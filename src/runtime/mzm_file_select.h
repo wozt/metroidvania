@@ -15,8 +15,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "mzm_screen.h"
-#include "mzm_text.h"
+#include "mzm/core/mzm_screen.h"
+#include "mzm/core/mzm_text.h"
 
 /* struct SaveFileInfo: what the screen shows of a file. */
 typedef struct {

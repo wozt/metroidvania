@@ -7,7 +7,7 @@
  *   data/native_parity/annotations.tsv and the native inventory;
  * - fusion_dashboard --check: the registry-derived part of the dashboard
  *   data against both registries and the tracked files;
- * - fusion_sound_ids --check: src/runtime/mzm_sound_ids.h against the pinned
+ * - fusion_sound_ids --check: src/runtime/mzm/core/mzm_sound_ids.h against the pinned
  *   decompilation's Sound enum.
  *
  * Regenerate with ./build/fusion_rebuild --checklist and

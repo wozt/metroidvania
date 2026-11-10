@@ -1,15 +1,15 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the Zero Mission sprite engine and the Zoomer. */
-#include "mzm_sfx.h"
+#include "mzm/core/mzm_sfx.h"
 #include "mzm_background_effect.h"
-#include "mzm_blocks.h"
+#include "mzm/core/mzm_blocks.h"
 #include "mzm_escape.h"
 #include "mzm_items.h"
 #include "mzm_message_banner.h"
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
-#include "mzm_sprites.h"
-#include "mzm_screen_shake.h"
+#include "mzm/core/mzm_sprites.h"
+#include "mzm/core/mzm_screen_shake.h"
 
 #include <assert.h>
 #include <limits.h>

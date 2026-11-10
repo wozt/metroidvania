@@ -13,7 +13,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "gba_ppu.h"
+#include "../../gba_ppu.h"
 
 enum {
     MZM_EWRAM_SIZE = 0x40000,

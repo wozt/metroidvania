@@ -1126,8 +1126,8 @@ static bool sprite_annotations_of(const char *source, const FusionJson *annotati
 }
 
 static bool sprite_annotations(const FusionJson *annotations, FusionJson *mapping) {
-    char *engine = read_file("src/runtime/mzm_sprites.c", NULL);
-    if (!engine) return fail("cannot read src/runtime/mzm_sprites.c");
+    char *engine = read_file("src/runtime/mzm/core/mzm_sprites.c", NULL);
+    if (!engine) return fail("cannot read src/runtime/mzm/core/mzm_sprites.c");
     bool ok = sprite_annotations_of(engine, annotations, mapping);
     free(engine);
     return ok;

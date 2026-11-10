@@ -9,8 +9,8 @@
  * update and the statue opening cutscene request of its death, and the
  * in-game timer at bosses. */
 #include "mzm_projectiles.h"
-#include "mzm_screen_shake.h"
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_screen_shake.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 enum {
     KRAID_POSE_GO_UP = 0x1,

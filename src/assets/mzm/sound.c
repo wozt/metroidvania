@@ -13,7 +13,7 @@
 #include "fusion/assets/mzm.h"
 
 #include "export.h"
-#include "../../runtime/mzm_sound_ids.h"
+#include "../../runtime/mzm/core/mzm_sound_ids.h"
 
 #include <stdarg.h>
 #include <stdio.h>

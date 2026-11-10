@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* Writes or checks src/runtime/mzm_sound_ids.h, the MZM_ identifiers of the
+/* Writes or checks src/runtime/mzm/core/mzm_sound_ids.h, the MZM_ identifiers of the
  * Sound enum of the pinned decompilation (include/constants/audio.h, whose
  * members are consecutive from 0). Only identifiers, no sound data. */
 #include <stdbool.h>
@@ -11,7 +11,7 @@
 #error "FUSION_SOURCE_DIR must identify the repository source directory"
 #endif
 
-static const char header_path[] = FUSION_SOURCE_DIR "/src/runtime/mzm_sound_ids.h";
+static const char header_path[] = FUSION_SOURCE_DIR "/src/runtime/mzm/core/mzm_sound_ids.h";
 static const char source_path[] = FUSION_SOURCE_DIR "/third_party/mzm/include/constants/audio.h";
 
 static char *read_all(const char *path, size_t *size) {
@@ -111,10 +111,10 @@ int main(int argc, char **argv) {
     if (check) {
         char *current = read_all(header_path, NULL);
         if (!current || strcmp(current, text)) {
-            printf("src/runtime/mzm_sound_ids.h is stale: build/fusion_sound_ids --write\n");
+            printf("src/runtime/mzm/core/mzm_sound_ids.h is stale: build/fusion_sound_ids --write\n");
             status = 1;
         } else {
-            printf("src/runtime/mzm_sound_ids.h is fresh\n");
+            printf("src/runtime/mzm/core/mzm_sound_ids.h is fresh\n");
         }
         free(current);
     } else {
@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "cannot write %s\n", header_path);
             status = 1;
         } else {
-            printf("Wrote src/runtime/mzm_sound_ids.h\n");
+            printf("Wrote src/runtime/mzm/core/mzm_sound_ids.h\n");
         }
     }
     free(text);

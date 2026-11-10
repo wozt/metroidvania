@@ -10,7 +10,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "mzm_screen.h"
+#include "mzm/core/mzm_screen.h"
 
 enum { MZM_GAME_OVER_STAY = 0, MZM_GAME_OVER_CONTINUE, MZM_GAME_OVER_QUIT };
 

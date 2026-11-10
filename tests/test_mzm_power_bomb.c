@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free regression tests for the Zero Mission power bomb explosion. */
 #include "mzm_power_bomb.h"
-#include "mzm_sfx.h"
+#include "mzm/core/mzm_sfx.h"
 
 #include <assert.h>
 #include <stdio.h>

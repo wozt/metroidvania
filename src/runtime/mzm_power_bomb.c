@@ -2,8 +2,8 @@
 /* Zero Mission power bomb explosion; comments name the pinned
  * decompilation's routines. */
 #include "mzm_power_bomb.h"
-#include "mzm_screen_shake.h"
-#include "mzm_sfx.h"
+#include "mzm/core/mzm_screen_shake.h"
+#include "mzm/core/mzm_sfx.h"
 
 #include <stdio.h>
 #include <stdlib.h>

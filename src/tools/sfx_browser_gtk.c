@@ -2,8 +2,8 @@
 /* Local GTK4 browser for ROM-derived Aria and Zero Mission sound entries. */
 #include "aos/core/aos_audio.h"
 #include "aos/core/aos_mp2k.h"
-#include "mzm_audio.h"
-#include "mzm_sound_ids.h"
+#include "mzm/core/mzm_audio.h"
+#include "mzm/core/mzm_sound_ids.h"
 #include "metroidvania_split_audio.h"
 
 #include <SDL3/SDL.h>

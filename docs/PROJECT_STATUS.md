@@ -2,6 +2,18 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0952 - MZM shared modules move to src/runtime/mzm/core/
+
+- The 14 shared MZM modules moved to `src/runtime/mzm/core/`:
+  `mzm_atomic`, `mzm_audio`, `mzm_blocks`, `mzm_effects`, `mzm_rom`,
+  `mzm_screen`, `mzm_screen_shake`, `mzm_sfx`, `mzm_sound_ids`,
+  `mzm_sprites`, `mzm_sprite_ai`, `mzm_text`, `mzm_room_gfx` and
+  `mzm_room_overlay`. Includes inside the directory are bare for
+  siblings and `../../` for flat modules not yet moved; consumers
+  use `mzm/core/` paths. The generated `mzm_sound_ids.h` output
+  path in `src/tools/sound_ids.c` was updated. CMake plus the
+  registries were updated. No code or behavior changed.
+
 ## Patch 0951 - Remaining Aria modules move to src/runtime/aos/game/
 
 - The last flat modules moved to `src/runtime/aos/game/`:
@@ -7986,7 +7998,7 @@ numbers and hit-feedback comparisons.
   production files match the reference. No Python-backed asset task remains;
   only `inventory` is still a temporary Python action.
 - `fusion_sound_ids --check/--write` replaces `scripts/mzm_sound_ids.py` for
-  `src/runtime/mzm_sound_ids.h` (identical but for its generator line); a
+  `src/runtime/mzm/core/mzm_sound_ids.h` (identical but for its generator line); a
   CTest and `scripts/check_generated.py` run the check.
 - Removed `scripts/mzm_audio.py`, `scripts/mzm_sound_ids.py`,
   `scripts/mzm_c_tables.py`, `scripts/mzm_samus_frame.py` and their tests;
@@ -12496,7 +12508,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   speeds, primary sprite stats) read from the ROM through verified reference
   ELF symbols. `mzm_runtime_room` now writes `P` lines; the 330 exported rooms
   hold 1,160 default sprite placements.
-- New SDL-free `src/runtime/mzm_sprites.{h,c}`: `SpriteInitPrimary`, the
+- New SDL-free `src/runtime/mzm/core/mzm_sprites.{h,c}`: `SpriteInitPrimary`, the
   `SpriteUpdate` order with the native sprite RNG, `SpriteUpdateAnimation`,
   `SpriteCheckOnScreen`, the sprite view of Clipdata
   (`ClipdataConvertToCollision`, original version) and the vertical and slope
@@ -12632,7 +12644,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0241 - Zero Mission particles and sprite debris
 
-- New SDL-free `src/runtime/mzm_effects.{h,c}`: `ParticleSet`,
+- New SDL-free `src/runtime/mzm/core/mzm_effects.{h,c}`: `ParticleSet`,
   `ParticleProcessAll` (high OAM priority first), `ParticleUpdateAnimation`
   and `ParticleCheckOnScreen` for the one-shot effects of the ported
   sprites and projectiles: sprite explosions (small to huge), the screw
@@ -12904,7 +12916,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   death). The pirates' scratch use of `gSpriteDrawOrder[0..4]` and
   `gBossWork.work2` live in `MzmSpriteGlobals`.
 - The sprite helpers shared by the AIs moved behind the internal header
-  `src/runtime/mzm_sprite_ai.h` (`ai_*`); `SSC_SPACE_PIRATE` and
+  `src/runtime/mzm/core/mzm_sprite_ai.h` (`ai_*`); `SSC_SPACE_PIRATE` and
   `SSC_SPACE_PIRATE_LASER` contacts are handled; the OAM table limit per
   family rises to 40.
 - `scripts/mzm_runtime_room.py` exports each block's clipdata movement
@@ -15577,7 +15589,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0314 - Zero Mission Atomics
 
-- Atomic and AtomicElectricity (`src/runtime/mzm_atomic.c`): hovering,
+- Atomic and AtomicElectricity (`src/runtime/mzm/core/mzm_atomic.c`): hovering,
   fleeing, charging with their palette flashing, shooting their
   electricity at Samus, chasing her arm cannon while she charges.
 - SSC_HURTS_SAMUS_A_LOT (five times the damage, stronger knockback); the
@@ -15652,7 +15664,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0308 - Zero Mission screen shakes, pistons and the glass tube
 
-- Screen shakes (`src/runtime/mzm_screen_shake.c`): one shared state run
+- Screen shakes (`src/runtime/mzm/core/mzm_screen_shake.c`): one shared state run
   once a frame, moving BG0 to BG2 by up to 2 pixels and BG3 by half; Samus's
   spark collisions, the power bomb, the super missile impact and the Long
   Beam Dessgeega start them, and crawlers on screen stop or fall during
@@ -15685,7 +15697,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   stop-enemy block once lit and drops her; a shot button calls it.
 - The sprite engine gains SSC_ZIPLINE (the SPOSE_ON_ZIPLINE and
   SPOSE_MORPH_BALL_ON_ZIPLINE grabs), SpriteUtilCheckOnZipline for frozen
-  sprites, and SP_SOLID_FOR_PROJECTILES hits (`src/runtime/mzm_sprites.c`);
+  sprites, and SP_SOLID_FOR_PROJECTILES hits (`src/runtime/mzm/core/mzm_sprites.c`);
   the runtime applies the collision's SamusSetPose and gPreviousXPosition.
 - Checked by capture in kraid_004; tests in `tests/test_mzm_sprites.c`.
 
@@ -15773,7 +15785,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   BG3 and covers the screen, slides to the arrival door once the room is
   loaded, then the room fades in; other doors fade to black and back.
   Samus, the pause and the in-game timer wait meanwhile.
-- `src/runtime/mzm_room_gfx.c`: sDoorTransitionTilemap on BG3
+- `src/runtime/mzm/core/mzm_room_gfx.c`: sDoorTransitionTilemap on BG3
   (RoomRleDecompress) and the faded room palette
   (ApplySpecialBackgroundFadingColor with the fade's row mask and
   sDoorTransitionPal); sprites fade by colour modulation.
@@ -15937,7 +15949,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 - YES sleeps after half a second: the screen blanks and the runtime shows
   nothing and pauses the audio device until SELECT, L and R are held
   together (the GBA's Stop syscall), then waits for the keys to be released.
-- `src/runtime/mzm_text.c`: the mask mode character drawing
+- `src/runtime/mzm/core/mzm_text.c`: the mask mode character drawing
   (TextDrawMessageCharacter) used by the messages.
 - Checked by capture in brinstar_000; tests in `tests/test_mzm_screens.c`.
 
@@ -15956,7 +15968,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   pistol when suitless.
 - The D-pad moves the cursor between the enabled slots with the native
   left/right memory; B, L or R goes back to the map.
-- `src/runtime/mzm_text.c`: the native text engine for the descriptions
+- `src/runtime/mzm/core/mzm_text.c`: the native text engine for the descriptions
   (character widths, append mode drawing, message processing with delays,
   new lines and the A key).
 - `MzmPauseGame` now carries the equipment instead of a suitless flag.
@@ -16026,7 +16038,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0284 - Zero Mission native room backgrounds: animations and liquids
 
-- `src/runtime/mzm_room_gfx.c` renders the room backgrounds from the ROM
+- `src/runtime/mzm/core/mzm_room_gfx.c` renders the room backgrounds from the ROM
   bank on a GbaPpu as the game loads them: VRAM (animated, common and
   tileset tiles, BG3 graphics), BG palettes, BG3 and LZ77 BG0 maps, the BG
   control registers and priorities of the room's transparency, and the
@@ -16046,7 +16058,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0283 - Zero Mission title screen
 
-- `src/runtime/mzm_screen.c`: what the non-gameplay screens share
+- `src/runtime/mzm/core/mzm_screen.c`: what the non-gameplay screens share
   (gOamData, the *_NonGameplay offsets and blending, the EWRAM work area,
   GBA-bit input) and `ProcessMenuOam`, `ResetFreeOam`,
   `UpdateMenuOamDataId`, `ClearGfxRam`, `ApplySpecialBackgroundFadingColor`
@@ -16698,10 +16710,10 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0259 - Zero Mission gameplay sound effects
 
-- `src/runtime/mzm_sfx.c` carries the `SoundPlay`, `SoundPlayNotAlreadyPlaying`,
+- `src/runtime/mzm/core/mzm_sfx.c` carries the `SoundPlay`, `SoundPlayNotAlreadyPlaying`,
   `SoundStop`, `SoundFade` and `StopAllMusicAndSounds` calls of the gameplay
   modules to a sink the runtime points at the sound engine, and records them
-  for tests. `scripts/mzm_sound_ids.py` generates `src/runtime/mzm_sound_ids.h`
+  for tests. `scripts/mzm_sound_ids.py` generates `src/runtime/mzm/core/mzm_sound_ids.h`
   from the decompilation's `Sound` enum; `check_generated` flags it when stale.
 - Samus (`mzm_samus.c`): the jump sounds by velocity and the Morph Ball jump
   (`SamusSetMidAir`), the wall jump, the landing effect on plain ground
@@ -16735,7 +16747,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0258 - Zero Mission sound engine and room music
 
-- `src/runtime/mzm_audio.c` ports the game's own sound engine routine by
+- `src/runtime/mzm/core/mzm_audio.c` ports the game's own sound engine routine by
   routine: `src/audio.c` (`UpdateMusic`, `UpdatePsgSounds`, `UpdateTrack` and
   the sequencer commands), `src/audio_wrappers.c`, the sound wrappers of
   `src/music_wrappers.c`, the assembly of `asm/audio_internal.s` (`InitTrack`,
@@ -16784,7 +16796,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0257 - Zero Mission breakable blocks
 
-- `src/runtime/mzm_blocks.c` ports the block routines of `src/block.c`:
+- `src/runtime/mzm/core/mzm_blocks.c` ports the block routines of `src/block.c`:
   `BlockApplyCcaa` (hatches first), the destruction and reveal rules by
   weakness, 2x2 blocks, never-reform blocks (remembered per room and removed
   on reload), reforming blocks with the native stages and BG1 frames (held
@@ -16817,7 +16829,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 - New *Monsters & items* dashboard tab: every native monster and item of both
   games, done or not. Zero Mission rows reuse the object catalog's parsing of
   the pinned sprite enum and stats (95 monsters, 10 items); a monster counts
-  as done when the `mzm_sprite_family` switch of `src/runtime/mzm_sprites.c`
+  as done when the `mzm_sprite_family` switch of `src/runtime/mzm/core/mzm_sprites.c`
   gives it an AI family (38 today), and the five enemy drops of `is_drop()`
   count as ported items. Aria lists all 113 enemy ids; only the six ported
   enemies of the `AOS_ENEMY` enum get a name, because resolving the others

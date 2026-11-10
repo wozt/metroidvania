@@ -5,7 +5,7 @@
  * all killed); comments name the pinned decompilation's routines. The
  * splashes of SpriteUtilCheckInRoomEffect and the dying BG priority are not
  * ported. */
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 #include <string.h>
 

@@ -9,7 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "mzm_effects.h"
+#include "mzm/core/mzm_effects.h"
 
 enum {
     MZM_ESCAPE_NONE,

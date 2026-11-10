@@ -5,7 +5,7 @@
  * shoot until Mother Brain dies; comments name the pinned decompilation's
  * routines. frozenPaletteRowOffset (1 for both) and the cannons' BG
  * priority are not modelled. */
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 enum {
     ZEBETITE_POSE_IDLE = 0x9,

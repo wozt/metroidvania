@@ -3,8 +3,8 @@
  * jumpers and the two that lock Kraid's lair until both are killed. They
  * jump or walk toward Samus, walk faster as they get hurt and leave two
  * extra drops. */
-#include "mzm_sprite_ai.h"
-#include "mzm_screen_shake.h"
+#include "mzm/core/mzm_sprite_ai.h"
+#include "mzm/core/mzm_screen_shake.h"
 
 enum {
     POSE_JUMP_WARNING_INIT = 0x8,

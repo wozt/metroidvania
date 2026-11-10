@@ -60,7 +60,7 @@ about 18 seconds instead of three minutes.
   use the statue's graphics (statues export only unflipped and X-flipped
   frames, without frozen or stun variants). Sprites draw by `drawOrder`.
 
-## Engine (`src/runtime/mzm_sprites.c`)
+## Engine (`src/runtime/mzm/core/mzm_sprites.c`)
 
 - `SpriteUpdate` order per sprite: `gSpriteRng =
   sSpriteRandomNumberTable[(frame8 + slot + frame16 / 16 + x + y) % 32]`, the
@@ -309,7 +309,7 @@ about 18 seconds instead of three minutes.
   the secondary stats damage until their third frame and are removed when
   their table ends or far off screen (`SP_KILL_OFF_SCREEN`). They draw with
   the parent Skree's graphics.
-- Particles (`src/runtime/mzm_effects.c`, `particle.c`): `ParticleSet` takes
+- Particles (`src/runtime/mzm/core/mzm_effects.c`, `particle.c`): `ParticleSet` takes
   the first free of 16 slots or replaces the particle with the highest frame
   counter; the one-shot effects (sprite explosions, the screw attack kill,
   the beam, invincible, missile and super missile impacts) play their table
@@ -419,7 +419,7 @@ stop-enemy blocks once the generator has activated them (their buttons call
 them back); Chozodia's security gates close while the alarm rings; pistons
 rise a block when a beam or bomb hits their head; the glass tube breaks under
 a power bomb after the Fully Powered Suit. Their sprites and the crawlers
-react to the shared screen shake (`src/runtime/mzm_screen_shake.c`), which
+react to the shared screen shake (`src/runtime/mzm/core/mzm_screen_shake.c`), which
 moves the backgrounds, never the sprites.
 
 Parasites (`src/runtime/mzm_parasite.c`) crawl, hop and jump, grab Samus and

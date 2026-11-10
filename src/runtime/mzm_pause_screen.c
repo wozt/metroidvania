@@ -5,9 +5,9 @@
 
 #include <string.h>
 
-#include "mzm_rom.h"
-#include "mzm_sfx.h"
-#include "mzm_sound_ids.h"
+#include "mzm/core/mzm_rom.h"
+#include "mzm/core/mzm_sfx.h"
+#include "mzm/core/mzm_sound_ids.h"
 
 enum {
     BLOCK = 64, HALF_BLOCK = 32, QUARTER_BLOCK = 16, MINIMAP = 32, MINIMAP_TILE_BACKGROUND = 0x140,

@@ -2,9 +2,9 @@
 /* Zero Mission's elevator statues (src/sprites_ai/elevator_statue.c):
  * the Kraid and Ridley statues by the Brinstar and Norfair elevators that
  * crumble once their boss is dead, leaving rubble Samus can stand on. */
-#include "mzm_sprite_ai.h"
-#include "mzm_blocks.h"
-#include "mzm_screen_shake.h"
+#include "mzm/core/mzm_sprite_ai.h"
+#include "mzm/core/mzm_blocks.h"
+#include "mzm/core/mzm_screen_shake.h"
 
 enum {
     POSE_CHECK_FALL = 0x8,

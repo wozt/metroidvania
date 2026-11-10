@@ -14,7 +14,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "gba_ppu.h"
+#include "../../gba_ppu.h"
 
 enum { MZM_ROOM_GFX_ANIMATED = 16, MZM_ROOM_GFX_NO_EFFECT_Y = 0xFFFF };
 

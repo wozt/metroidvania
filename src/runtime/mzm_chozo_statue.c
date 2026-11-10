@@ -9,7 +9,7 @@
  * transparency and the slow scrolling are not. */
 #include "mzm_background_effect.h"
 #include "mzm_items.h"
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 #include <stddef.h>
 #include <string.h>

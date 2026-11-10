@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests of the Zero Mission breakable blocks. */
-#include "mzm_blocks.h"
-#include "mzm_sfx.h"
+#include "mzm/core/mzm_blocks.h"
+#include "mzm/core/mzm_sfx.h"
 
 #include <assert.h>
 #include <stdio.h>

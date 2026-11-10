@@ -2,9 +2,9 @@
 /* Zero Mission's Deorem (src/sprites_ai/deorem.c): the two-location worm
  * encounter, its exposed missile-vulnerable eye, articulated body columns,
  * thorn volleys, burrowing retreat, staggered death and Charge Beam reward. */
-#include "mzm_blocks.h"
-#include "mzm_screen_shake.h"
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_blocks.h"
+#include "mzm/core/mzm_screen_shake.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 #include <limits.h>
 #include <string.h>

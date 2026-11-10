@@ -33,8 +33,8 @@
 #include <stdint.h>
 
 #include "mzm_effects.h"
-#include "mzm_escape.h"
-#include "mzm_projectiles.h"
+#include "../../mzm_escape.h"
+#include "../../mzm_projectiles.h"
 
 enum {
     MZM_SPRITE_STATUS_EXISTS = 1 << 0,

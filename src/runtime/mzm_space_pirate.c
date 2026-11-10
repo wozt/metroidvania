@@ -3,7 +3,7 @@
  * comments name the pinned decompilation's routines. The alarm music and
  * palette and the power-bomb and escape-ship variants are not ported; the
  * black pirates (src/sprites_ai/black_space_pirate.c) share their routines. */
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 #include <stddef.h>
 #include <string.h>

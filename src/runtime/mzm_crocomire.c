@@ -2,7 +2,7 @@
 /* Zero Mission's unused Crocomire and Gekitai Machine prototypes
  * (src/sprites_ai/crocomire.c and gekitai_machine.c). Crocomire only
  * assembles and loops its initial composition; Gekitai removes itself. */
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 enum {
     CROCOMIRE_POSE_IDLE_INIT = 0x8,

@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include "mzm_rom.h"
+#include "mzm/core/mzm_rom.h"
 
 enum {
     VRAM_OBJ = 0x10000,

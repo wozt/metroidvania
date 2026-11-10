@@ -3,7 +3,7 @@
  * Samus back on contact and spit a projectile arcing towards her every two
  * seconds while on screen; comments name the pinned decompilation's
  * routines. The exploding projectile's BG priority is not modelled. */
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 enum {
     POLYP_POSE_IDLE_INIT = 0x8,

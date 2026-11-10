@@ -2,8 +2,8 @@
 /* Zero Mission weapon selection and projectiles. Function names in comments
  * refer to the pinned mzm decompilation that each routine reproduces. */
 #include "mzm_projectiles.h"
-#include "mzm_effects.h"
-#include "mzm_sfx.h"
+#include "mzm/core/mzm_effects.h"
+#include "mzm/core/mzm_sfx.h"
 
 #include <string.h>
 

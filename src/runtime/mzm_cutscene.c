@@ -5,9 +5,9 @@
 
 #include <string.h>
 
-#include "mzm_rom.h"
-#include "mzm_sfx.h"
-#include "mzm_sound_ids.h"
+#include "mzm/core/mzm_rom.h"
+#include "mzm/core/mzm_sfx.h"
+#include "mzm/core/mzm_sound_ids.h"
 
 enum {
     /* CUTSCENE_STAGE_* */

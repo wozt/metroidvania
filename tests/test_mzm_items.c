@@ -3,7 +3,7 @@
  * message banner. */
 #include "mzm_items.h"
 #include "mzm_message_banner.h"
-#include "mzm_sfx.h"
+#include "mzm/core/mzm_sfx.h"
 
 #include <assert.h>
 #include <stdbool.h>

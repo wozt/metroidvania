@@ -5,8 +5,8 @@
 
 #include <string.h>
 
-#include "mzm_rom.h"
-#include "mzm_sfx.h"
+#include "mzm/core/mzm_rom.h"
+#include "mzm/core/mzm_sfx.h"
 
 enum {
     /* GameOverCursorAction */

@@ -4,7 +4,7 @@
 
 #include "core/json.h"
 #include "core/native_map.h"
-#include "project_room_document.h"
+#include "../../project_room_document.h"
 
 #include <ctype.h>
 #include <stdio.h>

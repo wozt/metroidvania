@@ -9,8 +9,8 @@
  * (StartEffectForCutscene) and the statue opening one of its death, the
  * minimap chunk update, and the wings' frozen palette offset read from
  * their OAM (RidleyPartWingSetPaletteOffset: offset 0). */
-#include "mzm_screen_shake.h"
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_screen_shake.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 enum {
     RIDLEY_GROUND = BLOCK_SIZE * 18 - ONE_SUB_PIXEL,

@@ -2,7 +2,7 @@
 /* Zero Mission's Kraid and Ridley Gadoras (src/sprites_ai/gadora.c): the
  * living hatch seal, invisible vulnerable eye, Ridley beam and persistent
  * hatch-opening death event. */
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 enum {
     GADORA_IDLE_INIT = 0x8,

@@ -3,7 +3,7 @@
  * DirectSound song and a PSG sound effect written here) drives the ported
  * sequencer, mixer and the PSG emulation. */
 #include "gba_psg.h"
-#include "mzm_audio.h"
+#include "mzm/core/mzm_audio.h"
 
 #include <stdbool.h>
 #include <stdio.h>

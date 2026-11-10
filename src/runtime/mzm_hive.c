@@ -2,7 +2,7 @@
 /* Zero Mission's Brinstar hives (src/sprites_ai/hive.c): the hive and its
  * three shrinking phases, its roots, the Mellows that guard it and the
  * Mellow swarms that keep spawning until the three hives are destroyed. */
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 enum {
     HIVE_POSE_PHASE_1 = 0x9,

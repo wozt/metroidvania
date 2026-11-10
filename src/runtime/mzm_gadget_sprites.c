@@ -5,10 +5,10 @@
  * (unknown_item_block.c), the map stations (map_station.c) and the save
  * platforms (save_platform.c); comments name the pinned decompilation's
  * routines. */
-#include "mzm_blocks.h"
+#include "mzm/core/mzm_blocks.h"
 #include "mzm_message_banner.h"
-#include "mzm_screen_shake.h"
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_screen_shake.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 enum {
     /* PrimarySprite */

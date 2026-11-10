@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "mzm_escape.h"
 
-#include "mzm_screen_shake.h"
-#include "mzm_sfx.h"
-#include "mzm_sprites.h"
+#include "mzm/core/mzm_screen_shake.h"
+#include "mzm/core/mzm_sfx.h"
+#include "mzm/core/mzm_sprites.h"
 
 #include <stdio.h>
 

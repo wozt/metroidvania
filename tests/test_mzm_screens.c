@@ -7,9 +7,9 @@
 
 #include "gba_ppu.h"
 #include "gba_input.h"
-#include "mzm_rom.h"
-#include "mzm_screen.h"
-#include "mzm_sfx.h"
+#include "mzm/core/mzm_rom.h"
+#include "mzm/core/mzm_screen.h"
+#include "mzm/core/mzm_sfx.h"
 #include "mzm_title_screen.h"
 #include "mzm_hud.h"
 #include "mzm_pause_screen.h"
@@ -22,7 +22,7 @@
 #include "mzm_tourian_escape.h"
 #include "mzm_chozodia_escape.h"
 #include "mzm_credits.h"
-#include "mzm_room_gfx.h"
+#include "mzm/core/mzm_room_gfx.h"
 
 static GbaPpu ppu;
 static MzmScreen screen;

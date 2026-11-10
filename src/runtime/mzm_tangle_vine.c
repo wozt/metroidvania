@@ -2,7 +2,7 @@
 /* Zero Mission's Tangle Vines (src/sprites_ai/tangle_vine.c): the solid,
  * harmful plants on the ground or the ceiling, the red Geruta and larva
  * vines, and the vine holding a Geruta that drops it when the vine dies. */
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 enum {
     TANGLE_VINE_POSE_IDLE = 0x9,

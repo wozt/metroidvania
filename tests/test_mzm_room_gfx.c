@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "mzm_rom.h"
-#include "mzm_room_gfx.h"
+#include "mzm/core/mzm_rom.h"
+#include "mzm/core/mzm_room_gfx.h"
 
 static MzmRoomGfx g;
 

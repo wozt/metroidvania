@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "mzm_screen.h"
+#include "mzm/core/mzm_screen.h"
 
 /* struct IntroData and the game mode counters it runs under. */
 typedef struct {

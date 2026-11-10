@@ -7,8 +7,8 @@
  * the Chozodia escape. */
 #include <string.h>
 
-#include "mzm_sprite_ai.h"
-#include "mzm_screen_shake.h"
+#include "mzm/core/mzm_sprite_ai.h"
+#include "mzm/core/mzm_screen_shake.h"
 #include "mzm_message_banner.h"
 
 enum {

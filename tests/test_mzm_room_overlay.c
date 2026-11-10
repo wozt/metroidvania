@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The editor's room overlays in the Zero Mission runtime: applied when the
  * document fits the room, ignored otherwise, absent without a document. */
-#include "mzm_room_overlay.h"
+#include "mzm/core/mzm_room_overlay.h"
 
 #include "core/native_map.h"
 

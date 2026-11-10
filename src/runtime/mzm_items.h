@@ -7,7 +7,7 @@
 #ifndef MZM_ITEMS_H
 #define MZM_ITEMS_H
 
-#include "mzm_blocks.h"
+#include "mzm/core/mzm_blocks.h"
 #include "mzm_samus.h"
 
 #include <stdbool.h>

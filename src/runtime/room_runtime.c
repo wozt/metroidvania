@@ -11,9 +11,9 @@
 
 #include "debug_menu.h"
 #include "gba_input.h"
-#include "mzm_blocks.h"
-#include "mzm_audio.h"
-#include "mzm_sfx.h"
+#include "mzm/core/mzm_blocks.h"
+#include "mzm/core/mzm_audio.h"
+#include "mzm/core/mzm_sfx.h"
 #include "mzm_background_effect.h"
 #include "mzm_power_bomb.h"
 #include "mzm_hatches.h"
@@ -22,15 +22,15 @@
 #include "mzm_items.h"
 #include "mzm_message_banner.h"
 #include "mzm_projectiles.h"
-#include "mzm_rom.h"
-#include "mzm_room_gfx.h"
+#include "mzm/core/mzm_rom.h"
+#include "mzm/core/mzm_room_gfx.h"
 #include "mzm_tourian_escape.h"
 #include "mzm_chozodia_escape.h"
 #include "mzm_credits.h"
 #include "mzm_samus.h"
-#include "mzm_screen_shake.h"
-#include "mzm_screen.h"
-#include "mzm_room_overlay.h"
+#include "mzm/core/mzm_screen_shake.h"
+#include "mzm/core/mzm_screen.h"
+#include "mzm/core/mzm_room_overlay.h"
 #include "mzm_title_screen.h"
 #include "mzm_pause_screen.h"
 #include "mzm_save.h"
@@ -42,7 +42,7 @@
 #include "mzm_intro.h"
 #include <sys/stat.h>
 #include <errno.h>
-#include "mzm_sprites.h"
+#include "mzm/core/mzm_sprites.h"
 
 #define MAX_MARKS 32768
 #define MAX_FILE_BYTES 4000000L

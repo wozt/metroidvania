@@ -7,7 +7,7 @@
  * parts through one of the native multi-sprite tables. */
 #include <limits.h>
 
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 enum {
     LARVA_IDLE_INIT = 0x8,

@@ -6,7 +6,7 @@
  * routines. */
 #include "mzm_message_banner.h"
 #include "mzm_samus.h"
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 enum {
     SSPRITE_GUNSHIP_PART = 50,

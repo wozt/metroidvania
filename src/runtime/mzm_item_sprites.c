@@ -4,7 +4,7 @@
  * Charge Beam (charge_beam.c), with their secondary sprites; comments name
  * the pinned decompilation's routines. */
 #include "mzm_items.h"
-#include "mzm_sprite_ai.h"
+#include "mzm/core/mzm_sprite_ai.h"
 
 enum {
     /* PrimarySprite */

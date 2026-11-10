@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T01:16:06+00:00",
+ "generated_at": "2026-11-10T01:20:13+00:00",
  "git": {
-  "commit": "461495c8",
+  "commit": "c3332086",
   "branch": "main",
   "dirty": true
  },
@@ -774,12 +774,12 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_effects.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_effects.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm_projectiles.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c",
+    "src/runtime/mzm/core/mzm_sfx.c",
     "src/runtime/mzm_parasite.c",
     "src/runtime/mzm_acid_worm.c"
    ],
@@ -948,12 +948,12 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_audio.c",
+    "src/runtime/mzm/core/mzm_audio.c",
     "src/runtime/gba_psg.c",
     "src/assets/mzm/sound.c",
     "src/assets/mzm/export.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c",
+    "src/runtime/mzm/core/mzm_sfx.c",
     "src/tools/sound_ids.c"
    ],
    "tests": [
@@ -1150,7 +1150,7 @@
    "local_sources": [
     "src/runtime/mzm_chozodia_escape.c",
     "src/runtime/mzm_chozodia_escape.h",
-    "src/runtime/mzm_screen.c",
+    "src/runtime/mzm/core/mzm_screen.c",
     "src/runtime/gba_ppu.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_save.c",
@@ -1445,7 +1445,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_cutscene.c",
-    "src/runtime/mzm_screen.c",
+    "src/runtime/mzm/core/mzm_screen.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm_door_fade.c"
    ],
@@ -1517,7 +1517,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_cutscene.c",
-    "src/runtime/mzm_text.c",
+    "src/runtime/mzm/core/mzm_text.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
@@ -1668,7 +1668,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_acid_worm.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -1759,8 +1759,8 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_atomic.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_atomic.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -1834,7 +1834,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_baristute.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -1907,7 +1907,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c"
    ],
@@ -1990,7 +1990,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_chozodia_scripted.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/mzm_message_banner.c",
     "src/runtime/room_runtime.c"
@@ -2055,9 +2055,9 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_chozodia_security.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
-    "src/runtime/mzm_sfx.c",
+    "src/runtime/mzm/core/mzm_sfx.c",
     "src/runtime/mzm_gadget_sprites.c"
    ],
    "tests": [
@@ -2137,7 +2137,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_crocomire.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -2199,7 +2199,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_deorem.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c"
    ],
@@ -2286,10 +2286,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
@@ -2386,10 +2386,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -2446,7 +2446,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_elevator_statue.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c"
    ],
    "tests": [
@@ -2519,7 +2519,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_escape_ship.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/mzm_door_fade.c"
@@ -2588,7 +2588,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_gadora.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -2658,10 +2658,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -2717,7 +2717,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_hive.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -2794,10 +2794,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -2853,7 +2853,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_imago.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -2941,7 +2941,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_imago_cocoon.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -3024,7 +3024,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_imago_larva.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -3111,9 +3111,9 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_kraid.c",
-    "src/runtime/mzm_sprites.c",
-    "src/runtime/mzm_effects.c",
-    "src/runtime/mzm_audio.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_effects.c",
+    "src/runtime/mzm/core/mzm_audio.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c",
     "src/assets/mzm/runtime_room.c"
@@ -3217,7 +3217,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_mecha_ridley.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -3334,10 +3334,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -3393,7 +3393,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_metroid.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm_samus.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
@@ -3468,7 +3468,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_mother_brain.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm_background_effect.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
@@ -3560,10 +3560,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -3619,7 +3619,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_parasite.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm_space_pirate.c",
     "src/runtime/mzm_gadget_sprites.c",
     "src/runtime/room_runtime.c",
@@ -3713,10 +3713,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -3778,7 +3778,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_polyp.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -3847,10 +3847,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -3908,7 +3908,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_ridley.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -4019,7 +4019,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c"
    ],
    "tests": [
@@ -4086,10 +4086,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -4146,10 +4146,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -4206,8 +4206,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_ruins_test.c",
-    "src/runtime/mzm_sprites.c",
-    "src/runtime/mzm_effects.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_effects.c",
     "src/runtime/mzm_background_effect.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c",
@@ -4331,10 +4331,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
@@ -4403,10 +4403,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
@@ -4488,10 +4488,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -4546,10 +4546,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -4606,13 +4606,13 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_space_pirate.c",
-    "src/runtime/mzm_sprite_ai.h",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprite_ai.h",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/assets/mzm/export.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c",
-    "src/runtime/mzm_audio.c"
+    "src/runtime/mzm/core/mzm_sfx.c",
+    "src/runtime/mzm/core/mzm_audio.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
@@ -4728,10 +4728,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c",
+    "src/runtime/mzm/core/mzm_sfx.c",
     "src/assets/mzm/runtime_room.c"
    ],
    "tests": [
@@ -4791,7 +4791,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_tangle_vine.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -4859,7 +4859,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_tourian.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c"
    ],
    "tests": [
@@ -4917,10 +4917,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -4975,10 +4975,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -5034,7 +5034,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_worker_robot.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm_projectiles.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
@@ -5123,10 +5123,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
@@ -5195,10 +5195,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
@@ -5295,11 +5295,11 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_blocks.c",
+    "src/runtime/mzm/core/mzm_blocks.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/runtime_room.c",
     "src/assets/mzm/export.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_blocks.c"
@@ -5375,7 +5375,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_gunship.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c",
     "src/assets/mzm/samus.c"
@@ -5488,7 +5488,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_gadget_sprites.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm_samus.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c"
@@ -5557,7 +5557,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_gadget_sprites.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c"
    ],
@@ -5683,7 +5683,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_gadget_sprites.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c"
    ],
@@ -5790,7 +5790,7 @@
     "src/runtime/mzm_tourian_escape.c",
     "src/runtime/mzm_tourian_escape.h",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_room_gfx.c"
+    "src/runtime/mzm/core/mzm_room_gfx.c"
    ],
    "tests": [
     "tests/test_mzm_hud.c",
@@ -5903,7 +5903,7 @@
    "local_sources": [
     "src/runtime/gba_input.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_screen.c"
+    "src/runtime/mzm/core/mzm_screen.c"
    ],
    "tests": [
     "tests/test_gba_input.c",
@@ -5967,7 +5967,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_gadget_sprites.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c",
     "src/assets/mzm/message_text.c",
@@ -6140,7 +6140,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_message_banner.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/message_text.c",
     "src/assets/mzm/sprites.c"
@@ -6228,8 +6228,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_chozo_statue.c",
-    "src/runtime/mzm_sprites.c",
-    "src/runtime/mzm_blocks.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_blocks.c",
     "src/runtime/mzm_background_effect.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c",
@@ -6376,10 +6376,10 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c",
@@ -6449,7 +6449,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_item_sprites.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/tools/fusion_dashboard.c"
@@ -6601,7 +6601,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_pause_screen.c",
-    "src/runtime/mzm_text.c",
+    "src/runtime/mzm/core/mzm_text.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
@@ -6662,7 +6662,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_file_select.c",
-    "src/runtime/mzm_text.c",
+    "src/runtime/mzm/core/mzm_text.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
@@ -6907,7 +6907,7 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_pause_screen.c",
-    "src/runtime/mzm_text.c"
+    "src/runtime/mzm/core/mzm_text.c"
    ],
    "tests": [
     "tests/test_mzm_screens.c"
@@ -7003,7 +7003,7 @@
    "local_sources": [
     "src/runtime/mzm_samus.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sfx.c",
+    "src/runtime/mzm/core/mzm_sfx.c",
     "src/runtime/mzm_projectiles.c",
     "src/assets/mzm/samus.c"
    ],
@@ -7193,8 +7193,8 @@
    "local_sources": [
     "src/runtime/mzm_samus.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_sprites.c",
-    "src/runtime/mzm_effects.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_effects.c",
     "src/assets/mzm/samus.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -7280,12 +7280,12 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_room_gfx.c",
+    "src/runtime/mzm/core/mzm_room_gfx.c",
     "src/runtime/mzm_background_effect.c",
     "src/assets/mzm/runtime_room.c",
     "src/assets/mzm/export.c",
     "src/runtime/room_runtime.c",
-    "src/runtime/mzm_screen_shake.c"
+    "src/runtime/mzm/core/mzm_screen_shake.c"
    ],
    "tests": [
     "tests/test_mzm_room_gfx.c",
@@ -7404,7 +7404,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_screen.c",
+    "src/runtime/mzm/core/mzm_screen.c",
     "src/runtime/mzm_game_over.c"
    ],
    "tests": [
@@ -7466,9 +7466,9 @@
     "include/fusion/assets/mzm.h",
     "src/assets/mzm/rom_bank.c",
     "src/runtime/gba_ppu.c",
-    "src/runtime/mzm_rom.c",
+    "src/runtime/mzm/core/mzm_rom.c",
     "src/tools/fusion_rebuild.c",
-    "src/runtime/mzm_screen.c"
+    "src/runtime/mzm/core/mzm_screen.c"
    ],
    "tests": [
     "tests/test_fusion_assets_mzm.c",
@@ -7654,8 +7654,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_intro.c",
-    "src/runtime/mzm_audio.c",
-    "src/runtime/mzm_sfx.c",
+    "src/runtime/mzm/core/mzm_audio.c",
+    "src/runtime/mzm/core/mzm_sfx.c",
     "src/runtime/room_runtime.c"
    ],
    "tests": [
@@ -7813,9 +7813,9 @@
     "src/runtime/room_runtime.c",
     "src/assets/mzm/export.c",
     "src/editor_backend/mzm_workspace.c",
-    "src/runtime/mzm_sfx.c",
+    "src/runtime/mzm/core/mzm_sfx.c",
     "src/runtime/mzm_door_fade.c",
-    "src/runtime/mzm_room_gfx.c"
+    "src/runtime/mzm/core/mzm_room_gfx.c"
    ],
    "tests": [
     "tests/test_mzm_hatches.c",
@@ -7936,10 +7936,10 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_projectiles.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/samus.c",
-    "src/runtime/mzm_sfx.c"
+    "src/runtime/mzm/core/mzm_sfx.c"
    ],
    "tests": [
     "tests/test_mzm_samus.c",
@@ -8024,8 +8024,8 @@
    "local_sources": [
     "src/runtime/mzm_projectiles.c",
     "src/runtime/mzm_samus.c",
-    "src/runtime/mzm_sprites.c",
-    "src/runtime/mzm_effects.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_effects.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -8100,8 +8100,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_projectiles.c",
-    "src/runtime/mzm_sprites.c",
-    "src/runtime/mzm_effects.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_effects.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/samus.c",
     "src/assets/mzm/sprites.c"
@@ -8198,9 +8198,9 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_projectiles.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm_space_pirate.c",
-    "src/runtime/mzm_effects.c",
+    "src/runtime/mzm/core/mzm_effects.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c",
     "src/assets/mzm/samus.c"
@@ -8301,9 +8301,9 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_projectiles.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm_space_pirate.c",
-    "src/runtime/mzm_effects.c",
+    "src/runtime/mzm/core/mzm_effects.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/samus.c"
    ],
@@ -8391,7 +8391,7 @@
    "local_sources": [
     "src/runtime/mzm_power_bomb.c",
     "src/runtime/mzm_projectiles.c",
-    "src/runtime/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/runtime_room.c",
     "src/assets/mzm/export.c"
@@ -8482,8 +8482,8 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/runtime/mzm_projectiles.c",
-    "src/runtime/mzm_sprites.c",
-    "src/runtime/mzm_effects.c",
+    "src/runtime/mzm/core/mzm_sprites.c",
+    "src/runtime/mzm/core/mzm_effects.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/samus.c",
     "src/assets/mzm/sprites.c"
@@ -17827,7 +17827,7 @@
    "status": "partial",
    "fidelity": "n/a",
    "local_sources": [
-    "src/runtime/mzm_room_overlay.c",
+    "src/runtime/mzm/core/mzm_room_overlay.c",
     "src/core/native_map.c",
     "src/runtime/room_runtime.c",
     "src/core/json.c",
@@ -17945,7 +17945,7 @@
     "src/runtime/rotating_line/parametric.c",
     "src/runtime/rotating_line/config.c",
     "src/runtime/aos/core/aos_mp2k.c",
-    "src/runtime/mzm_audio.c",
+    "src/runtime/mzm/core/mzm_audio.c",
     "src/runtime/fusion_host.c",
     "src/runtime/aos/title/aos_title_screen.c",
     "src/runtime/mzm_title_screen.c",
@@ -19154,7 +19154,7 @@
     "src/tools/sfx_browser_gtk.c",
     "src/runtime/aos/core/aos_audio.c",
     "src/runtime/aos/core/aos_mp2k.c",
-    "src/runtime/mzm_audio.c",
+    "src/runtime/mzm/core/mzm_audio.c",
     "src/runtime/gba_psg.c",
     "src/runtime/metroidvania_split_audio.h"
    ],
@@ -20487,9 +20487,9 @@
    "fidelity": "unknown",
    "local_sources": [
     "src/assets/mzm/sound.c",
-    "src/runtime/mzm_audio.c",
+    "src/runtime/mzm/core/mzm_audio.c",
     "src/runtime/gba_psg.c",
-    "src/runtime/mzm_sfx.c",
+    "src/runtime/mzm/core/mzm_sfx.c",
     "src/tools/sound_ids.c",
     "src/assets/aos/sound.c",
     "src/runtime/aos/core/aos_audio.c",
@@ -20773,7 +20773,7 @@
    "local_sources": [
     "include/fusion/assets/mzm.h",
     "src/assets/mzm/rom_bank.c",
-    "src/runtime/mzm_rom.c",
+    "src/runtime/mzm/core/mzm_rom.c",
     "src/tools/fusion_rebuild.c"
    ],
    "tests": [
@@ -22242,6 +22242,12 @@
  },
  "timeline": [
   {
+   "commit": "c3332086",
+   "date": "2026-11-10",
+   "subject": "Move remaining Aria modules into src/runtime/aos/game/",
+   "scope": "project"
+  },
+  {
    "commit": "461495c8",
    "date": "2026-11-10",
    "subject": "Move Aria intro and game-over modules into src/runtime/aos/intro/",
@@ -22713,12 +22719,6 @@
    "commit": "c0b58949",
    "date": "2026-11-09",
    "subject": "Port the Tsuchinoko (Aria of Sorrow enemy id 35)",
-   "scope": "project"
-  },
-  {
-   "commit": "ec12a942",
-   "date": "2026-11-09",
-   "subject": "Port the Dryad (Aria of Sorrow enemy id 70) with its seed projectile",
    "scope": "project"
   }
  ],

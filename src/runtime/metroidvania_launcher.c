@@ -25,10 +25,10 @@
 #include "gba_input.h"
 #include "gba_ppu.h"
 #include "metroidvania_split.h"
-#include "mzm_audio.h"
-#include "mzm_rom.h"
-#include "mzm_screen.h"
-#include "mzm_sfx.h"
+#include "mzm/core/mzm_audio.h"
+#include "mzm/core/mzm_rom.h"
+#include "mzm/core/mzm_screen.h"
+#include "mzm/core/mzm_sfx.h"
 #include "mzm_title_screen.h"
 
 /* The embedded frontends (FUSION_EMBEDDED). */

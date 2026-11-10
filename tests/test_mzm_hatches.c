@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests of the Zero Mission hatch state machine. */
 #include "mzm_hatches.h"
-#include "mzm_sfx.h"
+#include "mzm/core/mzm_sfx.h"
 
 #include <assert.h>
 #include <stdio.h>

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "metroidvania_split.h"
-#include "mzm_sound_ids.h"
+#include "mzm/core/mzm_sound_ids.h"
 #include "rotating_line/parametric.h"
 
 #include <assert.h>

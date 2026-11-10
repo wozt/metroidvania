@@ -5,7 +5,7 @@
  * structures are host structures laid out in the native RAM order where the
  * code compares their addresses. */
 #include "mzm_audio.h"
-#include "gba_psg.h"
+#include "../../gba_psg.h"
 
 #include <math.h>
 #include <stdio.h>

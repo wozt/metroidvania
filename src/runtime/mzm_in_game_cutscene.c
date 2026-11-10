@@ -5,8 +5,8 @@
 
 #include <string.h>
 
-#include "mzm_sfx.h"
-#include "mzm_sound_ids.h"
+#include "mzm/core/mzm_sfx.h"
+#include "mzm/core/mzm_sound_ids.h"
 
 enum { SCREEN_W = 240, SCREEN_H = 160, BLDALPHA_MAX = 16 };
 

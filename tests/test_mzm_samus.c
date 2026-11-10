@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free regression tests for the native Zero Mission pose controller. */
-#include "mzm_effects.h"
+#include "mzm/core/mzm_effects.h"
 #include "mzm_projectiles.h"
 #include "mzm_samus.h"
-#include "mzm_screen_shake.h"
-#include "mzm_sfx.h"
+#include "mzm/core/mzm_screen_shake.h"
+#include "mzm/core/mzm_sfx.h"
 
 #include <assert.h>
 #include <stdio.h>

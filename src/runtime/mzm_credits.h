@@ -10,8 +10,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "mzm_screen.h"
-#include "mzm_text.h"
+#include "mzm/core/mzm_screen.h"
+#include "mzm/core/mzm_text.h"
 
 /* What ChozodiaEscapeGetItemCountAndEndingNumber reads: gEquipment's
  * maximums and abilities (suitMisc, beams and bombs: 14 at most),

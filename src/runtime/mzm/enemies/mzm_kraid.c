@@ -8,7 +8,7 @@
  * the pinned decompilation's routines. Not ported: the minimap chunk
  * update and the statue opening cutscene request of its death, and the
  * in-game timer at bosses. */
-#include "../../mzm_projectiles.h"
+#include "../../mzm/weapons/mzm_projectiles.h"
 #include "../core/mzm_screen_shake.h"
 #include "../core/mzm_sprite_ai.h"
 

@@ -2,6 +2,15 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0954 - MZM weapon modules move to src/runtime/mzm/weapons/
+
+- `mzm_projectiles`, `mzm_power_bomb` and `mzm_gadget_sprites`
+  moved to `src/runtime/mzm/weapons/`. Includes inside the
+  directory use `../core/` for core modules and `../../mzm_*.h`
+  for modules not yet moved; consumers use `mzm/weapons/` paths.
+  CMake plus the registries were updated. No code or behavior
+  changed.
+
 ## Patch 0953 - MZM enemy modules move to src/runtime/mzm/enemies/
 
 - The 19 enemy modules moved to `src/runtime/mzm/enemies/`:
@@ -11654,7 +11663,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0194 - native Power Beam and missiles in the SDL runtime
 
-- Added `src/runtime/mzm_projectiles.{h,c}`, an SDL-free port of weapon
+- Added `src/runtime/mzm/weapons/mzm_projectiles.{h,c}`, an SDL-free port of weapon
   highlighting (R arms missiles, Select toggles super missiles), the fire
   check with native cooldowns (7/9/11 frames), projectile limits (6 beams,
   4 missiles, 4 super missiles), spawning at the arm cannon offset, native
@@ -15612,7 +15621,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 ## Patch 0313 - Zero Mission Chozodia save platforms
 
 - SavePlatformChozodia and its part share the save platform's code
-  (`src/runtime/mzm_gadget_sprites.c`) with their own tables, part and
+  (`src/runtime/mzm/weapons/mzm_gadget_sprites.c`) with their own tables, part and
   sounds, and refill Samus before the save prompt (energy, missiles,
   super missiles, power bombs, the refill light and message).
 - The refill helper (SpriteUtilRefill*) is shared with the Chozo statues.
@@ -15662,7 +15671,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 ## Patch 0309 - Zero Mission rising Chozo pillar
 
 - RisingChozoPillar, ChozoPillarPlatform and ChozoPillarPlatformShadow
-  (`src/runtime/mzm_gadget_sprites.c`): after the Power Grip, Crateria's
+  (`src/runtime/mzm/weapons/mzm_gadget_sprites.c`): after the Power Grip, Crateria's
   pillar rises in BG2 with dust, debris and shakes, then its six grippable
   platforms appear.
 - BG2 in BG_PROP_MOVING rooms follows ScrollBg2 (BG1 plus gBg2Movement,
@@ -15680,7 +15689,7 @@ No automatic reciprocal link or native engine encoder is implemented.
   spark collisions, the power bomb, the super missile impact and the Long
   Beam Dessgeega start them, and crawlers on screen stop or fall during
   them (SpriteUtilShouldFall).
-- Piston and GlassTube (`src/runtime/mzm_gadget_sprites.c`).
+- Piston and GlassTube (`src/runtime/mzm/weapons/mzm_gadget_sprites.c`).
 - Fix: the room gadgets' OAM tables past the 72nd (ziplines, gates)
   overflowed MzmSpriteKind and read zero durations; the limit is 128 with
   static asserts and a loader check.
@@ -15693,7 +15702,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 ## Patch 0307 - Zero Mission security gates
 
 - SecurityGateDefaultOpen and SecurityGateDefaultClosed
-  (`src/runtime/mzm_gadget_sprites.c`): Chozodia's gates close when the
+  (`src/runtime/mzm/weapons/mzm_gadget_sprites.c`): Chozodia's gates close when the
   alarm rings, turn solid once Samus is out of them
   (SpriteCheckCollidingWithSamus) and reopen two thirds of a second after
   it stops; the sprites now see Samus's whole hitbox.
@@ -15702,7 +15711,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 ## Patch 0306 - Zero Mission ziplines
 
 - Zipline, ZiplineButton, ZiplineGenerator and its parts
-  (`src/runtime/mzm_gadget_sprites.c`): Samus in morph ball on the
+  (`src/runtime/mzm/weapons/mzm_gadget_sprites.c`): Samus in morph ball on the
   generator activates the ziplines (EVENT_ZIPLINES_ACTIVATED, the animated
   palette back on); a zipline grabbed from below carries her to the other
   stop-enemy block once lit and drops her; a shot button calls it.
@@ -15714,11 +15723,11 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0305 - Zero Mission morph ball launchers
 
-- MorphBallLauncher and its parts (`src/runtime/mzm_gadget_sprites.c`): a
+- MorphBallLauncher and its parts (`src/runtime/mzm/weapons/mzm_gadget_sprites.c`): a
   bomb set on the launcher is taken, held, and its explosion launches
   Samus in morph ball (ProjectileMorphballLauncherCheckLaunchSamus, the
   ballspark launch already ported), with the energy around her.
-- The bombs gain the launcher stages (`src/runtime/mzm_projectiles.c`);
+- The bombs gain the launcher stages (`src/runtime/mzm/weapons/mzm_projectiles.c`);
   the sprites see the projectiles (MzmSpriteFrame.weapons).
 - Checked by capture in brinstar_000; tests in `tests/test_mzm_sprites.c`
   and `tests/test_mzm_samus.c`.
@@ -15911,7 +15920,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0292 - Zero Mission save platforms and save file
 
-- `src/runtime/mzm_gadget_sprites.c`: the save platform and its tube,
+- `src/runtime/mzm/weapons/mzm_gadget_sprites.c`: the save platform and its tube,
   shadow, ray and top parts (save_platform.c). Samus standing on it opens
   it and is grabbed for the save prompt; YES plays the saving sequence (the
   palette row 2 flash, the extending top, the tube and the rising ray), then
@@ -15933,7 +15942,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0291 - Zero Mission map stations and map download
 
-- `src/runtime/mzm_gadget_sprites.c`: the map station and its two screens
+- `src/runtime/mzm/weapons/mzm_gadget_sprites.c`: the map station and its two screens
   (map_station.c). Samus standing on the platform is grabbed, downloads,
   gets the area's map message and is released when the station retracts;
   a station whose area map is already downloaded stays retracted.
@@ -16033,7 +16042,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0285 - Zero Mission room gadgets
 
-- `src/runtime/mzm_gadget_sprites.c`: elevator pads, water drops (common
+- `src/runtime/mzm/weapons/mzm_gadget_sprites.c`: elevator pads, water drops (common
   sprite graphics), steam vents (ground, ceiling, walls, diagonals),
   Gerons (Brinstar, Varia and Norfair plugs that block their passage) and
   the unknown item blocks (Plasma Beam, Gravity Suit, Space Jump) with
@@ -16588,7 +16597,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0263 - Zero Mission power bombs
 
-- `src/runtime/mzm_power_bomb.c` ports `gCurrentPowerBomb`:
+- `src/runtime/mzm/weapons/mzm_power_bomb.c` ports `gCurrentPowerBomb`:
   `PowerBombExplosionStart`/`Begin` (the explosion sound), the power bomb
   cases of `HazeProcess` (`Haze_PowerBombExpanding`/`Retracting`: the axis by
   3 a frame to 159, five frames held, back to 4, the stage not reset), and
@@ -16686,7 +16695,7 @@ No automatic reciprocal link or native engine encoder is implemented.
 
 ## Patch 0260 - Zero Mission bombs and bomb jumps
 
-- `src/runtime/mzm_projectiles.c` ports the bomb branch of the Morph Ball
+- `src/runtime/mzm/weapons/mzm_projectiles.c` ports the bomb branch of the Morph Ball
   fire check (B with the Bombs item and no cooldown, without
   `hasNewProjectile`), the bomb spawn of `ProjectileUpdate` (four at most,
   7 frames of cooldown, at Samus's position) and `ProjectileProcessBomb`: a

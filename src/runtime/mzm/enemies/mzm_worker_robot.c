@@ -3,7 +3,7 @@
  * robots, immune to projectiles, that sleep until something hits them, then
  * walk until Samus or a ledge stops them; a missile on their side pushes
  * them back. Comments name the pinned decompilation's routines. */
-#include "../../mzm_projectiles.h"
+#include "../../mzm/weapons/mzm_projectiles.h"
 #include "../core/mzm_sprite_ai.h"
 
 enum {

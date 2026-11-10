@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-10T01:21:14+00:00",
+ "generated_at": "2026-11-10T01:22:05+00:00",
  "git": {
-  "commit": "7b34fe01",
+  "commit": "112332d1",
   "branch": "main",
   "dirty": true
  },
@@ -776,7 +776,7 @@
    "local_sources": [
     "src/runtime/mzm/core/mzm_effects.c",
     "src/runtime/mzm/core/mzm_sprites.c",
-    "src/runtime/mzm_projectiles.c",
+    "src/runtime/mzm/weapons/mzm_projectiles.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm/core/mzm_sfx.c",
@@ -2058,7 +2058,7 @@
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/mzm/core/mzm_sfx.c",
-    "src/runtime/mzm_gadget_sprites.c"
+    "src/runtime/mzm/weapons/mzm_gadget_sprites.c"
    ],
    "tests": [
     "tests/test_mzm_sprites.c"
@@ -3621,7 +3621,7 @@
     "src/runtime/mzm/enemies/mzm_parasite.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm/enemies/mzm_space_pirate.c",
-    "src/runtime/mzm_gadget_sprites.c",
+    "src/runtime/mzm/weapons/mzm_gadget_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -5035,7 +5035,7 @@
    "local_sources": [
     "src/runtime/mzm/enemies/mzm_worker_robot.c",
     "src/runtime/mzm/core/mzm_sprites.c",
-    "src/runtime/mzm_projectiles.c",
+    "src/runtime/mzm/weapons/mzm_projectiles.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c"
    ],
@@ -5487,7 +5487,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_gadget_sprites.c",
+    "src/runtime/mzm/weapons/mzm_gadget_sprites.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm_samus.c",
     "src/assets/mzm/sprites.c",
@@ -5556,7 +5556,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_gadget_sprites.c",
+    "src/runtime/mzm/weapons/mzm_gadget_sprites.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c"
@@ -5682,7 +5682,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_gadget_sprites.c",
+    "src/runtime/mzm/weapons/mzm_gadget_sprites.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/assets/mzm/sprites.c",
     "src/runtime/room_runtime.c"
@@ -5785,7 +5785,7 @@
     "src/runtime/mzm_escape.h",
     "src/runtime/mzm_hud.c",
     "src/runtime/mzm_message_banner.c",
-    "src/runtime/mzm_gadget_sprites.c",
+    "src/runtime/mzm/weapons/mzm_gadget_sprites.c",
     "src/runtime/mzm/enemies/mzm_mother_brain.c",
     "src/runtime/mzm_tourian_escape.c",
     "src/runtime/mzm_tourian_escape.h",
@@ -5966,7 +5966,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_gadget_sprites.c",
+    "src/runtime/mzm/weapons/mzm_gadget_sprites.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/sprites.c",
@@ -7004,7 +7004,7 @@
     "src/runtime/mzm_samus.c",
     "src/runtime/room_runtime.c",
     "src/runtime/mzm/core/mzm_sfx.c",
-    "src/runtime/mzm_projectiles.c",
+    "src/runtime/mzm/weapons/mzm_projectiles.c",
     "src/assets/mzm/samus.c"
    ],
    "tests": [
@@ -7935,7 +7935,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_projectiles.c",
+    "src/runtime/mzm/weapons/mzm_projectiles.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/samus.c",
@@ -8022,7 +8022,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_projectiles.c",
+    "src/runtime/mzm/weapons/mzm_projectiles.c",
     "src/runtime/mzm_samus.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm/core/mzm_effects.c",
@@ -8099,7 +8099,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_projectiles.c",
+    "src/runtime/mzm/weapons/mzm_projectiles.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm/core/mzm_effects.c",
     "src/runtime/room_runtime.c",
@@ -8197,7 +8197,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_projectiles.c",
+    "src/runtime/mzm/weapons/mzm_projectiles.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm/enemies/mzm_space_pirate.c",
     "src/runtime/mzm/core/mzm_effects.c",
@@ -8300,7 +8300,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_projectiles.c",
+    "src/runtime/mzm/weapons/mzm_projectiles.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm/enemies/mzm_space_pirate.c",
     "src/runtime/mzm/core/mzm_effects.c",
@@ -8389,8 +8389,8 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_power_bomb.c",
-    "src/runtime/mzm_projectiles.c",
+    "src/runtime/mzm/weapons/mzm_power_bomb.c",
+    "src/runtime/mzm/weapons/mzm_projectiles.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/room_runtime.c",
     "src/assets/mzm/runtime_room.c",
@@ -8481,7 +8481,7 @@
    "status": "functional",
    "fidelity": "unknown",
    "local_sources": [
-    "src/runtime/mzm_projectiles.c",
+    "src/runtime/mzm/weapons/mzm_projectiles.c",
     "src/runtime/mzm/core/mzm_sprites.c",
     "src/runtime/mzm/core/mzm_effects.c",
     "src/runtime/room_runtime.c",
@@ -22242,6 +22242,12 @@
  },
  "timeline": [
   {
+   "commit": "112332d1",
+   "date": "2026-11-10",
+   "subject": "Move MZM enemy modules into src/runtime/mzm/enemies/",
+   "scope": "project"
+  },
+  {
    "commit": "7b34fe01",
    "date": "2026-11-10",
    "subject": "Move shared MZM modules into src/runtime/mzm/core/",
@@ -22713,12 +22719,6 @@
    "commit": "37b9cd1b",
    "date": "2026-11-09",
    "subject": "docs: decode Waiter Skeleton enemy chain spec (id 30)",
-   "scope": "project"
-  },
-  {
-   "commit": "607408bb",
-   "date": "2026-11-09",
-   "subject": "Port the Kicker Skeleton (Aria of Sorrow enemy id 83)",
    "scope": "project"
   }
  ],

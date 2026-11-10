@@ -142,7 +142,7 @@ direction starts a spin, and A pressed in midair starts spinning without extra
 height. Wall jumping requires facing away from the touched wall before A, and
 is replaced by Space Jump when that item is equipped.
 
-Weapons follow `src/runtime/mzm_projectiles.c`, a port of
+Weapons follow `src/runtime/mzm/weapons/mzm_projectiles.c`, a port of
 `SamusSetHighlightedWeapon`, `SamusCheckFireBeamMissile` and the beam/missile
 parts of `ProjectileUpdate`, `ProjectileInit`, `ProjectileMove`,
 `ProjectileProcessNormalBeam`, `ProjectileProcessMissile`,

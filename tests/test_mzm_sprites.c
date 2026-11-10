@@ -6,7 +6,7 @@
 #include "mzm_escape.h"
 #include "mzm_items.h"
 #include "mzm_message_banner.h"
-#include "mzm_projectiles.h"
+#include "mzm/weapons/mzm_projectiles.h"
 #include "mzm_samus.h"
 #include "mzm/core/mzm_sprites.h"
 #include "mzm/core/mzm_screen_shake.h"

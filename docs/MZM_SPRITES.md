@@ -402,7 +402,7 @@ into a side stops her (`SpriteUtilCheckStopSamusAgainstSolidSpriteLeft` /
 landing request and `STANDING_ENEMY`, the release over two frames and the
 drop to `STANDING_MIDAIR` (also when the sprite is killed under her).
 
-Room gadgets (`src/runtime/mzm_gadget_sprites.c`): the elevator pad follows
+Room gadgets (`src/runtime/mzm/weapons/mzm_gadget_sprites.c`): the elevator pad follows
 Samus while she rides an elevator; water drops wait a random while, fall
 with `sSpritesFallingSpeed`, splash on the ground or the water surface
 (`gEffectYPosition`) and drip again (drawn with the common sprite graphics,

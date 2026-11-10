@@ -196,12 +196,12 @@ target_link_libraries(fusion_room_package_viewer PRIVATE SDL3::SDL3)
 fusion_enable_warnings(fusion_room_package_viewer)
 
 add_executable(fusion_room_runtime src/runtime/room_runtime.c src/runtime/fusion_host.c src/runtime/mzm/core/mzm_room_overlay.c src/runtime/project_room_document.c src/core/native_map.c src/runtime/mzm_samus.c
-               src/runtime/mzm_projectiles.c src/runtime/gba_input.c src/runtime/debug_menu.c
+               src/runtime/mzm/weapons/mzm_projectiles.c src/runtime/gba_input.c src/runtime/debug_menu.c
                src/runtime/mzm/core/mzm_sprites.c src/runtime/mzm/enemies/mzm_space_pirate.c src/runtime/mzm/enemies/mzm_parasite.c src/runtime/mzm/core/mzm_atomic.c src/runtime/mzm/enemies/mzm_polyp.c src/runtime/mzm_tourian.c src/runtime/mzm/enemies/mzm_worker_robot.c src/runtime/mzm/enemies/mzm_metroid.c src/runtime/mzm/enemies/mzm_kraid.c src/runtime/mzm/enemies/mzm_ridley.c src/runtime/mzm/enemies/mzm_mother_brain.c src/runtime/mzm/enemies/mzm_deorem.c src/runtime/mzm/enemies/mzm_acid_worm.c src/runtime/mzm/enemies/mzm_gadora.c src/runtime/mzm/enemies/mzm_imago_larva.c src/runtime/mzm/enemies/mzm_imago_cocoon.c src/runtime/mzm/enemies/mzm_mecha_ridley.c src/runtime/mzm/enemies/mzm_hive.c src/runtime/mzm/enemies/mzm_baristute.c src/runtime/mzm/enemies/mzm_tangle_vine.c src/runtime/mzm_ruins_test.c src/runtime/mzm_chozodia_scripted.c src/runtime/mzm_elevator_statue.c src/runtime/mzm/enemies/mzm_imago.c src/runtime/mzm_escape_ship.c src/runtime/mzm/enemies/mzm_crocomire.c
-                   src/runtime/mzm_chozodia_security.c src/runtime/mzm_chozo_statue.c src/runtime/mzm_item_sprites.c src/runtime/mzm_gadget_sprites.c src/runtime/mzm_gunship.c src/runtime/mzm_hatches.c
+                   src/runtime/mzm_chozodia_security.c src/runtime/mzm_chozo_statue.c src/runtime/mzm_item_sprites.c src/runtime/mzm/weapons/mzm_gadget_sprites.c src/runtime/mzm_gunship.c src/runtime/mzm_hatches.c
                src/runtime/mzm/core/mzm_blocks.c
                src/runtime/mzm/core/mzm_effects.c src/runtime/mzm/core/mzm_audio.c src/runtime/gba_psg.c
-               src/runtime/mzm/core/mzm_sfx.c src/runtime/mzm/core/mzm_screen_shake.c src/runtime/mzm_background_effect.c src/runtime/mzm_escape.c src/runtime/mzm_power_bomb.c
+               src/runtime/mzm/core/mzm_sfx.c src/runtime/mzm/core/mzm_screen_shake.c src/runtime/mzm_background_effect.c src/runtime/mzm_escape.c src/runtime/mzm/weapons/mzm_power_bomb.c
                src/runtime/mzm_items.c src/runtime/mzm_message_banner.c
                src/runtime/gba_ppu.c src/runtime/mzm/core/mzm_rom.c src/runtime/mzm_hud.c
                src/runtime/mzm/core/mzm_screen.c src/runtime/mzm_title_screen.c src/runtime/mzm/core/mzm_room_gfx.c src/runtime/mzm_tourian_escape.c src/runtime/mzm_chozodia_escape.c src/runtime/mzm_credits.c
@@ -603,8 +603,8 @@ if(BUILD_TESTING)
 
     # ROM-free native collision shape regression.
     add_executable(fusion_runtime_steep_slopes_tests tests/test_runtime_steep_slopes.c
-                   src/runtime/mzm_samus.c src/runtime/mzm_projectiles.c src/runtime/mzm_hatches.c
-                   src/runtime/mzm/core/mzm_blocks.c src/runtime/mzm/core/mzm_sfx.c src/runtime/mzm/core/mzm_screen_shake.c src/runtime/mzm_power_bomb.c
+                   src/runtime/mzm_samus.c src/runtime/mzm/weapons/mzm_projectiles.c src/runtime/mzm_hatches.c
+                   src/runtime/mzm/core/mzm_blocks.c src/runtime/mzm/core/mzm_sfx.c src/runtime/mzm/core/mzm_screen_shake.c src/runtime/mzm/weapons/mzm_power_bomb.c
                    src/runtime/mzm_items.c src/runtime/mzm_message_banner.c
                    src/runtime/gba_ppu.c src/runtime/mzm/core/mzm_rom.c src/runtime/mzm_hud.c
                    src/runtime/mzm/core/mzm_room_gfx.c src/runtime/mzm_save.c src/runtime/mzm_time_attack.c
@@ -623,7 +623,7 @@ if(BUILD_TESTING)
     add_test(NAME mzm_blocks COMMAND fusion_mzm_blocks_tests)
 
     add_executable(fusion_mzm_power_bomb_tests tests/test_mzm_power_bomb.c
-                   src/runtime/mzm_power_bomb.c src/runtime/mzm/core/mzm_sfx.c src/runtime/mzm/core/mzm_screen_shake.c)
+                   src/runtime/mzm/weapons/mzm_power_bomb.c src/runtime/mzm/core/mzm_sfx.c src/runtime/mzm/core/mzm_screen_shake.c)
     target_include_directories(fusion_mzm_power_bomb_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_power_bomb_tests)
     add_test(NAME mzm_power_bomb COMMAND fusion_mzm_power_bomb_tests)
@@ -690,12 +690,12 @@ if(BUILD_TESTING)
 
     add_executable(fusion_mzm_sprites_tests tests/test_mzm_sprites.c src/runtime/mzm/core/mzm_sprites.c
                    src/runtime/mzm/enemies/mzm_space_pirate.c src/runtime/mzm/enemies/mzm_parasite.c src/runtime/mzm/core/mzm_atomic.c src/runtime/mzm/enemies/mzm_polyp.c src/runtime/mzm_tourian.c src/runtime/mzm/enemies/mzm_worker_robot.c src/runtime/mzm/enemies/mzm_metroid.c src/runtime/mzm/enemies/mzm_kraid.c src/runtime/mzm/enemies/mzm_ridley.c src/runtime/mzm/enemies/mzm_mother_brain.c src/runtime/mzm/enemies/mzm_deorem.c src/runtime/mzm/enemies/mzm_acid_worm.c src/runtime/mzm/enemies/mzm_gadora.c src/runtime/mzm/enemies/mzm_imago_larva.c src/runtime/mzm/enemies/mzm_imago_cocoon.c src/runtime/mzm/enemies/mzm_mecha_ridley.c src/runtime/mzm/enemies/mzm_hive.c src/runtime/mzm/enemies/mzm_baristute.c src/runtime/mzm/enemies/mzm_tangle_vine.c src/runtime/mzm_ruins_test.c src/runtime/mzm_chozodia_scripted.c src/runtime/mzm_elevator_statue.c src/runtime/mzm/enemies/mzm_imago.c src/runtime/mzm_escape_ship.c src/runtime/mzm/enemies/mzm_crocomire.c
-                   src/runtime/mzm_chozodia_security.c src/runtime/mzm_chozo_statue.c src/runtime/mzm_item_sprites.c src/runtime/mzm_gadget_sprites.c src/runtime/mzm_gunship.c
+                   src/runtime/mzm_chozodia_security.c src/runtime/mzm_chozo_statue.c src/runtime/mzm_item_sprites.c src/runtime/mzm/weapons/mzm_gadget_sprites.c src/runtime/mzm_gunship.c
                    src/runtime/mzm/core/mzm_effects.c src/runtime/mzm/core/mzm_sfx.c src/runtime/mzm/core/mzm_screen_shake.c
                    src/runtime/mzm_background_effect.c
                    src/runtime/mzm_escape.c
-                   src/runtime/mzm_projectiles.c src/runtime/mzm_samus.c
-                   src/runtime/mzm_power_bomb.c)
+                   src/runtime/mzm/weapons/mzm_projectiles.c src/runtime/mzm_samus.c
+                   src/runtime/mzm/weapons/mzm_power_bomb.c)
     target_include_directories(fusion_mzm_sprites_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_sprites_tests)
     add_test(NAME mzm_sprites COMMAND fusion_mzm_sprites_tests)
@@ -1302,8 +1302,8 @@ if(BUILD_TESTING)
 
     # ROM-free native Zero Mission pose controller regression.
     add_executable(fusion_mzm_samus_tests tests/test_mzm_samus.c src/runtime/mzm_samus.c
-                   src/runtime/mzm_projectiles.c src/runtime/mzm/core/mzm_sfx.c src/runtime/mzm/core/mzm_screen_shake.c
-                   src/runtime/mzm_power_bomb.c)
+                   src/runtime/mzm/weapons/mzm_projectiles.c src/runtime/mzm/core/mzm_sfx.c src/runtime/mzm/core/mzm_screen_shake.c
+                   src/runtime/mzm/weapons/mzm_power_bomb.c)
     target_include_directories(fusion_mzm_samus_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_mzm_samus_tests)
     add_test(NAME mzm_samus_controller COMMAND fusion_mzm_samus_tests)

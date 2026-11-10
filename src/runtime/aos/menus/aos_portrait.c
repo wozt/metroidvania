@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_portrait.h"
 
-#include "aos/core/aos_rom_graphics.h"
+#include "../core/aos_rom_graphics.h"
 #include "fusion/assets/gba.h"
 
 #include <stdio.h>

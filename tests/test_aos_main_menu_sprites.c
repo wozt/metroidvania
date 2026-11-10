@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* ROM-free tests for the main menu's objects (aos_main_menu_sprites), its
  * file panels (aos_main_menu_files) and the OBJ layer they draw into. */
-#include "aos_main_menu_files.h"
-#include "aos_main_menu_sprites.h"
+#include "aos/menus/aos_main_menu_files.h"
+#include "aos/menus/aos_main_menu_sprites.h"
 
 #include <assert.h>
 #include <stdio.h>

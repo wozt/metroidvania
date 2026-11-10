@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_quick_map.h"
+#include "aos/menus/aos_quick_map.h"
 
 #include <assert.h>
 #include <stdio.h>

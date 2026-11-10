@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "../../aos_button_config.h"
+#include "../../aos/menus/aos_button_config.h"
 
 /* The level fields of gEwramData->unk_1325C (include/structs/ewram.h) and
  * the bestiary bitset at 0x133A0. */

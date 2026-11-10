@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "aos_intro_font.h"
+#include "../../aos_intro_font.h"
 #include "fusion/assets/rom.h"
 
 /* The gameplay dialogue window's BG0 frame as sub_0805AFC0 leaves it:

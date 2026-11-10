@@ -13,9 +13,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "aos/core/aos_anim.h"
+#include "../core/aos_anim.h"
 #include "aos_main_menu.h"
-#include "aos_obj.h"
+#include "../../aos_obj.h"
 
 enum { AOS_MENU_SHEET_ICONS = 0, AOS_MENU_SHEET_FONT = 1, AOS_MENU_SHEET_LABELS = 2,
        AOS_MENU_SHEETS = 3, AOS_MENU_MAX_SPRITES = 96, AOS_MENU_FILES = 6 };

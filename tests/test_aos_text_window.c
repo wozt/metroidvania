@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_text_window.h"
+#include "aos/menus/aos_text_window.h"
 
 #include "aos_intro_font.h"
 #include "aos_intro_resources.h"

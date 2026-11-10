@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "aos_intro_font.h"
+#include "../../aos_intro_font.h"
 #include "fusion/assets/rom.h"
 
 /* The main menu's BG0 as GameModeMainMenuUpdate's setup leaves it

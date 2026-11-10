@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_menu_preview.h"
+#include "aos/menus/aos_menu_preview.h"
 #include <assert.h>
 int main(void) {
     AosMenuPreview m = {0}; aos_menu_preview_init(&m);

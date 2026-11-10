@@ -269,15 +269,15 @@ set(AOS_ENEMY_SOURCES
     src/runtime/aos/enemies/valkyrie.c
     src/runtime/aos/enemies/bat.c)
 
-add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos/red_souls/aos_soul_red_arrow.c src/runtime/fusion_host.c src/runtime/aos_room_overlay.c src/runtime/project_room_document.c src/runtime/aos/core/aos_audio.c src/runtime/aos/core/aos_room_music.c src/runtime/aos/core/aos_mp2k.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/souls/aos_soul_notice.c src/runtime/aos/blue_souls/aos_soul_blue_buer.c src/runtime/aos/blue_souls/aos_soul_blue_imp.c src/runtime/aos/blue_souls/aos_soul_blue_ghost.c src/runtime/aos/blue_souls/aos_soul_blue_death.c src/runtime/aos/red_souls/aos_soul_red_lightning.c src/runtime/aos/red_souls/aos_soul_red_killer_doll.c src/runtime/aos/red_souls/aos_soul_red_nemesis.c src/runtime/aos/red_souls/aos_soul_red_throw.c src/runtime/aos/red_souls/aos_soul_red_merman.c src/runtime/aos/red_souls/aos_soul_red_axe.c src/runtime/aos/red_souls/aos_soul_red_spear.c src/runtime/aos/red_souls/aos_soul_red_shot.c src/runtime/aos/red_souls/aos_soul_red_dagger.c src/runtime/aos/red_souls/aos_soul_red_devil.c src/runtime/aos/red_souls/aos_soul_red_crow.c src/runtime/aos/red_souls/aos_soul_red_flea.c src/runtime/aos/red_souls/aos_soul_red_skull.c src/runtime/aos/red_souls/aos_soul_red_valkyrie.c src/runtime/aos/red_souls/aos_soul_red_needles.c src/runtime/aos/red_souls/aos_soul_red_ghost.c src/runtime/aos/red_souls/aos_soul_red_siren.c src/runtime/aos/red_souls/aos_soul_red_ripper.c src/runtime/aos/red_souls/aos_soul_red_millione.c src/runtime/aos/red_souls/aos_soul_red_fish_head.c src/runtime/aos/red_souls/aos_soul_red_killer_fish.c src/runtime/aos/red_souls/aos_soul_red_gladiator.c src/runtime/aos_portrait.c src/runtime/aos/core/aos_rom_graphics.c src/runtime/aos_pause_graphics.c src/runtime/aos_quick_map.c src/runtime/aos_window_frame.c src/runtime/aos_menu_cells.c
-               src/runtime/aos/core/aos_stats.c src/runtime/aos_recent_items.c src/runtime/aos_pickup.c src/runtime/aos_hud.c src/runtime/aos/souls/aos_soul_menu.c
+add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos/red_souls/aos_soul_red_arrow.c src/runtime/fusion_host.c src/runtime/aos_room_overlay.c src/runtime/project_room_document.c src/runtime/aos/core/aos_audio.c src/runtime/aos/core/aos_room_music.c src/runtime/aos/core/aos_mp2k.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/souls/aos_soul_notice.c src/runtime/aos/blue_souls/aos_soul_blue_buer.c src/runtime/aos/blue_souls/aos_soul_blue_imp.c src/runtime/aos/blue_souls/aos_soul_blue_ghost.c src/runtime/aos/blue_souls/aos_soul_blue_death.c src/runtime/aos/red_souls/aos_soul_red_lightning.c src/runtime/aos/red_souls/aos_soul_red_killer_doll.c src/runtime/aos/red_souls/aos_soul_red_nemesis.c src/runtime/aos/red_souls/aos_soul_red_throw.c src/runtime/aos/red_souls/aos_soul_red_merman.c src/runtime/aos/red_souls/aos_soul_red_axe.c src/runtime/aos/red_souls/aos_soul_red_spear.c src/runtime/aos/red_souls/aos_soul_red_shot.c src/runtime/aos/red_souls/aos_soul_red_dagger.c src/runtime/aos/red_souls/aos_soul_red_devil.c src/runtime/aos/red_souls/aos_soul_red_crow.c src/runtime/aos/red_souls/aos_soul_red_flea.c src/runtime/aos/red_souls/aos_soul_red_skull.c src/runtime/aos/red_souls/aos_soul_red_valkyrie.c src/runtime/aos/red_souls/aos_soul_red_needles.c src/runtime/aos/red_souls/aos_soul_red_ghost.c src/runtime/aos/red_souls/aos_soul_red_siren.c src/runtime/aos/red_souls/aos_soul_red_ripper.c src/runtime/aos/red_souls/aos_soul_red_millione.c src/runtime/aos/red_souls/aos_soul_red_fish_head.c src/runtime/aos/red_souls/aos_soul_red_killer_fish.c src/runtime/aos/red_souls/aos_soul_red_gladiator.c src/runtime/aos/menus/aos_portrait.c src/runtime/aos/core/aos_rom_graphics.c src/runtime/aos/menus/aos_pause_graphics.c src/runtime/aos/menus/aos_quick_map.c src/runtime/aos/menus/aos_window_frame.c src/runtime/aos/menus/aos_menu_cells.c
+               src/runtime/aos/core/aos_stats.c src/runtime/aos_recent_items.c src/runtime/aos_pickup.c src/runtime/aos/menus/aos_hud.c src/runtime/aos/souls/aos_soul_menu.c
                src/runtime/aos_levelup.c
                src/runtime/aos_bestiary.c
-               src/runtime/aos_button_config.c
+               src/runtime/aos/menus/aos_button_config.c
                src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c src/runtime/aos_room.c
                src/runtime/aos_door.c src/runtime/aos/core/aos_wall.c src/runtime/aos/weapons/aos_weapon.c ${AOS_ENEMY_SOURCES} src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/core/aos_effect.c
                src/runtime/gba_input.c src/runtime/aos/core/aos_input.c src/runtime/aos_save.c
-               src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c src/runtime/aos_main_menu.c
+               src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c src/runtime/aos/menus/aos_main_menu.c
                src/runtime/aos_intro_cutscene.c src/runtime/aos_intro_entities.c
                src/runtime/aos_intro_resources.c src/runtime/aos_intro_font.c
                src/runtime/aos_opening_event.c
@@ -288,17 +288,17 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos/re
 add_executable(fusion_aria_title_preview src/runtime/aos_title_preview.c src/runtime/fusion_host.c src/runtime/gba_input.c
                src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c
                src/runtime/aos_game_mode.c src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c
-               src/runtime/aos_main_menu.c src/runtime/aos_intro_cutscene.c
+               src/runtime/aos/menus/aos_main_menu.c src/runtime/aos_intro_cutscene.c
                src/runtime/aos_intro_entities.c src/runtime/aos_intro_resources.c
                src/runtime/aos_intro_font.c src/runtime/aos_intro_graphics.c
-               src/runtime/aos/core/aos_rom_graphics.c src/runtime/aos_main_menu_graphics.c
-               src/runtime/aos_main_menu_objects.c src/runtime/aos_main_menu_sprites.c
-               src/runtime/aos_main_menu_files.c src/runtime/aos/core/aos_stats.c
+               src/runtime/aos/core/aos_rom_graphics.c src/runtime/aos/menus/aos_main_menu_graphics.c
+               src/runtime/aos/menus/aos_main_menu_objects.c src/runtime/aos/menus/aos_main_menu_sprites.c
+               src/runtime/aos/menus/aos_main_menu_files.c src/runtime/aos/core/aos_stats.c
                src/runtime/aos_title_graphics.c src/runtime/aos_obj_rom.c src/runtime/aos_logo_graphics.c
-               src/runtime/aos/core/aos_input.c src/runtime/aos_text_window.c
-               src/runtime/aos_menu_bg0.c src/runtime/aos_window_frame.c
+               src/runtime/aos/core/aos_input.c src/runtime/aos/menus/aos_text_window.c
+               src/runtime/aos/menus/aos_menu_bg0.c src/runtime/aos/menus/aos_window_frame.c
                src/runtime/aos_game_over_graphics.c
-               src/runtime/aos_save.c src/runtime/aos_menu_save_bridge.c
+               src/runtime/aos_save.c src/runtime/aos/menus/aos_menu_save_bridge.c
                src/runtime/aos/core/aos_audio.c src/runtime/aos/core/aos_mp2k.c)
 target_include_directories(fusion_aria_title_preview PRIVATE src/runtime)
 target_link_libraries(fusion_aria_title_preview PRIVATE SDL3::SDL3 fusion_assets m)
@@ -701,7 +701,7 @@ if(BUILD_TESTING)
     add_test(NAME mzm_sprites COMMAND fusion_mzm_sprites_tests)
 
     # Device-free shared gamepad mapping (SDL3 headers and string tables only).
-    add_executable(fusion_aos_menu_preview_tests tests/test_aos_menu_preview.c src/runtime/aos_menu_preview.c)
+    add_executable(fusion_aos_menu_preview_tests tests/test_aos_menu_preview.c src/runtime/aos/menus/aos_menu_preview.c)
     target_include_directories(fusion_aos_menu_preview_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_menu_preview_tests)
     add_test(NAME aos_menu_preview COMMAND fusion_aos_menu_preview_tests)
@@ -714,7 +714,7 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_menu_save_bridge_tests
                    tests/test_aos_menu_save_bridge.c
-                   src/runtime/aos_menu_save_bridge.c src/runtime/aos_save.c)
+                   src/runtime/aos/menus/aos_menu_save_bridge.c src/runtime/aos_save.c)
     target_include_directories(fusion_aos_menu_save_bridge_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_menu_save_bridge_tests)
     add_test(NAME aos_menu_save_bridge COMMAND fusion_aos_menu_save_bridge_tests)
@@ -747,7 +747,7 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_game_over_graphics_tests)
     add_test(NAME aos_game_over_graphics COMMAND fusion_aos_game_over_graphics_tests)
 
-    add_executable(fusion_aos_hud_tests tests/test_aos_hud.c src/runtime/aos_hud.c)
+    add_executable(fusion_aos_hud_tests tests/test_aos_hud.c src/runtime/aos/menus/aos_hud.c)
     target_include_directories(fusion_aos_hud_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_hud_tests)
     add_test(NAME aos_hud COMMAND fusion_aos_hud_tests)
@@ -766,7 +766,7 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_soul_menu_tests tests/test_aos_soul_menu.c
                    src/runtime/aos/souls/aos_soul_menu.c src/runtime/aos_recent_items.c src/runtime/aos/core/aos_stats.c
-                   src/runtime/aos_button_config.c src/runtime/aos_bestiary.c)
+                   src/runtime/aos/menus/aos_button_config.c src/runtime/aos_bestiary.c)
     target_include_directories(fusion_aos_soul_menu_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_soul_menu_tests)
     add_test(NAME aos_soul_menu COMMAND fusion_aos_soul_menu_tests)
@@ -1010,8 +1010,8 @@ if(BUILD_TESTING)
     add_test(NAME aos_stats COMMAND fusion_aos_stats_tests)
 
     add_executable(fusion_aos_main_menu_sprites_tests tests/test_aos_main_menu_sprites.c
-                   src/runtime/aos_main_menu_sprites.c src/runtime/aos_main_menu_files.c
-                   src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c src/runtime/aos_menu_bg0.c
+                   src/runtime/aos/menus/aos_main_menu_sprites.c src/runtime/aos/menus/aos_main_menu_files.c
+                   src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c src/runtime/aos/menus/aos_menu_bg0.c
                    src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_main_menu_sprites_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_main_menu_sprites_tests PRIVATE fusion_assets m)
@@ -1019,14 +1019,14 @@ if(BUILD_TESTING)
     add_test(NAME aos_main_menu_sprites COMMAND fusion_aos_main_menu_sprites_tests)
 
     add_executable(fusion_aos_menu_bg0_tests tests/test_aos_menu_bg0.c
-                   src/runtime/aos_menu_bg0.c src/runtime/aos/core/aos_rom_graphics.c)
+                   src/runtime/aos/menus/aos_menu_bg0.c src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_menu_bg0_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_menu_bg0_tests PRIVATE fusion_assets m)
     fusion_enable_warnings(fusion_aos_menu_bg0_tests)
     add_test(NAME aos_menu_bg0 COMMAND fusion_aos_menu_bg0_tests)
 
     add_executable(fusion_aos_window_frame_tests tests/test_aos_window_frame.c
-                   src/runtime/aos_window_frame.c src/runtime/aos/core/aos_rom_graphics.c
+                   src/runtime/aos/menus/aos_window_frame.c src/runtime/aos/core/aos_rom_graphics.c
                    src/runtime/aos_intro_font.c)
     target_include_directories(fusion_aos_window_frame_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_window_frame_tests PRIVATE fusion_assets m)
@@ -1042,7 +1042,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_soul_notice COMMAND fusion_aos_soul_notice_tests)
 
     add_executable(fusion_aos_text_window_tests tests/test_aos_text_window.c
-                   src/runtime/aos_text_window.c src/runtime/aos_intro_resources.c
+                   src/runtime/aos/menus/aos_text_window.c src/runtime/aos_intro_resources.c
                    src/runtime/aos_intro_font.c src/runtime/aos_intro_entities.c)
     target_include_directories(fusion_aos_text_window_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_text_window_tests PRIVATE fusion_assets m)
@@ -1102,7 +1102,7 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_game_lifecycle_tests tests/test_aos_game_lifecycle.c
                    src/runtime/aos_game_lifecycle.c src/runtime/aos_game_over.c src/runtime/aos_game_mode.c
-                   src/runtime/aos_main_menu.c
+                   src/runtime/aos/menus/aos_main_menu.c
                    src/runtime/aos_title_fade.c src/runtime/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos_obj.c src/runtime/aos/core/aos_anim.c
                    src/runtime/aos/core/aos_input.c src/runtime/aos_intro_cutscene.c
                    src/runtime/aos_intro_entities.c)
@@ -1157,7 +1157,7 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_portrait_tests
                    tests/test_aos_portrait.c
-                   src/runtime/aos_portrait.c
+                   src/runtime/aos/menus/aos_portrait.c
                    src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_portrait_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_portrait_tests PRIVATE fusion_assets)
@@ -1184,7 +1184,7 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_main_menu_graphics_tests
                    tests/test_aos_main_menu_graphics.c
-                   src/runtime/aos_main_menu_graphics.c
+                   src/runtime/aos/menus/aos_main_menu_graphics.c
                    src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_main_menu_graphics_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_main_menu_graphics_tests PRIVATE fusion_assets)
@@ -1193,13 +1193,13 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_pause_graphics_tests
                    tests/test_aos_pause_graphics.c
-                   src/runtime/aos_pause_graphics.c
+                   src/runtime/aos/menus/aos_pause_graphics.c
                    src/runtime/aos_obj_rom.c
                    src/runtime/aos/core/aos_rom_graphics.c
                    src/runtime/aos_intro_resources.c
                    src/runtime/aos_intro_entities.c
                    src/runtime/aos_intro_font.c
-                   src/runtime/aos_menu_cells.c)
+                   src/runtime/aos/menus/aos_menu_cells.c)
     target_include_directories(fusion_aos_pause_graphics_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_pause_graphics_tests PRIVATE fusion_assets m)
     fusion_enable_warnings(fusion_aos_pause_graphics_tests)
@@ -1207,14 +1207,14 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_menu_cells_tests
                    tests/test_aos_menu_cells.c
-                   src/runtime/aos_menu_cells.c)
+                   src/runtime/aos/menus/aos_menu_cells.c)
     target_include_directories(fusion_aos_menu_cells_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_menu_cells_tests)
     add_test(NAME aos_menu_cells COMMAND fusion_aos_menu_cells_tests)
 
     add_executable(fusion_aos_quick_map_tests
                    tests/test_aos_quick_map.c
-                   src/runtime/aos_quick_map.c
+                   src/runtime/aos/menus/aos_quick_map.c
                    src/runtime/aos/core/aos_rom_graphics.c)
     target_include_directories(fusion_aos_quick_map_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_quick_map_tests PRIVATE fusion_assets)
@@ -1222,7 +1222,7 @@ if(BUILD_TESTING)
     add_test(NAME aos_quick_map COMMAND fusion_aos_quick_map_tests)
 
     add_executable(fusion_aos_main_menu_tests tests/test_aos_main_menu.c
-                   src/runtime/aos_main_menu.c)
+                   src/runtime/aos/menus/aos_main_menu.c)
     target_include_directories(fusion_aos_main_menu_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_main_menu_tests)
     add_test(NAME aos_main_menu COMMAND fusion_aos_main_menu_tests)

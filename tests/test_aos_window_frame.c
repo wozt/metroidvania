@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_window_frame.h"
+#include "aos/menus/aos_window_frame.h"
 
 #include <assert.h>
 #include <stdio.h>

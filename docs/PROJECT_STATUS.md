@@ -2,6 +2,18 @@
 
 Last updated: **2026-11-09**.
 
+## Patch 0948 - Menu modules move to src/runtime/aos/menus/
+
+- The 16 menu modules moved to `src/runtime/aos/menus/`:
+  `aos_button_config`, `aos_hud`, the `aos_main_menu*` family,
+  `aos_menu_bg0`, `aos_menu_cells`, `aos_menu_preview`,
+  `aos_menu_save_bridge`, `aos_pause_graphics`, `aos_portrait`,
+  `aos_quick_map`, `aos_text_window` and `aos_window_frame`.
+  Includes inside the directory are bare for siblings and
+  `../core/`, `../../aos_*.h` for other categories; consumers use
+  `aos/menus/` paths. CMake plus the registries were updated.
+  No code or behavior changed.
+
 ## Patch 0947 - Shared runtime modules move to src/runtime/aos/core/
 
 - The 14 shared primitives moved to `src/runtime/aos/core/`:
@@ -6982,7 +6994,7 @@ numbers and hit-feedback comparisons.
 
 ## Patch 0586 - Aria in-game HUD bars
 
-- `src/runtime/aos_hud.c` ports the HUD of `sub_0800DA50`: the frame of
+- `src/runtime/aos/menus/aos_hud.c` ports the HUD of `sub_0800DA50`: the frame of
   `sub_0800DB78`, the HP and MP bars of `sub_0800F138` (eight tiles, value *
   64 / max pixels, at least one when positive) and the two-step chase of
   `sub_0800DC70`. The object export writes the HUD tiles and palette
@@ -7145,7 +7157,7 @@ numbers and hit-feedback comparisons.
 
 ## Patch 0577 - Aria's native main-menu BG0
 
-- `src/runtime/aos_menu_bg0.c` models the main menu's BG0 as the native
+- `src/runtime/aos/menus/aos_menu_bg0.c` models the main menu's BG0 as the native
   setup leaves it: the text engine's tiles, the language bank from tile
   0x100 (sub_0803FD9C), palettes 12 and 13 (sub_0803C918, new
   `aos_rom_load_palette_range`) and the map loop that shows text tiles
@@ -7164,7 +7176,7 @@ numbers and hit-feedback comparisons.
 
 ## Patch 0576 - Aria's native text cursors and windows
 
-- `src/runtime/aos_text_window.c` ports Aria's two text cursors from the
+- `src/runtime/aos/menus/aos_text_window.c` ports Aria's two text cursors from the
   assembly (`gEwramData + 0x115A0` and `+ 0x115B2`): cell and pixel cursors,
   windows, newline, the glyph advance with its single 6-pixel carry and
   right/bottom wrapping, positioned puts, window clears and the print loops
@@ -7185,7 +7197,7 @@ numbers and hit-feedback comparisons.
 
 ## Patch 0575 - Native localized prompts in Aria's main menu
 
-- `aos_main_menu_prompt_id` (`src/runtime/aos_main_menu.c`) selects the
+- `aos_main_menu_prompt_id` (`src/runtime/aos/menus/aos_main_menu.c`) selects the
   localized prompt the native controllers show: 0x354-0x356 on the base
   selector, 0x35B/0x35C for PLAY, 0x358/0x359/0x379 for COPY and
   0x35A/0x377 for DELETE (sub_08004928, sub_08005908, copy/delete).

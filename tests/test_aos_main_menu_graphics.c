@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#include "aos_main_menu_graphics.h"
+#include "aos/menus/aos_main_menu_graphics.h"
 
 #include <assert.h>
 #include <stdio.h>

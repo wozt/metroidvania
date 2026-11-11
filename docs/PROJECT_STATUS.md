@@ -1,3 +1,20 @@
+## Patch 1014 - Red soul 20 (Altair) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_altair.c` ports
+  `SkillAltairUse` (routine 0x08027A04): four-state spirit, song
+  0xD6, attack box preset 5 plus `0x1020F8F0`, `+ 0x48 = -0x28000`,
+  `+ 0x72 |= 6`, `sub_08031EA4(entity, source, 0x14, -0x1A)`; states
+  advance on the `+ 0x6C` bit-4 hit flag (not produced here, so the
+  soul leaves through the margin probe), state 3 plays song 0xEE at
+  `+ 0x6E == 2`. `sub_0806D430` physics and variant swaps documented
+  as skipped.
+- `src/assets/aos/objects.c` exports `skill_altair` (entry 0x3C of
+  0x080E13BC: tiles 0x081D10EC, palette 0x0820B1CC, frames
+  0x08231F30).
+- `tests/test_aos_soul_red_altair.c` covers the state gates, timer
+  parity and song-0xEE edge. Remaining soul backlog: 12 red + 5
+  blue.
+
 ## Patch 1013 - Red soul 28 (Ukoback) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_ukoback.c` ports

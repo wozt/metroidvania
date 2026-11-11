@@ -458,6 +458,10 @@ static const EntitySpec entities[] = {
      * (no walker probes; palette variant through + 0x58 bits 0-4). */
     {"skill_ukoback", 0x081D711C, 0x0820B37C, 0, 0x0823469C, 0,
      0, 0, 0, {0}},
+    /* Entry 0x3C of 0x080E13BC: SkillAltairUse's spirit (the shared
+     * sub_0803F2C8 animation sequences carry the flicker variants). */
+    {"skill_altair", 0x081D10EC, 0x0820B1CC, 0, 0x08231F30, 0,
+     0, 0, 0, {0}},
     /* Resource 6 of 0x080E13BC: the Killer Doll soul's decoy (looping
      * sequence 0 or 1). */
     ENTITY("skill_killer_doll", 0x081CF0DC, 0x0820B11C, 0, 0x08231578),

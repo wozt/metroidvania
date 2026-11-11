@@ -1,3 +1,18 @@
+## Patch 1018 - Red soul 30 (Disc Armor) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_disc_armor.c` ports
+  `SkillDiscArmorUse` (routine 0x08027340): orbiting saw disc, song
+  0xD4, radius `|sin(t * 1260)| * 60` around the source anchor, `+ 0x2C`
+  angle stepping -+0x276/frame, 0x1A frames of life, box preset 5 plus
+  `0x2020F0F0`. The `sub_08023530` partner registration and visual
+  bookkeeping documented as skipped.
+- `src/assets/aos/objects.c` exports `skill_disc_armor` reusing the
+  entry-0x2A Bone record (tiles 0x081CF8E0, palette 0x0820B140, frames
+  0x08231740); object library: 1619 sequences.
+- `tests/test_aos_soul_red_disc_armor.c` covers the orbit radius cap,
+  angle cadence and delete timing. Remaining soul backlog: 8 red + 5
+  blue.
+
 ## Patch 1017 - Red soul 55 (Chronomage) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_chronomage.c` ports

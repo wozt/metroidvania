@@ -412,6 +412,9 @@ static const EntitySpec entities[] = {
     /* Entry 0x6 of 0x080E13BC: SkillChronomageUse reuses the Ripper
      * record's animation sequences (sequence 0, + 0x5C = 0xD). */
     ENTITY("skill_chronomage", 0x081CC8C8, 0x0820B068, 0, 0x08230AE0),
+    /* Entry 0x2A of 0x080E13BC: SkillDiscArmorUse's orbiting saw disc
+     * (sequence 0; the sub_08023530 partner registration is not ported). */
+    ENTITY("skill_disc_armor", 0x081CF8E0, 0x0820B140, 0, 0x08231740),
     /* Resource 11 of 0x080E13BC: Killer Fish's appearance sequence 1 and
      * looping swim/fall sequence 0. */
     ENTITY("skill_killer_fish", 0x081D18F0, 0x0820B1F0, 0, 0x082321E4),

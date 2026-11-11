@@ -216,7 +216,8 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [60] = "great_armor",
                                                      [69] = "big_golem",
                                                      [110] = "belmont",
-                                                     [111] = "graham"};
+                                                     [111] = "graham",
+                                                     [106] = "headhunter"};
 /* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold
  * Medusa head (parameter 1 bit 0) and the Ghost Dancer (parameter 0). */
 #define VARIANT_ARTS 5

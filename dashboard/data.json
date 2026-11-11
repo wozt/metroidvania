@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-11T15:49:28+00:00",
+ "generated_at": "2026-11-11T16:04:05+00:00",
  "git": {
-  "commit": "1a247d20",
+  "commit": "646262ec",
   "branch": "main",
   "dirty": true
  },
@@ -96,15 +96,15 @@
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 56,
-    "functional": 219,
+    "partial": 55,
+    "functional": 220,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 219,
-   "functional_or_better_percent": 76.8,
+   "functional_or_better": 220,
+   "functional_or_better_percent": 77.2,
    "with_passing_tests": 272,
    "with_passing_tests_percent": 95.4,
    "unknown_or_blocked": 1,
@@ -523,15 +523,15 @@
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 28,
-    "functional": 112,
+    "partial": 27,
+    "functional": 113,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 112,
-   "functional_or_better_percent": 80.0,
+   "functional_or_better": 113,
+   "functional_or_better_percent": 80.7,
    "with_passing_tests": 140,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
@@ -13898,22 +13898,23 @@
    "id": "aos.enemies.headhunter",
    "area": "aos",
    "category": "enemies",
-   "title": "Headhunter state machines, linked heads, attack actors and death sequence",
-   "status": "partial",
-   "fidelity": "partial",
+   "title": "Headhunter",
+   "status": "functional",
+   "fidelity": "unknown",
    "local_sources": [
     "src/runtime/aos/core/aos_enemy.c",
     "src/runtime/aos/core/aos_enemy_internal.h",
-    "src/runtime/aos/enemies/skeleton.c",
+    "src/runtime/aos/core/aos_enemy.h",
     "src/runtime/aos/enemies/headhunter.c",
     "src/runtime/aria_runtime.c",
-    "src/runtime/aos/game/aos_pickup.c",
-    "src/runtime/aos/game/aos_save.c"
+    "src/assets/aos/objects.c",
+    "src/runtime/aos/souls/aos_soul.c"
    ],
    "tests": [
     "tests/test_aos_enemy.c",
     "tests/test_aos_pickup.c",
-    "tests/test_aos_save.c"
+    "tests/test_aos_save.c",
+    "tests/test_aos_soul.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -13921,26 +13922,83 @@
     "EnemyHeadhunterUpdate",
     "sub_08081EBC",
     "sub_08082FFC",
-    "sub_08083AC4",
     "sub_08083860",
-    "sub_08083FD0",
+    "sub_08083A40",
     "sub_08083C1C",
     "sub_08083EEC",
+    "sub_08083FD0",
     "sub_080858B8",
     "sub_0808597C",
+    "sub_08086418",
+    "sub_08086458",
+    "sub_0806DFF8",
+    "sub_0806E0D0",
+    "sub_0803B800",
+    "sub_0803B924",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0803E058",
+    "sub_0806B04C",
+    "sub_0806B1FC",
+    "sub_0806AF98",
+    "sub_0806B120",
+    "sub_0806B7D8",
+    "sub_0806C2CC",
+    "sub_0806C250",
     "sub_0806CFFC",
+    "sub_0806D128",
+    "sub_08068AD4",
+    "sub_0806AE54",
+    "sub_0806D7F0",
     "sub_0806DA6C",
-    "sub_080D7308"
+    "sub_0806D244",
+    "sub_0806D260",
+    "sub_0806D3CC",
+    "sub_0806D3D8",
+    "sub_0806D490",
+    "sub_0806D4A8",
+    "sub_0806D54C",
+    "sub_0806DF20",
+    "sub_0806E140",
+    "sub_0806E1B8",
+    "sub_0806E314",
+    "sub_080683BC",
+    "sub_08013CF0",
+    "sub_0800C5A8",
+    "sub_08034498",
+    "sub_08045B44",
+    "sub_08022088",
+    "sub_08013D60",
+    "sub_08013E18",
+    "sub_080009E4",
+    "sub_08021530",
+    "sub_08042848",
+    "sub_080428B4",
+    "sub_080421AC",
+    "sub_0804277C",
+    "sub_080427B8",
+    "sub_08021924",
+    "sub_080D7308",
+    "sub_080D6EF8",
+    "sub_080D7198",
+    "PlaySong",
+    "RandomNumberGenerator",
+    "RandomNumberGenerator2",
+    "ArcTan2",
+    "SetPlayerInput"
    ],
-   "limitations": "sub_08081EBC cases 0-2 keep their ported intro and cases 3-51 now dispatch the three attack phases: the case-3 fixed-velocity slam (vy 0x10000, ay 0x2800, vx +/-0x6000), the phase-1 rise (case 10, ay -0x1000) and the case-12 coin flip handing control to state 1 case 0xA, the phase-2 drift/clamp cases 20-33 and the phase-3 cases 40-43 with the 50/51 finale; + 0x1A/+ 0x1B fold into hh_f1a/hh_f1b and + 0x18 into hh_phase. The sub_08082FFC state-1 attack machine is ported case-for-case as before. In sub_08083FD0 case 5 the four sub_08083C1C attack actors are now emitted per head phase at timers 2/5/0x14/0x1C through the new AOS_ROLE_HH_ACTOR role running the sub_08083EEC machine (ramp-window vx += ax and vy += 0x1555, the 0x3B sink/drift and the 0x59 delete); the mode/speed/flip velocity table is decoded. Cases 6-7 approximate the ten shared sub_0806DA6C particles with dark-smoke drifts. Approximations: the sub_0806CFFC box probes, the sub_0806D288/3C0/3CC move variants and the sub_0806DA6C scatter fold into accel_move/player_in_range/spawn_drift, the camera scroll record (+ 0xA094 + 4/+ 8) is approximated by cam-relative screen bounds, the frame-gated waits advance on the animation end, and several native sub-gates fall back to cycle_done or timers so no case stalls. The state-1 dash cases 22/32/42 now emit the real sub_080858B8 shot as AOS_ROLE_HH_SHOT running the sub_0808597C machine (31/32 damping, the 0x40000 speed cap, the 0x3B delete); case 22 keeps its decoded facing velocity and the (+/-29,+28) offset while cases 32/42 use the ArcTan2 aim approximated by a normalized direction with the decoded (+/-16,+28) and (+/-24,-32) offsets. The actor hit reaction, the shot palette swaps at ages 0x14/0x28, the dedicated OAM resources, native palette fade and event callback are absent. The sub_08083860 death machine is faithful as previously recorded; the gEwramData +0x348 boss flag, the gUnk_03002CB0 toggles and the sub_080D7198 screen call have no runtime equivalent. Art and an in-game capture are absent. EnemyHeadhunterCreate initializes the body on sequence 23 and emits three owned head identities at the native screen coordinates. The opening selects phase 1 and runs its sequence 24 appearance. Each head's sub_08083FD0 cases 0-4 wait for their phase, perform two accelerating arcs and approach the mirrored per-head attack perch. Cases 5-7 run the 90-frame attack clock and retreat drift, request sound 0x11D, count their completion into the body's hh_head_done, remove head 0 after selecting body sequence 1, and delay heads 1-2 by five frames before selecting body sequences 5 and 9 and applying their -19 and +11 pixel vertical corrections. The sub_08083860 death machine keeps its four cases: the flag/velocity setup, the fall and lower-edge clamp that waits on the linked heads, the animation 0x13 hand-off and the 0x5A countdown with the 0x76 stinger ending in the guaranteed yellow soul at special index 4 and the sub_080D6EF8 burst; schema v12 persists its bit. Source-derived and unit-tested, not emulator-compared.",
-   "next_action": "Emit the exact sub_080858B8 projectile instead of the flame approximation, port the sub_0806D7F0 particle kinds used by the case 6-7 scatter, the actor hit reaction and an in-game capture.",
+   "limitations": "The sub_0806D7F0 scatter particle kinds are approximated by AOS_EFFECT_DARK_SMOKE drifts, the projectile palette swaps at ages 0x14/0x28 and the actor hit reaction are not ported, the frame-gated native waits advance on animation ends with documented fallbacks, the sub_0806CFFC probes and camera bounds collapse to the shared helpers, the gUnk_03002CB0 toggles and the sub_080D7198 screen call have no runtime equivalent, and there is no emulator comparison. EnemyHeadhunterCreate (0x08081C10) initializes the body on sequence 23, emits three owned sub_08083FD0 heads through the gEwramData + 0x4E4 slots and registers the sub_08086418/sub_08086458 hurt/death callbacks; EnemyHeadhunterUpdate dispatches state 0 to the sub_08081EBC fifty-two-case machine (intro, the fixed-velocity slam, the phase-2 drift and the phase-3 jump/dash with the decoded rng gates and songs 0x85/0x67), state 1 to the sub_08082FFC forty-eight-case attack machine (the four head patterns, the 0xA/0x14/0x1E/0x28/0x32 returns and the sub_080858B8 aimed shots with the decoded speed formulas), state 2 to the sub_08083860 four-case death (the linked-head wait via hh_head_done, song 0x76, the guaranteed sub_080D7308 soul spawn and the sub_080D6EF8 burst) and the dormant tail; the sub_08083C1C/sub_08083EEC attack actors spawn per head phase at the decoded timers with the offset/velocity tables. Unit-tested in headhunter_tests.",
+   "next_action": "Port the sub_0806D7F0 particle kinds, the shot palette swaps and the actor hit reaction; compare the state machines against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
      "tests/test_aos_pickup.c",
-     "tests/test_aos_save.c"
+     "tests/test_aos_save.c",
+     "tests/test_aos_soul.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "aria area_04_room_011 (enemy id 106): Headhunter loads with the exported object library and runs the state machines"
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -13976,6 +14034,16 @@
       "registered": true,
       "ctest": [
        "aos_save"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_soul.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_soul"
       ],
       "outcome": "passed",
       "exists": true
@@ -27354,6 +27422,12 @@
  },
  "timeline": [
   {
+   "commit": "646262ec",
+   "date": "2026-11-11",
+   "subject": "Port Graham Jones (Aria enemy 0x6F)",
+   "scope": "project"
+  },
+  {
    "commit": "1a247d20",
    "date": "2026-11-11",
    "subject": "Port Great Armor (id 60)",
@@ -27826,12 +27900,6 @@
    "date": "2026-11-09",
    "subject": "Compile White Dragon family as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "fcea4c36",
-   "date": "2026-11-09",
-   "subject": "Compile Buer family as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -27892,9 +27960,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1818,
-    "routines_attached_to_features": 1818,
-    "unassigned_routines": 1755,
+    "routines_cited_by_features": 1821,
+    "routines_attached_to_features": 1821,
+    "unassigned_routines": 1752,
     "call_edges": 14228
    }
   },
@@ -30146,12 +30214,12 @@
      },
      "bosses": {
       "total": 11,
-      "implemented": 9,
-      "functional_or_better": 9,
-      "functional_or_better_percent": 81,
+      "implemented": 10,
+      "functional_or_better": 10,
+      "functional_or_better_percent": 90,
       "by_status": {
-       "functional": 9,
-       "not_started": 2
+       "functional": 10,
+       "not_started": 1
       }
      },
      "items": {
@@ -33046,13 +33114,30 @@
      {
       "id": 106,
       "name": "Headhunter",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Headhunter",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_aos_pickup.c",
+        "tests/test_aos_save.c",
+        "tests/test_aos_soul.c"
+       ],
+       "in_game_check": [
+        "aria area_04_room_011 (enemy id 106): Headhunter loads with the exported object library and runs the state machines"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.headhunter",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "n/a",
+       "soul": "ported",
+       "soul_ref": "yellow:14",
+       "notes": "Soul: drops (soul_rarity 0 through the generic roll path, no common or rare item in the record) and its yellow soul 14 is already ported as AOS_YELLOW_HEADHUNTER_ROUTINE 0x080323DD (SkillHeadhunterUse adds 1 + totalNbrSoulsCollected / 16, at most 33, to STR, CON and INT). Animations: ported from EnemyHeadhunterCreate (0x08081C10) / EnemyHeadhunterUpdate and the sub_08081EBC fifty-two-case state-0 machine, the sub_08082FFC forty-eight-case state-1 attack machine, the sub_08083860 four-case death machine, the three sub_08083FD0 heads and the sub_08083C1C/sub_08083EEC attack actors — the shared animation record 0x0821C190 through the shared play/step helpers; unit-tested in headhunter_tests. Sounds: PlaySong 0x85 (dive), 0x67 (dash beats), 0x76 (death) and the attack accents are requested and unit-tested, not listened to. Sprite: tiles 0x08118F00 through sub_0803B800, palette bank 0x0820A780, animation record 0x0821C190 exported natively as Enemy/headhunter; the three heads read the 0x08118F14 sub-sheet of the same container and fold into the HH_HEAD roles on the shared kind. Loot: the enemies.tsv record drops nothing (common/rare item 0). Divergences: the sub_0806D7F0 scatter particle kinds are approximated by AOS_EFFECT_DARK_SMOKE drifts, the projectile palette swaps at ages 0x14/0x28 and the actor hit reaction are not ported, the frame-gated native waits advance on animation ends with documented fallbacks, the sub_0806CFFC probes and camera bounds collapse to the shared helpers, and there is no emulator comparison."
       }
      },
      {
@@ -33204,17 +33289,17 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 109,
+      "ported": 110,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 109,
+      "ported": 110,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 108,
+      "ported": 109,
       "partial": 0,
       "missing": 0
      },
@@ -33224,12 +33309,12 @@
       "missing": 0
      },
      "soul": {
-      "ported": 72,
+      "ported": 73,
       "partial": 35,
       "missing": 0
      },
-     "complete": 74,
-     "monsters": 109
+     "complete": 75,
+     "monsters": 110
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -38650,7 +38735,7 @@
        "id": "07:0E",
        "name": "Headhunter",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_rarity 0 through the generic roll path, no common or rare item in the record) and its yellow soul 14 is already ported as AOS_YELLOW_HEADHUNTER_ROUTINE 0x080323DD (SkillHeadhunterUse adds 1 + totalNbrSoulsCollected / 16, at most 33, to STR, CON and INT). Animations: ported from EnemyHeadhunterCreate (0x08081C10) / EnemyHeadhunterUpdate and the sub_08081EBC fifty-two-case state-0 machine, the sub_08082FFC forty-eight-case state-1 attack machine, the sub_08083860 four-case death machine, the three sub_08083FD0 heads and the sub_08083C1C/sub_08083EEC attack actors — the shared animation record 0x0821C190 through the shared play/step helpers; unit-tested in headhunter_tests. Sounds: PlaySong 0x85 (dive), 0x67 (dash beats), 0x76 (death) and the attack accents are requested and unit-tested, not listened to. Sprite: tiles 0x08118F00 through sub_0803B800, palette bank 0x0820A780, animation record 0x0821C190 exported natively as Enemy/headhunter; the three heads read the 0x08118F14 sub-sheet of the same container and fold into the HH_HEAD roles on the shared kind. Loot: the enemies.tsv record drops nothing (common/rare item 0). Divergences: the sub_0806D7F0 scatter particle kinds are approximated by AOS_EFFECT_DARK_SMOKE drifts, the projectile palette swaps at ages 0x14/0x28 and the actor hit reaction are not ported, the frame-gated native waits advance on animation ends with documented fallbacks, the sub_0806CFFC probes and camera bounds collapse to the shared helpers, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

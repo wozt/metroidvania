@@ -284,6 +284,11 @@ static const EntitySpec entities[] = {
      * point reads tiles 0x081FD2C0, palette 0x0820C158, frames
      * 0x08254D84. The clone sheet stands in as the kind art. */
     ENTITY("graham", 0x081FB2BC, 0x0820C090, 0, 0x08253D60),
+    /* EnemyHeadhunterCreate/sub_08083A40: tiles 0x08118F00 through
+     * sub_0803B800, palette bank 0x0820A780, frames 0x0821C190; the
+     * three sub_08083FD0 heads read the 0x08118F14 sub-sheet of the
+     * same container and share the frame record. */
+    ENTITY("headhunter", 0x08118F00, 0x0820A780, 0, 0x0821C190),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

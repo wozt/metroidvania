@@ -1,3 +1,17 @@
+## Patch 1001 - Headhunter completed (id 106)
+
+- The missing native resources are now wired: `Enemy/headhunter`
+  exports tiles 0x08118F00 through `sub_0803B800`, palette bank
+  0x0820A780 and the shared frame record 0x0821C190 (the three
+  `sub_08083FD0` heads read the 0x08118F14 sub-sheet), and
+  `enemy_names[106]` resolves the kind at runtime.
+- The yellow soul 14 drop is already ported as
+  `AOS_YELLOW_HEADHUNTER_ROUTINE` 0x080323DD (SkillHeadhunterUse),
+  so all five monster aspects are `ported`/`n/a`; the remaining
+  approximations (the `sub_0806D7F0` particle kinds as dark-smoke
+  drifts, the shot palette swaps, the actor hit reaction and the
+  frame-gated waits) are documented divergences.
+
 ## Patch 1000 - Graham Jones ported (id 111)
 
 - `EnemyGrahamCreate` (0x080D2424) / `EnemyGrahamUpdate` (0x080D5DF4):

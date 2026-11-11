@@ -355,6 +355,7 @@ typedef struct AosEnemy {
     bool boss_parts_spawned; /* a multipart boss emitted its constructor children */
     uint8_t hh_phase;       /* Headhunter body +0x18: active head, 1..3 */
     uint8_t hh_head_done;   /* Headhunter state-2 case 1: linked heads finished */
+    uint8_t hh_f1a, hh_f1b; /* Headhunter state-0 +0x1A flags / +0x1B anim */
     bool buer_fire_mirrored; /* linked second sprite's +0x58 bit 0x40, separate from parent */
     /* Death step-one linked-fire displacement: +1 X/Y on every third
      * tick, then -1 on the following tick; carried into death step two.

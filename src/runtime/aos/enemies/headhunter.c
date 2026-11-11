@@ -365,6 +365,296 @@ AosHitReport aos_enemy_headhunter_update(AosEnemy *enemy, AosSoma *soma,
             enemy->timer = 60;
         }
         break;
+    /* sub_08081EBC cases 3-51: the three attack phases. + 0x1A is the
+     * sequence flag word (bit 0 engaged, bit 1 phase 2, bit 2 phase
+     * 3), + 0x1B the pending animation, + 0x18 the head phase and
+     * [gEwramData + 0xA094 + 4/+ 8] the camera origin the native
+     * bound probes add to the body position — approximated here by
+     * screen-space comparisons against cam_x/cam_y. The sub_0806CFFC
+     * box probes, sub_0806D288/3C0/3CC moves and the sub_0806DA6C
+     * actor spawns fold into the shared helpers or are skipped. */
+    case 3:
+        /* Wait 0x3B frames, then a fixed-velocity slam (vy 0x10000,
+         * ay 0x2800, vx +/-0x6000 by facing) re-applied every frame;
+         * the native landing probes advance the case — approximated
+         * by a frame count / the animation end. */
+        if (enemy->timer <= 0x3B) {
+            enemy->timer++;
+            break;
+        }
+        face_player(enemy, soma);
+        enemy->hh_f1a = 1;
+        enemy->ax = 0;
+        enemy->vy = 0x10000;
+        enemy->ay = 0x2800;
+        enemy->vx = enemy->mirrored ? 0x6000 : -0x6000;
+        accel_move(enemy, 0x60000);
+        /* The native landing probe stops the slam at the floor; the
+         * port uses the lower screen bound with a frame fallback. */
+        if ((enemy->y >> 16) - cam_y > 0xB3) {
+            enemy->vy = enemy->ay = 0;
+            enemy->hh_f1b = 0;
+            enemy->step++;
+        } else if (++enemy->hh_f1b > 0x50) {
+            enemy->hh_f1b = 0;
+            enemy->step++;
+        }
+        break;
+    case 4:
+        if (++enemy->timer > 0x11) enemy->step++;
+        break;
+    case 5:
+        if (++enemy->timer > 7) enemy->step++;
+        break;
+    case 6:
+        enemy->hh_f1a |= 1;
+        enemy->step++;
+        break;
+    case 7:
+        enemy->hh_f1a |= 1;
+        enemy->timer = enemy->substep = 0;
+        /* Native waits on the head phase; the port falls back to the
+         * animation end. */
+        if (enemy->cycle_done) {
+            enemy->cycle_done = false;
+            enemy->step++;
+        }
+        break;
+    case 8:
+        enemy->hh_f1a |= 1;
+        enemy->substep = 0;
+        if (++enemy->timer > 0x1B) enemy->step++;
+        break;
+    case 9:
+        enemy->hh_f1a |= 1;
+        enemy->hh_phase = 2;
+        if (++enemy->timer > 0x13 || enemy->cycle_done) {
+            enemy->cycle_done = false;
+            enemy->step++;
+        }
+        break;
+    case 10:
+        /* Rise: ax/vx/vy cleared, ay -0x1000, face player, + 0x1A bit 2
+         * by facing. */
+        enemy->ax = enemy->vx = enemy->vy = 0;
+        enemy->ay = -0x1000;
+        face_player(enemy, soma);
+        if (enemy->mirrored) enemy->hh_f1a |= 4;
+        else enemy->hh_f1a &= ~4u;
+        enemy->step++;
+        break;
+    case 11:
+        /* The native rise probes the lower screen bound each frame;
+         * the port times the rise instead (the bound math needs the
+         * room scroll record). */
+        accel_move(enemy, 0x40000);
+        if (++enemy->timer > 0x40 || enemy->cycle_done) {
+            enemy->cycle_done = false;
+            enemy->step++;
+        }
+        break;
+    case 12:
+        /* Face player, count + 0xD down; on expiry a coin flip enters
+         * state 1 case 0xA, else a random 0x3C-0x59 timer re-arms. */
+        face_player(enemy, soma);
+        if (enemy->timer == 0 || --enemy->timer == 0) {
+            if (random() & 1) {
+                enemy->state = 1;
+                enemy->step = 0xA;
+            } else {
+                enemy->timer = (uint8_t)(random() % 0x1E + 0x3C);
+            }
+        }
+        break;
+    case 20:
+        enemy->hh_f1a |= 1;
+        enemy->vx = enemy->ax = enemy->vy = 0;
+        enemy->ay = 0x2000;
+        if (((enemy->x >> 16) - cam_x) < 0x68)
+            enemy->vx = 0x10000;
+        if (((enemy->x >> 16) - cam_x) > 0x197)
+            enemy->vx = -0x4000;
+        if (enemy->cycle_done) {
+            enemy->cycle_done = false;
+            enemy->step++;
+        }
+        break;
+    case 21:
+        enemy->hh_f1a |= 1;
+        enemy->timer = 0;
+        accel_move(enemy, 0x60000);
+        if ((enemy->y >> 16) - cam_y > 0xB3) {
+            enemy->vx = enemy->ax = enemy->vy = enemy->ay = 0;
+            enemy->y = AOS_FIXED(cam_y + 0xC0);
+        }
+        /* The native fall advances on its own sub- gates; the port
+         * falls back to the animation end so the case cannot stall. */
+        if (enemy->cycle_done) {
+            enemy->cycle_done = false;
+            enemy->step++;
+        }
+        break;
+    case 22:
+        enemy->hh_f1a |= 1;
+        enemy->substep = 0;
+        if (enemy->anim.id == 0x1B && enemy->cycle_done) {
+            enemy->cycle_done = false;
+            play_loop(enemy, kind->anims, 0x1C, false);
+        }
+        if (++enemy->timer > 0x1B) enemy->step++;
+        break;
+    case 23:
+        enemy->hh_f1a |= 1;
+        if (enemy->substep) {
+            if (enemy->timer == 0 || --enemy->timer == 0) enemy->step++;
+        } else if (enemy->timer) {
+            if (enemy->timer == 0 || --enemy->timer == 0) enemy->step++;
+        }
+        break;
+    case 24:
+        enemy->ax = enemy->vx = 0;
+        enemy->vy = 0x10000;
+        enemy->ay = 0x1000;
+        face_player(enemy, soma);
+        if (enemy->mirrored) enemy->hh_f1a |= 4;
+        else enemy->hh_f1a &= ~4u;
+        enemy->step++;
+        enemy->timer = 0;
+        aos_audio_play_song(0x72);
+        break;
+    case 25:
+        face_player(enemy, soma);
+        accel_move(enemy, 0x40000);
+        if (++enemy->timer > 0x13) enemy->step++;
+        break;
+    case 26:
+        face_player(enemy, soma);
+        enemy->hh_f1a |= enemy->mirrored ? 0 : 4;
+        if (++enemy->timer > 0x13 || enemy->cycle_done) {
+            enemy->cycle_done = false;
+            enemy->step++;
+        }
+        break;
+    case 27:
+        accel_move(enemy, 0x40000);
+        if (++enemy->timer > 0x1D) {
+            enemy->step++;
+            enemy->timer = 0;
+            enemy->hh_f1a |= 2;
+            enemy->hh_f1b = 0x39;
+            enemy->ax = enemy->vx = 0;
+        }
+        break;
+    case 28:
+        enemy->hh_f1a |= 2;
+        enemy->hh_f1b = 0x39;
+        accel_move(enemy, 0x60000);
+        if (enemy->cycle_done) {
+            enemy->cycle_done = false;
+            enemy->step++;
+        }
+        break;
+    case 29:
+        if (enemy->timer == 0 || --enemy->timer == 0) enemy->step++;
+        break;
+    case 30:
+        face_player(enemy, soma);
+        if (random() % 7 <= 2) {
+            play_loop(enemy, kind->anims, 0xC, false);
+            enemy->step = 0x1F;
+            enemy->ax = enemy->vy = enemy->ay = 0;
+            enemy->vx = enemy->mirrored ? 0x20000 : -0x20000;
+        } else {
+            enemy->step++;
+        }
+        break;
+    case 31:
+        /* Drift to the left screen edge (x = 0x67 + cam) then
+         * advance to the phase tail. */
+        if (((enemy->x >> 16) - cam_x) > 0x66) {
+            enemy->x = AOS_FIXED(cam_x + 0x67);
+            enemy->step = 0x1E;
+        }
+        break;
+    case 32:
+        enemy->hh_f1a |= 2;
+        if (((enemy->y >> 16) - cam_y) > 0xC0) enemy->hh_f1b = 0x3B;
+        else enemy->step++;
+        if (enemy->cycle_done) {
+            enemy->cycle_done = false;
+            enemy->step++;
+        }
+        break;
+    case 33:
+        enemy->hh_f1a |= 2;
+        enemy->hh_f1b = 0x3B;
+        if (enemy->timer == 0 || --enemy->timer == 0) enemy->step++;
+        break;
+    case 40:
+        face_player(enemy, soma);
+        if ((random() & 7) <= 2) {
+            if (random() % 3 == 0 &&
+                ((enemy->x >> 16) - cam_x) < 0xC7) {
+                enemy->step = 0x2A;
+                enemy->ax = 0;
+                enemy->vx = -0x30000;
+                enemy->vy = -0x40000;
+                enemy->ay = 0x2000;
+            } else {
+                enemy->step++;
+            }
+        } else {
+            enemy->step++;
+        }
+        break;
+    case 41:
+        if (((enemy->x >> 16) - cam_x) > 0x66) {
+            enemy->x = AOS_FIXED(cam_x + 0x67);
+            enemy->step = 0x28;
+        }
+        break;
+    case 42:
+        enemy->hh_f1a |= 2;
+        enemy->hh_f1b = 0x3A;
+        accel_move(enemy, 0x60000);
+        if ((enemy->y >> 16) - cam_y > 0xBE) {
+            enemy->y = AOS_FIXED(cam_y + 0xBF);
+            enemy->step = 0x21;
+            enemy->substep = 0;
+            enemy->timer = 0xE;
+        } else if (enemy->cycle_done) {
+            enemy->cycle_done = false;
+            enemy->step++;
+        }
+        break;
+    case 43:
+        enemy->hh_f1a |= 2;
+        enemy->hh_f1b = 0x45;
+        if (enemy->timer == 0 || --enemy->timer == 0) enemy->step++;
+        break;
+    case 50:
+        enemy->hh_f1a |= 2;
+        enemy->hh_f1b = 0x45;
+        if (random() % 7 <= 2) {
+            play_loop(enemy, kind->anims, 0x11, false);
+            enemy->hh_f1a &= ~3u;
+            enemy->step = 0x33;
+            enemy->ax = enemy->vx = enemy->ay = 0;
+            if ((enemy->y >> 16) - cam_y > 0x98)
+                enemy->vy = -0x10000;
+            else
+                enemy->vy = 0x10000;
+        } else {
+            enemy->step++;
+        }
+        break;
+    case 51:
+        accel_move(enemy, 0x40000);
+        if ((enemy->y >> 16) - cam_y > 0x66) {
+            enemy->y = AOS_FIXED(cam_y + 0x67);
+            enemy->step = 0x32;
+        }
+        break;
     default:
         /* sub_08081EBC's aggro probes (the sub_0806CFFC box test)
          * hand the body to state 1, case 0, once Soma closes in;

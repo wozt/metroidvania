@@ -1,3 +1,16 @@
+## Patch 0995 - Headhunter state-0 attack phases
+
+- `sub_08081EBC` cases 3-51 now dispatch the three attack phases on
+  top of the ported intro: the case-3 fixed-velocity slam, the
+  phase-1 rise and case-12 coin flip into state 1 case 0xA, the
+  phase-2 drift/clamp cases 20-33 and the phase-3 cases 40-43 with
+  the 50/51 finale. `+0x1A`/`+0x1B` fold into `hh_f1a`/`hh_f1b`.
+- Documented approximations: the `sub_0806CFFC` probes,
+  `sub_0806D288/3C0/3CC` moves and `sub_0806DA6C` actor spawns fold
+  into shared helpers or are skipped, camera scroll bounds are
+  approximated by cam-relative screen checks, and frame-gated waits
+  fall back to `cycle_done`/timers so no case stalls.
+
 ## Patch 0994 - Headhunter state-1 attack machine
 
 - `sub_08082FFC` is now dispatched for `state == 1`: the full

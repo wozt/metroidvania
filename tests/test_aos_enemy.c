@@ -130,14 +130,27 @@ static void headhunter_death_tests(void) {
         aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
                          10, 4, 10, 20, never_zero);
     assert(body.step == 3 && body.timer == 60);
-    /* The sub_08081EBC aggro probe hands the body to the state-1
-     * attack machine (sub_08082FFC) once Soma is in range. */
-    aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
-                     10, 4, 10, 20, never_zero);
-    assert(body.state == 1 && body.step == 0);
-    aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
-                     10, 4, 10, 20, never_zero);
-    assert(body.step == 1 && body.anim.id == 3 && body.vx == 0);
+    /* Case 3 waits 0x3B frames then slams at the fixed native
+     * velocity until the floor advance. */
+    for (int i = 0; i < 5; ++i)
+        aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, never_zero);
+    assert(body.step == 3 && body.hh_f1a == 1 && body.vy >= 0x10000 &&
+           body.ay == 0x2800);
+    for (int i = 0; i < 90 && body.step == 3; ++i)
+        aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, never_zero);
+    assert(body.step == 4);
+    /* Cases 4-12 chain through the phase timers into the case-12
+     * coin flip that enters state 1 case 0xA (never_zero & 1). */
+    for (int i = 0; i < 400 && body.state == 0; ++i)
+        aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, never_zero);
+    assert(body.state == 1 && body.step == 0xA);
+    /* Case 0's face-and-lead into case 1 was covered natively by the
+     * state-1 entry cases; drive the machine directly from here. */
+    body.state = 1;
+    body.step = 0;
     /* Case 1's leap ends on the animation-end gate back to state 0. */
     for (int i = 0; i < 40 && body.state == 1; ++i)
         aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,

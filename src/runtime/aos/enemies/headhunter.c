@@ -14,12 +14,23 @@
 #define play aos_enemy_play
 #define play_loop aos_enemy_play_loop
 #define skeleton_merge aos_enemy_skeleton_merge
+#define spawn_flame_at aos_enemy_spawn_flame_at
 #define step_anim aos_enemy_step_anim
 
-/* sub_08083860, Headhunter's main-body death. The native body waits at the
- * lower screen edge for its linked heads before step 2; those actors are not
- * reconstructed, so their completed signal is immediate after the landing. */
-AosHitReport aos_enemy_headhunter_death(AosEnemy *enemy, const AosEnemyKind *kind, int cam_y) {
+/* sub_08083860: Headhunter's four-case death machine (+ 0xB). Case 0
+ * sets the + 0x1A/+ 0x1B flags, clears the velocities and applies the
+ * scroll/palette effect; case 1 falls to the lower screen edge and
+ * waits — the three linked heads advance the native + 0xB when their
+ * staged endings complete; case 2 plays animation 0x13 and loads the
+ * 0x5A timer; case 3 counts it down with the 0x76 stinger, then sets
+ * the boss-clear word, reports the sub_080D7308 soul and runs the
+ * sub_080D6EF8 burst before the native exit deletes the entity. The
+ * gEwramData + 0x348 boss flag, the gUnk_03002CB0 toggles and the
+ * sub_080D7198 screen call have no runtime equivalent. */
+AosHitReport aos_enemy_headhunter_death(AosEnemy *enemy,
+                                      const AosEnemyKind *kind,
+                                      int cam_y,
+                                      uint32_t (*random)(void)) {
     AosHitReport report = {0};
     switch (enemy->step) {
     case 0:
@@ -33,6 +44,9 @@ AosHitReport aos_enemy_headhunter_death(AosEnemy *enemy, const AosEnemyKind *kin
         if ((enemy->y >> 16) - cam_y > 0xBF) {
             enemy->vx = enemy->ax = enemy->vy = enemy->ay = 0;
             enemy->y = AOS_FIXED(cam_y + 0xC0);
+        }
+        if (enemy->hh_head_done >= 3) {
+            enemy->timer = 0;
             enemy->step = 2;
         }
         break;
@@ -49,6 +63,9 @@ AosHitReport aos_enemy_headhunter_death(AosEnemy *enemy, const AosEnemyKind *kin
             enemy->removed = true;
             enemy->step = 4;
             report.special_soul = true;
+            /* sub_080D6EF8 burst at the body's + 0x42 position. */
+            spawn_flame_at(enemy->x, enemy->y, 0x40000, 0x80000,
+                           random, &report);
         }
         break;
     default:
@@ -205,6 +222,7 @@ void aos_enemy_headhunter_head_update(AosEnemy *head, const AosEnemyKind *kind,
         aos_audio_play_song(0x11D);
         if (head->variant == 0) {
             body->step++;
+            body->hh_head_done++;
             play(body, kind->anims, 1);
             step_anim(body, kind->anims);
             head->removed = true;
@@ -219,12 +237,14 @@ void aos_enemy_headhunter_head_update(AosEnemy *head, const AosEnemyKind *kind,
             play(body, kind->anims, 5);
             step_anim(body, kind->anims);
             body->step++;
+            body->hh_head_done++;
             body->y -= 0x130000;
             head->removed = true;
         } else if (head->variant == 2 && head->timer && --head->timer == 0) {
             play(body, kind->anims, 9);
             step_anim(body, kind->anims);
             body->step++;
+            body->hh_head_done++;
             body->y += 0xB0000;
             head->removed = true;
         }

@@ -860,7 +860,8 @@ AosHitReport aos_enemy_cockatrice_update(
     int cam_x, int cam_y, uint32_t (*random)(void));
 AosHitReport aos_enemy_headhunter_death(AosEnemy *enemy,
                                          const AosEnemyKind *kind,
-                                         int cam_y);
+                                         int cam_y,
+                                         uint32_t (*random)(void));
 AosHitReport aos_enemy_headhunter_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
     const AosWeaponEntity *weapon,

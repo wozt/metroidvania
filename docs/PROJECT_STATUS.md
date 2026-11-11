@@ -1,3 +1,23 @@
+## Patch 0992 - Headhunter death machine made faithful
+
+- `sub_08083860` is a four-case machine on `+0xB`, now ported
+  case-for-case in `aos_enemy_headhunter_death`: case 0 sets the
+  `+0x1A`/`+0x1B` flags and clears the velocities, case 1 falls to
+  the lower screen edge and waits — the three linked heads advance
+  the native `+0xB` through the new `hh_head_done` counter — case 2
+  plays animation 0x13 and loads the 0x5A timer, case 3 counts it
+  down with the 0x76 stinger before the `sub_080D7308` guaranteed
+  soul and the `sub_080D6EF8` burst (approximated by
+  `spawn_flame_at`).
+- Each head completion path in `aos_enemy_headhunter_head_update`
+  now increments `body->hh_head_done`, matching the native signal
+  that releases the body's death case 1.
+- The `gEwramData +0x348` boss flag, the `gUnk_03002CB0` toggles
+  and the `sub_080D7198` screen call have no runtime equivalent
+  and stay documented divergences; the state-0/state-1 attack
+  machines and the `sub_08083C1C` attack actors remain the next
+  slice.
+
 ## Patch 0991 - Legion ported (id 108)
 
 - `EnemyLegionCreate` (0x0809C6BC) / `EnemyLegionUpdate`

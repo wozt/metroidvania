@@ -4513,7 +4513,7 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return report;
     }
     if (enemy->id == AOS_BOSS_HEADHUNTER && enemy->role == AOS_ROLE_ENEMY) {
-        if (enemy->state == 2) return aos_enemy_headhunter_death(enemy, kind, cam_y);
+        if (enemy->state == 2) return aos_enemy_headhunter_death(enemy, kind, cam_y, random);
         return aos_enemy_headhunter_update(enemy, soma, kind, weapon, weapon_frames,
                                  soma_atk, soma_def, cam_x, cam_y);
     }

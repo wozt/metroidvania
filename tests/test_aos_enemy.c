@@ -143,10 +143,19 @@ static void headhunter_death_tests(void) {
                                            10, 4, 0, 0, never_zero);
     assert(!report.special_soul && boss.step == 1 && boss.vy == 0x10000 &&
            boss.ay == 0x4000);
-    while (boss.step == 1)
+    /* Case 1 waits at the lower edge until the three linked heads
+     * report their staged endings (hh_head_done). */
+    for (int i = 0; i < 200 && boss.step == 1; ++i)
         aos_enemy_update(&boss, &soma, &layer, &kind, NULL, NULL,
                          10, 4, 0, 0, never_zero);
-    assert(boss.step == 2 && boss.y == AOS_FIXED(0xC0) && boss.vy == 0);
+    assert(boss.step == 1 && boss.y == AOS_FIXED(0xC0) && boss.vy == 0);
+    boss.hh_head_done = 3;
+    aos_enemy_update(&boss, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, never_zero);
+    assert(boss.step == 2);
+    aos_enemy_update(&boss, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, never_zero);
+    assert(boss.step == 3 && boss.timer == 0x59);
     aos_audio_clear();
     int frames = 0;
     do {
@@ -154,7 +163,7 @@ static void headhunter_death_tests(void) {
                                   10, 4, 0, 0, never_zero);
         ++frames;
     } while (!report.special_soul && frames < 100);
-    assert(report.special_soul && boss.removed && boss.step == 4 && frames == 91 &&
+    assert(report.special_soul && boss.removed && boss.step == 4 && frames == 90 &&
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x76) == 12);
 }
 

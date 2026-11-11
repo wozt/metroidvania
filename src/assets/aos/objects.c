@@ -256,6 +256,7 @@ static const EntitySpec entities[] = {
      * body, the six bones, the shot/fan/wave projectiles and the
      * death gore. */
     ENTITY("stolas", 0x081CC064, 0x0820AC28, 0, 0x08225224),
+    ENTITY("death", 0x08119498, 0x0820BC1C, 0, 0x08249C48),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),
@@ -839,6 +840,64 @@ static bool load_tile_sheet(const FusionRom *rom, uint32_t descriptor,
                                      "object tiles", error, error_size);
         if (!tiles) goto failed;
         memcpy(sheet->data, tiles, sheet->size);
+        return true;
+    }
+    if (header[0] == 2) {
+        /* A multi-sheet container (Death's tiles): header[2] pointers
+         * to uncompressed sub-descriptors (encoding 0, depth 4), each
+         * width_tiles x height_tiles tiles; the game loads them into
+         * VRAM contiguously, so the sheets concatenate in order. */
+        unsigned count = header[2];
+        size_t total = 0;
+        uint32_t offsets[16];
+        uint8_t dims[16][2];
+        if (count == 0 || count > 16) {
+            set_error(error, error_size, "unsupported object sheet count");
+            goto failed;
+        }
+        const uint8_t *entries = slice(rom, descriptor + 4, count * 4,
+                                       "sheet pointer table", error,
+                                       error_size);
+        if (!entries) goto failed;
+        for (unsigned i = 0; i < count; ++i) {
+            uint32_t sub = read_u32(entries + i * 4);
+            const uint8_t *sh = slice(rom, sub, 4, "sub-sheet header",
+                                      error, error_size);
+            if (!sh || sh[0] != 0 || sh[1] != 4) {
+                set_error(error, error_size,
+                          "unsupported object sub-sheet encoding");
+                goto failed;
+            }
+            offsets[i] = sub;
+            dims[i][0] = sh[2];
+            dims[i][1] = sh[3];
+            total += (size_t)sh[2] * sh[3] * TILE_BYTES;
+            if (i == 0) {
+                sheet->width_tiles = sh[2];
+            } else if (sh[2] != sheet->width_tiles) {
+                set_error(error, error_size,
+                          "object sub-sheets differ in width");
+                goto failed;
+            }
+        }
+        free(sheet->data);
+        sheet->data = malloc(total);
+        sheet->size = total;
+        if (!sheet->data) {
+            set_error(error, error_size, "cannot allocate object tile sheet");
+            sheet->data = NULL;
+            return false;
+        }
+        size_t at = 0;
+        for (unsigned i = 0; i < count; ++i) {
+            size_t n = (size_t)dims[i][0] * dims[i][1] * TILE_BYTES;
+            const uint8_t *tiles = slice(rom, offsets[i] + 4, n,
+                                         "sub-sheet tiles", error,
+                                         error_size);
+            if (!tiles) goto failed;
+            memcpy(sheet->data + at, tiles, n);
+            at += n;
+        }
         return true;
     }
     if (header[0] == 1) {

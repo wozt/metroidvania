@@ -409,7 +409,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_GLADIATOR &&
         id != AOS_ENEMY_WOODEN_GOLEM && id != AOS_ENEMY_GOLEM &&
         id != AOS_ENEMY_FLESH_GOLEM && id != AOS_ENEMY_IRON_GOLEM &&
-        id != AOS_ENEMY_STOLAS &&
+        id != AOS_ENEMY_STOLAS && id != AOS_ENEMY_DEATH &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1358,6 +1358,31 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->boss_parts_spawned = false;
         enemy->spawned_count = 0;
         play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_DEATH) {
+        /* EnemyDeathCreate 0x080BF2E8: tiles 0x08119498, palette
+         * 0x0820BC1C, frames 0x08249C48 through sub_0806E0D0; + 0x5C =
+         * 0x13, anim (1,2,1); the three children of sub_0806DFF8
+         * (mirror sub_080BC298, mid sub_080BD094 only when param0,
+         * scythe sub_080BD358) emit on the first updates via
+         * boss_parts_spawned; the gEwramData + 0x8E & 0x40 flag parks
+         * state 8; hp = 0x98C; hurt callbacks sub_080BF4AC/sub_080BF504
+         * and the lethal path fold into the shared collide/update. */
+        enemy->hp = 0x98C;
+        enemy->dth_atk = 0;
+        enemy->dth_flags = 0;
+        enemy->dth_idx = enemy->dth_g6c = enemy->dth_g6e = 0;
+        enemy->dth_dx = enemy->dth_dy = 0;
+        enemy->dth_vx = enemy->dth_vy = 0;
+        enemy->state = flag_8e_40 ? 8 : (param0 ? 1 : 0);
+        enemy->step = 0;
+        enemy->substep = 0;
+        enemy->timer = 0;
+        enemy->boss_parts_spawned = false;
+        enemy->spawned_count = 0;
+        play_loop(enemy, anims, 1, true);
         step_anim(enemy, anims);
         return true;
     }
@@ -2865,6 +2890,16 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                     enemy->timer = 0x3C;
+                } else if (enemy->id == AOS_ENEMY_DEATH &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_080BF4AC lethal: sub_080683BC defeated,
+                     * state 7, + 0xD = 0x3C — the update's death
+                     * machine spawns the gore and deletes. */
+                    aos_audio_play_song(0x6E);
+                    enemy->defeated = true;
+                    enemy->state = 7;
+                    enemy->step = enemy->substep = 0;
+                    enemy->timer = 0x3C;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080715B4: sound 0x6E, animation 1, 40-frame
@@ -4308,6 +4343,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_stolas_update(enemy, soma, layer, kind, weapon,
                                        weapon_frames, soma_atk, soma_def,
                                        cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_DEATH)
+        return aos_enemy_death_update(enemy, soma, layer, kind, weapon,
+                                      weapon_frames, soma_atk, soma_def,
+                                      cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

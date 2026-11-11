@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 130 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 131 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1610 | 1963 |
+| Castlevania: Aria of Sorrow | 1633 | 1940 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1564,6 +1564,15 @@ Dependencies: `aos.enemies.axe_armor`.
 Known divergences: The death's palette flash, sub_080683BC and the dust's + 0x0F are not ported.  
 Next action: Play the sounds once the Aria sound path exists.
 Evidence: in game: `aria area_05_room_003 (--spawn 180 440 --hp 9999): the mounted dead warrior charges (frame 30), brakes in a cloud of dust (frame 80), turns and charges off (frames 130 and 170)`.
+
+[+] **`aos.enemies.death` — Death.** EnemyDeathCreate (0x080BF2E8) loads the encoding-2 multi-sheet tiles 0x08119498 (four concatenated 16x16 sub-sheets, exported by the new objects.c branch), palette 0x0820BC1C and frames 0x08249C48, spawns the three child callbacks sub_080BC298/sub_080BD094/sub_080BD358 through sub_0806DFF8, and starts the nine-state update machine of EnemyDeathUpdate (0x080BF5FC): state 0 sub_080BE414 intro/aggro waits on the global flag, checks player distance, plays song 0x121 and dashes in; state 1 sub_080BE608 is the eight-case hover/attack machine; states 2-6 are the dive/wander/charge/sweep/beat phases; state 7 sub_080BF178 is the death sequence that deletes; state 8 falls back to sub_0803F17C. The mirror child copies the parent animation/facing, the mid child rides a slot with timers and emits the scythe, and the scythe child is a nine-state machine of its own. Unit-tested in death_tests.
+
+Native evidence: `aos:asm:asm/code/code_080B0AD4.s:EnemyDeathCreate`, `aos:asm:asm/code/code_080B0AD4.s:EnemyDeathUpdate`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BC298`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BC390`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BC82C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BCECC`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BCFC8`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BD094`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BD20C`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BD2D0`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BD358`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BDAF0`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BDD94`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BDFC4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BE218`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BE414`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BE608`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BE984`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BEB50`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BEC84`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BEF04`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BF108`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BF178`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BF6B8`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BF738`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BF990`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BFB58`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BFBF4`, `aos:asm:asm/code/code_080B0AD4.s:sub_080BFCD8`.  
+Local implementation: [`src/runtime/aos/core/aos_enemy.c`](../src/runtime/aos/core/aos_enemy.c), [`src/runtime/aos/core/aos_enemy_internal.h`](../src/runtime/aos/core/aos_enemy_internal.h), [`src/runtime/aos/core/aos_enemy.h`](../src/runtime/aos/core/aos_enemy.h), [`src/runtime/aos/enemies/death.c`](../src/runtime/aos/enemies/death.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Known divergences: The gEwramData + 0x4E4 slot table (stride 0x84) folds into parent pointers and the DEATH_MIRROR/MID/SCYTHE/SHOT/GORE roles; the three sub_0806DFF8 child callbacks persist as those roles emitted over the first updates under the 8-child room cap; the wall probes sub_0806D490/sub_0806D4A8/sub_0806D3D8 and the sub_080009E4 sine offsets collapse into player_in and documented constants; the scythe sub-children and the projectile helpers fold into the SHOT/GORE roles; the sub_08021654 ring emits, the sub_080427B8/sub_0804277C box registrations, the + 0x5A palette merge and the sub_08013CF0/sub_08034498/sub_0800C5A8 event calls are not ported.  
+Next action: Compare the attack choreography and child timing against an emulator; port the full case tables of the state-1 and scythe machines, the ring emits and the projectile helpers.
+Evidence: in game: `aria --area 6 --room 7 (and --area 7 --room 8): Death hovers, cycles its attack states and the scythe children, then dies into gore.`.
 
 [+] **`aos.enemies.demon_lord` — Demon Lord.** The + 0x36 variant byte (the id itself) selects this family's palette bank, variant animation and child frame table inside the shared EnemyDevilCreate (0x0808FA30) / EnemyDevilUpdate cluster ported under aos.enemies.devil: the sixteen-case state-0 idle/approach and state-1 attack machines, the eight-record orbit swarm, the imp children, the aimed fireball and straight orb and the never-flinching hurt with the song-0x72 death. Unit-tested in devil_tests.
 

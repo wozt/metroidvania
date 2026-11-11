@@ -188,6 +188,7 @@ enum {
     AOS_ENEMY_FLESH_GOLEM = 0x50,
     AOS_ENEMY_IRON_GOLEM = 0x65,
     AOS_ENEMY_STOLAS = 0x61,
+    AOS_ENEMY_DEATH = 0x6B,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -261,7 +262,10 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_STOLAS_BONE2 = 129, AOS_ROLE_STOLAS_BONE3 = 130,
        AOS_ROLE_STOLAS_BONE4 = 131, AOS_ROLE_STOLAS_BONE5 = 132,
        AOS_ROLE_STOLAS_SHOT = 133, AOS_ROLE_STOLAS_FAN = 134,
-       AOS_ROLE_STOLAS_WAVE = 135, AOS_ROLE_STOLAS_GORE = 136 };
+       AOS_ROLE_STOLAS_WAVE = 135, AOS_ROLE_STOLAS_GORE = 136,
+       AOS_ROLE_DEATH_MIRROR = 137, AOS_ROLE_DEATH_MID = 138,
+       AOS_ROLE_DEATH_MID_TAIL = 139, AOS_ROLE_DEATH_SCYTHE = 140,
+       AOS_ROLE_DEATH_SHOT = 141, AOS_ROLE_DEATH_GORE = 142 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -773,6 +777,15 @@ typedef struct AosEnemy {
     uint8_t sto_slot, sto_tgt, sto_anim, sto_b, sto_c, sto_d;
     uint16_t sto_atk, sto_cnt;
     int32_t sto_x68, sto_xf8;
+    /* Death (id 0x6B): the + 0x16 attack timer, the + 0x48/+ 0x4C frame
+     * deltas, the + 0x50/+ 0x54 drift velocities, the + 0x14 flag bits,
+     * the + 0x19 pick and the + 0x6C/+ 0x6E gates of its nine-state
+     * machine; the + 0x1C/+ 0x1E charge target reuses target_x/
+     * target_y.  The three children are roles AOS_ROLE_DEATH_*. */
+    uint16_t dth_atk;
+    uint16_t dth_flags;
+    uint8_t dth_idx, dth_g6c, dth_g6e;
+    int32_t dth_dx, dth_dy, dth_vx, dth_vy;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

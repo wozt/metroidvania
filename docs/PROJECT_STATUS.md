@@ -1,3 +1,34 @@
+## Patch 0987 - Death ported (id 107)
+
+- `EnemyDeathCreate` (0x080BF2E8) / `EnemyDeathUpdate` (0x080BF5FC):
+  the first encoding-2 multi-sheet tiles `0x08119498` (four
+  concatenated 16x16 sub-sheets, exported by the new `objects.c`
+  branch), palette `0x0820BC1C`, frames `0x08249C48`, three child
+  callbacks `sub_080BC298`/`sub_080BD094`/`sub_080BD358` through
+  `sub_0806DFF8` and the nine-state update machine.
+- `death.c` ports the architecture: state 0 (`sub_080BE414`) is
+  the intro/aggro that waits on the global flag, checks player
+  distance, plays song 0x121 and dashes in; state 1
+  (`sub_080BE608`) is the eight-case hover/attack machine; states
+  2-6 are the dive/wander/charge/sweep/beat phases; state 7
+  (`sub_080BF178`) is the death sequence that deletes; state 8
+  falls back to `sub_0803F17C`. The mirror child copies the
+  parent animation/facing, the mid child rides a slot with
+  timers and emits the scythe, and the scythe child is a
+  nine-state machine of its own.
+- The `gEwramData + 0x4E4` slot table folds into parent pointers
+  and the `DEATH_*` roles; wall probes and sine offsets collapse
+  into `player_in` and documented constants; divergences recorded
+  per aspect in `aos_monster_aspects.tsv`.
+- Blue soul 24 (`SkillDeathUse`, already ported as
+  `aos_soul_blue_death`) and the `0x08119498`/`0x08249C48` art
+  exported natively (multi-sheet encoding); all five aspects
+  `ported`.
+- Unit-tested in `death_tests` (create, stats, nine-state
+  dispatch, child emission/linkage, attack effects, lethal
+  timer, state-7 gore and delete); rooms
+  `area_06_room_007`/`area_07_room_008` carry the entity.
+
 ## Patch 0986 - Stolas ported (id 97)
 
 - `EnemyStolasCreate` (0x0809A6C0) / `EnemyStolasUpdate` (0x0809A4AC):

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-11T00:08:57+00:00",
+ "generated_at": "2026-11-11T00:48:14+00:00",
  "git": {
-  "commit": "5c771cf9",
+  "commit": "622e0d59",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 275,
+   "total": 276,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 209,
+    "functional": 210,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 209,
-   "functional_or_better_percent": 76.0,
-   "with_passing_tests": 257,
-   "with_passing_tests_percent": 93.5,
+   "functional_or_better": 210,
+   "functional_or_better_percent": 76.1,
+   "with_passing_tests": 263,
+   "with_passing_tests_percent": 95.3,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -225,6 +225,7 @@
     "aos.enemies.curly",
     "aos.enemies.dead_crusader",
     "aos.enemies.dead_warrior",
+    "aos.enemies.death",
     "aos.enemies.demon_lord",
     "aos.enemies.devil",
     "aos.enemies.disc_armor",
@@ -405,8 +406,8 @@
    },
    "functional_or_better": 92,
    "functional_or_better_percent": 100.0,
-   "with_passing_tests": 90,
-   "with_passing_tests_percent": 97.8,
+   "with_passing_tests": 92,
+   "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.particles",
@@ -509,20 +510,20 @@
    "areas": [
     "aos"
    ],
-   "total": 130,
+   "total": 131,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 102,
+    "functional": 103,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 102,
-   "functional_or_better_percent": 78.5,
-   "with_passing_tests": 130,
+   "functional_or_better": 103,
+   "functional_or_better_percent": 78.6,
+   "with_passing_tests": 131,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -550,6 +551,7 @@
     "aos.enemies.curly",
     "aos.enemies.dead_crusader",
     "aos.enemies.dead_warrior",
+    "aos.enemies.death",
     "aos.enemies.demon_lord",
     "aos.enemies.devil",
     "aos.enemies.disc_armor",
@@ -725,8 +727,8 @@
    },
    "functional_or_better": 5,
    "functional_or_better_percent": 33.3,
-   "with_passing_tests": 11,
-   "with_passing_tests_percent": 73.3,
+   "with_passing_tests": 12,
+   "with_passing_tests_percent": 80.0,
    "unknown_or_blocked": 0,
    "features": [
     "tools.dashboard",
@@ -827,8 +829,8 @@
    },
    "functional_or_better": 2,
    "functional_or_better_percent": 66.7,
-   "with_passing_tests": 0,
-   "with_passing_tests_percent": 0.0,
+   "with_passing_tests": 2,
+   "with_passing_tests_percent": 66.7,
    "unknown_or_blocked": 1,
    "features": [
     "platform.dashboard_offline",
@@ -6431,15 +6433,13 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -6582,15 +6582,13 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -10896,6 +10894,103 @@
     ],
     "in_game_check": [
      "aria area_05_room_003 (--spawn 180 440 --hp 9999): the mounted dead warrior charges (frame 30), brakes in a cloud of dust (frame 80), turns and charges off (frames 130 and 170)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
+   }
+  },
+  {
+   "id": "aos.enemies.death",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Death",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/core/aos_enemy.h",
+    "src/runtime/aos/enemies/death.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyDeathCreate",
+    "EnemyDeathUpdate",
+    "sub_080BC298",
+    "sub_080BC390",
+    "sub_080BC82C",
+    "sub_080BCECC",
+    "sub_080BCFC8",
+    "sub_080BD094",
+    "sub_080BD20C",
+    "sub_080BD2D0",
+    "sub_080BD358",
+    "sub_080BDAF0",
+    "sub_080BDD94",
+    "sub_080BDFC4",
+    "sub_080BE218",
+    "sub_080BE414",
+    "sub_080BE608",
+    "sub_080BE984",
+    "sub_080BEB50",
+    "sub_080BEC84",
+    "sub_080BEF04",
+    "sub_080BF108",
+    "sub_080BF178",
+    "sub_080BF6B8",
+    "sub_080BF738",
+    "sub_080BF990",
+    "sub_080BFB58",
+    "sub_080BFBF4",
+    "sub_080BFCD8"
+   ],
+   "limitations": "The gEwramData + 0x4E4 slot table (stride 0x84) folds into parent pointers and the DEATH_MIRROR/MID/SCYTHE/SHOT/GORE roles; the three sub_0806DFF8 child callbacks persist as those roles emitted over the first updates under the 8-child room cap; the wall probes sub_0806D490/sub_0806D4A8/sub_0806D3D8 and the sub_080009E4 sine offsets collapse into player_in and documented constants; the scythe sub-children and the projectile helpers fold into the SHOT/GORE roles; the sub_08021654 ring emits, the sub_080427B8/sub_0804277C box registrations, the + 0x5A palette merge and the sub_08013CF0/sub_08034498/sub_0800C5A8 event calls are not ported. EnemyDeathCreate (0x080BF2E8) loads the encoding-2 multi-sheet tiles 0x08119498 (four concatenated 16x16 sub-sheets, exported by the new objects.c branch), palette 0x0820BC1C and frames 0x08249C48, spawns the three child callbacks sub_080BC298/sub_080BD094/sub_080BD358 through sub_0806DFF8, and starts the nine-state update machine of EnemyDeathUpdate (0x080BF5FC): state 0 sub_080BE414 intro/aggro waits on the global flag, checks player distance, plays song 0x121 and dashes in; state 1 sub_080BE608 is the eight-case hover/attack machine; states 2-6 are the dive/wander/charge/sweep/beat phases; state 7 sub_080BF178 is the death sequence that deletes; state 8 falls back to sub_0803F17C. The mirror child copies the parent animation/facing, the mid child rides a slot with timers and emits the scythe, and the scythe child is a nine-state machine of its own. Unit-tested in death_tests.",
+   "next_action": "Compare the attack choreography and child timing against an emulator; port the full case tables of the state-1 and scythe machines, the ring emits and the projectile helpers.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria --area 6 --room 7 (and --area 7 --room 8): Death hovers, cycles its attack states and the scythe children, then dies into gore."
     ],
     "emulator_compared": false,
     "played_through": false
@@ -22277,7 +22372,7 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -22291,11 +22386,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -25108,15 +25201,13 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -25154,14 +25245,12 @@
       "test": "@all-tests on linux",
       "kind": "suite",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -25393,7 +25482,7 @@
     "files": [
      "tests/test_dashboard.c"
     ],
-    "outcome": "failed"
+    "outcome": "passed"
    },
    {
     "name": "native_map_contract",
@@ -26142,12 +26231,18 @@
    }
   ],
   "summary": {
-   "passed": 136,
-   "failed": 1,
+   "passed": 137,
+   "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "622e0d59",
+   "date": "2026-11-11",
+   "subject": "Port Aria of Sorrow Stolas (id 97)",
+   "scope": "project"
+  },
   {
    "commit": "5c771cf9",
    "date": "2026-11-11",
@@ -26621,12 +26716,6 @@
    "date": "2026-11-09",
    "subject": "Compile Dead Crusader as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "9e6f9ddb",
-   "date": "2026-11-09",
-   "subject": "Compile Skull Millione family as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -26687,9 +26776,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1610,
-    "routines_attached_to_features": 1610,
-    "unassigned_routines": 1963,
+    "routines_cited_by_features": 1633,
+    "routines_attached_to_features": 1633,
+    "unassigned_routines": 1940,
     "call_edges": 14228
    }
   },
@@ -28941,11 +29030,12 @@
      },
      "bosses": {
       "total": 11,
-      "implemented": 0,
-      "functional_or_better": 0,
-      "functional_or_better_percent": 0,
+      "implemented": 1,
+      "functional_or_better": 1,
+      "functional_or_better_percent": 9,
       "by_status": {
-       "not_started": 11
+       "not_started": 10,
+       "functional": 1
       }
      },
      "items": {
@@ -31777,13 +31867,28 @@
      {
       "id": 107,
       "name": "Death",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Death",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria --area 6 --room 7 (and --area 7 --room 8): Death hovers, cycles its attack states and the scythe children, then dies into gore."
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.death",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "n/a",
+       "soul": "ported",
+       "soul_ref": "blue:24",
+       "notes": "Soul: drops its blue soul 24 (SkillDeathUse, already ported as aos_soul_blue_death) through the boss soul path; the enemies.tsv soul_rarity is 0 so the generic roll never fires. Animations: ported from EnemyDeathCreate (0x080BF2E8) / EnemyDeathUpdate (0x080BF5FC) and the sub_080BE414 intro, sub_080BE608 hover/attack machine, sub_080BE984 dive, sub_080BEB50 wander, sub_080BEC84 charge, sub_080BEF04 sweep, sub_080BF108 beat, sub_080BF178 death and the sub_080BC298 mirror, sub_080BD094 mid, sub_080BD358 scythe children — the shared animation record 0x08249C48 through the shared play/step helpers; unit-tested in death_tests. Sounds: PlaySong 0x121 (intro/dive), 0xD1 (attack wind-up), 0x92/0x1F (scythe), 0x6E (lethal/death) are requested and unit-tested, not listened to. Loot: the enemies.tsv record drops nothing (common/rare 0x0000). Sprite: tiles 0x08119498 — the first encoding-2 multi-sheet container (four 16x16 sub-sheets concatenated by the exporter) — palette 0x0820BC1C, animation record 0x08249C48 exported natively, shared by every descendant. Divergences: the gEwramData + 0x4E4 slot table (stride 0x84) folds into parent pointers and the DEATH_* roles, the sub_0806D490/sub_0806D4A8/sub_0806D3D8 wall probes and sub_080009E4 sine offsets collapse into player_in and documented constants, the scythe's sub-children and projectile helpers fold into the SHOT/GORE roles, the sub_08021654 ring emits, the sub_080427B8/sub_0804277C box registrations, the + 0x5A palette merge and the sub_08013CF0/sub_08034498/sub_0800C5A8 event calls are not ported, and there is no emulator comparison."
       }
      },
      {
@@ -31849,17 +31954,17 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 99,
+      "ported": 100,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 99,
+      "ported": 100,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 98,
+      "ported": 99,
       "partial": 0,
       "missing": 0
      },
@@ -31869,12 +31974,12 @@
       "missing": 0
      },
      "soul": {
-      "ported": 68,
+      "ported": 69,
       "partial": 31,
       "missing": 0
      },
-     "complete": 68,
-     "monsters": 99
+     "complete": 69,
+     "monsters": 100
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -37055,7 +37160,7 @@
        "id": "06:18",
        "name": "Death",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops its blue soul 24 (SkillDeathUse, already ported as aos_soul_blue_death) through the boss soul path; the enemies.tsv soul_rarity is 0 so the generic roll never fires. Animations: ported from EnemyDeathCreate (0x080BF2E8) / EnemyDeathUpdate (0x080BF5FC) and the sub_080BE414 intro, sub_080BE608 hover/attack machine, sub_080BE984 dive, sub_080BEB50 wander, sub_080BEC84 charge, sub_080BEF04 sweep, sub_080BF108 beat, sub_080BF178 death and the sub_080BC298 mirror, sub_080BD094 mid, sub_080BD358 scythe children — the shared animation record 0x08249C48 through the shared play/step helpers; unit-tested in death_tests. Sounds: PlaySong 0x121 (intro/dive), 0xD1 (attack wind-up), 0x92/0x1F (scythe), 0x6E (lethal/death) are requested and unit-tested, not listened to. Loot: the enemies.tsv record drops nothing (common/rare 0x0000). Sprite: tiles 0x08119498 — the first encoding-2 multi-sheet container (four 16x16 sub-sheets concatenated by the exporter) — palette 0x0820BC1C, animation record 0x08249C48 exported natively, shared by every descendant. Divergences: the gEwramData + 0x4E4 slot table (stride 0x84) folds into parent pointers and the DEATH_* roles, the sub_0806D490/sub_0806D4A8/sub_0806D3D8 wall probes and sub_080009E4 sine offsets collapse into player_in and documented constants, the scythe's sub-children and projectile helpers fold into the SHOT/GORE roles, the sub_08021654 ring emits, the sub_080427B8/sub_0804277C box registrations, the + 0x5A palette merge and the sub_08013CF0/sub_08034498/sub_0800C5A8 event calls are not ported, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

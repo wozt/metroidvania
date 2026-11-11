@@ -418,6 +418,10 @@ static const EntitySpec entities[] = {
      * once) with its 0x084F13B4 walker probes. */
     {"skill_werewolf", 0x081D30FC, 0x0820B25C, 0, 0x082331BC, 0x084F13B4,
      0, 0, 0, {0}},
+    /* Resource 0x138 of 0x080E13BC: SkillKillerMantleUse's spectral knight
+     * (attack box preset 5 through sub_0804277C). */
+    {"skill_killer_mantle", 0x081D912C, 0x0820B40C, 0, 0x08234CDC,
+     0, 0, 0, 0, {0}},
     /* Resource 6 of 0x080E13BC: the Killer Doll soul's decoy (looping
      * sequence 0 or 1). */
     ENTITY("skill_killer_doll", 0x081CF0DC, 0x0820B11C, 0, 0x08231578),

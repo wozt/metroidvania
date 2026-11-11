@@ -39,6 +39,7 @@
 #include "aos/red_souls/aos_soul_red_killer_fish.h"
 #include "aos/red_souls/aos_soul_red_gladiator.h"
 #include "aos/red_souls/aos_soul_red_werewolf.h"
+#include "aos/red_souls/aos_soul_red_killer_mantle.h"
 #include "aos/red_souls/aos_soul_red_devil.h"
 #include "aos/red_souls/aos_soul_red_ghost.h"
 #include "aos/red_souls/aos_soul_red_siren.h"
@@ -314,7 +315,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_WITCH, SKILL_ART_PILLAR, SKILL_ART_FLYING_ARMOR, SKILL_ART_DEATH,
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
-       SKILL_ART_WEREWOLF, SKILL_ARTS };
+       SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -334,7 +335,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_devil_spark",
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
-                                                         "skill_werewolf"};
+                                                         "skill_werewolf", "skill_killer_mantle"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -957,7 +958,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL, SKILL_VALKYRIE, SKILL_NEEDLES,
        SKILL_RIPPER, SKILL_MILLIONE_EMITTER, SKILL_MILLIONE_CHILD, SKILL_FISH_HEAD,
        SKILL_KILLER_FISH, SKILL_GLADIATOR, SKILL_LIGHTNING, SKILL_DECOY, SKILL_NEMESIS,
-       SKILL_WEREWOLF };
+       SKILL_WEREWOLF, SKILL_KILLER_MANTLE };
 
 typedef struct {
     bool alive, started;
@@ -995,6 +996,7 @@ typedef struct {
     AosDecoy decoy;         /* SKILL_DECOY */
     AosNemesisSoul nemesis; /* SKILL_NEMESIS */
     AosWerewolf werewolf;   /* SKILL_WEREWOLF */
+    AosKillerMantle killer_mantle; /* SKILL_KILLER_MANTLE */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
@@ -1028,6 +1030,7 @@ typedef struct {
 #define SKILL_KILLER_DOLL_ROUTINE 0x08024F39u
 #define SKILL_NEMESIS_ROUTINE 0x080251F1u
 #define SKILL_WEREWOLF_ROUTINE 0x080284FCu
+#define SKILL_KILLER_MANTLE_ROUTINE 0x0802B9A8u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1047,6 +1050,7 @@ typedef struct {
     const AosAnimSet *gladiator;    /* resource 24, sequence/frame 0 */
     const AosAnimSet *lightning;    /* resource 9, sequence 0 */
     const AosAnimSet *werewolf;     /* resource 14, sequence 0 */
+    const AosAnimSet *killer_mantle;  /* skill_killer_mantle, sequence 0 */
     const AosEnemyKind *werewolf_kind; /* its 0x084F13B4 walker probes */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
@@ -1165,6 +1169,8 @@ static int cast_red_soul(void *context) {
                : routine == SKILL_WEREWOLF_ROUTINE && souls->werewolf &&
                          souls->werewolf_kind && souls->werewolf_kind->probes.count
                    ? SKILL_WEREWOLF
+               : routine == SKILL_KILLER_MANTLE_ROUTINE && souls->killer_mantle
+                   ? SKILL_KILLER_MANTLE
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1230,6 +1236,9 @@ static int cast_red_soul(void *context) {
     } else if (kind == SKILL_NEMESIS) {
         skill->nemesis = aos_nemesis_soul_create();
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -8);
+    } else if (kind == SKILL_KILLER_MANTLE) {
+        skill->killer_mantle = aos_killer_mantle_create();
+        place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, 0);
     } else if (kind == SKILL_WEREWOLF) {
         skill->werewolf = aos_werewolf_create(souls->soma->x, souls->soma->y,
                                               souls->soma->facing_left);
@@ -2075,6 +2084,24 @@ static void update_skills(AriaSouls *souls) {
             skill->y = skill->werewolf.body.y;
             skill->facing_left = skill->werewolf.body.mirrored;
             break;
+        case SKILL_KILLER_MANTLE:
+            /* SkillKillerMantleUse: counted on its first update, song 0xD1,
+             * sequence 0; sub_08031EA4(entity, source, 0, 0) re-places it on
+             * Soma every frame, the animation end (sub_0803F17C == 3) or
+             * the sub_0806D128(e, 4) margin probe ends it, and state 2
+             * deletes it. The + 0x59 bit-4 tail gate is not traced. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0xD1);
+                aos_anim_start(&skill->anim, souls->killer_mantle, 0, false);
+            }
+            place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, 0);
+            bool mantle_anim_done = aos_anim_step(&skill->anim, souls->killer_mantle) == 3;
+            if (!aos_killer_mantle_update(&skill->killer_mantle, mantle_anim_done,
+                                          skill_outside(souls, skill, 4)))
+                end_skill(souls, skill);
+            break;
         case SKILL_GHOST:
             /* SkillGhostUse: one counted, invisible owner plays 0xD6 and
              * emits two sub_0802A49C spirits, then releases itself. */
@@ -2704,6 +2731,8 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
         else if (skill->kind == SKILL_WEREWOLF && souls->werewolf_kind &&
                  skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
             box = souls->werewolf_kind->attack[0][skill->anim.frame];
+        else if (skill->kind == SKILL_KILLER_MANTLE)
+            box = (AosBox){-8, -8, 16, 16};    /* preset 5, approximated */
         else if (skill->kind == SKILL_LIGHTNING)
             box = aos_lightning_box(&skill->lightning);
         else if (skill->kind == SKILL_SKULL && souls->skull_kind &&
@@ -7309,6 +7338,11 @@ int aria_runtime_main(int argc, char **argv) {
                                  ? &werewolf->set
                                  : NULL;
             souls.werewolf_kind = souls.werewolf ? &werewolf->kind : NULL;
+            const __typeof__(objects.skills[0]) *mantle =
+                &objects.skills[SKILL_ART_KILLER_MANTLE];
+            souls.killer_mantle = objects_ok && mantle->loaded && mantle->defs[0].count
+                                      ? &mantle->set
+                                      : NULL;
             const __typeof__(objects.skills[0]) *killer_doll =
                 &objects.skills[SKILL_ART_KILLER_DOLL];
             souls.killer_doll = objects_ok && killer_doll->loaded &&

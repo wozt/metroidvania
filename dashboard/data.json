@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-11T17:09:56+00:00",
+ "generated_at": "2026-11-11T17:18:59+00:00",
  "git": {
-  "commit": "e10216fe",
+  "commit": "6a629f73",
   "branch": "main",
   "dirty": true
  },
@@ -105,8 +105,8 @@
    },
    "functional_or_better": 221,
    "functional_or_better_percent": 77.3,
-   "with_passing_tests": 268,
-   "with_passing_tests_percent": 93.7,
+   "with_passing_tests": 134,
+   "with_passing_tests_percent": 46.9,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -416,8 +416,8 @@
    },
    "functional_or_better": 92,
    "functional_or_better_percent": 100.0,
-   "with_passing_tests": 90,
-   "with_passing_tests_percent": 97.8,
+   "with_passing_tests": 85,
+   "with_passing_tests_percent": 92.4,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.particles",
@@ -533,8 +533,8 @@
    },
    "functional_or_better": 114,
    "functional_or_better_percent": 80.9,
-   "with_passing_tests": 141,
-   "with_passing_tests_percent": 100.0,
+   "with_passing_tests": 26,
+   "with_passing_tests_percent": 18.4,
    "unknown_or_blocked": 0,
    "features": [
     "aos.audio.play_song",
@@ -699,8 +699,8 @@
    },
    "functional_or_better": 8,
    "functional_or_better_percent": 34.8,
-   "with_passing_tests": 22,
-   "with_passing_tests_percent": 95.7,
+   "with_passing_tests": 9,
+   "with_passing_tests_percent": 39.1,
    "unknown_or_blocked": 0,
    "features": [
     "assets.aria_early_enemy_components_0477",
@@ -747,8 +747,8 @@
    },
    "functional_or_better": 5,
    "functional_or_better_percent": 33.3,
-   "with_passing_tests": 11,
-   "with_passing_tests_percent": 73.3,
+   "with_passing_tests": 10,
+   "with_passing_tests_percent": 66.7,
    "unknown_or_blocked": 0,
    "features": [
     "tools.dashboard",
@@ -1015,7 +1015,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -1029,9 +1029,11 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -2453,7 +2455,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -2467,9 +2469,11 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -4795,7 +4799,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -4809,9 +4813,11 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -7465,7 +7471,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -7489,9 +7495,11 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -7622,7 +7630,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -7656,9 +7664,11 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -8819,13 +8829,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
+    "verdict": "failing",
     "warnings": [],
-    "verified_on": "2026-11-11"
+    "verified_on": null
    }
   },
   {
@@ -9056,13 +9066,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -9158,13 +9170,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -9253,13 +9267,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -9368,13 +9384,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -9440,13 +9458,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -9566,13 +9586,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -9654,13 +9676,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -9790,13 +9814,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -9891,13 +9917,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -9966,13 +9994,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -10051,13 +10081,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -10165,13 +10197,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -10282,13 +10316,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -10390,13 +10426,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -10474,13 +10512,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -10564,13 +10604,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -10647,13 +10689,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -10736,13 +10780,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -10809,13 +10855,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -10881,13 +10929,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -11081,13 +11131,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -11183,13 +11235,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -11323,13 +11377,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -11403,13 +11459,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -11479,13 +11537,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -11556,13 +11616,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -11653,13 +11715,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -11725,13 +11789,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -11853,13 +11919,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -11946,13 +12014,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -12043,13 +12113,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -12114,13 +12186,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -12211,13 +12285,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -12282,13 +12358,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -12375,13 +12453,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -12463,13 +12543,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -12535,13 +12617,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -12613,13 +12697,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -12741,13 +12827,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -12819,13 +12907,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -12893,13 +12983,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -12971,13 +13063,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -13053,13 +13147,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -13165,13 +13261,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -13261,13 +13359,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -13398,13 +13498,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -13526,13 +13628,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -13604,13 +13708,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -13840,13 +13946,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -13911,13 +14019,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -13994,13 +14104,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -14236,13 +14348,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -14364,13 +14478,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -14452,13 +14568,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -14535,13 +14653,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -14627,13 +14747,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -14724,13 +14846,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -14823,13 +14947,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -14922,13 +15048,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -15007,13 +15135,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -15117,13 +15247,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -15195,13 +15327,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -15302,13 +15436,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -15398,13 +15534,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -15535,13 +15673,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -15614,13 +15754,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -15696,13 +15838,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -15776,13 +15920,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -15870,13 +16016,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -15968,13 +16116,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -16045,13 +16195,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -16136,13 +16288,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -16234,13 +16388,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -16317,13 +16473,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -16433,13 +16591,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -16529,13 +16689,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -16609,13 +16771,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -16686,13 +16850,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -16780,13 +16946,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -16860,13 +17028,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -16939,13 +17109,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -17010,13 +17182,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -17097,13 +17271,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -17174,13 +17350,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -17257,13 +17435,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -17330,13 +17510,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -17421,13 +17603,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -17534,13 +17718,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -17676,13 +17862,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -17774,13 +17962,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -17883,13 +18073,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -17961,13 +18153,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -18080,13 +18274,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -18188,13 +18384,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -18281,13 +18479,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -18387,13 +18587,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -18467,13 +18669,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -18578,13 +18782,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -18684,13 +18890,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -18790,13 +18998,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -18904,13 +19114,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -18994,13 +19206,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -19075,13 +19289,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -19191,13 +19407,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -19319,13 +19537,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -19414,7 +19634,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -19428,9 +19648,11 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -19502,13 +19724,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -19587,13 +19811,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -19670,7 +19896,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -19684,9 +19910,11 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -19749,13 +19977,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -20143,13 +20373,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
+    "verdict": "failing",
     "warnings": [],
-    "verified_on": "2026-11-11"
+    "verified_on": null
    }
   },
   {
@@ -20553,7 +20783,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -20567,9 +20797,9 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
+    "verdict": "failing",
     "warnings": [],
-    "verified_on": "2026-11-11"
+    "verified_on": null
    }
   },
   {
@@ -20969,13 +21199,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
+    "verdict": "failing",
     "warnings": [],
-    "verified_on": "2026-11-11"
+    "verified_on": null
    }
   },
   {
@@ -21745,7 +21975,9 @@
     "src/runtime/aos/core/aos_enemy.c",
     "src/runtime/aos/red_souls/aos_soul_red_arrow.c",
     "src/runtime/aos/red_souls/aos_soul_red_werewolf.c",
-    "src/runtime/aos/red_souls/aos_soul_red_werewolf.h"
+    "src/runtime/aos/red_souls/aos_soul_red_werewolf.h",
+    "src/runtime/aos/red_souls/aos_soul_red_killer_mantle.c",
+    "src/runtime/aos/red_souls/aos_soul_red_killer_mantle.h"
    ],
    "tests": [
     "tests/test_aos_soul.c",
@@ -21776,7 +22008,8 @@
     "tests/test_aos_soul_red_nemesis.c",
     "tests/test_aos_enemy.c",
     "tests/test_aos_soul_red_arrow.c",
-    "tests/test_aos_soul_red_werewolf.c"
+    "tests/test_aos_soul_red_werewolf.c",
+    "tests/test_aos_soul_red_killer_mantle.c"
    ],
    "dependencies": [
     "aos.souls.inventory_pickups",
@@ -21868,9 +22101,12 @@
     "SkillNemesisUse",
     "SkillWerewolfUse",
     "sub_0802393C",
-    "sub_0806D4C0"
+    "sub_0806D4C0",
+    "SkillKillerMantleUse",
+    "sub_0804277C",
+    "sub_0803F17C"
    ],
-   "limitations": "Only SkillBatUse, SkillKillerFishUse, SkillWingedSkeletonUse, SkillSkullArcherUse, SkillMermanUse, SkillAxeArmorUse, SkillDurgaUse, SkillHarpyUse, SkillWerewolfUse, SkillTinyDevilUse, sub_SkillBlueCrowUse, SkillFleamanUse, SkillGhostUse, SkillSirenUse parameter 0, Skill_EvilButcher_Ripper_Use, SkillSkullMillioneUse, SkillFishHeadUse, SkillGladiatorUse, SkillLightningDollUse, SkillKillerDollUse and the shared throw routine for parameters 0, 1, 3 and 5 have skill entities; the runtime refuses the other red souls instead of spending MP. The throw routine's flash 0x20, shards 0x100 and frame-derived box 0x200 paths remain unported. sub_08042A54(1, 0x1E) is not run, and its turn is drawn about the frame's centre rather than the native affine object's. The Merman drops' splashes (sub_0802DAD4) and the spout's sound 0xED are not created or played. Durga's sound 0xC7 and the Harpy's sound 0xE6 are not played; the dagger's trail is kept inside the dagger's skill entity and drawn behind it (natively a separate entity in slots 0x49-0xCF that deletes itself after the dagger's slot empties). The spear's sound 0xE4 and its tip's sub_08042A54(1, 0x14) are not played or run. The axe's afterimages are drawn at half opacity (their semi-transparent mode's blend weights are not traced), and sound 0xE3 is not played. Child skill entities update in the frame they are created when their slot follows the parent's, which is not verified against the native entity order. The arrow's stuck helper sub_080239E4 and its sound 0xC8 are not ported, the arrow's first update both sets its speed and moves (the split between its states 0 and 1 is not verified frame by frame), and the arrow's hit has not been observed against an enemy in a runtime run. sub_08021530 is ported for type 5 in normal play only (the gEwramData + 0x4CC bit 6 alternative using 0x133EE is not, and the + 0xA1 bit 4 reduction is never set by the runtime); the soul hit takes the elements of the record's + 0xC on the assumption that a type-5 attacker reaches sub_0806B7D8's flag-8 path, and the per-enemy reactions documented as weapon-only (Valkyrie, harpy and siren recoils) stay weapon-only. The ring's damage was not observed in a runtime run (no enemy near the start). Sound 0xE2, sub_08042A54(1, 0xF), the cast's per-animation palette and the 0x131B8 & 0x800 gate. sub_08021994 is ported for its MP regeneration only (the curse states of unk_13270 and the earlier input-driven effect of unk_13276 are not), the cast state's pose-3 recoil (+ 0x0B with + 0x6E == 3, sound 0xEB) is not modelled, and the + 0x1E byte the poses write has no traced reader. The source-adapted soul equipment page changes the equipped red soul, but its native pause-hub graphics and descriptions are not ported. Skill entities are cleared on a room change. The Julius variant (sub_08034624, table 0x080E1ED8) is not ported. The homing list is kept by the runtime as room entity indices: every active, unrewarded enemy inside the screen box (-16, 0, 0x110, 0xB0) registers each frame, which approximates the native sub_0806CC20 call sites, the forced target 0x13220 is never set, and the Tiny Devil fires' afterimage trails (sub_0802383C) are not ported. The flea's end sparks (sub_08045CEC(x, y, 0, 7)) are not created, only their two random draws are made. SkillGhostUse does not create sub_0802A3CC's native visual trail and the boss-only forced target is not connected. SkillSirenUse's non-zero parameter path and its trail helpers are not ported; the Siren soul record uses parameter 0. The Valkyrie soul's sparkle is drawn twice by sub_08045E4C (at its position and at its random offset); the runtime models that as two identical timed sparkles. Ripper variants 0 and 1 are castable with their native shared art, 2 x 2 type-5 attack, left/right wall probes, rebound affine turn, blink, sounds and slot cleanup. sub_0802D9BC and sub_080239E4 now report and retain the first struck enemy, store the blade's fixed-point relative offset, follow it while active, expand the box to 20 x 16, observe its defeated state and preserve the variants' distinct attached lifetimes. Entity generation identity and update order are source-adapted and not emulator-compared. SkillSkullMillioneUse's sub_08042A54(1, 0xC) global state-byte write is not run; child allocation and same-frame updates follow the runtime's source-adapted slot order. SkillFishHeadUse's sub_08042A54(1, 0x14) global state-byte write is not run. SkillGladiatorUse does not reserve and release a native affine slot through sub_0803E654 and sub_0803E6BC, its sub_08042A54(1, 0x1E) global state-byte write is not run, and SDL rotates it about the exported frame centre. SkillKillerFishUse does not run sub_08042A54(1, 0x1E); its sub_08069CF4 collision uses the source-derived centre offsets instead of a separately reconstructed current-entity collision box. The decoy's aim covers the ported enemy routines through aos_enemy_set_decoy: the port routines with no native reference (approximate AIs such as Imp, Harpy, Gorgon, Tiny Devil, Peeping Eye, Giant Ghost and the shared early-enemy path) follow the decoy like the native helpers do, which is not checked against their own native code. Soma's red soul use of sub_0801B0D8 (_0801C298, Up held and a new attack press with no 0x540 flag) runs sub_08019478: with no skill entity alive the last used soul follows the equipped one; the cast needs that soul's record (0x080E1598, exported as metadata/red_souls.tsv: 56 records, one per red soul count of the 0x1C-byte inventory groups) to have a skill routine, at least its MP cost (Soma may spend his last points, unlike Julius), fewer active entities than the last used record's maximum (sub_0802D2BC) and a free slot of eight (sub_0802D208). It spends the MP, plays the cast animation of sub_0802D1D8 (0x080E1918: ground 22/78/79/80, air 49/78/79/80) with the pose's hop (vy -3.5, gravity -0x1000), lunge (3 px per frame) or recoil byte, sets flag 0x100 and enters state 2, which steers in the air, brakes on the ground and ends with the animation. The weapon attack that follows is refused by the 0x100 flag. sub_08021994 regenerates one MP every 64 ticks of Soma's + 0x22 counter (16 with accessory 0x29, full with 0x2C). SkillBatUse places its entity at Soma's facing and (0, -26) (sub_08031EA4), counts itself on its first update, plays sequence 0 of its resource (0x081CD8D0 / 0x0820B0B0 / 0x082311F8, exported as Enemy/skill_bat with its per-frame attack boxes) and ends with it, freeing its slot. The ring's frame boxes are type-5 attacks: after the weapon, each enemy tests them with the recent-hit slot and cooldown of type 5 (0x080E33F0), and sub_0806E218 deals sub_08021530(5) = (STR * power / 10 + INT / 4 + power * 6) / 16 of the last used soul's record (sub_0802D244; the bat's power is 60, 26 at level 1) through the existing damage formula with the record's elements. Portable saves keep the equipped souls and MP (schema v7). SkillSkullArcherUse places its bow at Soma's facing and (-12, -24), counts itself on its first update and plays sequence 0 of its resource (0x081D510C / 0x0820B2EC / 0x08233BCC, exported as Enemy/skill_archer); on animation frame 14 it takes a free slot (sub_08023530) for the arrow sub_08028BC4 at its own position, and it ends with its animation or outside the screen margins 4 (sub_0806D128). The arrow (still frame 1) flies 6 pixels a frame with the type-5 box (8, -1, 2, 2) of 0x0202FF08; once an enemy took it (sub_0802DB84, reported back through the soul attack) it stops, blinks 16 frames and is deleted, as it is outside the margins 2. The Skeleton soul's routine (shared by six souls) reads the record of 0x084F12C8 its parameter selects (exported as metadata/skill_throws.tsv); for parameter 3 it places the bone (resource 7 of 0x080E13BC, exported as Enemy/skill_bone) at Soma's facing and (8, -26), throws it at (0.5, -4) pixels a frame (mirrored facing left) with gravity 0x2000 capped at 8 pixels a frame (sub_0806D430, sub_0806D460), turns it 0x0B00 a frame (negated facing left; sub_0803E058's matrix turns it clockwise), keeps the type-5 box (-8, -8, 16, 16) of 0x1010F8F8 and deletes it the frame after its moved position leaves the screen margins 4 (+ 0x59 bit 2 is set by sub_08019478). Its hit callback sub_0802DACC only marks the hit, so the bone passes through. SkillMermanUse (resource 0 of 0x080E13BC, exported as Enemy/skill_shared) plays sequence 0 at Soma's facing and (0, -26), counts itself and creates five sub_08026DB8 drops from (6, -26) through sub_08023530: drop k flies k + 1 pixels a frame slowed by its 128th, looping sequence 6, with the type-5 box (-8, -8, 16, 16) for 16 frames; then its attack is disabled and it falls with gravity 0x2000 (sub_0806D3D8, X moved twice on that frame) until it leaves the screen margins 3. SkillWingedSkeletonUse shows still frame 0 of resource 0 at Soma's facing and (8, -26) (sub_08031EA4 copies whole pixels only, now for every skill), throws it 4 pixels a frame ahead and 1.125 up with gravity 0x2000, turning 0x100 a frame from -0x800 while its angle is at most 0x3FFF (mirrored facing left), and keeps the point 16 pixels along it (turned by 0x8000 facing left); when the cell at its whole position plus that point is solid and not special (sub_08001A00, sub_08001F3C) it sticks and blinks 32 frames, and outside the screen margins 4 it goes. Its child sub_08025F70 carries the type-5 box (-8, -8, 16, 16) at that point until the spear's state 3. A local runtime run with soul 1 equipped drew the spear leaving Soma's hand and turning down. SkillDurgaUse shows still frame 2 of resource 24 (exported as Enemy/skill_blades) at Soma's facing and (8, -26), flies 4 pixels a frame ahead (sub_0806D3D8), attacks with its still frame's box (frame record + 8 through sub_08042848, exported as a static_attack row: (-16, -4, 32, 8)) and is deleted in the update it leaves the screen margins 3. A local runtime run with soul 13 equipped drew the flying sword. SkillHarpyUse, placed at Soma's facing and (20, -26), counts itself and creates two sub_0802CAC0 daggers (sub_08023530 marks each child's + 0x59 bit 2 and counts it), then is deleted on its next update: dagger 0 faces right and dagger 1 left whatever Soma's facing, 5 pixels a frame, still frame 1 of resource 24 with the type-5 box (-1, -1, 2, 2) of 0x0202FFFF; once its hit callback sub_0802D9B4 ran it goes, against a wall 6 pixels ahead (sub_08002058 or sub_0800207C) it blinks 16 frames and goes, and outside the screen margins 4 it goes. Its trail (sub_0802C9E8, sub_0802C944, sub_0802DC60) keeps a 10-entry history of its whole position (entry 0 of the fresh entity is left at (0, 0), as natively) and draws frames 3, 4, 5 at entries 1, 2, 3. A local runtime run with soul 24 equipped drew both daggers and their trails. SkillAxeArmorUse shows still frame 6 (its parameter) of the same resource at Soma's whole X and 26 pixels above his whole Y, unmirrored; it flies 3.25 pixels a frame toward his facing and is pulled back by 0x1000 a frame while within 8 pixels a frame, turns 0x800 a frame (sub_0803E058 with + 0x2A << 11), keeps the type-5 box (-10, -10, 20, 20) of 0x1414F6F6 and is deleted the frame after it leaves the screen margins 4. Its two sub_080240A0 afterimages show its whole X 3 and 6 frames back (a 10-entry history), its current Y and an angle lagging by that many steps, with no attack, and go when it reaches state 2. A local runtime run with soul 5 equipped drew the axe turning away with its afterimages. A local runtime run with soul 4 equipped drew the drops as a stream from Soma's hand. A local runtime run with soul 3 equipped drew the bone rising and turning. A local runtime run with soul 6 equipped drew the bow behind Soma and an arrow leaving it to the right. A local runtime run with soul 2 equipped cast it (MP 80 to 75, state 2, animation 22) and drew the expanding ring. Source-derived and unit-tested, not emulator-compared. SkillTinyDevilUse (sound 0x1A3) creates three SkillTinyDevilUpdate fires at angles -0x1800, 0 and 0x1800 (mirrored facing left); each plays sequence 0 of resource 21 (exported as Enemy/skill_devil with its 16 direction frames), then picks the first filled homing-list slot from random & 3 (sub_08021924 registers, sub_08021DC4 ages), plays 0x134 and homes, turning 0x100 a frame and speeding up by 0x4000 to 0x50000, until its 64-frame timer, its hit or its target's death sends it straight; its type-5 box is (-8, -8, 16, 16) and it goes outside the screen margins 2. A local run in room 0/6 registered three enemies and sent the fires at them. sub_SkillBlueCrowUse (sound 0xEE) shows looping sequence 2 of resource 31 (exported as Enemy/skill_crow with its frame boxes), facing away from Soma's facing, and circles him for 50 frames: angle 0x1000 stepping -0x147 (0x7000 and +0x147 facing left), radius sin(timer * 0x28F) * 60 pixels around (0, -18) from Soma, attacking with its frame's box. A local run drew the crow arcing around Soma. SkillFleamanUse (sound 0x19C) places a flea of resource 20 (exported as Enemy/skill_flea with its still frames, boxes and the walker probes 0x084F13BE) at Soma's facing and (8, -26), turned to walk ahead of him with gravity 0x2000; for 160 frames it steps the probe walker sub_0806CAF8 at 1.5 (mode 8, shared with the enemies through aos_enemy_probe_walk), shows still frame 0, 1 or 2 by its vertical speed, turns at walls and on landing hops at -1.0 three times in four, else at -5.0 plus a random fraction; then it blinks through sequence 1 for 16 frames and goes; it goes too outside the screen margins 2 and attacks with its frame's box. A local run drew it hopping ahead of Soma. Flags 4 and 0x40 of the throw routine are ported for parameter 5 (the Zombie Soldier's grenade, still frame 3 of resource 7): it rolls with the probe walker sub_0806CAF8 (mode 0, the speed negated, probes 0x084F1388) and its gravity, turns at walls, bounces at -vy / 2 with sound 0x11B when it lands faster than 1.0 and otherwise stops rolling; its attack stays off until its 0x50-frame fuse runs out, when sub_08045A98(x, y, 0) creates burst list 0 (0x08525498, exported as metadata/bursts.tsv: 18 pieces whose sub_08045E80 waits its delay, moves and animates) with sound 0xD7, the throw is hidden and its 0x2838E2E4 box (-28, -30, 56, 40) attacks for the 2 + 16 frames of states 2 and 4. Every throw now plays its record's song (0xE6 for these two). A local run drew grenades rolling and bursting. Parameter 0 (Rock Armor) uses resource 0 frame 13, walks probe table 0x084F1388 and on its first landing plays 0xD3, ends and creates four sub_0802DA98 fragments from native still frames 0x40-0x41 with their source random positions, velocities and gravity. Parameter 1 (Waiter Skeleton) uses resource 1 frame 11 and probe table 0x084F139C, links for its lifetime, stops against the scenery, lasts 200 frames, blinks at 16 and creates animation-4 row-6 dust on its last eight even frames. Local room 0/3 captures showed both native arts, Rock Armor's four landing fragments and Waiter Skeleton's final dust. Source-derived and unit-tested, not emulator-compared. SkillGhostUse requests 0xD6 and creates two sequence-1 spirits from resource 21; each selects the nearest homing-list target, otherwise turns toward native-range random points, accelerates and steers for 64 frames with its type-5 box, then leaves through margin entry 2. A local room 0/3 capture drew the cast. Source-derived and unit-tested, not emulator-compared. SkillSirenUse parameter 0 chooses still frame 2 or 3 of resource 0 and sound 0xDD or 0xDE from its first random draw, starts at Soma's facing and (8, -26), flies four pixels per frame unmirrored with sine Y motion seeded by its second draw, attacks with (-4, -4, 8, 8), and goes one frame after a hit or margin-1 exit. A local room 0/3 capture drew the note. Source-derived and unit-tested, not emulator-compared. SkillBeamSkeletonUse (sound 0x1A9) shows sequence 0 of resource 19 (exported as Enemy/skill_skull with its frame boxes, the beam's 88 pixels wide) at Soma's whole position plus (20, -16), mirrored with his facing, every frame; at frame 10, tick 0, it holds sound 0xCE (sub_08013D60: the 4-slot held list unk_254C4), and the update after its animation ends releases it (sub_08013E18) and deletes it; it attacks with its frame's box. A local run drew the skull and its beam. SkillValkyrieUse (sound 0x1AF) plays sequence 0 of resource 2 (exported as Enemy/skill_valkyrie with its frame boxes) where it is summoned, at Soma's facing and (20, -16); from its 20th frame every fourth one throws a sparkle of sub_08045B44 type 0 (0x085251A8: still frame 0x36, 12 frames, exported as Effect/sparkle) along x + counter * 0.75 + 32 toward its facing and y + 56 - counter * 31 / 16, each +/- 16 pixels at random, rising at 1.0 with a random ay; it is hidden outside sub_08068AD4(e, -64, -8, 0x170, 0xB0), attacks with its frame's box and, once its animation ends, blinks 10 frames and goes. A local run drew the warrior's sword stroke and sparkles. SkillNeedlesUse (sound 0xE0) loops sequence 0 of resource 12 (exported as Enemy/skill_needles with its four piece frames) at Soma's facing and (20, -26) with the type-5 box (-8, -8, 16, 16) for 128 frames or until its hit callback runs; then it bursts (the dust of sub_08045CEC(x, y, 15, 7), sound 0xD7), jumps at -1.0 minus a random fraction with gravity 0x2000 and for 32 frames draws (sub_08028018) its four pieces, alternating by parity, at angles 0xF000 + k * 0x3333 plus a random 0x3FF and a radius growing by timer * 32 / 256 pixels; it goes outside the screen margins 3. A local run drew the urchins and their bursts. Skill_EvilButcher_Ripper_Use loads the two still-frame variants from 0x084F128C, places the blade at Soma's integer position and y - 26, flies at 6 pixels per frame with its 2 x 2 type-5 box, uses the native left/right wall corrections at 6 pixels ahead, then rebounds at 1.5 pixels per frame with -2.0 vertical speed, 0.125 gravity and an affine angle step for a 50-frame blink; it requests 0xE6 and 0x138 and releases its active slot on its margin-4 or timed exit. On the first hit sub_0802D9BC creates the target helper sub_080239E4: variant 0 ends on its next update, while variant 1 follows the live enemy at the recorded offset with a 20 x 16 attack until its post-incremented age passes 20 or the target is defeated. A local area 7 room 55 run showed the attached blade deal three 33-damage hits and kill a Ripper. SkillSkullMillioneUse requests sound 0xC9, follows Soma from 20 through 25 pixels ahead and 20 pixels above, and creates three sub_0802B028 children at offsets 21, 23 and 25 on alternate updates. Each child plays sequence 0 of resource 7 with that frame's type-5 attack box, then releases its counted slot after the animation or a margin-2 exit; the invisible parent releases its slot on the update after the third child or a margin-3 exit. A local room 0/3 capture drew all three children in front of Soma. SkillFishHeadUse (sound 0xD8) places sequence 0 of resource 17 at Soma's facing and (8, -26), starts at 2 pixels per frame, accelerates horizontally by 1/16 pixel per frame to an 8-pixel-per-frame cap, attacks with the constant type-5 box (-6, -6, 12, 12), and goes in the update where it is struck or leaves screen margin entry 2. A local room 0/3 capture drew the accelerating flame in front of Soma. Source-derived and unit-tested, not emulator-compared. SkillGladiatorUse (sound 0xC5) places frame 0 of resource 24 at Soma's facing and (8, -26), throws it forward at 2 pixels per frame and up at 2.5 with 1/8 gravity, and walks it with probe table 0x084F13C8 in mode 2. It loses 1/128 horizontal pixel per frame, adjusts on slopes, rebounds from walls at half speed with sound 0x15F, requests the same sound on landing, and turns by its forward speed divided by 64. At rest it blinks for 16 frames and calls sub_08045CEC for five animation-0 particles at random offsets before releasing its counted slot. Its constant type-5 box is (-16, -16, 32, 32). A local room 0/3 capture drew the rotating shield in front of Soma. Source-derived and unit-tested, not emulator-compared. SkillKillerFishUse (sounds 0x19C, 0x1AD and 0xDB outside water, 0xDA in water) places resource 11 animation 1 twenty pixels ahead of Soma and twelve pixels above him, facing back toward him. When that animation ends it tests bit-3 collision at its body and sixteen pixels above: outside water it halves its horizontal speed, jumps at -3.5 with 0.5 gravity and emits an animation-7 impact every fourth update; in water it aims once at the nearest homing-list target more than 32 pixels away, swims through sub_08069CF4 with the three-pixel cap and aligns to the water boundary through sub_0806E5FC. Its constant type-5 box is (-24, -16, 48, 32), and its native appearance and loop animations are exported. A local area 0 room 16 run showed it swimming in front of Soma. Source-derived and unit-tested, not emulator-compared. SkillLightningDollUse (resource 9 of 0x080E13BC, exported as Enemy/skill_lightning) is placed by sub_08031EA4 at (16, -28) with a random vertical flip and plays 0x1A9 (sub_080213F4 being false) and 0xE9; past sequence frame 3 its box (0, -16, reach x 32) grows by 8 a frame from 16 to 0x80, up to frame 3 it follows Soma while he casts (flag 0x100); it ends with its animation or beyond the margins of entry 2 (sub_0806D128). sub_08042A54(1, 0xA) and the frame-8 palette reload are not run. SkillKillerDollUse (resource 6 of 0x080E13BC, exported as Enemy/skill_killer_doll) plays 0xE5, starts looping sequence 0 or 1 at random, links gEwramData + 0x13168 to itself and is placed by sub_08031EA4 at (8, -16), thrown at 1.5 forward and -2.5; each frame it moves, gains 0x2000 of vy (8.0 cap), lands on a floor probed at y + 1 (y += depth + 2, then braking by 0x4000 instead of 0x100), meets ceilings at y - 32 and walls at x +/- 8, y - 16, bouncing back at half speed; after 0xB4 frames it blinks still for 0x1E, then gives 0x13168 back to Soma (also beyond the margins of entry 2). The enemies read 0x13168 through sub_0806CD38 / sub_0806CD78 and their helpers (sub_0806BC40, sub_0806BF78, sub_0806E29C, sub_0806CF2C...); the port's target_x / target_y follow it, while collide, the knockback, the Lightning Doll spark and the Ghost and Zombie producers keep Soma's position as their native routines read 0x13110. SkillNemesisUse (sequence 2 of resource 21 of 0x080E13BC, the Tiny Devil soul's art) plays 0x97, starts looping sequence 2, clears gEwramData + 0x13168 for 300 frames (sub_0806CD38 / sub_0806CD78 then return each enemy's own position, so the enemies lose their target), rises from 9 to 38 pixels above Soma (sub_08031EA4 at (0, -8 - + 0x0B)), blinks 30 frames and gives 0x13168 back to Soma; unit-tested and seen in a local capture of area 3 room 0, not emulator-compared.",
+   "limitations": "Only SkillBatUse, SkillKillerFishUse, SkillWingedSkeletonUse, SkillSkullArcherUse, SkillMermanUse, SkillAxeArmorUse, SkillDurgaUse, SkillHarpyUse, SkillWerewolfUse, SkillKillerMantleUse, SkillTinyDevilUse, sub_SkillBlueCrowUse, SkillFleamanUse, SkillGhostUse, SkillSirenUse parameter 0, Skill_EvilButcher_Ripper_Use, SkillSkullMillioneUse, SkillFishHeadUse, SkillGladiatorUse, SkillLightningDollUse, SkillKillerDollUse and the shared throw routine for parameters 0, 1, 3 and 5 have skill entities; the runtime refuses the other red souls instead of spending MP. The throw routine's flash 0x20, shards 0x100 and frame-derived box 0x200 paths remain unported. sub_08042A54(1, 0x1E) is not run, and its turn is drawn about the frame's centre rather than the native affine object's. The Merman drops' splashes (sub_0802DAD4) and the spout's sound 0xED are not created or played. Durga's sound 0xC7 and the Harpy's sound 0xE6 are not played; the dagger's trail is kept inside the dagger's skill entity and drawn behind it (natively a separate entity in slots 0x49-0xCF that deletes itself after the dagger's slot empties). The spear's sound 0xE4 and its tip's sub_08042A54(1, 0x14) are not played or run. The axe's afterimages are drawn at half opacity (their semi-transparent mode's blend weights are not traced), and sound 0xE3 is not played. Child skill entities update in the frame they are created when their slot follows the parent's, which is not verified against the native entity order. The arrow's stuck helper sub_080239E4 and its sound 0xC8 are not ported, the arrow's first update both sets its speed and moves (the split between its states 0 and 1 is not verified frame by frame), and the arrow's hit has not been observed against an enemy in a runtime run. sub_08021530 is ported for type 5 in normal play only (the gEwramData + 0x4CC bit 6 alternative using 0x133EE is not, and the + 0xA1 bit 4 reduction is never set by the runtime); the soul hit takes the elements of the record's + 0xC on the assumption that a type-5 attacker reaches sub_0806B7D8's flag-8 path, and the per-enemy reactions documented as weapon-only (Valkyrie, harpy and siren recoils) stay weapon-only. The ring's damage was not observed in a runtime run (no enemy near the start). Sound 0xE2, sub_08042A54(1, 0xF), the cast's per-animation palette and the 0x131B8 & 0x800 gate. sub_08021994 is ported for its MP regeneration only (the curse states of unk_13270 and the earlier input-driven effect of unk_13276 are not), the cast state's pose-3 recoil (+ 0x0B with + 0x6E == 3, sound 0xEB) is not modelled, and the + 0x1E byte the poses write has no traced reader. The source-adapted soul equipment page changes the equipped red soul, but its native pause-hub graphics and descriptions are not ported. Skill entities are cleared on a room change. The Julius variant (sub_08034624, table 0x080E1ED8) is not ported. The homing list is kept by the runtime as room entity indices: every active, unrewarded enemy inside the screen box (-16, 0, 0x110, 0xB0) registers each frame, which approximates the native sub_0806CC20 call sites, the forced target 0x13220 is never set, and the Tiny Devil fires' afterimage trails (sub_0802383C) are not ported. The flea's end sparks (sub_08045CEC(x, y, 0, 7)) are not created, only their two random draws are made. SkillGhostUse does not create sub_0802A3CC's native visual trail and the boss-only forced target is not connected. SkillSirenUse's non-zero parameter path and its trail helpers are not ported; the Siren soul record uses parameter 0. The Valkyrie soul's sparkle is drawn twice by sub_08045E4C (at its position and at its random offset); the runtime models that as two identical timed sparkles. Ripper variants 0 and 1 are castable with their native shared art, 2 x 2 type-5 attack, left/right wall probes, rebound affine turn, blink, sounds and slot cleanup. sub_0802D9BC and sub_080239E4 now report and retain the first struck enemy, store the blade's fixed-point relative offset, follow it while active, expand the box to 20 x 16, observe its defeated state and preserve the variants' distinct attached lifetimes. Entity generation identity and update order are source-adapted and not emulator-compared. SkillSkullMillioneUse's sub_08042A54(1, 0xC) global state-byte write is not run; child allocation and same-frame updates follow the runtime's source-adapted slot order. SkillFishHeadUse's sub_08042A54(1, 0x14) global state-byte write is not run. SkillGladiatorUse does not reserve and release a native affine slot through sub_0803E654 and sub_0803E6BC, its sub_08042A54(1, 0x1E) global state-byte write is not run, and SDL rotates it about the exported frame centre. SkillKillerFishUse does not run sub_08042A54(1, 0x1E); its sub_08069CF4 collision uses the source-derived centre offsets instead of a separately reconstructed current-entity collision box. The decoy's aim covers the ported enemy routines through aos_enemy_set_decoy: the port routines with no native reference (approximate AIs such as Imp, Harpy, Gorgon, Tiny Devil, Peeping Eye, Giant Ghost and the shared early-enemy path) follow the decoy like the native helpers do, which is not checked against their own native code. Soma's red soul use of sub_0801B0D8 (_0801C298, Up held and a new attack press with no 0x540 flag) runs sub_08019478: with no skill entity alive the last used soul follows the equipped one; the cast needs that soul's record (0x080E1598, exported as metadata/red_souls.tsv: 56 records, one per red soul count of the 0x1C-byte inventory groups) to have a skill routine, at least its MP cost (Soma may spend his last points, unlike Julius), fewer active entities than the last used record's maximum (sub_0802D2BC) and a free slot of eight (sub_0802D208). It spends the MP, plays the cast animation of sub_0802D1D8 (0x080E1918: ground 22/78/79/80, air 49/78/79/80) with the pose's hop (vy -3.5, gravity -0x1000), lunge (3 px per frame) or recoil byte, sets flag 0x100 and enters state 2, which steers in the air, brakes on the ground and ends with the animation. The weapon attack that follows is refused by the 0x100 flag. sub_08021994 regenerates one MP every 64 ticks of Soma's + 0x22 counter (16 with accessory 0x29, full with 0x2C). SkillBatUse places its entity at Soma's facing and (0, -26) (sub_08031EA4), counts itself on its first update, plays sequence 0 of its resource (0x081CD8D0 / 0x0820B0B0 / 0x082311F8, exported as Enemy/skill_bat with its per-frame attack boxes) and ends with it, freeing its slot. The ring's frame boxes are type-5 attacks: after the weapon, each enemy tests them with the recent-hit slot and cooldown of type 5 (0x080E33F0), and sub_0806E218 deals sub_08021530(5) = (STR * power / 10 + INT / 4 + power * 6) / 16 of the last used soul's record (sub_0802D244; the bat's power is 60, 26 at level 1) through the existing damage formula with the record's elements. Portable saves keep the equipped souls and MP (schema v7). SkillSkullArcherUse places its bow at Soma's facing and (-12, -24), counts itself on its first update and plays sequence 0 of its resource (0x081D510C / 0x0820B2EC / 0x08233BCC, exported as Enemy/skill_archer); on animation frame 14 it takes a free slot (sub_08023530) for the arrow sub_08028BC4 at its own position, and it ends with its animation or outside the screen margins 4 (sub_0806D128). The arrow (still frame 1) flies 6 pixels a frame with the type-5 box (8, -1, 2, 2) of 0x0202FF08; once an enemy took it (sub_0802DB84, reported back through the soul attack) it stops, blinks 16 frames and is deleted, as it is outside the margins 2. The Skeleton soul's routine (shared by six souls) reads the record of 0x084F12C8 its parameter selects (exported as metadata/skill_throws.tsv); for parameter 3 it places the bone (resource 7 of 0x080E13BC, exported as Enemy/skill_bone) at Soma's facing and (8, -26), throws it at (0.5, -4) pixels a frame (mirrored facing left) with gravity 0x2000 capped at 8 pixels a frame (sub_0806D430, sub_0806D460), turns it 0x0B00 a frame (negated facing left; sub_0803E058's matrix turns it clockwise), keeps the type-5 box (-8, -8, 16, 16) of 0x1010F8F8 and deletes it the frame after its moved position leaves the screen margins 4 (+ 0x59 bit 2 is set by sub_08019478). Its hit callback sub_0802DACC only marks the hit, so the bone passes through. SkillMermanUse (resource 0 of 0x080E13BC, exported as Enemy/skill_shared) plays sequence 0 at Soma's facing and (0, -26), counts itself and creates five sub_08026DB8 drops from (6, -26) through sub_08023530: drop k flies k + 1 pixels a frame slowed by its 128th, looping sequence 6, with the type-5 box (-8, -8, 16, 16) for 16 frames; then its attack is disabled and it falls with gravity 0x2000 (sub_0806D3D8, X moved twice on that frame) until it leaves the screen margins 3. SkillWingedSkeletonUse shows still frame 0 of resource 0 at Soma's facing and (8, -26) (sub_08031EA4 copies whole pixels only, now for every skill), throws it 4 pixels a frame ahead and 1.125 up with gravity 0x2000, turning 0x100 a frame from -0x800 while its angle is at most 0x3FFF (mirrored facing left), and keeps the point 16 pixels along it (turned by 0x8000 facing left); when the cell at its whole position plus that point is solid and not special (sub_08001A00, sub_08001F3C) it sticks and blinks 32 frames, and outside the screen margins 4 it goes. Its child sub_08025F70 carries the type-5 box (-8, -8, 16, 16) at that point until the spear's state 3. A local runtime run with soul 1 equipped drew the spear leaving Soma's hand and turning down. SkillDurgaUse shows still frame 2 of resource 24 (exported as Enemy/skill_blades) at Soma's facing and (8, -26), flies 4 pixels a frame ahead (sub_0806D3D8), attacks with its still frame's box (frame record + 8 through sub_08042848, exported as a static_attack row: (-16, -4, 32, 8)) and is deleted in the update it leaves the screen margins 3. A local runtime run with soul 13 equipped drew the flying sword. SkillHarpyUse, placed at Soma's facing and (20, -26), counts itself and creates two sub_0802CAC0 daggers (sub_08023530 marks each child's + 0x59 bit 2 and counts it), then is deleted on its next update: dagger 0 faces right and dagger 1 left whatever Soma's facing, 5 pixels a frame, still frame 1 of resource 24 with the type-5 box (-1, -1, 2, 2) of 0x0202FFFF; once its hit callback sub_0802D9B4 ran it goes, against a wall 6 pixels ahead (sub_08002058 or sub_0800207C) it blinks 16 frames and goes, and outside the screen margins 4 it goes. Its trail (sub_0802C9E8, sub_0802C944, sub_0802DC60) keeps a 10-entry history of its whole position (entry 0 of the fresh entity is left at (0, 0), as natively) and draws frames 3, 4, 5 at entries 1, 2, 3. A local runtime run with soul 24 equipped drew both daggers and their trails. SkillAxeArmorUse shows still frame 6 (its parameter) of the same resource at Soma's whole X and 26 pixels above his whole Y, unmirrored; it flies 3.25 pixels a frame toward his facing and is pulled back by 0x1000 a frame while within 8 pixels a frame, turns 0x800 a frame (sub_0803E058 with + 0x2A << 11), keeps the type-5 box (-10, -10, 20, 20) of 0x1414F6F6 and is deleted the frame after it leaves the screen margins 4. Its two sub_080240A0 afterimages show its whole X 3 and 6 frames back (a 10-entry history), its current Y and an angle lagging by that many steps, with no attack, and go when it reaches state 2. A local runtime run with soul 5 equipped drew the axe turning away with its afterimages. A local runtime run with soul 4 equipped drew the drops as a stream from Soma's hand. A local runtime run with soul 3 equipped drew the bone rising and turning. A local runtime run with soul 6 equipped drew the bow behind Soma and an arrow leaving it to the right. A local runtime run with soul 2 equipped cast it (MP 80 to 75, state 2, animation 22) and drew the expanding ring. Source-derived and unit-tested, not emulator-compared. SkillTinyDevilUse (sound 0x1A3) creates three SkillTinyDevilUpdate fires at angles -0x1800, 0 and 0x1800 (mirrored facing left); each plays sequence 0 of resource 21 (exported as Enemy/skill_devil with its 16 direction frames), then picks the first filled homing-list slot from random & 3 (sub_08021924 registers, sub_08021DC4 ages), plays 0x134 and homes, turning 0x100 a frame and speeding up by 0x4000 to 0x50000, until its 64-frame timer, its hit or its target's death sends it straight; its type-5 box is (-8, -8, 16, 16) and it goes outside the screen margins 2. A local run in room 0/6 registered three enemies and sent the fires at them. sub_SkillBlueCrowUse (sound 0xEE) shows looping sequence 2 of resource 31 (exported as Enemy/skill_crow with its frame boxes), facing away from Soma's facing, and circles him for 50 frames: angle 0x1000 stepping -0x147 (0x7000 and +0x147 facing left), radius sin(timer * 0x28F) * 60 pixels around (0, -18) from Soma, attacking with its frame's box. A local run drew the crow arcing around Soma. SkillFleamanUse (sound 0x19C) places a flea of resource 20 (exported as Enemy/skill_flea with its still frames, boxes and the walker probes 0x084F13BE) at Soma's facing and (8, -26), turned to walk ahead of him with gravity 0x2000; for 160 frames it steps the probe walker sub_0806CAF8 at 1.5 (mode 8, shared with the enemies through aos_enemy_probe_walk), shows still frame 0, 1 or 2 by its vertical speed, turns at walls and on landing hops at -1.0 three times in four, else at -5.0 plus a random fraction; then it blinks through sequence 1 for 16 frames and goes; it goes too outside the screen margins 2 and attacks with its frame's box. A local run drew it hopping ahead of Soma. Flags 4 and 0x40 of the throw routine are ported for parameter 5 (the Zombie Soldier's grenade, still frame 3 of resource 7): it rolls with the probe walker sub_0806CAF8 (mode 0, the speed negated, probes 0x084F1388) and its gravity, turns at walls, bounces at -vy / 2 with sound 0x11B when it lands faster than 1.0 and otherwise stops rolling; its attack stays off until its 0x50-frame fuse runs out, when sub_08045A98(x, y, 0) creates burst list 0 (0x08525498, exported as metadata/bursts.tsv: 18 pieces whose sub_08045E80 waits its delay, moves and animates) with sound 0xD7, the throw is hidden and its 0x2838E2E4 box (-28, -30, 56, 40) attacks for the 2 + 16 frames of states 2 and 4. Every throw now plays its record's song (0xE6 for these two). A local run drew grenades rolling and bursting. Parameter 0 (Rock Armor) uses resource 0 frame 13, walks probe table 0x084F1388 and on its first landing plays 0xD3, ends and creates four sub_0802DA98 fragments from native still frames 0x40-0x41 with their source random positions, velocities and gravity. Parameter 1 (Waiter Skeleton) uses resource 1 frame 11 and probe table 0x084F139C, links for its lifetime, stops against the scenery, lasts 200 frames, blinks at 16 and creates animation-4 row-6 dust on its last eight even frames. Local room 0/3 captures showed both native arts, Rock Armor's four landing fragments and Waiter Skeleton's final dust. Source-derived and unit-tested, not emulator-compared. SkillGhostUse requests 0xD6 and creates two sequence-1 spirits from resource 21; each selects the nearest homing-list target, otherwise turns toward native-range random points, accelerates and steers for 64 frames with its type-5 box, then leaves through margin entry 2. A local room 0/3 capture drew the cast. Source-derived and unit-tested, not emulator-compared. SkillSirenUse parameter 0 chooses still frame 2 or 3 of resource 0 and sound 0xDD or 0xDE from its first random draw, starts at Soma's facing and (8, -26), flies four pixels per frame unmirrored with sine Y motion seeded by its second draw, attacks with (-4, -4, 8, 8), and goes one frame after a hit or margin-1 exit. A local room 0/3 capture drew the note. Source-derived and unit-tested, not emulator-compared. SkillBeamSkeletonUse (sound 0x1A9) shows sequence 0 of resource 19 (exported as Enemy/skill_skull with its frame boxes, the beam's 88 pixels wide) at Soma's whole position plus (20, -16), mirrored with his facing, every frame; at frame 10, tick 0, it holds sound 0xCE (sub_08013D60: the 4-slot held list unk_254C4), and the update after its animation ends releases it (sub_08013E18) and deletes it; it attacks with its frame's box. A local run drew the skull and its beam. SkillValkyrieUse (sound 0x1AF) plays sequence 0 of resource 2 (exported as Enemy/skill_valkyrie with its frame boxes) where it is summoned, at Soma's facing and (20, -16); from its 20th frame every fourth one throws a sparkle of sub_08045B44 type 0 (0x085251A8: still frame 0x36, 12 frames, exported as Effect/sparkle) along x + counter * 0.75 + 32 toward its facing and y + 56 - counter * 31 / 16, each +/- 16 pixels at random, rising at 1.0 with a random ay; it is hidden outside sub_08068AD4(e, -64, -8, 0x170, 0xB0), attacks with its frame's box and, once its animation ends, blinks 10 frames and goes. A local run drew the warrior's sword stroke and sparkles. SkillNeedlesUse (sound 0xE0) loops sequence 0 of resource 12 (exported as Enemy/skill_needles with its four piece frames) at Soma's facing and (20, -26) with the type-5 box (-8, -8, 16, 16) for 128 frames or until its hit callback runs; then it bursts (the dust of sub_08045CEC(x, y, 15, 7), sound 0xD7), jumps at -1.0 minus a random fraction with gravity 0x2000 and for 32 frames draws (sub_08028018) its four pieces, alternating by parity, at angles 0xF000 + k * 0x3333 plus a random 0x3FF and a radius growing by timer * 32 / 256 pixels; it goes outside the screen margins 3. A local run drew the urchins and their bursts. Skill_EvilButcher_Ripper_Use loads the two still-frame variants from 0x084F128C, places the blade at Soma's integer position and y - 26, flies at 6 pixels per frame with its 2 x 2 type-5 box, uses the native left/right wall corrections at 6 pixels ahead, then rebounds at 1.5 pixels per frame with -2.0 vertical speed, 0.125 gravity and an affine angle step for a 50-frame blink; it requests 0xE6 and 0x138 and releases its active slot on its margin-4 or timed exit. On the first hit sub_0802D9BC creates the target helper sub_080239E4: variant 0 ends on its next update, while variant 1 follows the live enemy at the recorded offset with a 20 x 16 attack until its post-incremented age passes 20 or the target is defeated. A local area 7 room 55 run showed the attached blade deal three 33-damage hits and kill a Ripper. SkillSkullMillioneUse requests sound 0xC9, follows Soma from 20 through 25 pixels ahead and 20 pixels above, and creates three sub_0802B028 children at offsets 21, 23 and 25 on alternate updates. Each child plays sequence 0 of resource 7 with that frame's type-5 attack box, then releases its counted slot after the animation or a margin-2 exit; the invisible parent releases its slot on the update after the third child or a margin-3 exit. A local room 0/3 capture drew all three children in front of Soma. SkillFishHeadUse (sound 0xD8) places sequence 0 of resource 17 at Soma's facing and (8, -26), starts at 2 pixels per frame, accelerates horizontally by 1/16 pixel per frame to an 8-pixel-per-frame cap, attacks with the constant type-5 box (-6, -6, 12, 12), and goes in the update where it is struck or leaves screen margin entry 2. A local room 0/3 capture drew the accelerating flame in front of Soma. Source-derived and unit-tested, not emulator-compared. SkillGladiatorUse (sound 0xC5) places frame 0 of resource 24 at Soma's facing and (8, -26), throws it forward at 2 pixels per frame and up at 2.5 with 1/8 gravity, and walks it with probe table 0x084F13C8 in mode 2. It loses 1/128 horizontal pixel per frame, adjusts on slopes, rebounds from walls at half speed with sound 0x15F, requests the same sound on landing, and turns by its forward speed divided by 64. At rest it blinks for 16 frames and calls sub_08045CEC for five animation-0 particles at random offsets before releasing its counted slot. Its constant type-5 box is (-16, -16, 32, 32). A local room 0/3 capture drew the rotating shield in front of Soma. Source-derived and unit-tested, not emulator-compared. SkillKillerFishUse (sounds 0x19C, 0x1AD and 0xDB outside water, 0xDA in water) places resource 11 animation 1 twenty pixels ahead of Soma and twelve pixels above him, facing back toward him. When that animation ends it tests bit-3 collision at its body and sixteen pixels above: outside water it halves its horizontal speed, jumps at -3.5 with 0.5 gravity and emits an animation-7 impact every fourth update; in water it aims once at the nearest homing-list target more than 32 pixels away, swims through sub_08069CF4 with the three-pixel cap and aligns to the water boundary through sub_0806E5FC. Its constant type-5 box is (-24, -16, 48, 32), and its native appearance and loop animations are exported. A local area 0 room 16 run showed it swimming in front of Soma. Source-derived and unit-tested, not emulator-compared. SkillLightningDollUse (resource 9 of 0x080E13BC, exported as Enemy/skill_lightning) is placed by sub_08031EA4 at (16, -28) with a random vertical flip and plays 0x1A9 (sub_080213F4 being false) and 0xE9; past sequence frame 3 its box (0, -16, reach x 32) grows by 8 a frame from 16 to 0x80, up to frame 3 it follows Soma while he casts (flag 0x100); it ends with its animation or beyond the margins of entry 2 (sub_0806D128). sub_08042A54(1, 0xA) and the frame-8 palette reload are not run. SkillKillerDollUse (resource 6 of 0x080E13BC, exported as Enemy/skill_killer_doll) plays 0xE5, starts looping sequence 0 or 1 at random, links gEwramData + 0x13168 to itself and is placed by sub_08031EA4 at (8, -16), thrown at 1.5 forward and -2.5; each frame it moves, gains 0x2000 of vy (8.0 cap), lands on a floor probed at y + 1 (y += depth + 2, then braking by 0x4000 instead of 0x100), meets ceilings at y - 32 and walls at x +/- 8, y - 16, bouncing back at half speed; after 0xB4 frames it blinks still for 0x1E, then gives 0x13168 back to Soma (also beyond the margins of entry 2). The enemies read 0x13168 through sub_0806CD38 / sub_0806CD78 and their helpers (sub_0806BC40, sub_0806BF78, sub_0806E29C, sub_0806CF2C...); the port's target_x / target_y follow it, while collide, the knockback, the Lightning Doll spark and the Ghost and Zombie producers keep Soma's position as their native routines read 0x13110. SkillNemesisUse (sequence 2 of resource 21 of 0x080E13BC, the Tiny Devil soul's art) plays 0x97, starts looping sequence 2, clears gEwramData + 0x13168 for 300 frames (sub_0806CD38 / sub_0806CD78 then return each enemy's own position, so the enemies lose their target), rises from 9 to 38 pixels above Soma (sub_08031EA4 at (0, -8 - + 0x0B)), blinks 30 frames and gives 0x13168 back to Soma; unit-tested and seen in a local capture of area 3 room 0, not emulator-compared.",
    "next_action": "Reconstruct the native soul-page graphics and descriptions, then port the remaining red, blue and yellow soul effects.",
    "evidence": {
     "unit_tests": [
@@ -21902,7 +22138,8 @@
      "tests/test_aos_soul_red_nemesis.c",
      "tests/test_aos_enemy.c",
      "tests/test_aos_soul_red_arrow.c",
-     "tests/test_aos_soul_red_werewolf.c"
+     "tests/test_aos_soul_red_werewolf.c",
+     "tests/test_aos_soul_red_killer_mantle.c"
     ],
     "in_game_check": [
      "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -22202,6 +22439,16 @@
       "registered": true,
       "ctest": [
        "aos_soul_red_werewolf"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_soul_red_killer_mantle.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_soul_red_killer_mantle"
       ],
       "outcome": "passed",
       "exists": true
@@ -22985,13 +23232,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -24053,7 +24302,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -24117,9 +24366,9 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
+    "verdict": "failing",
     "warnings": [],
-    "verified_on": "2026-11-11"
+    "verified_on": null
    }
   },
   {
@@ -24695,13 +24944,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
+    "verdict": "failing",
     "warnings": [],
-    "verified_on": "2026-11-11"
+    "verified_on": null
    }
   },
   {
@@ -25016,13 +25265,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
+    "verdict": "failing",
     "warnings": [],
-    "verified_on": "2026-11-11"
+    "verified_on": null
    }
   },
   {
@@ -25144,7 +25393,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -25218,9 +25467,9 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
+    "verdict": "failing",
     "warnings": [],
-    "verified_on": "2026-11-11"
+    "verified_on": null
    }
   },
   {
@@ -25483,7 +25732,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -25497,9 +25746,11 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -25563,7 +25814,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -25587,9 +25838,9 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
+    "verdict": "failing",
     "warnings": [],
-    "verified_on": "2026-11-11"
+    "verified_on": null
    }
   },
   {
@@ -25648,13 +25899,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -25716,7 +25969,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -25730,9 +25983,11 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -25879,7 +26134,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -25923,9 +26178,9 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
+    "verdict": "failing",
     "warnings": [],
-    "verified_on": "2026-11-11"
+    "verified_on": null
    }
   },
   {
@@ -25998,13 +26253,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
+    "verdict": "failing",
     "warnings": [],
-    "verified_on": "2026-11-11"
+    "verified_on": null
    }
   },
   {
@@ -26062,13 +26317,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -26129,7 +26386,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -26143,9 +26400,11 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -26220,7 +26479,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -26234,9 +26493,9 @@
       "exists": true
      }
     ],
-    "verdict": "passing",
+    "verdict": "failing",
     "warnings": [],
-    "verified_on": "2026-11-11"
+    "verified_on": null
    }
   },
   {
@@ -26308,13 +26567,15 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      }
     ],
-    "verdict": "passing",
-    "warnings": [],
-    "verified_on": "2026-11-11"
+    "verdict": "failing",
+    "warnings": [
+     "declared functional, but no passing test was observed in this run"
+    ],
+    "verified_on": null
    }
   },
   {
@@ -26379,7 +26640,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "passed",
+      "outcome": "failed",
       "exists": true
      },
      {
@@ -26770,7 +27031,7 @@
     "files": [
      "tests/test_native_golden.c"
     ],
-    "outcome": "passed"
+    "outcome": "failed"
    },
    {
     "name": "native_golden_mzm",
@@ -27210,6 +27471,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_soul_red_killer_mantle",
+    "files": [
+     "tests/test_aos_soul_red_killer_mantle.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_soul_red_gladiator",
     "files": [
      "tests/test_aos_soul_red_gladiator.c"
@@ -27555,11 +27823,17 @@
   ],
   "summary": {
    "passed": 137,
-   "failed": 1,
+   "failed": 2,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "6a629f73",
+   "date": "2026-11-11",
+   "subject": "aos: port red soul 23 (Werewolf) walker",
+   "scope": "project"
+  },
   {
    "commit": "e10216fe",
    "date": "2026-11-11",
@@ -28033,12 +28307,6 @@
    "date": "2026-11-09",
    "subject": "Compile Minotaur family as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "fd4135e2",
-   "date": "2026-11-09",
-   "subject": "Compile Giant Ghost family as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -28099,9 +28367,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1843,
-    "routines_attached_to_features": 1843,
-    "unassigned_routines": 1730,
+    "routines_cited_by_features": 1844,
+    "routines_attached_to_features": 1844,
+    "unassigned_routines": 1729,
     "call_edges": 14228
    }
   },
@@ -32624,9 +32892,9 @@
        "animations": "ported",
        "sounds": "ported",
        "loot": "ported",
-       "soul": "partial",
+       "soul": "ported",
        "soul_ref": "red:53",
-       "notes": "Soul: drops (soul_rarity 13, rare item 0x000D through the generic roll) and is collected, but its red soul 53 (routine 0x0802B9A9) has no ported update yet. Animations: ported from EnemyKillerMantleCreate (0x080BB70C) / EnemyKillerMantleUpdate (0x080BB824) and the sub_080BB2D4 / sub_080BB518 / sub_080BB664 handlers — animation 0 looping idle, 1-2 the rocking patrol, 3-5 the dash attack, 6 the death, 8 the dash-end afterimage; the orbit blade sub_080BB0F0 is a linked role on still frame 0x12. Sounds: PlaySong 0x89 at the attack launch and 0x6D at the death are requested and unit-tested, not listened to. Divergences: the orbit child's + 0x1C scale is tracked but not drawn (only its angle reaches the renderer), the + 0x58 low-5 fade, the + 0x59 / + 0x5A / + 0x5C bookkeeping, the sub_080428F0 / sub_08042884 box presets (the exported frame boxes stand in), the sub_0806E3B0 target-facing read approximated by Soma's facing_left, the sub_0806BBC4 direction approximated by the decoy-aware target side, the + 0x4BE pause and the sub_0803E654 draw approximated by the RNG bit 15 are not fully ported; the orbit child is emitted by the first on-screen update instead of the create; there is no emulator comparison."
+       "notes": "Soul: drops (soul_rarity 13, rare item 0x000D through the generic roll) and is collected, but its red soul 53 (routine 0x0802B9A9) is ported as SkillKillerMantleUse (routine 0x0802B9A8): the spectral knight is counted, plays song 0xD1 and sequence 0 glued to Soma through sub_08031EA4(entity, source, 0, 0), ends on the animation end or the sub_0806D128(e, 4) margin probe and is unit-tested in test_aos_soul_red_killer_mantle.c. Animations: ported from EnemyKillerMantleCreate (0x080BB70C) / EnemyKillerMantleUpdate (0x080BB824) and the sub_080BB2D4 / sub_080BB518 / sub_080BB664 handlers — animation 0 looping idle, 1-2 the rocking patrol, 3-5 the dash attack, 6 the death, 8 the dash-end afterimage; the orbit blade sub_080BB0F0 is a linked role on still frame 0x12. Sounds: PlaySong 0x89 at the attack launch and 0x6D at the death are requested and unit-tested, not listened to. Divergences: the orbit child's + 0x1C scale is tracked but not drawn (only its angle reaches the renderer), the + 0x58 low-5 fade, the + 0x59 / + 0x5A / + 0x5C bookkeeping, the sub_080428F0 / sub_08042884 box presets (the exported frame boxes stand in), the sub_0806E3B0 target-facing read approximated by Soma's facing_left, the sub_0806BBC4 direction approximated by the decoy-aware target side, the + 0x4BE pause and the sub_0803E654 draw approximated by the RNG bit 15 are not fully ported; the orbit child is emitted by the first on-screen update instead of the create; there is no emulator comparison."
       }
      },
      {
@@ -33461,11 +33729,11 @@
       "missing": 0
      },
      "soul": {
-      "ported": 78,
-      "partial": 30,
+      "ported": 79,
+      "partial": 29,
       "missing": 0
      },
-     "complete": 81,
+     "complete": 82,
      "monsters": 111
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
@@ -35865,7 +36133,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -35910,7 +36179,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -35955,7 +36225,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36000,7 +36271,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36045,7 +36317,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36090,7 +36363,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36135,7 +36409,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36180,7 +36455,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36225,7 +36501,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36270,7 +36547,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36315,7 +36593,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36360,7 +36639,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36405,7 +36685,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36450,7 +36731,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36495,7 +36777,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36540,7 +36823,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36585,7 +36869,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36630,7 +36915,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36675,7 +36961,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36720,7 +37007,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36765,7 +37053,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36810,7 +37099,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36855,7 +37145,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36900,7 +37191,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36945,7 +37237,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -36990,7 +37283,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37035,7 +37329,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37080,7 +37375,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37125,7 +37421,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37170,7 +37467,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37215,7 +37513,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37260,7 +37559,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37305,7 +37605,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37350,7 +37651,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37395,7 +37697,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37440,7 +37743,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37485,7 +37789,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37530,7 +37835,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37575,7 +37881,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37620,7 +37927,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37665,7 +37973,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37710,7 +38019,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37755,7 +38065,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37800,7 +38111,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37845,7 +38157,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37890,7 +38203,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37935,7 +38249,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -37980,7 +38295,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -38025,7 +38341,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -38070,7 +38387,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -38115,7 +38433,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -38160,7 +38479,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -38174,7 +38494,7 @@
        "id": "05:35",
        "name": "Killer Mantle",
        "status": "not_started",
-       "note": "Soul: drops (soul_rarity 13, rare item 0x000D through the generic roll) and is collected, but its red soul 53 (routine 0x0802B9A9) has no ported update yet. Animations: ported from EnemyKillerMantleCreate (0x080BB70C) / EnemyKillerMantleUpdate (0x080BB824) and the sub_080BB2D4 / sub_080BB518 / sub_080BB664 handlers — animation 0 looping idle, 1-2 the rocking patrol, 3-5 the dash attack, 6 the death, 8 the dash-end afterimage; the orbit blade sub_080BB0F0 is a linked role on still frame 0x12. Sounds: PlaySong 0x89 at the attack launch and 0x6D at the death are requested and unit-tested, not listened to. Divergences: the orbit child's + 0x1C scale is tracked but not drawn (only its angle reaches the renderer), the + 0x58 low-5 fade, the + 0x59 / + 0x5A / + 0x5C bookkeeping, the sub_080428F0 / sub_08042884 box presets (the exported frame boxes stand in), the sub_0806E3B0 target-facing read approximated by Soma's facing_left, the sub_0806BBC4 direction approximated by the decoy-aware target side, the + 0x4BE pause and the sub_0803E654 draw approximated by the RNG bit 15 are not fully ported; the orbit child is emitted by the first on-screen update instead of the create; there is no emulator comparison.",
+       "note": "Soul: drops (soul_rarity 13, rare item 0x000D through the generic roll) and is collected, but its red soul 53 (routine 0x0802B9A9) is ported as SkillKillerMantleUse (routine 0x0802B9A8): the spectral knight is counted, plays song 0xD1 and sequence 0 glued to Soma through sub_08031EA4(entity, source, 0, 0), ends on the animation end or the sub_0806D128(e, 4) margin probe and is unit-tested in test_aos_soul_red_killer_mantle.c. Animations: ported from EnemyKillerMantleCreate (0x080BB70C) / EnemyKillerMantleUpdate (0x080BB824) and the sub_080BB2D4 / sub_080BB518 / sub_080BB664 handlers — animation 0 looping idle, 1-2 the rocking patrol, 3-5 the dash attack, 6 the death, 8 the dash-end afterimage; the orbit blade sub_080BB0F0 is a linked role on still frame 0x12. Sounds: PlaySong 0x89 at the attack launch and 0x6D at the death are requested and unit-tested, not listened to. Divergences: the orbit child's + 0x1C scale is tracked but not drawn (only its angle reaches the renderer), the + 0x58 low-5 fade, the + 0x59 / + 0x5A / + 0x5C bookkeeping, the sub_080428F0 / sub_08042884 box presets (the exported frame boxes stand in), the sub_0806E3B0 target-facing read approximated by Soma's facing_left, the sub_0806BBC4 direction approximated by the decoy-aware target side, the + 0x4BE pause and the sub_0803E654 draw approximated by the RNG bit 15 are not fully ported; the orbit child is emitted by the first on-screen update instead of the create; there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",
@@ -38205,7 +38525,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -38250,7 +38571,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"
@@ -38295,7 +38617,8 @@
          "tests/test_aos_soul_red_nemesis.c",
          "tests/test_aos_enemy.c",
          "tests/test_aos_soul_red_arrow.c",
-         "tests/test_aos_soul_red_werewolf.c"
+         "tests/test_aos_soul_red_werewolf.c",
+         "tests/test_aos_soul_red_killer_mantle.c"
         ],
         "in_game_check": [
          "aria area_00_room_003 (--red-soul 14/19 --repeat 40): local captures show Rock Armor's landing fragments and Waiter Skeleton's final dust; area_00_room_016 (--spawn 340 184 --hp 9999 --red-soul 7 --repeat 40): frame 180 shows Killer Fish swimming in water; area_00_room_003 (--red-soul 45 --repeat 40): frames 46-60 show the bolt growing from Soma's hand; area_00_room_006 (--hp 9999 --red-soul 45 --repeat 40): it kills a Skeleton with an 85-damage hit; area_00_room_003 (--red-soul 51 --repeat 40): frames 43-85 show the doll thrown in an arc, landing right of Soma"

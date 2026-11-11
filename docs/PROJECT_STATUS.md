@@ -1,3 +1,19 @@
+## Patch 1004 - Red soul 53 (Killer Mantle) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_killer_mantle.c` ports
+  `SkillKillerMantleUse` (routine 0x0802B9A8): the spectral knight is
+  counted on its first update, plays song 0xD1, stays glued to Soma
+  through `sub_08031EA4(entity, source, 0, 0)`, ends on the animation
+  end (`sub_0803F17C == 3`) or the `sub_0806D128(e, 4)` margin probe,
+  and deletes itself in state 2. The `+ 0x59` bit-4 tail gate was not
+  traced and is a documented divergence; attack box preset 5
+  (`sub_0804277C`) is approximated by the common 16x16 box.
+- `src/assets/aos/objects.c` exports `skill_killer_mantle`
+  (tiles 0x081D912C, palette 0x0820B40C, frames 0x08234CDC — resource
+  0x138 of 0x080E13BC); object library: 1592 sequences.
+- `tests/test_aos_soul_red_killer_mantle.c` covers the state machine.
+  Remaining soul backlog: 24 red + 5 blue.
+
 ## Patch 1003 - Red soul 23 (Werewolf) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_werewolf.c` ports

@@ -37,12 +37,9 @@ aos:asm:asm/code/code_080211F0.s:SkillBaloreUse	SkillBaloreUse	abilities	name			
 aos:asm:asm/code/code_080211F0.s:SkillBiphronUse	SkillBiphronUse	abilities	name			asm_function		asm/code/code_080211F0.s	14841	0	10
 aos:asm:asm/code/code_080211F0.s:SkillCockatriceUse	SkillCockatriceUse	abilities	name			asm_function		asm/code/code_080211F0.s	16620	0	15
 aos:asm:asm/code/code_080211F0.s:SkillCreakingSkullUse	SkillCreakingSkullUse	abilities	name			asm_function		asm/code/code_080211F0.s	31037	0	8
-aos:asm:asm/code/code_080211F0.s:SkillDemonLordUse	SkillDemonLordUse	abilities	name			asm_function		asm/code/code_080211F0.s	21665	0	10
 aos:asm:asm/code/code_080211F0.s:SkillDiscArmorUse	SkillDiscArmorUse	abilities	name			asm_function		asm/code/code_080211F0.s	12290	0	13
 aos:asm:asm/code/code_080211F0.s:SkillDryadUse	SkillDryadUse	abilities	name			asm_function		asm/code/code_080211F0.s	14218	0	14
 aos:asm:asm/code/code_080211F0.s:SkillFinalGuardUse	SkillFinalGuardUse	abilities	name			asm_function		asm/code/code_080211F0.s	29334	0	9
-aos:asm:asm/code/code_080211F0.s:SkillFlameDemonUpdate	SkillFlameDemonUpdate	abilities	name			asm_function		asm/code/code_080211F0.s	21386	0	13
-aos:asm:asm/code/code_080211F0.s:SkillFlameDemonUse	SkillFlameDemonUse	abilities	name			asm_function		asm/code/code_080211F0.s	16280	0	11
 aos:asm:asm/code/code_080211F0.s:SkillGiantBatUse	SkillGiantBatUse	abilities	name			asm_function		asm/code/code_080211F0.s	27256	0	7
 aos:asm:asm/code/code_080211F0.s:SkillKyomaDemonUse	SkillKyomaDemonUse	abilities	name			asm_function		asm/code/code_080211F0.s	21159	0	11
 aos:asm:asm/code/code_080211F0.s:SkillLegionUse	SkillLegionUse	abilities	name			asm_function		asm/code/code_080211F0.s	21836	0	13
@@ -60,7 +57,6 @@ aos:asm:asm/code/code_080211F0.s:sub_080256AC	sub_080256AC	abilities	referrers		
 aos:asm:asm/code/code_080211F0.s:sub_08026858	sub_08026858	abilities	referrers			asm_function	0x08026858	asm/code/code_080211F0.s	10924	0	5
 aos:asm:asm/code/code_080211F0.s:sub_08027140	sub_08027140	abilities	referrers			asm_function	0x08027140	asm/code/code_080211F0.s	12036	0	9
 aos:asm:asm/code/code_080211F0.s:sub_080286BC	sub_080286BC	abilities	referrers			asm_function	0x080286BC	asm/code/code_080211F0.s	14687	0	9
-aos:asm:asm/code/code_080211F0.s:sub_080292B4	sub_080292B4	abilities	referrers			asm_function	0x080292B4	asm/code/code_080211F0.s	16151	0	10
 aos:asm:asm/code/code_080211F0.s:sub_08029568	sub_08029568	abilities	referrers			asm_function	0x08029568	asm/code/code_080211F0.s	16482	0	8
 aos:asm:asm/code/code_080211F0.s:sub_0802A330	sub_0802A330	abilities	referrers			asm_function	0x0802A330	asm/code/code_080211F0.s	18182	0	3
 aos:asm:asm/code/code_080211F0.s:sub_0802CD6C	sub_0802CD6C	abilities	referrers			asm_function	0x0802CD6C	asm/code/code_080211F0.s	23388	0	3

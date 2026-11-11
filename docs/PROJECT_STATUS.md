@@ -1,3 +1,23 @@
+## Patch 1006 - Red souls 43/44 (Demon Lord / Flame Demon) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_flame_demon.c` ports the
+  shared fire-spirit machinery: `sub_080292B4` volley bolts (sine fan
+  velocities, `sub_0806D3D8` 0x80000 cap, margin-2/anim-end delete) and
+  `SkillFlameDemonUpdate`'s rotating wisp (+ 0x2C spin, fire puff every
+  eighth frame, margin-3 delete).
+- `SkillFlameDemonUse` (0x080293C4): one counted cast, song 0xD8, a
+  `sub_08045CEC(0xC, 6)` burst and a fan of 3 or 5 bolts (5 when
+  `rng & 7 == 0`) on the shared fish-head art (entry 0xCC of
+  0x080E13BC). `SkillDemonLordUse` (0x0802BF68): song 0x1A4, one wisp
+  at `+ 0x0D == 0x1D` (song 0x12A), anim-end delete.
+- `src/assets/aos/objects.c` exports `skill_demon_lord` (entry 0x150:
+  tiles 0x081DA134, palette 0x0820B454, frames 0x0823512C); object
+  library: 1595 sequences. Documented approximations: the wisp's + 0x50
+  field modelled as vy, the palette-variant pick skipped, preset-5
+  attack box as the common 16x16 box.
+- `tests/test_aos_soul_red_flame_demon.c` covers bolts, wisp spin,
+  puffs, cap and deletion. Remaining soul backlog: 20 red + 5 blue.
+
 ## Patch 1005 - Red souls 35/36 (Werejaguar/Weretiger) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_were_beast.c` ports the

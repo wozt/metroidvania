@@ -426,6 +426,10 @@ static const EntitySpec entities[] = {
      * (attack box preset 5 through sub_0804277C). */
     {"skill_were_beast", 0x081D00E4, 0x0820B164, 0, 0x0823199C,
      0, 0, 0, 0, {0}},
+    /* Entry 0x150 of 0x080E13BC shared by SkillDemonLordUse and
+     * SkillFlameDemonUpdate (attack box preset 5). */
+    {"skill_demon_lord", 0x081DA134, 0x0820B454, 0, 0x0823512C,
+     0, 0, 0, 0, {0}},
     /* Resource 6 of 0x080E13BC: the Killer Doll soul's decoy (looping
      * sequence 0 or 1). */
     ENTITY("skill_killer_doll", 0x081CF0DC, 0x0820B11C, 0, 0x08231578),

@@ -41,6 +41,7 @@
 #include "aos/red_souls/aos_soul_red_werewolf.h"
 #include "aos/red_souls/aos_soul_red_killer_mantle.h"
 #include "aos/red_souls/aos_soul_red_were_beast.h"
+#include "aos/red_souls/aos_soul_red_flame_demon.h"
 #include "aos/red_souls/aos_soul_red_devil.h"
 #include "aos/red_souls/aos_soul_red_ghost.h"
 #include "aos/red_souls/aos_soul_red_siren.h"
@@ -316,7 +317,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_WITCH, SKILL_ART_PILLAR, SKILL_ART_FLYING_ARMOR, SKILL_ART_DEATH,
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
-       SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ARTS };
+       SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -336,7 +337,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_devil_spark",
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
-                                                         "skill_werewolf", "skill_killer_mantle", "skill_were_beast"};
+                                                         "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -959,7 +960,8 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL, SKILL_VALKYRIE, SKILL_NEEDLES,
        SKILL_RIPPER, SKILL_MILLIONE_EMITTER, SKILL_MILLIONE_CHILD, SKILL_FISH_HEAD,
        SKILL_KILLER_FISH, SKILL_GLADIATOR, SKILL_LIGHTNING, SKILL_DECOY, SKILL_NEMESIS,
-       SKILL_WEREWOLF, SKILL_KILLER_MANTLE, SKILL_WERE_BEAST };
+       SKILL_WEREWOLF, SKILL_KILLER_MANTLE, SKILL_WERE_BEAST,
+       SKILL_FLAME_DEMON, SKILL_FLAME_BOLT, SKILL_DEMON_LORD, SKILL_FLAME_SPIRIT };
 
 typedef struct {
     bool alive, started;
@@ -999,6 +1001,8 @@ typedef struct {
     AosWerewolf werewolf;   /* SKILL_WEREWOLF */
     AosKillerMantle killer_mantle; /* SKILL_KILLER_MANTLE */
     AosWereBeast were_beast;   /* SKILL_WERE_BEAST */
+    AosFlameSpirit flame;     /* SKILL_FLAME_BOLT / SKILL_FLAME_SPIRIT */
+    uint8_t volley_count;      /* SKILL_DEMON_LORD spawn gate */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
@@ -1034,6 +1038,8 @@ typedef struct {
 #define SKILL_WEREWOLF_ROUTINE 0x080284FCu
 #define SKILL_KILLER_MANTLE_ROUTINE 0x0802B9A8u
 #define SKILL_WERE_BEAST_ROUTINE 0x08027608u
+#define SKILL_FLAME_DEMON_ROUTINE 0x080293C4u
+#define SKILL_DEMON_LORD_ROUTINE 0x0802BF68u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1055,6 +1061,7 @@ typedef struct {
     const AosAnimSet *werewolf;     /* resource 14, sequence 0 */
     const AosAnimSet *killer_mantle;  /* skill_killer_mantle, sequence 0 */
     const AosAnimSet *were_beast;    /* skill_were_beast, sequence 0 */
+    const AosAnimSet *demon_lord;    /* skill_demon_lord, sequence 0 */
     const AosEnemyKind *werewolf_kind; /* its 0x084F13B4 walker probes */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
@@ -1177,6 +1184,10 @@ static int cast_red_soul(void *context) {
                    ? SKILL_KILLER_MANTLE
                : routine == SKILL_WERE_BEAST_ROUTINE && souls->were_beast
                    ? SKILL_WERE_BEAST
+               : routine == SKILL_FLAME_DEMON_ROUTINE && souls->fish_head
+                   ? SKILL_FLAME_DEMON
+               : routine == SKILL_DEMON_LORD_ROUTINE && souls->demon_lord
+                   ? SKILL_DEMON_LORD
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1248,6 +1259,17 @@ static int cast_red_soul(void *context) {
     } else if (kind == SKILL_WERE_BEAST) {
         skill->were_beast = aos_were_beast_create();
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, 0);
+    } else if (kind == SKILL_FLAME_DEMON) {
+        place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left,
+              -8, -0x10);    /* sub_08031EA4(sb, 8, -0x10) */
+    } else if (kind == SKILL_DEMON_LORD) {
+        place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left,
+              8, -0x10);     /* sub_08031EA4(sb, 8, -0x10) */
+    } else if (kind == SKILL_FLAME_BOLT) {
+        /* The parent's fan sets the velocity; see update_skills. */
+    } else if (kind == SKILL_FLAME_SPIRIT) {
+        skill->flame = aos_flame_spirit_create(skill->x, skill->y,
+                                               skill->facing_left);
     } else if (kind == SKILL_WEREWOLF) {
         skill->werewolf = aos_werewolf_create(souls->soma->x, souls->soma->y,
                                               souls->soma->facing_left);
@@ -2129,6 +2151,123 @@ static void update_skills(AriaSouls *souls) {
             if (!aos_were_beast_update(&skill->were_beast, beast_anim_done, false))
                 end_skill(souls, skill);
             break;
+        case SKILL_FLAME_DEMON:
+            /* SkillFlameDemonUse: one counted cast plays song 0xD8, emits
+             * a sub_08045CEC(0xC, 6) burst and a fan of 3 or 5
+             * sub_080292B4 bolts (5 when rng & 7 == 0), then deletes itself
+             * on the next update. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_anim_start(&skill->anim, souls->fish_head, 0, false);
+                int count = (aos_random() & 7) == 0 ? 5 : 3;
+                int32_t step = 0x1000 / count;
+                int32_t angle = -step * (count >> 1);
+                for (int k = 0; k < count; ++k) {
+                    AriaSkill *bolt = spawn_child(souls, SKILL_FLAME_BOLT);
+                    if (!bolt) break;
+                    bolt->soul = skill->soul;
+                    bolt->x = skill->x;
+                    bolt->y = skill->y;
+                    bolt->facing_left = skill->facing_left;
+                    bolt->flame = aos_flame_bolt_create(skill->x, skill->y,
+                                                        (uint32_t)angle,
+                                                        skill->facing_left);
+                    bolt->x = bolt->flame.x;
+                    bolt->y = bolt->flame.y;
+                    angle += step;
+                }
+                aos_audio_play_song(0xD8);
+                if (souls->effects && *souls->effect_count < MAX_EFFECTS)
+                    souls->effects[(*souls->effect_count)++] = (AosEffect){
+                        .kind = AOS_EFFECT_BURST_15, .drift = true,
+                        .x = skill->x >> 16, .y = skill->y >> 16};
+                skill->state = 1;
+            } else {
+                end_skill(souls, skill);
+            }
+            break;
+        case SKILL_FLAME_BOLT: {
+            /* sub_080292B4: fish-head art bolt drifting on its fan velocity,
+             * deleted on the animation end or the sub_0806D128(e, 2)
+             * margin probe. */
+            if (!skill->started) {
+                skill->started = true;
+                aos_anim_start(&skill->anim, souls->fish_head, 0, false);
+            }
+            bool bolt_done = aos_anim_step(&skill->anim, souls->fish_head) == 3;
+            skill->flame.x = skill->x;
+            skill->flame.y = skill->y;
+            if (!aos_flame_spirit_update(&skill->flame, bolt_done,
+                                         skill_outside(souls, skill, 2), NULL)) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->x = skill->flame.x;
+            skill->y = skill->flame.y;
+            skill->facing_left = skill->flame.mirrored;
+            break;
+        }
+        case SKILL_DEMON_LORD:
+            /* SkillDemonLordUse: counted with song 0x1A4; at + 0x0D == 0x1D
+             * it emits one SkillFlameDemonUpdate wisp (song 0x12A) and the
+             * animation end deletes the caster. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0x1A4);
+                aos_anim_start(&skill->anim, souls->demon_lord, 0, false);
+            }
+            if (!skill->volley_count) {
+                ++skill->timer;
+                if (skill->timer >= 0x1D) {
+                    skill->volley_count = 1;
+                    AriaSkill *wisp = spawn_child(souls, SKILL_FLAME_SPIRIT);
+                    if (wisp) {
+                        wisp->soul = skill->soul;
+                        place(wisp, skill->x, skill->y, skill->facing_left, 0, 0);
+                        wisp->flame = aos_flame_spirit_create(skill->x, skill->y,
+                                                            skill->facing_left);
+                        wisp->x = wisp->flame.x;
+                        wisp->y = wisp->flame.y;
+                        wisp->facing_left = wisp->flame.mirrored;
+                        aos_audio_play_song(0x12A);
+                    }
+                }
+            }
+            if (aos_anim_step(&skill->anim, souls->demon_lord) == 3)
+                end_skill(souls, skill);
+            break;
+        case SKILL_FLAME_SPIRIT: {
+            /* SkillFlameDemonUpdate: the rotating wisp — velocity drift
+             * capped at 0x80000, + 0x2C spin, a fire puff every eighth
+             * frame, deleted on the animation end or the
+             * sub_0806D128(e, 3) margin probe. */
+            if (!skill->started) {
+                skill->started = true;
+                aos_anim_start(&skill->anim, souls->demon_lord, 0, false);
+            }
+            skill->flame.x = skill->x;
+            skill->flame.y = skill->y;
+            bool puff = false;
+            bool wisp_done = aos_anim_step(&skill->anim, souls->demon_lord) == 3;
+            if (!aos_flame_spirit_update(&skill->flame, wisp_done,
+                                         skill_outside(souls, skill, 3), &puff)) {
+                end_skill(souls, skill);
+                break;
+            }
+            if (puff && souls->effects && *souls->effect_count < MAX_EFFECTS)
+                souls->effects[(*souls->effect_count)++] = (AosEffect){
+                    .kind = AOS_EFFECT_FLAME, .drift = true,
+                    .x = (int16_t)((skill->flame.x >> 16) +
+                                   (int16_t)(aos_random() % 0x100 - 0x80)),
+                    .y = (int16_t)((skill->flame.y >> 16) +
+                                   (int16_t)(aos_random() % 0x80 - 0x40))};
+            skill->x = skill->flame.x;
+            skill->y = skill->flame.y;
+            skill->facing_left = skill->flame.mirrored;
+            break;
+        }
         case SKILL_GHOST:
             /* SkillGhostUse: one counted, invisible owner plays 0xD6 and
              * emits two sub_0802A49C spirits, then releases itself. */
@@ -2762,6 +2901,8 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
             box = (AosBox){-8, -8, 16, 16};    /* preset 5, approximated */
         else if (skill->kind == SKILL_WERE_BEAST)
             box = (AosBox){-8, -8, 16, 16};    /* preset 5, approximated */
+        else if (skill->kind == SKILL_FLAME_BOLT || skill->kind == SKILL_FLAME_SPIRIT)
+            box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 / preset 5 */
         else if (skill->kind == SKILL_LIGHTNING)
             box = aos_lightning_box(&skill->lightning);
         else if (skill->kind == SKILL_SKULL && souls->skull_kind &&
@@ -7377,6 +7518,11 @@ int aria_runtime_main(int argc, char **argv) {
             souls.were_beast = objects_ok && beast->loaded && beast->defs[0].count
                                    ? &beast->set
                                    : NULL;
+            const __typeof__(objects.skills[0]) *lord =
+                &objects.skills[SKILL_ART_DEMON_LORD];
+            souls.demon_lord = objects_ok && lord->loaded && lord->defs[0].count
+                                   ? &lord->set
+                                   : NULL;
             const __typeof__(objects.skills[0]) *killer_doll =
                 &objects.skills[SKILL_ART_KILLER_DOLL];
             souls.killer_doll = objects_ok && killer_doll->loaded &&
@@ -7784,6 +7930,10 @@ int aria_runtime_main(int argc, char **argv) {
                            : &objects.skills[SKILL_ART_FLEA]
                                   .frames[AOS_FLEA_END_SEQUENCE][skill->anim.frame])
                 : skill->kind == SKILL_GHOST ? NULL
+                : skill->kind == SKILL_FLAME_DEMON || skill->kind == SKILL_FLAME_BOLT
+                    ? &objects.skills[SKILL_ART_FISH_HEAD].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_DEMON_LORD || skill->kind == SKILL_FLAME_SPIRIT
+                    ? &objects.skills[SKILL_ART_DEMON_LORD].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_NEMESIS
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_NEMESIS_SOUL_SEQUENCE][skill->anim.frame]

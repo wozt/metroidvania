@@ -1,3 +1,17 @@
+## Patch 1005 - Red souls 35/36 (Werejaguar/Weretiger) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_were_beast.c` ports the
+  shared `Skill_Werejaguar_Weretiger_Use` (routine 0x08027608): the
+  spectral beast is counted, plays song 0xEB, stays glued to Soma
+  through `sub_08031EA4(entity, source, 0, 0)`, ends on the animation
+  end or the `(source + 0x10 & 0x180) != 0x100` check (approximated
+  as never-gone) and deletes itself in state 2.
+- `src/assets/aos/objects.c` exports `skill_were_beast` (tiles
+  0x081D00E4, palette 0x0820B164, frames 0x0823199C — entry 0x60 of
+  0x080E13BC); object library: 1594 sequences.
+- `tests/test_aos_soul_red_were_beast.c` covers the state machine.
+  Remaining soul backlog: 22 red + 5 blue.
+
 ## Patch 1004 - Red soul 53 (Killer Mantle) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_killer_mantle.c` ports

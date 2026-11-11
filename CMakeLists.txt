@@ -293,6 +293,7 @@ set(AOS_ENEMY_SOURCES
     src/runtime/aos/enemies/balore.c
     src/runtime/aos/enemies/creaking_skull.c
     src/runtime/aos/enemies/legion.c
+    src/runtime/aos/enemies/belmont.c
     src/runtime/aos/enemies/headhunter.c
     src/runtime/aos/enemies/zombie.c
     src/runtime/aos/enemies/nemesis.c

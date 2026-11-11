@@ -1,3 +1,29 @@
+## Patch 0993 - Julius Belmont ported (id 110)
+
+- `EnemyBelmontCreate` (0x080CFAB0) / `EnemyBelmontUpdate`
+  (0x080CFED0): tiles `0x08119520` — an encoding-2 container of
+  four 16x8 sub-sheets; the object exporter's block scan now walks
+  the pointer table while entries still validate as sub-sheets
+  (the native `sub_0803A1E8` loader semantics), which also covers
+  Belmont's `02 03 02 01` header whose count bytes differ from the
+  earlier `04 02` forms — palette `0x0820C028`, frames `0x08252748`.
+- `belmont.c` ports the thirteen-state machine: state 3 hands off
+  to the state-2 main machine (`sub_080D0044`) whose decoded random
+  pick enters the attack states 4-10, each keeping its native song
+  accents (0xF6/0x93, 0xFC, 0x94, 0x80/0xF0) and projectile
+  volleys through `BEL_SHOT` children; the `sub_080D1A44` hurt
+  callback's lethal path (song 0x1E1) and juggle gate (+ 0x20 > 2,
+  songs 0x1E2/0x1E3) drive state 0xB into the state-0xF0 death
+  machine with gore and the delete.
+- Documented approximations: the param0 == 1 cutscene variant and
+  its Object20 dialogue entities are not ported, the per-case
+  choreography collapses to a windup/strike/recover cycle, and the
+  projectile entities share the parent kind; no soul drops, so the
+  aspect row records soul/loot n/a — Aria complete count 71.
+- `belmont_tests` covers create/dormant, the state-3 handoff, the
+  state-2 attack pick, the state-9 envelope, the three-shot volley,
+  the shot lifetime and the lethal-to-delete path.
+
 ## Patch 0992 - Headhunter death machine made faithful
 
 - `sub_08083860` is a four-case machine on `+0xB`, now ported

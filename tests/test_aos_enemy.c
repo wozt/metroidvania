@@ -12360,6 +12360,138 @@ static void legion_tests(void) {
     assert(el.removed);
 }
 
+static void belmont_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { BEL_ANIMS = 4 };
+    static const uint8_t ticks4[4] = {4, 4, 4, 4};
+    static AosAnimDef defs[BEL_ANIMS];
+    for (int a = 0; a < BEL_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks4};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = BEL_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < BEL_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-32, -64, 64, 72};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 110: hp 6000, contact 95, defence 80,
+     * weak 0x0000, resist 0x0FE0, no drops, no soul. */
+    static const AosEnemyStats bel = {6000, 95, 80, 0x0000, 0x0FE0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+
+    /* Create: hp from the record, state 3 awake, state 0xC dormant
+     * under the global flag. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, 0x6E, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &bel));
+    assert(e.state == 3 && e.hp == 6000 && e.bel_juggle == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, 0x6E, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &bel));
+    assert(ed.state == 0xC && ed.hp == 6000);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* State 3 hands off to state 2 on the first update. */
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(120);
+    aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(e.state == 2);
+
+    /* State 2 with always_zero random picks state 9 (0 % 0xC == 0);
+     * the attack envelope plays song 0x94 then returns to state 2. */
+    e.step = 0;
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    assert(e.state == 9 && e.substep == 0);
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(e.substep == 1 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x94) >= 1);
+    e.timer = 0x18;
+    aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(e.substep == 2);
+    aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(e.substep == 3);
+    e.timer = 0x28;
+    aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(e.state == 2 && e.substep == 0);
+
+    /* State 6 fires the three-shot volley (sub_080D1BB4 x3). */
+    e.state = 6;
+    e.substep = 2;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    int shots = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_BEL_SHOT) shots++;
+    assert(shots == 3);
+
+    /* A BEL_SHOT child flies and expires at its lifetime. */
+    AosEnemy sh;
+    memset(&sh, 0, sizeof sh);
+    sh.id = 0x6E;
+    sh.role = AOS_ROLE_BEL_SHOT;
+    sh.parent = &e;
+    sh.x = AOS_FIXED(150);
+    sh.y = AOS_FIXED(120);
+    sh.vx = 0x380000;
+    sh.timer = 0x50;
+    for (int i = 0; i < 0x50; ++i)
+        aos_enemy_update(&sh, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(sh.removed);
+
+    /* Lethal: hp 0 -> defeated, song 0x1E1, state 0xB, then the
+     * 0xF0 death machine gores and deletes. */
+    AosEnemy el;
+    assert(aos_enemy_create(&el, 0x6E, 150, 120, 0, 0,
+                            &soma, &layer, &kind, &bel));
+    el.x = AOS_FIXED(150);
+    el.y = AOS_FIXED(120);
+    el.state = 2;
+    el.hp = 0;
+    hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(el.defeated && el.state == 0xB);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x1E1) >= 1);
+    el.timer = 0x50;
+    aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(el.state == 0xF0 && el.timer == 0xA0);
+    el.timer = 4;
+    hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    int gore = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_BEL_GORE) gore++;
+    assert(gore == 1);
+    /* Count the 0xF0 countdown to the delete. */
+    int frames = 0;
+    while (!el.removed && frames < 0xA0 + 8) {
+        aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(el.removed);
+}
+
 int main(void) {
     peeping_eye_tests();
     skeleton_bone_tests();
@@ -12617,6 +12749,7 @@ int main(void) {
     manticore_tests();
     death_tests();
     legion_tests();
+    belmont_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

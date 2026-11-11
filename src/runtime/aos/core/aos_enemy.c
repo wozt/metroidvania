@@ -412,7 +412,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_STOLAS && id != AOS_ENEMY_DEATH &&
         id != AOS_ENEMY_MANTICORE && id != AOS_ENEMY_BALORE &&
         id != AOS_ENEMY_CREAKING_SKULL && id != AOS_ENEMY_GIANT_SKELETON &&
-        id != AOS_ENEMY_LEGION &&
+        id != AOS_ENEMY_LEGION && id != AOS_ENEMY_BELMONT &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1484,6 +1484,25 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->timer = 0;
         enemy->boss_parts_spawned = false;
         enemy->spawned_count = 0;
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_BELMONT) {
+        /* EnemyBelmontCreate 0x080CFAB0: tiles 0x08119520, palette
+         * 0x0820C028, frames 0x08252748 through sub_0806E0D0; the
+         * param0 == 1 cutscene variant (sub_080CFC04 Object20
+         * dialogue entities) folds into the boss path (documented);
+         * + 0x5C = 0x11, + 0x3E |= 4, the first-visit flag
+         * gEwramData + 0x42C |= 2 and the hurt/death callbacks
+         * sub_0806E1B8/sub_080D1A44 fold into the shared paths; the
+         * gEwramData + 0x8E & 0x40 flag parks state 0xC, else state
+         * 3 (the sub_080D2328 handoff into state 2). */
+        enemy->bel_juggle = 0;
+        enemy->state = flag_8e_40 ? 0xC : 3;
+        enemy->step = 0;
+        enemy->substep = 0;
+        enemy->timer = 0;
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
         return true;
@@ -4467,6 +4486,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_legion_update(enemy, soma, layer, kind, weapon,
                                        weapon_frames, soma_atk, soma_def,
                                        cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_BELMONT)
+        return aos_enemy_belmont_update(enemy, soma, layer, kind, weapon,
+                                        weapon_frames, soma_atk, soma_def,
+                                        cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

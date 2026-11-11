@@ -262,6 +262,10 @@ static const EntitySpec entities[] = {
     ENTITY("creaking_skull", 0x081CC044, 0x0820AB38, 0, 0x082232B8),
     ENTITY("giant_skeleton", 0x081CC044, 0x0820AB38, 0, 0x082232B8),
     ENTITY("legion", 0x081190C0, 0x0820AC4C, 0, 0x082258FC),
+    /* Julius Belmont EnemyBelmontCreate 0x080CFAB0: tiles
+     * 0x08119520, palette 0x0820C028, frames 0x08252748 — shared by
+     * the body and the sub_080D1BB4/sub_080D1ADC projectiles. */
+    ENTITY("belmont", 0x08119520, 0x0820C028, 0, 0x08252748),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),
@@ -871,26 +875,30 @@ static bool load_tile_sheet(const FusionRom *rom, uint32_t descriptor,
         for (unsigned block = 0; block < 8; ++block) {
             const uint8_t *bh = slice(rom, at, 4, "sheet block header",
                                       error, error_size);
-            if (!bh || bh[0] != tag || bh[2] != 4 || bh[3] != 2)
+            if (!bh || bh[0] != tag)
                 break;
-            unsigned n = bh[1];
-            if (n == 0 || n > 8 || count + n > 32) {
-                set_error(error, error_size, "unsupported object sheet count");
-                goto failed;
-            }
-            const uint8_t *entries = slice(rom, at + 4, n * 4,
-                                           "sheet pointer table", error,
-                                           error_size);
-            if (!entries) goto failed;
-            for (unsigned i = 0; i < n; ++i) {
-                uint32_t sub = read_u32(entries + i * 4);
-                const uint8_t *sh = slice(rom, sub, 8, "sub-sheet header",
-                                          error, error_size);
-                if (!sh || (sh[0] != 0 && sh[0] != 1) || sh[1] != 4) {
-                    set_error(error, error_size,
-                              "unsupported object sub-sheet encoding");
-                    goto failed;
-                }
+            /* The native loader (sub_0803A1E8) walks the pointer
+             * table until the entries stop being sheet descriptors;
+             * the count/grid bytes vary per object (Belmont's
+             * `02 03 02 01` heads four 16x8 sheets), so scan while
+             * each word still points at a valid sub-sheet. */
+            unsigned n = 0;
+            while (n < 8 && count + n < 32) {
+                const uint8_t *we = slice(rom, at + 4 + n * 4, 4,
+                                          "sheet pointer", error,
+                                          error_size);
+                if (!we)
+                    break;
+                uint32_t sub = read_u32(we);
+                const uint8_t *sh;
+                if (sub < GBA_BASE ||
+                    (uint64_t)sub - GBA_BASE + 8 > rom->size)
+                    break;
+                sh = rom->data + (sub - GBA_BASE);
+                if ((sh[0] != 0 && sh[0] != 1) || sh[1] != 4 ||
+                    sh[2] == 0 || sh[3] == 0 || sh[2] > 64 ||
+                    sh[3] > 64)
+                    break;
                 offsets[count] = sub;
                 dims[count][0] = sh[2];
                 dims[count][1] = sh[3];
@@ -904,11 +912,17 @@ static bool load_tile_sheet(const FusionRom *rom, uint32_t descriptor,
                     goto failed;
                 }
                 count++;
+                n++;
             }
+            if (n == 0)
+                break;
             at += 4 + n * 4;
         }
         if (count == 0) {
-            set_error(error, error_size, "unsupported object sheet count");
+            char detail[160];
+            snprintf(detail, sizeof detail,
+                     "unsupported object sheet count at 0x%08X", descriptor);
+            set_error(error, error_size, detail);
             goto failed;
         }
         free(sheet->data);
@@ -1335,8 +1349,12 @@ static bool export_entity(const FusionRom *rom, FusionSpriteLibrary *library,
                           const EntitySpec *entity, const char *key_prefix,
                           Text *rows, char *error, size_t error_size) {
     TileSheet sheet;
-    if (!load_tile_sheet(rom, entity->graphics, &sheet, error, error_size))
+    if (!load_tile_sheet(rom, entity->graphics, &sheet, error, error_size)) {
+        char detail[192];
+        snprintf(detail, sizeof detail, "%s: %s", entity->name, error);
+        set_error(error, error_size, detail);
         return false;
+    }
     const uint8_t *palette = load_palette(rom, entity->palette, entity->bank,
                                           error, error_size);
     const uint8_t *descriptor = palette

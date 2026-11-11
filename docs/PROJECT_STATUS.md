@@ -1,3 +1,25 @@
+## Patch 1021 - Red soul 33 (Dryad) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_dryad.c` ports
+  `SkillDryadUse` (routine 0x080282DD): the arcing seed — placed at
+  (0x14, -0x1A) with vx -+0x10000, vy -0x20000 and gravity 0x2000,
+  song 0xE5, box preset 5 plus 0x0202FFFF; state 1 flies under
+  `sub_0806D3D8` (cap 0x40000) until the strike plants it (the
+  `sub_0802D9BC`/`sub_080239E4` child modelled by the planted flag,
+  + 0x0D = 0x78, box 0x1014F8F6); state 2 counts to 0x14 with song
+  0xD5 and the `sub_08021FEC(8)` bonus once while the host's
+  + 0x34/+ 0x72 bit 2 end it; state 3 blinks for 0x10 frames and
+  state 4 deletes; the `sub_0806D128(e, 4)` margin probe enters
+  state 4 from any state.
+- `src/assets/aos/objects.c` exports `skill_dryad` still frame 0
+  (resource 13 of 0x080E13BC: tiles 0x081D28F8, palette 0x0820B238,
+  frames 0x08232690).
+- `tests/test_aos_soul_red_dryad.c` covers the flight arc and cap,
+  the planted transition, the song/bonus edge, the host-end paths
+  and the blink linger. The child entity, enemy-side charm fields,
+  the sub_08042A7C popup and the + 0x59 bit-4 mark are documented as
+  approximated. Remaining soul backlog: 4 red + 5 blue.
+
 ## Patch 1020 - Red soul 41 (Giant Skeleton) ported
 
 - The shared throw routine's flag 0x200 (frame-derived attack box)

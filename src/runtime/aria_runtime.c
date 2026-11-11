@@ -51,6 +51,7 @@
 #include "aos/red_souls/aos_soul_red_chronomage.h"
 #include "aos/red_souls/aos_soul_red_disc_armor.h"
 #include "aos/red_souls/aos_soul_red_cockatrice.h"
+#include "aos/red_souls/aos_soul_red_dryad.h"
 #include "aos/red_souls/aos_soul_red_were_beast.h"
 #include "aos/red_souls/aos_soul_red_flame_demon.h"
 #include "aos/red_souls/aos_soul_red_devil.h"
@@ -329,7 +330,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
        SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD,
-       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ART_COCKATRICE, SKILL_ARTS };
+       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ART_COCKATRICE, SKILL_ART_DRYAD, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -350,7 +351,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
                                                          "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord",
-                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor", "skill_cockatrice"};
+                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor", "skill_cockatrice", "skill_dryad"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -976,7 +977,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_WEREWOLF, SKILL_KILLER_MANTLE, SKILL_WERE_BEAST,
        SKILL_FLAME_DEMON, SKILL_FLAME_BOLT, SKILL_DEMON_LORD, SKILL_FLAME_SPIRIT,
        SKILL_BIPHRON, SKILL_BIPHRON_TOTEM, SKILL_BALORE, SKILL_KYOMA_DEMON,
-       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL, SKILL_UKOBACK, SKILL_ALTAIR, SKILL_UNE, SKILL_MANDRAGORA, SKILL_CHRONOMAGE, SKILL_DISC_ARMOR, SKILL_COCKATRICE };
+       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL, SKILL_UKOBACK, SKILL_ALTAIR, SKILL_UNE, SKILL_MANDRAGORA, SKILL_CHRONOMAGE, SKILL_DISC_ARMOR, SKILL_COCKATRICE, SKILL_DRYAD };
 
 typedef struct {
     bool alive, started;
@@ -1029,6 +1030,8 @@ typedef struct {
     AosChronomage chronomage; /* SKILL_CHRONOMAGE */
     AosDiscArmor disc_armor;   /* SKILL_DISC_ARMOR */
     AosCockatrice cockatrice; /* SKILL_COCKATRICE */
+    AosDryad dryad;           /* SKILL_DRYAD */
+    AosEnemy *dryad_host;     /* its + 0x20 child's + 0x20: the struck enemy */
     uint8_t volley_count;      /* SKILL_DEMON_LORD spawn gate */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
@@ -1080,6 +1083,7 @@ typedef struct {
 #define SKILL_CHRONOMAGE_ROUTINE 0x08024950u
 #define SKILL_DISC_ARMOR_ROUTINE 0x08027340u
 #define SKILL_COCKATRICE_ROUTINE 0x0802968Cu
+#define SKILL_DRYAD_ROUTINE 0x080282DDu
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1119,6 +1123,7 @@ typedef struct {
     const AosAnimSet *chronomage;     /* skill_chronomage art, sequence 0 */
     const AosAnimSet *disc_armor;     /* skill_disc_armor, sequence 0 */
     const AosAnimSet *cockatrice;     /* skill_cockatrice, sequence 0 */
+    const AosAnimSet *dryad;          /* skill_dryad still frame 0 */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
@@ -1279,6 +1284,8 @@ static int cast_red_soul(void *context) {
                    ? SKILL_DISC_ARMOR
                : routine == SKILL_COCKATRICE_ROUTINE && souls->cockatrice
                    ? SKILL_COCKATRICE
+               : routine == SKILL_DRYAD_ROUTINE && souls->dryad
+                   ? SKILL_DRYAD
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1397,6 +1404,15 @@ static int cast_red_soul(void *context) {
             souls->soma->y - 0x1A * 0x10000, souls->soma->facing_left);
         skill->x = skill->cockatrice.x;
         skill->y = skill->cockatrice.y;
+        skill->facing_left = souls->soma->facing_left;
+    } else if (kind == SKILL_DRYAD) {
+        /* SkillDryadUse's state 0 places it through sub_08031EA4 at
+         * (0x14, -0x1A) with vx -+0x10000, vy -0x20000 and gravity
+         * 0x2000 already loaded. */
+        skill->dryad = aos_dryad_create(souls->soma->x, souls->soma->y,
+                                        souls->soma->facing_left);
+        skill->x = skill->dryad.x;
+        skill->y = skill->dryad.y;
         skill->facing_left = souls->soma->facing_left;
     } else if (kind == SKILL_DISC_ARMOR) {
         skill->disc_armor = aos_disc_armor_create(
@@ -2676,6 +2692,37 @@ static void update_skills(AriaSouls *souls) {
             skill->x = skill->cockatrice.x;
             skill->y = skill->cockatrice.y;
             break;
+        case SKILL_DRYAD:
+            /* SkillDryadUse: counted on its first update with box
+             * preset 5 plus 0x0202FFFF, song 0xE5 and the + 0x131BE
+             * count; state 1 arcs under sub_0806D3D8 (cap 0x40000),
+             * the sub_0802D9BC strike plants the sub_080239E4 child
+             * (the runtime sets planted and resets + 0x26), state 2
+             * counts to 0x14 with song 0xD5 and the sub_08021FEC(8)
+             * bonus once while the host's + 0x34/+ 0x72 bit 2 end it,
+             * state 3 lingers 0x10 frames blinking, state 4 deletes;
+             * the sub_0806D128(e, 4) margin probe and the + 0x59 bit-4
+             * mark enter state 4 from any state. The child entity, the
+             * enemy-side charm fields and the sub_08042A7C popup are
+             * not ported (the host fights on normally). */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0xE5);
+            }
+            skill->dryad.host_gone = skill->dryad_host &&
+                                    (skill->dryad_host->hp <= 0 ||
+                                     skill->dryad_host->removed);
+            skill->dryad.host_flag = skill->dryad_host &&
+                                    skill->dryad_host->defeated;
+            skill->dryad.outside = skill_outside(souls, skill, 4);
+            if (!aos_dryad_update(&skill->dryad)) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->x = skill->dryad.x;
+            skill->y = skill->dryad.y;
+            break;
         case SKILL_FLAME_DEMON:
             /* SkillFlameDemonUse: one counted cast plays song 0xD8, emits
              * a sub_08045CEC(0xC, 6) burst and a fan of 3 or 5
@@ -3505,6 +3552,11 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
         else if (skill->kind == SKILL_SPEAR_TIP)
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
+        else if (skill->kind == SKILL_DRYAD && skill->dryad.state != 4)
+            /* 0x0202FFFF flying, the planted 0x1014F8F6 after the
+             * strike (sub_08042884 replaces the box). */
+            box = skill->dryad.planted ? (AosBox){-10, -8, 20, 16}
+                                       : (AosBox){-1, -1, 2, 2};
         else if (skill->kind == SKILL_AXE && skill->axe.state == 1)
             box = (AosBox){-10, -10, 20, 20};  /* 0x1414F6F6 */
         if (!box.w || !box.h) continue;
@@ -8166,6 +8218,12 @@ int aria_runtime_main(int argc, char **argv) {
                                        cockatrice->defs[0].count
                                    ? &cockatrice->set
                                    : NULL;
+            const __typeof__(objects.skills[0]) *dryad =
+                &objects.skills[SKILL_ART_DRYAD];
+            souls.dryad = objects_ok && dryad->loaded &&
+                                   dryad->defs[0].count
+                               ? &dryad->set
+                               : NULL;
             const __typeof__(objects.skills[0]) *mantle =
                 &objects.skills[SKILL_ART_KILLER_MANTLE];
             souls.killer_mantle = objects_ok && mantle->loaded && mantle->defs[0].count
@@ -8405,6 +8463,17 @@ int aria_runtime_main(int argc, char **argv) {
                         aos_ripper_soul_attach(&owners[k]->ripper, attacks[k].target->x,
                                                attacks[k].target->y);
                     }
+                    if (owners[k]->kind == SKILL_DRYAD) {
+                        /* sub_0802D9BC: the first strike spawns the child
+                         * (+ 0x20), sets + 0x0D = 0x78 and the 0x1014F8F6
+                         * box; later strikes only reset + 0x26. */
+                        if (!owners[k]->dryad.planted) {
+                            owners[k]->dryad.planted = true;
+                            owners[k]->dryad.timer = 0x78;
+                        }
+                        owners[k]->dryad.counter = 0;
+                        owners[k]->dryad_host = attacks[k].target;
+                    }
                 }
         }
 
@@ -8624,6 +8693,8 @@ int aria_runtime_main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_DISC_ARMOR].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_COCKATRICE
                     ? &objects.skills[SKILL_ART_COCKATRICE].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_DRYAD
+                    ? &objects.skills[SKILL_ART_DRYAD].frames[0][0]
                 : skill->kind == SKILL_NEMESIS
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_NEMESIS_SOUL_SEQUENCE][skill->anim.frame]

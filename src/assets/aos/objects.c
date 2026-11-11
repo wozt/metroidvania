@@ -421,6 +421,10 @@ static const EntitySpec entities[] = {
     /* Entry 0x144 of 0x080E13BC: SkillCockatriceUse reuses the Kyoma
      * Demon record's animation sequences (sequence 0). */
     ENTITY("skill_cockatrice", 0x081D9930, 0x0820B430, 0, 0x08234F90),
+    /* Resource 13 of 0x080E13BC: SkillDryadUse's still frame 0 (the
+     * + 0x65 = 0 frame; the sub_0802D9BC planted box is not in the
+     * frames table). */
+    STATIC("skill_dryad", 0x081D28F8, 0x0820B238, 0, 0x08232690, 1, 0),
     /* Resource 11 of 0x080E13BC: Killer Fish's appearance sequence 1 and
      * looping swim/fall sequence 0. */
     ENTITY("skill_killer_fish", 0x081D18F0, 0x0820B1F0, 0, 0x082321E4),

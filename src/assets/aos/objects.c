@@ -266,6 +266,11 @@ static const EntitySpec entities[] = {
      * 0x08119520, palette 0x0820C028, frames 0x08252748 — shared by
      * the body and the sub_080D1BB4/sub_080D1ADC projectiles. */
     ENTITY("belmont", 0x08119520, 0x0820C028, 0, 0x08252748),
+    /* EnemyBigGolemCreate 0x080A8328 / sub_080AD1D0: tiles
+     * 0x0825EB04, palette 0x0826642C, frames 0x08266E08; the four
+     * sub_0806DFF8 children of sub_080AC6E8 read tiles 0x0825EB0C
+     * and frames 0x08266E78 under the other variant byte. */
+    ENTITY("big_golem", 0x0825EB04, 0x0826642C, 0, 0x08266E08),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

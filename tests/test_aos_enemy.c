@@ -12632,7 +12632,115 @@ static void belmont_tests(void) {
     assert(el.removed);
 }
 
+static void big_golem_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { BG_ANIMS = 4 };
+    static const uint8_t ticks4[4] = {4, 4, 4, 4};
+    static AosAnimDef defs[BG_ANIMS];
+    for (int a = 0; a < BG_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks4};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = BG_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < BG_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-64, -128,
+                                                       128, 96};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 69: hp 1200, contact 55, defence 15,
+     * weak 0x0000, resist 0x0400, exp 1000, rare 0x0029. */
+    static const AosEnemyStats bg = {1200, 55, 15, 0x0000, 0x0400, 1000};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+
+    /* Create: state 3 parks dormant under the global flag, state 0
+     * awake otherwise; the four sub_0806DFF8 children emit on the
+     * first update. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, 0x45, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &bg));
+    assert(e.state == 0 && e.hp == 1200);
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    int kids = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role >= AOS_ROLE_BG_CHILD0 &&
+            hit.children[i].role <= AOS_ROLE_BG_CHILD3)
+            kids++;
+    assert(kids == 4);
+    assert(e.boss_parts_spawned);
+
+    /* State 0 case 12 exits into the state-1 attack machine. */
+    e.step = 12;
+    aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(e.state == 1 && e.step == 0);
+
+    /* State 1: windup song 0x86 then strike song 0x71 volleys. */
+    aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(e.step == 1);
+    aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x86) >= 1);
+    e.timer = 0x31;
+    aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(e.step == 2);
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x71) >= 1);
+
+    /* A BG_CHILD part tracks its body and dies with it. */
+    AosEnemy ch;
+    memset(&ch, 0, sizeof ch);
+    ch.id = 0x45;
+    ch.role = AOS_ROLE_BG_CHILD1;
+    ch.variant = 1;
+    ch.parent = &e;
+    ch.x = AOS_FIXED(100);
+    ch.y = AOS_FIXED(100);
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(200);
+    aos_enemy_update(&ch, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(!ch.removed && ch.x == AOS_FIXED(150) + 0x500000 &&
+           ch.y == AOS_FIXED(200) - 0x600000);
+    e.removed = true;
+    aos_enemy_update(&ch, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(ch.removed);
+    e.removed = false;
+
+    /* Lethal: hp 0 -> defeated -> state 2 death machine with the
+     * decoded timer; the cycle-gated flag deletes it. */
+    e.state = 1;
+    e.hp = 0;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(e.defeated && e.state == 2);
+    int frames = 0;
+    while (!e.removed && frames < 0xD6 + 0x40) {
+        aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.removed);
+}
+
 int main(void) {
+    big_golem_tests();
     peeping_eye_tests();
     skeleton_bone_tests();
     soul_attack_tests();

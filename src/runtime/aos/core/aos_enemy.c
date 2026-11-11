@@ -413,6 +413,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_MANTICORE && id != AOS_ENEMY_BALORE &&
         id != AOS_ENEMY_CREAKING_SKULL && id != AOS_ENEMY_GIANT_SKELETON &&
         id != AOS_ENEMY_LEGION && id != AOS_ENEMY_BELMONT &&
+        id != AOS_ENEMY_BIG_GOLEM &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1503,6 +1504,27 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->step = 0;
         enemy->substep = 0;
         enemy->timer = 0;
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_BIG_GOLEM) {
+        /* EnemyBigGolemCreate 0x080A8328: tiles 0x0825EB04, palette
+         * 0x0826642C, frames 0x08266E08 through sub_080AD1D0; the + 0x30
+         * param gate and the gEwramData room flags can delete the
+         * spawn; the gEwramData + 0x4CC & 3 variant adds 0x3E8 hp;
+         * the four sub_0806DFF8 children of sub_080AC6E8 emit on the
+         * first updates via boss_parts_spawned; the gEwramData + 0x8E
+         * & 0x40 flag parks state 3; the + 0x20/+ 0x58 flag clears and
+         * the sub_080AC468 hitbox table fold into the shared paths. */
+        if ((enemy->param0 & 3) != 0)
+            enemy->hp += 0x3E8;
+        enemy->state = flag_8e_40 ? 3 : 0;
+        enemy->step = 0;
+        enemy->substep = 0;
+        enemy->timer = 0;
+        enemy->boss_parts_spawned = false;
+        enemy->spawned_count = 0;
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
         return true;
@@ -4468,6 +4490,12 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_death_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,
                                       cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_BIG_GOLEM)
+        return aos_enemy_big_golem_update(enemy, soma, layer, kind,
+                                          weapon,
+                                          weapon_frames, soma_atk,
+                                          soma_def, cam_x, cam_y,
+                                          random);
     if (enemy->id == AOS_ENEMY_MANTICORE)
         return aos_enemy_manticore_update(enemy, soma, layer, kind, weapon,
                                           weapon_frames, soma_atk, soma_def,

@@ -1,3 +1,22 @@
+## Patch 0998 - Big Golem ported (id 69)
+
+- `EnemyBigGolemCreate` (0x080A8328) / `EnemyBigGolemUpdate`
+  (0x080A8224) through `sub_080AD1D0`: tiles 0x0825EB04, palette
+  0x0826642C, frames 0x08266E08; the four `sub_0806DFF8` children
+  (callback `sub_080AC6E8`, tiles 0x0825EB0C / frames 0x08266E78)
+  fold into the persistent `AOS_ROLE_BG_CHILD0-3` parts.
+- State 0 `sub_080A89F8` (thirteen cases) and state 1
+  `sub_080AA7A8` (forty cases) collapse to documented
+  chase/attack-pose/settle and windup/volley/recover cycles with
+  the native song accents 0x7C, 0x86 and 0x71; the state-2 death
+  machine keeps its decoded timer, every-fourth-frame particles
+  and the `+0x59` flag gating the delete.
+- Blue soul 12 (`SkillBigGolemUse`) was already ported, so the
+  monster aspect row is fully `ported`; `big_golem_tests` covers
+  create, child emission, the state-0 exit, the state-1 windup and
+  strike songs, child tracking/death and the lethal-to-delete
+  path.
+
 ## Patch 0997 - Headhunter dash shots (sub_080858B8/sub_0808597C)
 
 - The state-1 dash cases 22/32/42 now emit the real

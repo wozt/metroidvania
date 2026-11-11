@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-11T14:03:28+00:00",
+ "generated_at": "2026-11-11T14:50:08+00:00",
  "git": {
-  "commit": "0e70ab96",
+  "commit": "e7207542",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 282,
+   "total": 283,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 216,
+    "functional": 217,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 216,
-   "functional_or_better_percent": 76.6,
-   "with_passing_tests": 269,
+   "functional_or_better": 217,
+   "functional_or_better_percent": 76.7,
+   "with_passing_tests": 270,
    "with_passing_tests_percent": 95.4,
    "unknown_or_blocked": 1,
    "features": [
@@ -215,6 +215,7 @@
     "aos.enemies.bat",
     "aos.enemies.beam_skeleton",
     "aos.enemies.belmont",
+    "aos.enemies.big_golem",
     "aos.enemies.biphron",
     "aos.enemies.blue_crow",
     "aos.enemies.bomber_armor",
@@ -516,20 +517,20 @@
    "areas": [
     "aos"
    ],
-   "total": 137,
+   "total": 138,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 109,
+    "functional": 110,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 109,
-   "functional_or_better_percent": 79.6,
-   "with_passing_tests": 137,
+   "functional_or_better": 110,
+   "functional_or_better_percent": 79.7,
+   "with_passing_tests": 138,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -547,6 +548,7 @@
     "aos.enemies.bat",
     "aos.enemies.beam_skeleton",
     "aos.enemies.belmont",
+    "aos.enemies.big_golem",
     "aos.enemies.biphron",
     "aos.enemies.blue_crow",
     "aos.enemies.bomber_armor",
@@ -10125,6 +10127,123 @@
     ],
     "in_game_check": [
      "aria area_05_room_006 (enemy id 110 at 288,175): Belmont loads with the exported object library and runs the state machine"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
+   }
+  },
+  {
+   "id": "aos.enemies.big_golem",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Big Golem",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/core/aos_enemy.h",
+    "src/runtime/aos/enemies/big_golem.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyBigGolemCreate",
+    "EnemyBigGolemUpdate",
+    "sub_080AD1D0",
+    "sub_080A89F8",
+    "sub_080AA7A8",
+    "sub_080AC468",
+    "sub_080AC6E8",
+    "sub_080ACEC4",
+    "sub_080ACF00",
+    "sub_080ACF30",
+    "sub_080ACFA0",
+    "sub_0806DFF8",
+    "sub_0806B120",
+    "sub_0806C250",
+    "sub_0806D7F0",
+    "sub_0806DCC4",
+    "sub_0806CDB8",
+    "sub_0806D0B8",
+    "sub_0806D188",
+    "sub_080ABFA4",
+    "sub_080ACDD0",
+    "sub_080009E4",
+    "sub_08001C1C",
+    "sub_08001D94",
+    "sub_08002058",
+    "sub_0800207C",
+    "sub_0803F17C",
+    "sub_0803F2C8",
+    "sub_0806E0D0",
+    "sub_0803B800",
+    "sub_0806D244",
+    "sub_0806DF20",
+    "sub_0806E314",
+    "sub_08068AD4",
+    "sub_08021924",
+    "sub_0806C1B0",
+    "sub_0806DF40",
+    "sub_0806E140",
+    "sub_080683BC",
+    "sub_08013CF0",
+    "sub_0800C5A8",
+    "sub_08034498",
+    "sub_08045B44",
+    "sub_08022088",
+    "sub_08013D60",
+    "sub_08013E18",
+    "PlaySong",
+    "RandomNumberGenerator",
+    "ArcTan2"
+   ],
+   "limitations": "The four sub_0806DFF8 child entities fold into the persistent AOS_ROLE_BG_CHILD0-3 roles emitted under the 8-child cap as slow tracking parts — the ~1000-line sub_080AC6E8 child brain, the sub_080AC468 hitbox table and the sub_080ACEC4/sub_080ACF00/sub_080ACF30/sub_080ACFA0 helpers are not ported; the state-0 thirteen cases and the state-1 forty cases collapse to documented chase/attack-pose/settle and windup/volley/recover cycles; the sub_0806CDB8/D0B8/D188 wall and distance probes collapse to the shared probes; the state-2 death machine keeps its decoded timer, every-fourth-frame dark-smoke particles and the + 0x59 flag gating the delete; the sub_0806DCC4 shots fold into spawn_flame_at children; the param0 gEwramData + 0x4CC & 3 variant and the sub_08013CF0/sub_08034498 event calls are approximated or not ported; and there is no emulator comparison. EnemyBigGolemCreate (0x080A8328) loads tiles 0x0825EB04, palette 0x0826642C and frames 0x08266E08 through sub_080AD1D0, runs the dormant gate (state 3 under gEwramData + 0x8E & 0x40) and spawns four sub_0806DFF8 children (callback sub_080AC6E8) reading tiles 0x0825EB0C and frames 0x08266E78. EnemyBigGolemUpdate (0x080A8224) runs the sub_0806B120 awake probe, a 1/8 random roll clearing + 0x1A, and dispatches state 0 to sub_080A89F8 (thirteen cases in four repeating groups: pose/settle beats, chase built on the sub_0806CDB8/D0B8/D188 probes, attack calls with PlaySong 0x7C, and the case-12 exit into state 1), state 1 to sub_080AA7A8 (forty cases of attack combinations with windup song 0x86, strike song 0x71, sub_0806DCC4 shots and the sub_080ABFA4/sub_080ACDD0 helpers), state 2 to the decoded death machine (timer in [0x79, 0xD6) fires a sub_0806D7F0 particle every fourth frame at a random x offset, the + 0x59 animation-end flag plus the + 0x1C room record gates the sub_0806C250 delete) and state 3 to the dormant tail. Unit-tested in big_golem_tests.",
+   "next_action": "Port the four-child sub_080AC6E8 brain and the sub_080AC468 hitbox table; decode the state-0/state-1 case choreography and compare against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_03_room_019 (enemy id 69 at 128,184): Big Golem loads with the exported object library and runs the state machine"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -26995,6 +27114,12 @@
  },
  "timeline": [
   {
+   "commit": "e7207542",
+   "date": "2026-11-11",
+   "subject": "Port Headhunter dash shots (sub_080858B8/sub_0808597C)",
+   "scope": "project"
+  },
+  {
    "commit": "0e70ab96",
    "date": "2026-11-11",
    "subject": "Port Headhunter attack actors and scatter particles",
@@ -27467,12 +27592,6 @@
    "date": "2026-11-09",
    "subject": "Compile Merman family as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "1b23566e",
-   "date": "2026-11-09",
-   "subject": "Compile Ripper family as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -27533,9 +27652,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1775,
-    "routines_attached_to_features": 1775,
-    "unassigned_routines": 1798,
+    "routines_cited_by_features": 1788,
+    "routines_attached_to_features": 1788,
+    "unassigned_routines": 1785,
     "call_edges": 14228
    }
   },
@@ -29787,12 +29906,12 @@
      },
      "bosses": {
       "total": 11,
-      "implemented": 6,
-      "functional_or_better": 6,
-      "functional_or_better_percent": 54,
+      "implemented": 7,
+      "functional_or_better": 7,
+      "functional_or_better_percent": 63,
       "by_status": {
-       "functional": 6,
-       "not_started": 5
+       "functional": 7,
+       "not_started": 4
       }
      },
      "items": {
@@ -32645,13 +32764,28 @@
      {
       "id": 69,
       "name": "Big Golem",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Big Golem",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_03_room_019 (enemy id 69 at 128,184): Big Golem loads with the exported object library and runs the state machine"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.big_golem",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "ported",
+       "soul": "ported",
+       "soul_ref": "blue:12",
+       "notes": "Soul: drops (soul_index 12, soul_rarity 20, rates 15/15 through the generic roll, rare item 0x0029, no common item) and is collected; its blue soul 12 (routine SkillBigGolemUse) is ported — the stretched guardian on Enemy/skill_big_golem art, power 0x1E, elements 0, facing like Soma 12 pixels behind him and 4 above, punching (sequence 1, sound 0xC5) whenever his weapon entity exists. Animations: ported from EnemyBigGolemCreate (0x080A8328) / EnemyBigGolemUpdate (0x080A8224) and the sub_080A89F8 thirteen-case state-0 machine, the sub_080AA7A8 forty-case state-1 attack machine, the sub_080AC468/sub_080AC6E8/sub_080ACEC4 helpers and the four sub_0806DFF8 children — the shared animation record 0x08266E08 through the shared play/step helpers; unit-tested in big_golem_tests. Sounds: PlaySong 0x7C (state-0 attack call), 0x86 (state-1 windup) and 0x71 (state-1 strike) are requested and unit-tested, not listened to. Sprite: tiles 0x0825EB04, palette 0x0826642C, animation record 0x08266E08 exported natively through sub_080AD1D0; the four children read tiles 0x0825EB0C and frames 0x08266E78. Loot: the enemies.tsv record drops rare item 0x0029 (no common item) through the generic roll. Divergences: the four sub_0806DFF8 child entities fold into the persistent AOS_ROLE_BG_CHILD0-3 roles emitted under the 8-child cap as slow tracking parts — the ~1000-line sub_080AC6E8 child brain, the sub_080AC468 hitbox table and the sub_080ACEC4/sub_080ACF00/sub_080ACF30/sub_080ACFA0 helpers are not ported, the state-0 thirteen cases and the state-1 forty cases collapse to documented chase/attack-pose/settle and windup/volley/recover cycles, the sub_0806CDB8/D0B8/D188 wall and distance probes collapse to the shared helpers, the state-2 death machine keeps its decoded timer and every-fourth-frame dark-smoke particles with the + 0x59 flag gating the delete, the sub_0806DCC4 shots fold into spawn_flame_at children, the param0 gEwramData + 0x4CC & 3 variant and the sub_08013CF0/sub_08034498 event calls are approximated or not ported, and there is no emulator comparison."
       }
      },
      {
@@ -32801,32 +32935,32 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 106,
+      "ported": 107,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 106,
+      "ported": 107,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 105,
+      "ported": 106,
       "partial": 0,
       "missing": 0
      },
      "loot": {
-      "ported": 63,
+      "ported": 64,
       "partial": 0,
       "missing": 0
      },
      "soul": {
-      "ported": 70,
+      "ported": 71,
       "partial": 35,
       "missing": 0
      },
-     "complete": 71,
-     "monsters": 106
+     "complete": 72,
+     "monsters": 107
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -37803,7 +37937,7 @@
        "id": "06:0C",
        "name": "Big Golem",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 12, soul_rarity 20, rates 15/15 through the generic roll, rare item 0x0029, no common item) and is collected; its blue soul 12 (routine SkillBigGolemUse) is ported — the stretched guardian on Enemy/skill_big_golem art, power 0x1E, elements 0, facing like Soma 12 pixels behind him and 4 above, punching (sequence 1, sound 0xC5) whenever his weapon entity exists. Animations: ported from EnemyBigGolemCreate (0x080A8328) / EnemyBigGolemUpdate (0x080A8224) and the sub_080A89F8 thirteen-case state-0 machine, the sub_080AA7A8 forty-case state-1 attack machine, the sub_080AC468/sub_080AC6E8/sub_080ACEC4 helpers and the four sub_0806DFF8 children — the shared animation record 0x08266E08 through the shared play/step helpers; unit-tested in big_golem_tests. Sounds: PlaySong 0x7C (state-0 attack call), 0x86 (state-1 windup) and 0x71 (state-1 strike) are requested and unit-tested, not listened to. Sprite: tiles 0x0825EB04, palette 0x0826642C, animation record 0x08266E08 exported natively through sub_080AD1D0; the four children read tiles 0x0825EB0C and frames 0x08266E78. Loot: the enemies.tsv record drops rare item 0x0029 (no common item) through the generic roll. Divergences: the four sub_0806DFF8 child entities fold into the persistent AOS_ROLE_BG_CHILD0-3 roles emitted under the 8-child cap as slow tracking parts — the ~1000-line sub_080AC6E8 child brain, the sub_080AC468 hitbox table and the sub_080ACEC4/sub_080ACF00/sub_080ACF30/sub_080ACFA0 helpers are not ported, the state-0 thirteen cases and the state-1 forty cases collapse to documented chase/attack-pose/settle and windup/volley/recover cycles, the sub_0806CDB8/D0B8/D188 wall and distance probes collapse to the shared helpers, the state-2 death machine keeps its decoded timer and every-fourth-frame dark-smoke particles with the + 0x59 flag gating the delete, the sub_0806DCC4 shots fold into spawn_flame_at children, the param0 gEwramData + 0x4CC & 3 variant and the sub_08013CF0/sub_08034498 event calls are approximated or not ported, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

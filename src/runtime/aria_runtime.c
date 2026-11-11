@@ -40,6 +40,7 @@
 #include "aos/red_souls/aos_soul_red_gladiator.h"
 #include "aos/red_souls/aos_soul_red_werewolf.h"
 #include "aos/red_souls/aos_soul_red_killer_mantle.h"
+#include "aos/red_souls/aos_soul_red_biphron.h"
 #include "aos/red_souls/aos_soul_red_were_beast.h"
 #include "aos/red_souls/aos_soul_red_flame_demon.h"
 #include "aos/red_souls/aos_soul_red_devil.h"
@@ -317,7 +318,8 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_WITCH, SKILL_ART_PILLAR, SKILL_ART_FLYING_ARMOR, SKILL_ART_DEATH,
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
-       SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD, SKILL_ARTS };
+       SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD,
+       SKILL_ART_BIPHRON, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -337,7 +339,8 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_devil_spark",
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
-                                                         "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord"};
+                                                         "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord",
+                                                         "skill_biphron"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -961,7 +964,8 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_RIPPER, SKILL_MILLIONE_EMITTER, SKILL_MILLIONE_CHILD, SKILL_FISH_HEAD,
        SKILL_KILLER_FISH, SKILL_GLADIATOR, SKILL_LIGHTNING, SKILL_DECOY, SKILL_NEMESIS,
        SKILL_WEREWOLF, SKILL_KILLER_MANTLE, SKILL_WERE_BEAST,
-       SKILL_FLAME_DEMON, SKILL_FLAME_BOLT, SKILL_DEMON_LORD, SKILL_FLAME_SPIRIT };
+       SKILL_FLAME_DEMON, SKILL_FLAME_BOLT, SKILL_DEMON_LORD, SKILL_FLAME_SPIRIT,
+       SKILL_BIPHRON, SKILL_BIPHRON_TOTEM };
 
 typedef struct {
     bool alive, started;
@@ -1002,6 +1006,7 @@ typedef struct {
     AosKillerMantle killer_mantle; /* SKILL_KILLER_MANTLE */
     AosWereBeast were_beast;   /* SKILL_WERE_BEAST */
     AosFlameSpirit flame;     /* SKILL_FLAME_BOLT / SKILL_FLAME_SPIRIT */
+    AosBiphron biphron;       /* SKILL_BIPHRON */
     uint8_t volley_count;      /* SKILL_DEMON_LORD spawn gate */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
@@ -1040,6 +1045,7 @@ typedef struct {
 #define SKILL_WERE_BEAST_ROUTINE 0x08027608u
 #define SKILL_FLAME_DEMON_ROUTINE 0x080293C4u
 #define SKILL_DEMON_LORD_ROUTINE 0x0802BF68u
+#define SKILL_BIPHRON_ROUTINE 0x08028800u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1063,6 +1069,8 @@ typedef struct {
     const AosAnimSet *were_beast;    /* skill_were_beast, sequence 0 */
     const AosAnimSet *demon_lord;    /* skill_demon_lord, sequence 0 */
     const AosEnemyKind *werewolf_kind; /* its 0x084F13B4 walker probes */
+    const AosAnimSet *biphron;        /* skill_biphron, sequence 0 */
+    const AosEnemyKind *biphron_kind; /* its 0x084F13B4 walker probes */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
@@ -1188,6 +1196,9 @@ static int cast_red_soul(void *context) {
                    ? SKILL_FLAME_DEMON
                : routine == SKILL_DEMON_LORD_ROUTINE && souls->demon_lord
                    ? SKILL_DEMON_LORD
+               : routine == SKILL_BIPHRON_ROUTINE && souls->biphron &&
+                         souls->biphron_kind && souls->biphron_kind->probes.count
+                   ? SKILL_BIPHRON
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1276,6 +1287,12 @@ static int cast_red_soul(void *context) {
         skill->x = skill->werewolf.body.x;
         skill->y = skill->werewolf.body.y;
         skill->facing_left = skill->werewolf.body.mirrored;
+    } else if (kind == SKILL_BIPHRON) {
+        skill->biphron = aos_biphron_create(souls->soma->x, souls->soma->y,
+                                            souls->soma->facing_left);
+        skill->x = skill->biphron.body.x;
+        skill->y = skill->biphron.body.y;
+        skill->facing_left = skill->biphron.body.mirrored;
     } else if (kind == SKILL_LIGHTNING) {
         skill->lightning = aos_lightning_create(souls->soma->x, souls->soma->y,
                                                 souls->soma->facing_left, aos_random() & 1);
@@ -2238,6 +2255,60 @@ static void update_skills(AriaSouls *souls) {
             if (aos_anim_step(&skill->anim, souls->demon_lord) == 3)
                 end_skill(souls, skill);
             break;
+        case SKILL_BIPHRON: {
+            /* SkillBiphronUse: state 0 places it at (+-0x14, -0xA) from
+             * Soma's facing; sub_0802393C must find its floor or the cast
+             * deletes itself, else + 0x24 = 0x8000, song 0x1A4 and
+             * + 0x0D = 0x40. Each update ramps + 0x24 toward 0x1FFFF,
+             * sub_0806CAF8 walks it at -+ 0x24 (0x084F13B4 probes, mode 4),
+             * a wall result&3 flips + 0x58 bit 6, every eighth + 0x0D tick
+             * (including the delete frame) emits a sub_080286BC totem
+             * (song 0xD9 each), and + 0x0D == 0 deletes it. */
+            if (!skill->started) {
+                if (!aos_biphron_ground_ok(&skill->biphron, souls->layer)) {
+                    end_skill(souls, skill);
+                    break;
+                }
+                aos_biphron_land(&skill->biphron, souls->layer,
+                                 &souls->biphron_kind->probes);
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0x1A4);
+                aos_anim_start(&skill->anim, souls->biphron, 0, false);
+            }
+            bool totem = false;
+            bool alive = aos_biphron_update(&skill->biphron, souls->layer,
+                                            &souls->biphron_kind->probes, &totem);
+            if (totem) {
+                AriaSkill *tot = spawn_child(souls, SKILL_BIPHRON_TOTEM);
+                if (tot) {
+                    tot->soul = skill->soul;
+                    place(tot, skill->biphron.body.x, skill->biphron.body.y,
+                          skill->biphron.body.mirrored, 0, 0);
+                    tot->x = skill->biphron.body.x;
+                    tot->y = skill->biphron.body.y;
+                    tot->facing_left = skill->biphron.body.mirrored;
+                    aos_audio_play_song(0xD9);
+                }
+            }
+            if (aos_anim_step(&skill->anim, souls->biphron) == 3 || !alive)
+                end_skill(souls, skill);
+            skill->x = skill->biphron.body.x;
+            skill->y = skill->biphron.body.y;
+            skill->facing_left = skill->biphron.body.mirrored;
+            break;
+        }
+        case SKILL_BIPHRON_TOTEM:
+            /* sub_080286BC: stationary totem on the Biphron art, attack box
+             * preset 5, song 0xD9 at spawn, deleted on the animation end.
+             * Its + 0x5C = 0xF field has no exported sequence equivalent. */
+            if (!skill->started) {
+                skill->started = true;
+                aos_anim_start(&skill->anim, souls->biphron, 0, false);
+            }
+            if (aos_anim_step(&skill->anim, souls->biphron) == 3)
+                end_skill(souls, skill);
+            break;
         case SKILL_FLAME_SPIRIT: {
             /* SkillFlameDemonUpdate: the rotating wisp — velocity drift
              * capped at 0x80000, + 0x2C spin, a fire puff every eighth
@@ -2903,6 +2974,8 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
             box = (AosBox){-8, -8, 16, 16};    /* preset 5, approximated */
         else if (skill->kind == SKILL_FLAME_BOLT || skill->kind == SKILL_FLAME_SPIRIT)
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 / preset 5 */
+        else if (skill->kind == SKILL_BIPHRON || skill->kind == SKILL_BIPHRON_TOTEM)
+            box = (AosBox){-8, -8, 16, 16};    /* preset 5, approximated */
         else if (skill->kind == SKILL_LIGHTNING)
             box = aos_lightning_box(&skill->lightning);
         else if (skill->kind == SKILL_SKULL && souls->skull_kind &&
@@ -7508,6 +7581,12 @@ int aria_runtime_main(int argc, char **argv) {
                                  ? &werewolf->set
                                  : NULL;
             souls.werewolf_kind = souls.werewolf ? &werewolf->kind : NULL;
+            const __typeof__(objects.skills[0]) *biphron =
+                &objects.skills[SKILL_ART_BIPHRON];
+            souls.biphron = objects_ok && biphron->loaded && biphron->defs[0].count
+                                ? &biphron->set
+                                : NULL;
+            souls.biphron_kind = souls.biphron ? &biphron->kind : NULL;
             const __typeof__(objects.skills[0]) *mantle =
                 &objects.skills[SKILL_ART_KILLER_MANTLE];
             souls.killer_mantle = objects_ok && mantle->loaded && mantle->defs[0].count
@@ -7934,6 +8013,8 @@ int aria_runtime_main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_FISH_HEAD].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_DEMON_LORD || skill->kind == SKILL_FLAME_SPIRIT
                     ? &objects.skills[SKILL_ART_DEMON_LORD].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_BIPHRON || skill->kind == SKILL_BIPHRON_TOTEM
+                    ? &objects.skills[SKILL_ART_BIPHRON].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_NEMESIS
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_NEMESIS_SOUL_SEQUENCE][skill->anim.frame]

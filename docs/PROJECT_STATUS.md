@@ -1,3 +1,24 @@
+## Patch 1007 - Red soul 37 (Biphron) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_biphron.c` ports
+  `SkillBiphronUse` (routine 0x08028800) and its `sub_080286BC`
+  totem: state 0 places the walker at (+-0x14, -0xA) from Soma's
+  facing and `sub_0802393C` must find its floor or the cast deletes
+  itself; + 0x24 ramps 0x8000 toward 0x1FFFF, `sub_0806CAF8` walks it
+  at -+ 0x24 with the 0x084F13B4 probes (mode 4), a wall result&3
+  flips + 0x58 bit 6, every eighth + 0x0D tick (including the delete
+  frame) emits a stationary totem (song 0xD9 each, attack box preset
+  5), song 0x1A4 at spawn and + 0x0D == 0 deletes.
+- `src/assets/aos/objects.c` exports `skill_biphron` (entry 0xB4 of
+  0x080E13BC: tiles 0x081D3900, palette 0x0820B280, frames
+  0x082331BC); object library: 1596 sequences. Documented
+  divergences: the totem's + 0x5C = 0xF field has no exported
+  sequence equivalent (anim_0 shared by parent and totem), the
+  + 0x13124/+ 0x131BE bookkeeping folds into the skill slots.
+- `tests/test_aos_soul_red_biphron.c` covers placement, the floor
+  gate, the speed ramp, totem cadence, wall flip and lifetime.
+  Remaining soul backlog: 19 red + 5 blue.
+
 ## Patch 1006 - Red souls 43/44 (Demon Lord / Flame Demon) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_flame_demon.c` ports the

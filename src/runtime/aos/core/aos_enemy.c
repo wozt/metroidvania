@@ -4532,9 +4532,13 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_biphron_update(enemy, soma, layer, kind, weapon, weapon_frames,
                               soma_atk, soma_def, random);
     if (enemy->role == AOS_ROLE_HEADHUNTER_HEAD) {
-        aos_enemy_headhunter_head_update(enemy, kind, random);
-        return report;
+        return aos_enemy_headhunter_head_update(enemy, kind, random);
     }
+    if (enemy->role == AOS_ROLE_HH_ACTOR &&
+        enemy->id == AOS_BOSS_HEADHUNTER)
+        return aos_enemy_headhunter_update(enemy, soma, kind, weapon,
+                                 weapon_frames, soma_atk, soma_def,
+                                 cam_x, cam_y, random);
     if (enemy->id == AOS_BOSS_HEADHUNTER && enemy->role == AOS_ROLE_ENEMY) {
         if (enemy->state == 2) return aos_enemy_headhunter_death(enemy, kind, cam_y, random);
         return aos_enemy_headhunter_update(enemy, soma, kind, weapon, weapon_frames,

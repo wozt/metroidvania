@@ -91,6 +91,50 @@ static void headhunter_death_tests(void) {
     assert(first.removed && phase_body.step == 4 && phase_body.anim.id == 1 &&
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x11D) == 1);
 
+    /* sub_08083FD0 case 5: the head emits one sub_08083C1C actor at
+     * each timer 2/5/0x14/0x1C with the phase-specific table. */
+    AosEnemy actor_head = first;
+    actor_head.removed = false;
+    actor_head.step = 5;
+    actor_head.timer = 1;
+    actor_head.variant = 0;
+    actor_head.parent = &body;
+    AosHitReport shot =
+        aos_enemy_update(&actor_head, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, headhunter_random);
+    assert(shot.child_count == 1 &&
+           shot.children[0].role == AOS_ROLE_HH_ACTOR &&
+           shot.children[0].variant == 0 &&
+           shot.children[0].x == body.x - AOS_FIXED(5) &&
+           shot.children[0].y == body.y - AOS_FIXED(32) &&
+           shot.children[0].vx == 0xA000 && shot.children[0].ax == -0x2AA);
+    actor_head.timer = 4;
+    shot = aos_enemy_update(&actor_head, &soma, &layer, &kind, NULL, NULL,
+                            10, 4, 10, 20, headhunter_random);
+    assert(shot.child_count == 1 && shot.children[0].vx == -0x2000);
+    actor_head.timer = 19;
+    shot = aos_enemy_update(&actor_head, &soma, &layer, &kind, NULL, NULL,
+                            10, 4, 10, 20, headhunter_random);
+    assert(shot.child_count == 1 && shot.children[0].mirrored &&
+           shot.children[0].vx == 0xA500);
+    actor_head.timer = 27;
+    shot = aos_enemy_update(&actor_head, &soma, &layer, &kind, NULL, NULL,
+                            10, 4, 10, 20, headhunter_random);
+    assert(shot.child_count == 1 && shot.children[0].vx == -0x2600);
+    /* The sub_08083EEC actor integrates, sinks past 0x3B and deletes
+     * past 0x59. */
+    AosEnemy actor = shot.children[0];
+    actor.parent = &body;
+    actor.timer = 60;
+    int32_t ax = actor.x, ay = actor.y;
+    aos_enemy_update(&actor, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(actor.y == ay + actor.vy + 0x4000 && actor.x == ax + actor.vx);
+    actor.timer = 90;
+    aos_enemy_update(&actor, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(actor.removed);
+
     body.hh_phase = 2;
     aos_enemy_update(&second, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 10, 20, never_zero);

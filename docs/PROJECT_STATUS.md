@@ -1,3 +1,14 @@
+## Patch 0996 - Headhunter attack actors and scatter particles
+
+- `sub_08083FD0` case 5 now emits the four `sub_08083C1C` attack
+  actors per head phase at timers 2/5/0x14/0x1C through the new
+  `AOS_ROLE_HH_ACTOR` role running the `sub_08083EEC` machine
+  (ramp-window `vx += ax` and `vy += 0x1555`, the 0x3B sink/drift
+  and the 0x59 delete); the mode/speed/flip velocity table is
+  decoded.
+- Cases 6-7 approximate the ten shared `sub_0806DA6C` particles
+  with dark-smoke drifts (the `sub_0806D7F0` kinds are not ported).
+
 ## Patch 0995 - Headhunter state-0 attack phases
 
 - `sub_08081EBC` cases 3-51 now dispatch the three attack phases on

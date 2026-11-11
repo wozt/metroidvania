@@ -872,9 +872,14 @@ AosHitReport aos_enemy_headhunter_update(
     const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
     int cam_x, int cam_y, uint32_t (*random)(void));
-void aos_enemy_headhunter_head_update(AosEnemy *head,
-                                      const AosEnemyKind *kind,
-                                      uint32_t (*random)(void));
+AosHitReport aos_enemy_headhunter_head_update(AosEnemy *head,
+                                               const AosEnemyKind *kind,
+                                               uint32_t (*random)(void));
+AosHitReport aos_enemy_headhunter_actor_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
 void aos_enemy_zombie_create(AosEnemy *zombie, const AosSoma *soma,
                              const AosCollision *layer,
                              const AosAnimSet *anims);

@@ -6,6 +6,7 @@
 
 #include "../../aos/core/aos_enemy_internal.h"
 #include "../../aos/core/aos_audio.h"
+#include <string.h>
 
 #define accelerate_toward aos_enemy_accelerate_toward
 #define accel_move aos_enemy_accel_move
@@ -16,6 +17,7 @@
 #define play_loop aos_enemy_play_loop
 #define player_in_range aos_enemy_player_in_range
 #define skeleton_merge aos_enemy_skeleton_merge
+#define spawn_drift aos_enemy_spawn_drift
 #define spawn_flame_at aos_enemy_spawn_flame_at
 #define step_anim aos_enemy_step_anim
 
@@ -321,6 +323,12 @@ AosHitReport aos_enemy_headhunter_update(AosEnemy *enemy, AosSoma *soma,
                                       int soma_atk, int soma_def, int cam_x, int cam_y,
                                       uint32_t (*random)(void)) {
     AosHitReport report = {0};
+    /* AOS_ROLE_HH_ACTOR children run the sub_08083EEC machine instead
+     * of the body controllers. */
+    if (enemy->role == AOS_ROLE_HH_ACTOR)
+        return aos_enemy_headhunter_actor_update(
+            enemy, soma, kind, weapon, weapon_frames, soma_atk,
+            soma_def, cam_x, cam_y, random);
     if (!enemy->boss_parts_spawned) {
         for (unsigned i = 0; i < 3; ++i)
             report.children[report.child_count++] =
@@ -673,12 +681,131 @@ AosHitReport aos_enemy_headhunter_update(AosEnemy *enemy, AosSoma *soma,
     return report;
 }
 
-void aos_enemy_headhunter_head_update(AosEnemy *head, const AosEnemyKind *kind,
-                                   uint32_t (*random)(void)) {
+/* sub_08083C1C spawn table of sub_08083FD0 case 5: each linked head
+ * emits four attack actors at its + 0xD timers 2, 5, 0x14 and 0x1C.
+ * dx/dy are the 16.16 offsets from the body, flip selects the native
+ * + 0x28 arg (animation pick), mode the + 0x30 trajectory class and
+ * speed the + 0x34 variant. Rows are indexed by the head's + 0x20
+ * phase byte, which the port stores in variant. */
+typedef struct {
+    int32_t dx, dy;
+    uint8_t flip, mode, speed;
+} HhActorSpawn;
+
+static const HhActorSpawn hh_actor_spawn[3][4] = {
+    {{-0x50000, -0x200000, 0, 0, 0},
+     {0x30000, -0x220000, 0, 0, 1},
+     {-0x90000, -0x1C0000, 1, 0, 0},
+     {0x70000, -0x1B0000, 1, 0, 1}},
+    {{-0xD0000, -0x1C0000, 0, 1, 0},
+     {-0xA0000, -0x1E0000, 0, 1, 1},
+     {-0xF0000, -0x160000, 1, 1, 0},
+     {-0xF0000, -0x180000, 1, 1, 1}},
+    {{-0xB0000, -0x140000, 0, 2, 0},
+     {-0x80000, -0x160000, 0, 2, 1},
+     {-0xF0000, -0x100000, 1, 2, 0},
+     {0x10000, -0x110000, 1, 2, 1}},
+};
+
+/* sub_08083C1C: spawns the sub_08083EEC actor at the body position
+ * plus the decoded offset. Modes 1 and 2 mirror the x offset by the
+ * body's + 0x58 facing bit; the velocity table below is the callee's
+ * mode/speed/flip select and + 0x4C becomes the x acceleration. */
+static void hh_spawn_actor(AosEnemy *head, AosHitReport *report,
+                           int slot) {
+    AosEnemy *body = head->parent;
+    if (!body || report->child_count >= AOS_ENEMY_MAX_CHILDREN)
+        return;
+    const HhActorSpawn *s =
+        &hh_actor_spawn[head->variant < 3 ? head->variant : 0][slot];
+    AosEnemy c;
+    memset(&c, 0, sizeof c);
+    c.id = head->id;
+    c.role = AOS_ROLE_HH_ACTOR;
+    c.parent = body;
+    c.variant = s->mode;
+    c.mirrored = s->flip != 0;
+    c.x = body->x + s->dx;
+    c.y = body->y + s->dy;
+    if (s->mode && body->mirrored)
+        c.x = body->x - s->dx;
+    else if (s->mode)
+        c.x = body->x + s->dx;
+    if (s->mode == 0) {
+        c.vx = s->speed ? (s->flip ? -0x2600 : -0x2000)
+                        : (s->flip ? 0xA500 : 0xA000);
+        c.ax = -0x2AA;
+    } else if (s->mode == 1) {
+        c.vx = s->speed ? (s->flip ? 0xB100 : 0xB000)
+                        : (s->flip ? 0xEB00 : 0xF000);
+        c.ax = -0x2AA;
+    } else {
+        c.vx = s->speed ? (s->flip ? 0xB100 : 0xB000)
+                        : (s->flip ? 0x9500 : 0x9000);
+        c.ax = 0x2AA;
+    }
+    c.hp = 1;
+    c.combat.type = AOS_TYPE_ENEMY;
+    c.static_frame = -1;
+    report->children[report->child_count++] = c;
+}
+
+/* sub_08083EEC: the attack actor's own machine. The + 0xC ramp window
+ * (first 0xC frames) integrates vx += ax and vy += 0x1555; past age
+ * 0x3B the + 0x44 sink and the mode 1/2 x drift apply; the entity is
+ * deleted past age 0x59. */
+AosHitReport aos_enemy_headhunter_actor_update(
+    AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void)) {
+    (void)random;
+    AosHitReport report = {0};
+    AosEnemy *body = enemy->parent;
+    if (!body || body->removed || body->id != AOS_BOSS_HEADHUNTER) {
+        enemy->removed = true;
+        return report;
+    }
+    enemy->timer++;
+    if (enemy->substep <= 0xB) {
+        enemy->substep++;
+        enemy->vx += enemy->ax;
+        enemy->vy += 0x1555;
+    }
+    enemy->x += enemy->vx;
+    enemy->y += enemy->vy;
+    if (enemy->timer > 0x3B) {
+        enemy->y += 0x4000;
+        if (enemy->variant == 1 || enemy->variant == 2)
+            enemy->x += body->mirrored ? -0x2000 : 0x2000;
+    }
+    if (enemy->timer > 0x59) {
+        enemy->removed = true;
+        return report;
+    }
+    int sx = (enemy->x >> 16) - cam_x, sy = (enemy->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x10) > 0x110 || (uint16_t)sy > 0xB0) {
+        enemy->removed = true;
+        return report;
+    }
+    AosHitReport hit =
+        collide(enemy, soma, kind, weapon, weapon_frames, soma_atk,
+                soma_def);
+    skeleton_merge(&report, &hit);
+    if (hit.soma_hit)
+        enemy->removed = true;
+    aos_combat_tick(&enemy->combat);
+    return report;
+}
+
+AosHitReport aos_enemy_headhunter_head_update(AosEnemy *head,
+                                               const AosEnemyKind *kind,
+                                               uint32_t (*random)(void)) {
+    AosHitReport report = {0};
     AosEnemy *body = head->parent;
     if (!body || body->removed || body->id != AOS_BOSS_HEADHUNTER) {
         head->removed = true;
-        return;
+        return report;
     }
     head->mirrored = body->mirrored;
     /* sub_08083FD0 cases 0-4: wait for this head's phase, make two
@@ -688,7 +815,7 @@ void aos_enemy_headhunter_head_update(AosEnemy *head, const AosEnemyKind *kind,
         head->step = 1;
         head->substep = 0;
         head->timer = 0;
-        return;
+        return report;
     }
     switch (head->step) {
     case 1:
@@ -740,8 +867,15 @@ void aos_enemy_headhunter_head_update(AosEnemy *head, const AosEnemyKind *kind,
     }
     case 5:
         head->timer++;
-        /* sub_08083C1C emits four phase-specific attack actors at timers
-         * 2, 5, 20 and 28. Their dedicated resources are not ported yet. */
+        /* sub_08083FD0 case 5: the four phase-specific sub_08083C1C
+         * attack actors fire at timers 2, 5, 0x14 and 0x1C. */
+        switch (head->timer) {
+        case 2: hh_spawn_actor(head, &report, 0); break;
+        case 5: hh_spawn_actor(head, &report, 1); break;
+        case 0x14: hh_spawn_actor(head, &report, 2); break;
+        case 0x1C: hh_spawn_actor(head, &report, 3); break;
+        default: break;
+        }
         if (head->timer == 90) head->step = 6;
         if (head->timer > 59) {
             head->y += 0x4000;
@@ -758,7 +892,17 @@ void aos_enemy_headhunter_head_update(AosEnemy *head, const AosEnemyKind *kind,
             step_anim(body, kind->anims);
             head->removed = true;
         } else {
-            /* Native cases 1 and 2 emit ten shared visual particles here. */
+            /* Native cases 1 and 2 run ten sub_0806DA6C scatter calls at
+             * the body (y - 0x10 / - 0x08) feeding sub_0806D7F0; the
+             * port approximates them with dark-smoke drifts. */
+            for (int i = 0; i < 10; ++i) {
+                int32_t px = body->x + (int32_t)(random() % 0x200000) -
+                             0x100000;
+                int32_t py = body->y +
+                             (head->variant == 1 ? -0x100000 : -0x80000) +
+                             (int32_t)(random() % 0x200000) - 0x100000;
+                spawn_drift(AOS_EFFECT_DARK_SMOKE, px, py, &report);
+            }
             head->timer = 5;
             head->step = 7;
         }
@@ -783,4 +927,5 @@ void aos_enemy_headhunter_head_update(AosEnemy *head, const AosEnemyKind *kind,
     default:
         break;
     }
+    return report;
 }

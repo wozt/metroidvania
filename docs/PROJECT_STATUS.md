@@ -1,3 +1,22 @@
+## Patch 0999 - Great Armor ported (id 60)
+
+- `EnemyGreatArmorCreate` (0x0808A43C) / `EnemyGreatArmorUpdate`
+  (0x0808A224) through `sub_0808E024`: tiles 0x081CC004, the palette
+  bank of the 0x0820A8F8 table picked by the + 0x36 id byte, frames
+  0x0821F240; the fourteen `sub_0806DFF8` children (callback
+  `sub_0808E164`) fold into the persistent `AOS_ROLE_GA_PART` parts
+  emitted over the first updates under the 8-child cap.
+- State 0 `sub_0808A908` (53 cases) and state 1 `sub_0808C400` (60
+  cases with the `sub_0808D3EC` continuation) collapse to documented
+  chase/attack-pose/settle and windup/volley/recover cycles with the
+  native song accents 0x64, 0x7C, 0x7F and 0x86; the decoded exits
+  return to state 0 steps 3/6; the state-2 death machine keeps its
+  timer window, particles and `+0x59` delete gate.
+- Blue soul 8 (`SkillGreatArmorUse`, routine 0x08031949) was already
+  ported, so all five monster aspects are `ported`; `great_armor_tests`
+  covers create, the 8+6 part emission, the state-0 aggro entry, the
+  state-1 songs, part tracking/death and the lethal-to-delete path.
+
 ## Patch 0998 - Big Golem ported (id 69)
 
 - `EnemyBigGolemCreate` (0x080A8328) / `EnemyBigGolemUpdate`

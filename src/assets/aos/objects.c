@@ -271,6 +271,12 @@ static const EntitySpec entities[] = {
      * sub_0806DFF8 children of sub_080AC6E8 read tiles 0x0825EB0C
      * and frames 0x08266E78 under the other variant byte. */
     ENTITY("big_golem", 0x0825EB04, 0x0826642C, 0, 0x08266E08),
+    /* EnemyGreatArmorCreate 0x0808A43C / sub_0808E024: tiles
+     * 0x081CC004 through sub_0803B800, palette bank of the
+     * 0x0820A8F8 table picked by the + 0x36 id byte, frames
+     * 0x0821F240 through sub_0803B924; the fourteen sub_0806DFF8
+     * children of sub_0808E164 share the sheet. */
+    ENTITY("great_armor", 0x081CC004, 0x0820A8F8, 0, 0x0821F240),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

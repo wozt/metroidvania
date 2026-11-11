@@ -127,6 +127,7 @@ enum {
     AOS_ENEMY_HARPY = 0x38,
     AOS_ENEMY_MEDUSA_HEAD = 0x39,
     AOS_ENEMY_LIGHTNING_DOLL = 0x3B,
+    AOS_ENEMY_GREAT_ARMOR = 0x3C,
     AOS_ENEMY_NEEDLES = 0x3F,
     AOS_ENEMY_CAGNAZZO = 0x49,
     AOS_ENEMY_RIPPER = 0x4A,
@@ -286,7 +287,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_BEL_SHOT = 163, AOS_ROLE_BEL_GORE = 164,
        AOS_ROLE_HH_ACTOR = 165, AOS_ROLE_HH_SHOT = 166,
        AOS_ROLE_BG_CHILD0 = 167, AOS_ROLE_BG_CHILD1 = 168,
-       AOS_ROLE_BG_CHILD2 = 169, AOS_ROLE_BG_CHILD3 = 170 };
+       AOS_ROLE_BG_CHILD2 = 169, AOS_ROLE_BG_CHILD3 = 170,
+       AOS_ROLE_GA_PART = 171 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -839,6 +841,10 @@ typedef struct AosEnemy {
      * projectiles of sub_080D1BB4/sub_080D1ADC are
      * AOS_ROLE_BEL_SHOT and the death debris AOS_ROLE_BEL_GORE. */
     uint8_t bel_juggle;
+    /* Great Armor (id 0x3C): `ga_f1a` is the + 0x1A flag the update
+     * tail clears on a (rng & 0x7F) <= 3 roll; the fourteen body
+     * parts are AOS_ROLE_GA_PART children indexed by `variant`. */
+    uint8_t ga_f1a;
     /* Balore (id 0x6D): the + 0x12 animation index the state machines
      * feed to the 0x085287C4 table, the + 0x1C/+ 0x1D frame bytes of
      * the limb children, the + 0x18 hover flag and the orbit angle

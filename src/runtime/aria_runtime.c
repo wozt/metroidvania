@@ -43,6 +43,7 @@
 #include "aos/red_souls/aos_soul_red_biphron.h"
 #include "aos/red_souls/aos_soul_red_kyoma_demon.h"
 #include "aos/red_souls/aos_soul_red_student_witch.h"
+#include "aos/red_souls/aos_soul_red_slime.h"
 #include "aos/red_souls/aos_soul_red_were_beast.h"
 #include "aos/red_souls/aos_soul_red_flame_demon.h"
 #include "aos/red_souls/aos_soul_red_devil.h"
@@ -321,7 +322,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
        SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD,
-       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ARTS };
+       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -342,7 +343,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
                                                          "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord",
-                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch"};
+                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -968,7 +969,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_WEREWOLF, SKILL_KILLER_MANTLE, SKILL_WERE_BEAST,
        SKILL_FLAME_DEMON, SKILL_FLAME_BOLT, SKILL_DEMON_LORD, SKILL_FLAME_SPIRIT,
        SKILL_BIPHRON, SKILL_BIPHRON_TOTEM, SKILL_BALORE, SKILL_KYOMA_DEMON,
-       SKILL_LEGION, SKILL_STUDENT_WITCH };
+       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL };
 
 typedef struct {
     bool alive, started;
@@ -1012,6 +1013,8 @@ typedef struct {
     AosBiphron biphron;       /* SKILL_BIPHRON */
     AosKyomaDemon kyoma_demon; /* SKILL_KYOMA_DEMON */
     AosStudentWitch student_witch; /* SKILL_STUDENT_WITCH */
+    AosSlime slime;           /* SKILL_SLIME */
+    AosSlimeTrail slime_trail; /* SKILL_SLIME_TRAIL */
     uint8_t volley_count;      /* SKILL_DEMON_LORD spawn gate */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
@@ -1055,6 +1058,7 @@ typedef struct {
 #define SKILL_KYOMA_DEMON_ROUTINE 0x0802BB44u
 #define SKILL_LEGION_ROUTINE 0x0802C0D4u
 #define SKILL_STUDENT_WITCH_ROUTINE 0x08025360u
+#define SKILL_SLIME_ROUTINE 0x0802CFC4u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1085,6 +1089,7 @@ typedef struct {
     const AosAnimSet *legion;         /* skill_legion, sequence 0 */
     const AosAnimSet *student_witch; /* skill_student_witch, sequence 0 */
     const AosEnemyKind *witch_kind;  /* its 0x084F12BC walker probes */
+    const AosAnimSet *slime;         /* skill_slime, sequence 0 */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
@@ -1222,6 +1227,8 @@ static int cast_red_soul(void *context) {
                : routine == SKILL_STUDENT_WITCH_ROUTINE && souls->student_witch &&
                          souls->witch_kind && souls->witch_kind->probes.count
                    ? SKILL_STUDENT_WITCH
+               : routine == SKILL_SLIME_ROUTINE && souls->slime
+                   ? SKILL_SLIME
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1331,6 +1338,12 @@ static int cast_red_soul(void *context) {
         skill->x = skill->student_witch.body.x;
         skill->y = skill->student_witch.body.y;
         skill->facing_left = skill->student_witch.body.mirrored;
+    } else if (kind == SKILL_SLIME) {
+        skill->slime = aos_slime_create(souls->soma->x, souls->soma->y,
+                                        souls->soma->facing_left, aos_random());
+        skill->x = skill->slime.body.x;
+        skill->y = skill->slime.body.y;
+        skill->facing_left = skill->slime.body.mirrored;
     } else if (kind == SKILL_LIGHTNING) {
         skill->lightning = aos_lightning_create(souls->soma->x, souls->soma->y,
                                                 souls->soma->facing_left, aos_random() & 1);
@@ -2299,6 +2312,60 @@ static void update_skills(AriaSouls *souls) {
             skill->x = skill->student_witch.body.x;
             skill->y = skill->student_witch.body.y;
             skill->facing_left = skill->student_witch.body.mirrored;
+            break;
+        }
+        case SKILL_SLIME: {
+            /* SkillSlimeUse: state 0 places it through
+             * sub_08031EA4(entity, source, 0xC, -0x1A), draws
+             * (rng & 0x3FF) + 0x1000 into + 0x2C (mirrored: -0x8000 -
+             * angle), presets + 0x34 = 0x300000 and + 0x24 = 0x100, attack
+             * box 5 plus the 0x0808FCFC box, and spawns the sub_0802C9E8
+             * trail child; state 1 recomputes + 0x48/+ 0x4C from the angle
+             * each frame, integrates with the sub_0802CE20 floor/ceiling
+             * snap (approximated), swaps the animation variant at 0x20
+             * remaining and deletes at life 0 or the sub_0806D128(e, 6)
+             * margin probe. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_anim_start(&skill->anim, souls->slime, 0, false);
+                AriaSkill *trail = spawn_child(souls, SKILL_SLIME_TRAIL);
+                if (trail) {
+                    trail->soul = skill->soul;
+                    trail->parent = skill->slot;
+                    trail->started = true;
+                    trail->x = skill->x;
+                    trail->y = skill->y;
+                }
+            }
+            bool variant = false;
+            bool alive = aos_slime_update(&skill->slime, souls->layer, &variant);
+            if (variant) aos_anim_start(&skill->anim, souls->slime, 1, false);
+            if (skill_outside(souls, skill, 6) || !alive)
+                end_skill(souls, skill);
+            skill->x = skill->slime.body.x;
+            skill->y = skill->slime.body.y;
+            skill->facing_left = skill->slime.body.mirrored;
+            break;
+        }
+        case SKILL_SLIME_TRAIL: {
+            /* sub_0802C9E8's child (update sub_0802DCB0, orphan check
+             * sub_0802CD6C): appends the parent's room position to its
+             * nine-entry ring each frame and draws at the oldest entry;
+             * sub_0802CD6C deletes it once the parent's slot empties. */
+            AriaSkill *parent = skill->parent >= 0 && skill->parent < MAX_SKILLS &&
+                                       souls->skills[skill->parent].alive
+                                   ? &souls->skills[skill->parent]
+                                   : NULL;
+            if (!parent || parent->kind != SKILL_SLIME) {
+                end_skill(souls, skill);
+                break;
+            }
+            aos_slime_trail_push(&skill->slime_trail, parent->x, parent->y);
+            int32_t tx, ty;
+            aos_slime_trail_pos(&skill->slime_trail, &tx, &ty);
+            skill->x = tx;
+            skill->y = ty;
             break;
         }
         case SKILL_FLAME_DEMON:
@@ -7742,6 +7809,11 @@ int aria_runtime_main(int argc, char **argv) {
                                       ? &s_witch->set
                                       : NULL;
             souls.witch_kind = souls.student_witch ? &s_witch->kind : NULL;
+            const __typeof__(objects.skills[0]) *slime =
+                &objects.skills[SKILL_ART_SLIME];
+            souls.slime = objects_ok && slime->loaded && slime->defs[0].count
+                              ? &slime->set
+                              : NULL;
             const __typeof__(objects.skills[0]) *mantle =
                 &objects.skills[SKILL_ART_KILLER_MANTLE];
             souls.killer_mantle = objects_ok && mantle->loaded && mantle->defs[0].count
@@ -8178,6 +8250,8 @@ int aria_runtime_main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_LEGION].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_STUDENT_WITCH
                     ? &objects.skills[SKILL_ART_STUDENT_WITCH].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_SLIME || skill->kind == SKILL_SLIME_TRAIL
+                    ? &objects.skills[SKILL_ART_SLIME].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_NEMESIS
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_NEMESIS_SOUL_SEQUENCE][skill->anim.frame]

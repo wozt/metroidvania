@@ -1,3 +1,25 @@
+## Patch 1012 - Red soul 32 (Slime) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_slime.c` ports
+  `SkillSlimeUse` (routine 0x0802CFC4) and its `sub_0802C9E8` trail
+  child: orbiting blob — angle `(rng & 0x3FF) + 0x1000` (mirrored
+  `-0x8000 - angle`), speed `+ 0x34 = 0x300000`, `+ 0x48/+ 0x4C`
+  recomputed from `sub_080009E4` each frame, life `+ 0x24 = 0x100`,
+  anim variant swap at 0x20 remaining, delete at life 0 or the
+  `sub_0806D128(e, 6)` margin probe; attack box 5 plus `0x0808FCFC`.
+- The trail child keeps the native nine-entry parent-position ring
+  and draws at the oldest entry; `sub_0802CD6C`'s orphan check ends
+  it with the parent.
+- `src/assets/aos/objects.c` exports `skill_slime` (entry 0x18C of
+  0x080E13BC: tiles 0x0825F318, palette 0x08266494, frames
+  0x08267154); object library: 1603 sequences. Documented
+  divergences: `sub_0802CE20` slide bookkeeping folded into the
+  floor/ceiling snap, trail rendered statically, `+ 0x52/+ 0x56` and
+  `+ 0x72` flag writes skipped.
+- `tests/test_aos_soul_red_slime.c` covers placement, angle variants,
+  velocity recompute, life/variant swap and the trail ring.
+  Remaining soul backlog: 14 red + 5 blue.
+
 ## Patch 1011 - Red soul 15 (Student Witch / Basilisk) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_student_witch.c` ports

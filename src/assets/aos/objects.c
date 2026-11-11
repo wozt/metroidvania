@@ -450,6 +450,10 @@ static const EntitySpec entities[] = {
      * shared by red soul 15 (Student Witch and Basilisk). */
     {"skill_student_witch", 0x081CE0D4, 0x0820B0D4, 0, 0x08231350,
      0x084F12BC, 0, 0, 0, {0}},
+    /* Entry 0x18C of 0x080E13BC: SkillSlimeUse's orbiting blob and its
+     * sub_0802C9E8 trail child (compressed resource container). */
+    {"skill_slime", 0x0825F318, 0x08266494, 0, 0x08267154, 0,
+     0, 0, 0, {0}},
     /* Resource 6 of 0x080E13BC: the Killer Doll soul's decoy (looping
      * sequence 0 or 1). */
     ENTITY("skill_killer_doll", 0x081CF0DC, 0x0820B11C, 0, 0x08231578),

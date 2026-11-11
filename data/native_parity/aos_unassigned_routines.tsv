@@ -32,7 +32,6 @@ aos:asm:asm/code/code_08014548.s:sub_0801FD24	sub_0801FD24	unclassified		technic
 aos:asm:asm/code/code_08014548.s:sub_0801FEF8	sub_0801FEF8	unclassified				asm_function	0x0801FEF8	asm/code/code_08014548.s	23611	0	36
 aos:asm:asm/code/code_080211F0.s:SkillAlastorUse	SkillAlastorUse	abilities	name			asm_function		asm/code/code_080211F0.s	32358	0	22
 aos:asm:asm/code/code_080211F0.s:SkillArachneUse	SkillArachneUse	abilities	name			asm_function		asm/code/code_080211F0.s	15671	0	15
-aos:asm:asm/code/code_080211F0.s:SkillCockatriceUse	SkillCockatriceUse	abilities	name			asm_function		asm/code/code_080211F0.s	16620	0	15
 aos:asm:asm/code/code_080211F0.s:SkillCreakingSkullUse	SkillCreakingSkullUse	abilities	name			asm_function		asm/code/code_080211F0.s	31037	0	8
 aos:asm:asm/code/code_080211F0.s:SkillDryadUse	SkillDryadUse	abilities	name			asm_function		asm/code/code_080211F0.s	14218	0	14
 aos:asm:asm/code/code_080211F0.s:SkillFinalGuardUse	SkillFinalGuardUse	abilities	name			asm_function		asm/code/code_080211F0.s	29334	0	9

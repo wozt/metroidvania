@@ -50,6 +50,7 @@
 #include "aos/red_souls/aos_soul_red_mandragora.h"
 #include "aos/red_souls/aos_soul_red_chronomage.h"
 #include "aos/red_souls/aos_soul_red_disc_armor.h"
+#include "aos/red_souls/aos_soul_red_cockatrice.h"
 #include "aos/red_souls/aos_soul_red_were_beast.h"
 #include "aos/red_souls/aos_soul_red_flame_demon.h"
 #include "aos/red_souls/aos_soul_red_devil.h"
@@ -328,7 +329,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
        SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD,
-       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ARTS };
+       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ART_COCKATRICE, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -349,7 +350,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
                                                          "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord",
-                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor"};
+                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor", "skill_cockatrice"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -975,7 +976,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_WEREWOLF, SKILL_KILLER_MANTLE, SKILL_WERE_BEAST,
        SKILL_FLAME_DEMON, SKILL_FLAME_BOLT, SKILL_DEMON_LORD, SKILL_FLAME_SPIRIT,
        SKILL_BIPHRON, SKILL_BIPHRON_TOTEM, SKILL_BALORE, SKILL_KYOMA_DEMON,
-       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL, SKILL_UKOBACK, SKILL_ALTAIR, SKILL_UNE, SKILL_MANDRAGORA, SKILL_CHRONOMAGE, SKILL_DISC_ARMOR };
+       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL, SKILL_UKOBACK, SKILL_ALTAIR, SKILL_UNE, SKILL_MANDRAGORA, SKILL_CHRONOMAGE, SKILL_DISC_ARMOR, SKILL_COCKATRICE };
 
 typedef struct {
     bool alive, started;
@@ -1027,6 +1028,7 @@ typedef struct {
     AosMandragora mandragora; /* SKILL_MANDRAGORA */
     AosChronomage chronomage; /* SKILL_CHRONOMAGE */
     AosDiscArmor disc_armor;   /* SKILL_DISC_ARMOR */
+    AosCockatrice cockatrice; /* SKILL_COCKATRICE */
     uint8_t volley_count;      /* SKILL_DEMON_LORD spawn gate */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
@@ -1077,6 +1079,7 @@ typedef struct {
 #define SKILL_MANDRAGORA_ROUTINE 0x0802AD78u
 #define SKILL_CHRONOMAGE_ROUTINE 0x08024950u
 #define SKILL_DISC_ARMOR_ROUTINE 0x08027340u
+#define SKILL_COCKATRICE_ROUTINE 0x0802968Cu
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1115,6 +1118,7 @@ typedef struct {
     const AosAnimSet *mandragora;     /* skill_mandragora, sequences 0-1 */
     const AosAnimSet *chronomage;     /* skill_chronomage art, sequence 0 */
     const AosAnimSet *disc_armor;     /* skill_disc_armor, sequence 0 */
+    const AosAnimSet *cockatrice;     /* skill_cockatrice, sequence 0 */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
@@ -1267,6 +1271,8 @@ static int cast_red_soul(void *context) {
                    ? SKILL_CHRONOMAGE
                : routine == SKILL_DISC_ARMOR_ROUTINE && souls->disc_armor
                    ? SKILL_DISC_ARMOR
+               : routine == SKILL_COCKATRICE_ROUTINE && souls->cockatrice
+                   ? SKILL_COCKATRICE
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1376,6 +1382,16 @@ static int cast_red_soul(void *context) {
         skill->x = skill->student_witch.body.x;
         skill->y = skill->student_witch.body.y;
         skill->facing_left = skill->student_witch.body.mirrored;
+    } else if (kind == SKILL_COCKATRICE) {
+        /* No sub_08031EA4 in the native init: the + 0x4A = -+8 /
+         * + 0x4E = -+0x1A fields fed the partner registration, so the
+         * entity keeps the cast position offset like the other souls. */
+        skill->cockatrice = aos_cockatrice_create(
+            souls->soma->x + (souls->soma->facing_left ? -8 : 8) * 0x10000,
+            souls->soma->y - 0x1A * 0x10000, souls->soma->facing_left);
+        skill->x = skill->cockatrice.x;
+        skill->y = skill->cockatrice.y;
+        skill->facing_left = souls->soma->facing_left;
     } else if (kind == SKILL_DISC_ARMOR) {
         skill->disc_armor = aos_disc_armor_create(
             souls->soma->x, souls->soma->y, souls->soma->facing_left);
@@ -2619,6 +2635,33 @@ static void update_skills(AriaSouls *souls) {
             skill->x = skill->disc_armor.x;
             skill->y = skill->disc_armor.y;
             skill->facing_left = souls->soma->facing_left;
+            break;
+        case SKILL_COCKATRICE:
+            /* SkillCockatriceUse: counted on its first update, sequence
+             * 0, + 0x65 = 1, + 0x5C = 0xD, + 0x59 |= 0x12, + 0x58 =
+             * variant | facing bit 6, + 0x2C = 0x2800 (mirrored
+             * -0x8000 - 0x2800) with + 0x2E = -+0x40, + 0x4A = -+8,
+             * + 0x4E = -+0x1A, attack box preset 5, + 0x72 |= 4, song
+             * history 0xCD requested once; state 1 spins the angle for
+             * 0x20 frames while + 0x50/+ 0x54 = sine(angle +/- 0x4000)
+             * * 32 shape the dynamic box, then deletes; the
+             * sub_08023530(e, sub_08029568) partner registration, the
+             * + 0x48/+ 0x4C drift fields and the sub_0803E654 variant
+             * pick are not ported; the sub_0806D128(e, 2) margin probe
+             * deletes from any state. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0xCD);
+                aos_anim_start(&skill->anim, souls->cockatrice, 0, false);
+            }
+            if (!aos_cockatrice_update(&skill->cockatrice,
+                                       skill_outside(souls, skill, 2))) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->x = skill->cockatrice.x;
+            skill->y = skill->cockatrice.y;
             break;
         case SKILL_FLAME_DEMON:
             /* SkillFlameDemonUse: one counted cast plays song 0xD8, emits
@@ -8100,6 +8143,12 @@ int aria_runtime_main(int argc, char **argv) {
                                        disc_armor->defs[0].count
                                    ? &disc_armor->set
                                    : NULL;
+            const __typeof__(objects.skills[0]) *cockatrice =
+                &objects.skills[SKILL_ART_COCKATRICE];
+            souls.cockatrice = objects_ok && cockatrice->loaded &&
+                                       cockatrice->defs[0].count
+                                   ? &cockatrice->set
+                                   : NULL;
             const __typeof__(objects.skills[0]) *mantle =
                 &objects.skills[SKILL_ART_KILLER_MANTLE];
             souls.killer_mantle = objects_ok && mantle->loaded && mantle->defs[0].count
@@ -8550,6 +8599,8 @@ int aria_runtime_main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_CHRONOMAGE].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_DISC_ARMOR
                     ? &objects.skills[SKILL_ART_DISC_ARMOR].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_COCKATRICE
+                    ? &objects.skills[SKILL_ART_COCKATRICE].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_NEMESIS
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_NEMESIS_SOUL_SEQUENCE][skill->anim.frame]

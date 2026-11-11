@@ -1,3 +1,18 @@
+## Patch 1019 - Red soul 22 (Cockatrice) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_cockatrice.c` ports
+  `SkillCockatriceUse` (routine 0x0802968C): serpent spinning its
+  `+ 0x2C` angle by -+0x40/frame for 0x20 frames, `+ 0x50`/`+ 0x54`
+  sine velocities * 32, song history 0xCD, margin-2 delete. The
+  `sub_08023530` partner registration, drift fields and dynamic box
+  documented as skipped.
+- `src/assets/aos/objects.c` exports `skill_cockatrice` reusing the
+  entry-0x144 Kyoma Demon record (tiles 0x081D9930, palette
+  0x0820B430, frames 0x08234F90); object library: 1620 sequences.
+- `tests/test_aos_soul_red_cockatrice.c` covers the angle cadence,
+  velocity fields and delete timing. Remaining soul backlog: 7 red +
+  5 blue.
+
 ## Patch 1018 - Red soul 30 (Disc Armor) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_disc_armor.c` ports

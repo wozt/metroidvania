@@ -39,7 +39,6 @@ aos:asm:asm/code/code_080211F0.s:SkillDiscArmorUse	SkillDiscArmorUse	abilities	n
 aos:asm:asm/code/code_080211F0.s:SkillDryadUse	SkillDryadUse	abilities	name			asm_function		asm/code/code_080211F0.s	14218	0	14
 aos:asm:asm/code/code_080211F0.s:SkillFinalGuardUse	SkillFinalGuardUse	abilities	name			asm_function		asm/code/code_080211F0.s	29334	0	9
 aos:asm:asm/code/code_080211F0.s:SkillGiantBatUse	SkillGiantBatUse	abilities	name			asm_function		asm/code/code_080211F0.s	27256	0	7
-aos:asm:asm/code/code_080211F0.s:SkillLegionUse	SkillLegionUse	abilities	name			asm_function		asm/code/code_080211F0.s	21836	0	13
 aos:asm:asm/code/code_080211F0.s:SkillManEaterUse	SkillManEaterUse	abilities	name			asm_function		asm/code/code_080211F0.s	22580	0	12
 aos:asm:asm/code/code_080211F0.s:SkillMandragoraUse	SkillMandragoraUse	abilities	name			asm_function		asm/code/code_080211F0.s	19459	0	19
 aos:asm:asm/code/code_080211F0.s:SkillNightmareUse	SkillNightmareUse	abilities	name			asm_function		asm/code/code_080211F0.s	19018	0	20

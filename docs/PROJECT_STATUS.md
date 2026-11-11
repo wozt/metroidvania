@@ -1,3 +1,17 @@
+## Patch 1010 - Red soul 49 (Legion) ported
+
+- `SkillLegionUse` (routine 0x0802C0D4) reuses the tested
+  `AosWereBeast` machine as SKILL_LEGION: counted cast, song 0x1A9,
+  attack box preset 5, `sub_08031EA4` glue with the source facing
+  mirrored onto + 0x58 bit 6, song 0xCE requested at animation frame
+  0xC through the `sub_08013D60` history dedup (approximated by a
+  plain play; `sub_08013E18` removals have no sound), ends on anim
+  end or the `(source + 0x10 & 0x80) != 0` check (never-gone).
+- `src/assets/aos/objects.c` exports `skill_legion` (entry 0x15C of
+  0x080E13BC: tiles 0x081DA938, palette 0x0820B478, frames
+  0x08235684); object library: 1599 sequences.
+- Remaining soul backlog: 16 red + 5 blue.
+
 ## Patch 1009 - Red soul 54 (Kyoma Demon) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_kyoma_demon.c` ports

@@ -442,6 +442,10 @@ static const EntitySpec entities[] = {
      * (no walker probes; + 0x58 bits 0-4 carry the palette variant). */
     {"skill_kyoma_demon", 0x081D9930, 0x0820B430, 0, 0x08234F90, 0,
      0, 0, 0, {0}},
+    /* Entry 0x15C of 0x080E13BC: SkillLegionUse's glued familiar
+     * (attack box preset 5, no walker probes). */
+    {"skill_legion", 0x081DA938, 0x0820B478, 0, 0x08235684, 0,
+     0, 0, 0, {0}},
     /* Resource 6 of 0x080E13BC: the Killer Doll soul's decoy (looping
      * sequence 0 or 1). */
     ENTITY("skill_killer_doll", 0x081CF0DC, 0x0820B11C, 0, 0x08231578),

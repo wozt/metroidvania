@@ -39,7 +39,6 @@ aos:asm:asm/code/code_080211F0.s:SkillDiscArmorUse	SkillDiscArmorUse	abilities	n
 aos:asm:asm/code/code_080211F0.s:SkillDryadUse	SkillDryadUse	abilities	name			asm_function		asm/code/code_080211F0.s	14218	0	14
 aos:asm:asm/code/code_080211F0.s:SkillFinalGuardUse	SkillFinalGuardUse	abilities	name			asm_function		asm/code/code_080211F0.s	29334	0	9
 aos:asm:asm/code/code_080211F0.s:SkillGiantBatUse	SkillGiantBatUse	abilities	name			asm_function		asm/code/code_080211F0.s	27256	0	7
-aos:asm:asm/code/code_080211F0.s:SkillKyomaDemonUse	SkillKyomaDemonUse	abilities	name			asm_function		asm/code/code_080211F0.s	21159	0	11
 aos:asm:asm/code/code_080211F0.s:SkillLegionUse	SkillLegionUse	abilities	name			asm_function		asm/code/code_080211F0.s	21836	0	13
 aos:asm:asm/code/code_080211F0.s:SkillManEaterUse	SkillManEaterUse	abilities	name			asm_function		asm/code/code_080211F0.s	22580	0	12
 aos:asm:asm/code/code_080211F0.s:SkillMandragoraUse	SkillMandragoraUse	abilities	name			asm_function		asm/code/code_080211F0.s	19459	0	19
@@ -1074,7 +1073,6 @@ aos:c:src/code/code_080211F0.c:sub_080220CC	sub_080220CC	unclassified				c_funct
 aos:c:src/code/code_080211F0.c:sub_080220F0	sub_080220F0	unclassified				c_function	0x080220F0	src/code/code_080211F0.c	1005	0	0
 aos:c:src/code/code_080211F0.c:sub_080220F4	sub_080220F4	unclassified				c_function	0x080220F4	src/code/code_080211F0.c	1015	0	0
 aos:c:src/code/code_080211F0.c:sub_080220F8	sub_080220F8	unclassified		technical	exclusive_callees	c_function	0x080220F8	src/code/code_080211F0.c	1025	1	1
-aos:c:src/code/code_080211F0.c:sub_08022134	sub_08022134	abilities	referrers			c_function	0x08022134	src/code/code_080211F0.c	1044	1	1
 aos:c:src/code/code_080211F0.c:sub_0802215C	sub_0802215C	unclassified				c_function	0x0802215C	src/code/code_080211F0.c	1054	1	1
 aos:c:src/code/code_080211F0.c:sub_08022184	sub_08022184	enemies	referrers			c_function	0x08022184	src/code/code_080211F0.c	1065	1	3
 aos:c:src/code/code_080211F0.c:sub_080221B0	sub_080221B0	unclassified				c_function	0x080221B0	src/code/code_080211F0.c	1078	0	0

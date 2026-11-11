@@ -1,3 +1,20 @@
+## Patch 1009 - Red soul 54 (Kyoma Demon) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_kyoma_demon.c` ports
+  `SkillKyomaDemonUse` (routine 0x0802BB44): counted cast, song 0x97,
+  `sub_08031EA4(entity, source, 0, 0)` glue, a 0x20-frame wobble
+  (`+ 0x24 = sub_080009E4(+ 0x0D << 10)` feeding the visual
+  `sub_0803E058`) then a 0xB4-frame linger before delete — no
+  animation-end or source-flag gate, no attack box natively.
+- `src/assets/aos/objects.c` exports `skill_kyoma_demon` (entry 0x144
+  of 0x080E13BC: tiles 0x081D9930, palette 0x0820B430, frames
+  0x08234F90); object library: 1598 sequences. Documented
+  divergences: the `sub_0803E654` palette-variant pick and its 0x8000
+  sentinel are not tracked (cast always proceeds), `+ 0x58` bits 0-4
+  variant and `sub_08022134`/`sub_0803E6BC` bookkeeping skipped.
+- `tests/test_aos_soul_red_kyoma_demon.c` covers the three-state
+  timer machine. Remaining soul backlog: 17 red + 5 blue.
+
 ## Patch 1008 - Red soul 50 (Balore) ported
 
 - `SkillBaloreUse` (routine 0x0802C2C4) reuses the tested

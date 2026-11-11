@@ -41,6 +41,7 @@
 #include "aos/red_souls/aos_soul_red_werewolf.h"
 #include "aos/red_souls/aos_soul_red_killer_mantle.h"
 #include "aos/red_souls/aos_soul_red_biphron.h"
+#include "aos/red_souls/aos_soul_red_kyoma_demon.h"
 #include "aos/red_souls/aos_soul_red_were_beast.h"
 #include "aos/red_souls/aos_soul_red_flame_demon.h"
 #include "aos/red_souls/aos_soul_red_devil.h"
@@ -319,7 +320,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
        SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD,
-       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ARTS };
+       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -340,7 +341,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
                                                          "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord",
-                                                         "skill_biphron", "skill_balore"};
+                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -965,7 +966,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_KILLER_FISH, SKILL_GLADIATOR, SKILL_LIGHTNING, SKILL_DECOY, SKILL_NEMESIS,
        SKILL_WEREWOLF, SKILL_KILLER_MANTLE, SKILL_WERE_BEAST,
        SKILL_FLAME_DEMON, SKILL_FLAME_BOLT, SKILL_DEMON_LORD, SKILL_FLAME_SPIRIT,
-       SKILL_BIPHRON, SKILL_BIPHRON_TOTEM, SKILL_BALORE };
+       SKILL_BIPHRON, SKILL_BIPHRON_TOTEM, SKILL_BALORE, SKILL_KYOMA_DEMON };
 
 typedef struct {
     bool alive, started;
@@ -1007,6 +1008,7 @@ typedef struct {
     AosWereBeast were_beast;   /* SKILL_WERE_BEAST */
     AosFlameSpirit flame;     /* SKILL_FLAME_BOLT / SKILL_FLAME_SPIRIT */
     AosBiphron biphron;       /* SKILL_BIPHRON */
+    AosKyomaDemon kyoma_demon; /* SKILL_KYOMA_DEMON */
     uint8_t volley_count;      /* SKILL_DEMON_LORD spawn gate */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
@@ -1047,6 +1049,7 @@ typedef struct {
 #define SKILL_DEMON_LORD_ROUTINE 0x0802BF68u
 #define SKILL_BIPHRON_ROUTINE 0x08028800u
 #define SKILL_BALORE_ROUTINE 0x0802C2C4u
+#define SKILL_KYOMA_DEMON_ROUTINE 0x0802BB44u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1073,6 +1076,7 @@ typedef struct {
     const AosAnimSet *biphron;        /* skill_biphron, sequence 0 */
     const AosEnemyKind *biphron_kind; /* its 0x084F13B4 walker probes */
     const AosAnimSet *balore;         /* skill_balore, sequence 0 */
+    const AosAnimSet *kyoma_demon;   /* skill_kyoma_demon, sequence 0 */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
@@ -1203,6 +1207,8 @@ static int cast_red_soul(void *context) {
                    ? SKILL_BIPHRON
                : routine == SKILL_BALORE_ROUTINE && souls->balore
                    ? SKILL_BALORE
+               : routine == SKILL_KYOMA_DEMON_ROUTINE && souls->kyoma_demon
+                   ? SKILL_KYOMA_DEMON
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1299,6 +1305,9 @@ static int cast_red_soul(void *context) {
         skill->facing_left = skill->biphron.body.mirrored;
     } else if (kind == SKILL_BALORE) {
         skill->were_beast = aos_were_beast_create();
+        place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, 0);
+    } else if (kind == SKILL_KYOMA_DEMON) {
+        skill->kyoma_demon = aos_kyoma_demon_create();
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, 0);
     } else if (kind == SKILL_LIGHTNING) {
         skill->lightning = aos_lightning_create(souls->soma->x, souls->soma->y,
@@ -2192,6 +2201,27 @@ static void update_skills(AriaSouls *souls) {
             place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, 0);
             bool balore_anim_done = aos_anim_step(&skill->anim, souls->balore) == 3;
             if (!aos_were_beast_update(&skill->were_beast, balore_anim_done, false))
+                end_skill(souls, skill);
+            break;
+        case SKILL_KYOMA_DEMON:
+            /* SkillKyomaDemonUse: counted with song 0x97; state 1 glues it
+             * to Soma through sub_08031EA4(entity, source, 0, 0) for the
+             * 0x20-frame wobble (+ 0x24 = sub_080009E4(+ 0x0D << 10) feeds
+             * the visual sub_0803E058), then state 2 lingers 0xB4 frames
+             * before deleting. The sub_0803E654 palette-variant pick and
+             * its 0x8000 sentinel are not tracked (cast always proceeds),
+             * and sub_08022134/sub_0803E6BC bookkeeping is skipped. No
+             * attack box is preset natively. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0x97);
+                aos_anim_start(&skill->anim, souls->kyoma_demon, 0, false);
+            }
+            place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, 0);
+            if (aos_anim_step(&skill->anim, souls->kyoma_demon) == 3)
+                skill->anim.id = 0;    /* the native entity has no anim-end gate */
+            if (!aos_kyoma_demon_update(&skill->kyoma_demon))
                 end_skill(souls, skill);
             break;
         case SKILL_FLAME_DEMON:
@@ -7618,6 +7648,11 @@ int aria_runtime_main(int argc, char **argv) {
             souls.balore = objects_ok && balore->loaded && balore->defs[0].count
                                ? &balore->set
                                : NULL;
+            const __typeof__(objects.skills[0]) *kyoma =
+                &objects.skills[SKILL_ART_KYOMA_DEMON];
+            souls.kyoma_demon = objects_ok && kyoma->loaded && kyoma->defs[0].count
+                                    ? &kyoma->set
+                                    : NULL;
             const __typeof__(objects.skills[0]) *mantle =
                 &objects.skills[SKILL_ART_KILLER_MANTLE];
             souls.killer_mantle = objects_ok && mantle->loaded && mantle->defs[0].count
@@ -8048,6 +8083,8 @@ int aria_runtime_main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_BIPHRON].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_BALORE
                     ? &objects.skills[SKILL_ART_BALORE].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_KYOMA_DEMON
+                    ? &objects.skills[SKILL_ART_KYOMA_DEMON].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_NEMESIS
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_NEMESIS_SOUL_SEQUENCE][skill->anim.frame]

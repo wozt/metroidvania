@@ -377,8 +377,11 @@ static const EntitySpec entities[] = {
      * palette row 0, frames), exported with its per-frame attack boxes. */
     ENTITY("skill_bat", 0x081CD8D0, 0x0820B0B0, 0, 0x082311F8),
     /* SkillSkullArcherUse and its arrow sub_08028BC4: entry 18 of 0x080E13BC
-     * (the bow plays sequence 0, the arrow shows frame 1). */
-    STATIC("skill_archer", 0x081D510C, 0x0820B2EC, 0, 0x08233BCC, 1, 1),
+     * (the bow plays sequence 0, the arrow shows frame 1); the Giant
+     * Skeleton's shared throw (parameter 4, flag 0x200) uses still frame 0
+     * with its own {-16,-16,32,32} box. Frame 1 stays first so statics[0]
+     * remains the arrow. */
+    STATIC("skill_archer", 0x081D510C, 0x0820B2EC, 0, 0x08233BCC, 2, 1, 0),
     /* Resource 0 of 0x080E13BC, shared by several souls: the Merman's spout
      * and drops (sequences 0, 6), the Winged Skeleton's spear (still frame
      * 0), the Siren's notes (2-3) and the Axe Armor's axe (6). */

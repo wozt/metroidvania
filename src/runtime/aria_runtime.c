@@ -1147,6 +1147,9 @@ typedef struct {
     AosBox durga_attack;            /* that frame's attack box */
     const int *shared_ids;          /* resource 0's exported still frames */
     int shared_count;
+    const int *archer_ids;          /* resource 18's exported still frames */
+    int archer_count;
+    const AosBox *archer_attacks;   /* their static_attack rows, by frame id */
     const int16_t (*margins)[2];    /* sub_0806D128's table */
     int cam_x, cam_y;
 } AriaSouls;
@@ -1189,6 +1192,9 @@ static int cast_red_soul(void *context) {
                                     throw_record->frame) >= 0) ||
                       (throw_record->resource == 7 && souls->bone &&
                        static_index(souls->bone_ids, souls->bone_count,
+                                    throw_record->frame) >= 0) ||
+                      (throw_record->resource == 18 && souls->archer_ids &&
+                       static_index(souls->archer_ids, souls->archer_count,
                                     throw_record->frame) >= 0));
     bool throwable = routine == SKILL_THROW_ROUTINE && throw_record &&
                      aos_throw_supported(throw_record) && throw_art;
@@ -1473,6 +1479,13 @@ static int cast_red_soul(void *context) {
     else if (kind == SKILL_THROW) {
         skill->parameter = (uint8_t)record->parameter;
         skill->thrown = aos_throw_create(souls->soma->x, souls->soma->y, souls->soma->facing_left);
+        /* Flag 0x200: the still frame's own attack box (resource 18's
+         * static_attack rows, indexed by the record's frame id). */
+        if (souls->throws && record->parameter < AOS_THROW_RECORDS &&
+            souls->throws[record->parameter].resource == 18 &&
+            souls->throws[record->parameter].frame < 64 && souls->archer_attacks)
+            skill->thrown.frame_attack =
+                souls->archer_attacks[souls->throws[record->parameter].frame];
     } else
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, -0xC, -0x18);
     printf("Red soul %u cast (MP %d)\n", souls->stats->red_soul, souls->stats->mp);
@@ -3427,9 +3440,13 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
             box = (AosBox){8, -1, 2, 2};
         else if (skill->kind == SKILL_THROW && skill->thrown.attacking &&
                  skill->thrown.state != 3)
-            /* 0x1010F8F8, or the fused throws' 0x2838E2E4 once exploded. */
-            box = souls->throws[skill->parameter].flags & 0x60 ? (AosBox){-28, -30, 56, 40}
-                                                                : (AosBox){-8, -8, 16, 16};
+            /* 0x1010F8F8, the fused throws' 0x2838E2E4 once exploded, or
+             * flag 0x200's still-frame box. */
+            box = souls->throws[skill->parameter].flags & 0x60
+                      ? (AosBox){-28, -30, 56, 40}
+                      : souls->throws[skill->parameter].flags & 0x200
+                            ? skill->thrown.frame_attack
+                            : (AosBox){-8, -8, 16, 16};
         else if (skill->kind == SKILL_DROP && skill->drop.attacking)
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
         else if (skill->kind == SKILL_SHOT)
@@ -8186,6 +8203,9 @@ int aria_runtime_main(int argc, char **argv) {
             const __typeof__(objects.skills[0]) *merman = &objects.skills[SKILL_ART_SHARED];
             souls.shared_ids = merman->static_ids;
             souls.shared_count = objects_ok ? merman->static_count : 0;
+            souls.archer_ids = archer->static_ids;
+            souls.archer_count = objects_ok ? archer->static_count : 0;
+            souls.archer_attacks = objects.skills[SKILL_ART_ARCHER].static_attack;
             souls.merman = objects_ok && merman->set.count > AOS_MERMAN_DROP_SEQUENCE &&
                                    merman->defs[AOS_MERMAN_SPOUT_SEQUENCE].count &&
                                    merman->defs[AOS_MERMAN_DROP_SEQUENCE].count
@@ -8532,7 +8552,10 @@ int aria_runtime_main(int argc, char **argv) {
                                                  ? SKILL_ART_SHARED
                                                  : souls.throws[skill->parameter].resource == 1
                                                        ? SKILL_ART_RIPPER
-                                                       : SKILL_ART_BONE],
+                                                       : souls.throws[skill->parameter].resource ==
+                                                                 18
+                                                             ? SKILL_ART_ARCHER
+                                                             : SKILL_ART_BONE],
                                          souls.throws[skill->parameter].frame))
                 : skill->kind == SKILL_SHOT || skill->kind == SKILL_DAGGER
                     ? blade_frame(&objects.skills[SKILL_ART_BLADES],

@@ -103,6 +103,11 @@ bool aos_throw_update_world(AosThrow *entity, const AosThrowRecord *record,
         entity->vy = record->vy;
         entity->gravity = record->gravity;
         entity->attacking = !(record->flags & 0x60);
+        /* Flag 0x200 (unfused only): sub_08042848 installs the still
+         * frame's own box when the frame record has one (+ 0x72 bit 1
+         * stays clear); a missing box sets the bit instead. */
+        if (!(record->flags & 0x60) && (record->flags & AOS_THROW_FRAME_BOX))
+            entity->attacking = entity->frame_attack.w > 1 && entity->frame_attack.h > 1;
         if (record->flags & 0x60) entity->timer = AOS_THROW_FUSE_FRAMES;
         else if (record->flags & AOS_THROW_TIMEOUT) entity->timer = AOS_THROW_TIMEOUT_FRAMES;
         entity->linked = record->flags & AOS_THROW_LINK;

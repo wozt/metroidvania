@@ -59,8 +59,37 @@ static void refused_tests(void) {
     assert(aos_throw_supported(&other));
     other.flags = AOS_THROW_TERRAIN | AOS_THROW_LINK | AOS_THROW_TIMEOUT;
     assert(aos_throw_supported(&other));
-    other.flags |= 0x0200;         /* frame-derived attack box is not ported */
+    other.flags |= 0x0200;         /* the still frame's box is ported */
+    assert(aos_throw_supported(&other));
+    other.flags |= 0x0100;         /* shards are not */
     assert(!aos_throw_supported(&other));
+}
+
+/* Parameter 4's shape: the Giant Skeleton's still-frame throw on the
+ * archer resource, flag 0x200's own box and spin 0x0480. */
+static const AosThrowRecord giant = {0x10000, -0x20000, 0x2000, 18, 0, 0, 0, 0xE3,
+                                     AOS_THROW_SPIN | AOS_THROW_FRAME_BOX, 0x0480, 0};
+
+static void frame_box_tests(void) {
+    assert(aos_throw_supported(&giant));
+    /* With the frame's {-16,-16,32,32} box it attacks; without one the
+     * native + 0x72 bit 1 stays set and it does not. */
+    AosThrow e = aos_throw_create(100 << 16, 200 << 16, false);
+    e.frame_attack = (AosBox){-16, -16, 32, 32};
+    assert(aos_throw_update(&e, &giant, 0, 0, 16, 16));
+    assert(e.state == 1 && e.attacking && e.spin == 0x0480);
+    AosThrow bare = aos_throw_create(100 << 16, 200 << 16, false);
+    assert(aos_throw_update(&bare, &giant, 0, 0, 16, 16));
+    assert(!bare.attacking);
+    /* Fused records keep their own path even with 0x200 set: the fuse
+     * timer runs and the frame box is ignored. */
+    AosThrowRecord fused = giant;
+    fused.flags |= 0x40;
+    assert(aos_throw_supported(&fused));
+    AosThrow f = aos_throw_create(100 << 16, 200 << 16, false);
+    f.frame_attack = (AosBox){-16, -16, 32, 32};
+    assert(aos_throw_update(&f, &fused, 0, 0, 16, 16));
+    assert(f.state == 1 && !f.attacking && f.timer == AOS_THROW_FUSE_FRAMES);
 }
 
 /* Parameter 5's shape: a fused grenade rolling at 1.125, thrown up at 1.625. */
@@ -168,6 +197,7 @@ int main(void) {
     flight_tests();
     facing_left_tests();
     refused_tests();
+    frame_box_tests();
     grenade_tests();
     terrain_throw_tests();
     landing_fragment_tests();

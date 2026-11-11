@@ -1,3 +1,16 @@
+## Patch 1020 - Red soul 41 (Giant Skeleton) ported
+
+- The shared throw routine's flag 0x200 (frame-derived attack box)
+  is now supported in `aos_soul_red_throw.c`: the still frame's own
+  box replaces 0x1010F8F8 and gates `attacking` when the record is
+  unfused. Giant Skeleton's parameter-4 record (resource 18 =
+  skill_archer, still frame 0, song 0xE3, spin 0x0480) is ported.
+- `src/assets/aos/objects.c` exports `skill_archer` still frame 0
+  (box {-16,-16,32,32}); object library: 1621 sequences.
+- `tests/test_aos_soul_red_throw.c` covers the frame-box gate and
+  the fused-path precedence. Remaining soul backlog: 6 red +
+  5 blue.
+
 ## Patch 1019 - Red soul 22 (Cockatrice) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_cockatrice.c` ports

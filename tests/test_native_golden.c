@@ -227,7 +227,7 @@ static void console_line(Lines *lines, const char *kind, Bytes console) {
     free(console.data);
 }
 
-static char work[] = "/tmp/fusion-native-golden-XXXXXX";
+static char work[4096] = "/tmp/fusion-native-golden-XXXXXX";
 
 static void subdirectory(char *path, size_t size, const char *name, bool create) {
     snprintf(path, size, "%s/%s", work, name);
@@ -619,9 +619,12 @@ int main(int argc, char **argv) {
         fputs("usage: fusion_native_golden_tests aos|mzm\n", stderr);
         return 2;
     }
+    const char *tmp = getenv("TMPDIR");
+    if (tmp && *tmp)
+        snprintf(work, sizeof work, "%s/fusion-native-golden-XXXXXX", tmp);
     if (!mkdtemp(work)) die("cannot create a temporary directory");
     int result = !strcmp(argv[1], "aos") ? run_aos() : run_mzm();
-    char command[256];
+    char command[4200];
     snprintf(command, sizeof command, "rm -rf '%s'", work);
     if (system(command) != 0) fprintf(stderr, "cannot remove %s\n", work);
     if (!result) printf("native %s golden: ok\n", argv[1]);

@@ -33,11 +33,12 @@ enum {
     AOS_THROW_FUSE = 0x0040,        /* explodes after 0x50 frames (0x20: with a flash) */
     AOS_THROW_SPIN = 0x0080,
     AOS_THROW_TIMEOUT = 0x0400,     /* 200-frame grounded lifetime */
-    /* The flags this port follows; the flash 0x20, shards 0x100 and
-     * frame-derived boxes 0x200 remain refused. */
+    AOS_THROW_FRAME_BOX = 0x0200,   /* the still frame's own attack box */
+    /* The flags this port follows; the flash 0x20 and shards 0x100
+     * remain refused. */
     AOS_THROW_PORTED_FLAGS = AOS_THROW_TERRAIN | AOS_THROW_ROLL | AOS_THROW_LINK |
                              AOS_THROW_LANDING_BURST | AOS_THROW_FUSE | AOS_THROW_SPIN |
-                             AOS_THROW_TIMEOUT,
+                             AOS_THROW_TIMEOUT | AOS_THROW_FRAME_BOX,
     AOS_THROW_FUSE_FRAMES = 0x50,
     AOS_THROW_TIMEOUT_FRAMES = 0xC8,
 };
@@ -61,6 +62,8 @@ typedef struct {
     bool timeout_dust;      /* this update ran sub_08045CEC(x, y, 4, 6) */
     bool blinking;          /* + 0x0F after the timeout reaches 16 */
     bool linked;            /* flag 8's temporary gEwramData + 0x13168 link */
+    AosBox frame_attack;    /* flag 0x200: the still frame's attack box,
+                             * injected by the caller (0 = none) */
     AosEnemy body;          /* the probe walker's view of a rolling throw */
 } AosThrow;
 

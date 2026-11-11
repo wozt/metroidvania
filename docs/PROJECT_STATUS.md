@@ -1,3 +1,29 @@
+## Patch 1023 - Red soul 48 (Red Minotaur) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_minotaur.c` ports
+  `SkillRedMinotaurUse` (routine 0x080269BD): the anchor at
+  `sub_08031EA4(source, 0, -0x1A)` ramps `+0x24` to 0x1FFFF, spins
+  `+0x2C` by the facing-signed `+0x2E` accelerated by `+0x28` for
+  0x50 frames of `+0x0D`, spins down while `+0x24` drains and
+  deletes in state 4; songs 0x1A0 and 0xCF play at the cast and the
+  `sub_0806D128(e, 4)` margin probe enters state 4 from any state.
+- The `sub_08026858` partner is the `SKILL_MINOTAUR_BLADE` child:
+  it orbits the anchor at radius 80 px on the shared angle
+  (x = sin(angle) * 80, y = sin(angle - 0x4000) * 80), carries the
+  `{-32,-32,64,64}` box (0x4040E0E0, `+0x72` bits 1|2), disarms
+  while the anchor sits in state 2 and rearms in state 3, and dies
+  with the anchor. Both sprites rotate by the `+0x2C` angle as an
+  approximation of the `sub_0803E058` affine call.
+- `src/assets/aos/objects.c` exports `skill_red_minotaur` (resource
+  5 of 0x080E13BC: tiles 0x081CE8D8, palette 0x0820B0F8, frames
+  0x082313A0). Object library: 1625 sequences.
+- `tests/test_aos_soul_red_minotaur.c` covers the charge ramp, the
+  spin-up/spin-down timing, the margin delete and the blade orbit,
+  disarm and rearm. The `sub_0803E654` variant pick, the `+0x131BE`
+  count, the palette-variant bookkeeping and the child visibility
+  flags are documented as not ported. Remaining soul backlog: 1 red
+  + 5 blue.
+
 ## Patch 1022 - Red souls 16+21 (Arachne/Mudman) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_arachne.c` ports the shared

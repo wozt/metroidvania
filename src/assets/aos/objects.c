@@ -429,6 +429,9 @@ static const EntitySpec entities[] = {
      * (parameter 6; Mudman's parameter 7 reuses skill_fish_head's
      * resource 17). */
     ENTITY("skill_arachne", 0x081D4104, 0x0820B2A4, 0, 0x082332D0),
+    /* Resource 5 of 0x080E13BC: SkillRedMinotaurUse's anchor and its
+     * sub_08026858 orbiting blade share the record's sequences. */
+    ENTITY("skill_red_minotaur", 0x081CE8D8, 0x0820B0F8, 0, 0x082313A0),
     /* Resource 11 of 0x080E13BC: Killer Fish's appearance sequence 1 and
      * looping swim/fall sequence 0. */
     ENTITY("skill_killer_fish", 0x081D18F0, 0x0820B1F0, 0, 0x082321E4),

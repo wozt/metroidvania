@@ -53,6 +53,7 @@
 #include "aos/red_souls/aos_soul_red_cockatrice.h"
 #include "aos/red_souls/aos_soul_red_dryad.h"
 #include "aos/red_souls/aos_soul_red_arachne.h"
+#include "aos/red_souls/aos_soul_red_minotaur.h"
 #include "aos/red_souls/aos_soul_red_were_beast.h"
 #include "aos/red_souls/aos_soul_red_flame_demon.h"
 #include "aos/red_souls/aos_soul_red_devil.h"
@@ -331,7 +332,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
        SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD,
-       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ART_COCKATRICE, SKILL_ART_DRYAD, SKILL_ART_ARACHNE, SKILL_ARTS };
+       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ART_COCKATRICE, SKILL_ART_DRYAD, SKILL_ART_ARACHNE, SKILL_ART_RED_MINOTAUR, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -352,7 +353,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
                                                          "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord",
-                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor", "skill_cockatrice", "skill_dryad", "skill_arachne"};
+                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor", "skill_cockatrice", "skill_dryad", "skill_arachne", "skill_red_minotaur"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -978,7 +979,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_WEREWOLF, SKILL_KILLER_MANTLE, SKILL_WERE_BEAST,
        SKILL_FLAME_DEMON, SKILL_FLAME_BOLT, SKILL_DEMON_LORD, SKILL_FLAME_SPIRIT,
        SKILL_BIPHRON, SKILL_BIPHRON_TOTEM, SKILL_BALORE, SKILL_KYOMA_DEMON,
-       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL, SKILL_UKOBACK, SKILL_ALTAIR, SKILL_UNE, SKILL_MANDRAGORA, SKILL_CHRONOMAGE, SKILL_DISC_ARMOR, SKILL_COCKATRICE, SKILL_DRYAD, SKILL_ARACHNE, SKILL_MUDMAN, SKILL_ARACHNE_SHARD };
+       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL, SKILL_UKOBACK, SKILL_ALTAIR, SKILL_UNE, SKILL_MANDRAGORA, SKILL_CHRONOMAGE, SKILL_DISC_ARMOR, SKILL_COCKATRICE, SKILL_DRYAD, SKILL_ARACHNE, SKILL_MUDMAN, SKILL_ARACHNE_SHARD, SKILL_RED_MINOTAUR, SKILL_MINOTAUR_BLADE };
 
 typedef struct {
     bool alive, started;
@@ -1035,6 +1036,8 @@ typedef struct {
     AosEnemy *dryad_host;     /* its + 0x20 child's + 0x20: the struck enemy */
     AosArachneSoul arachne;   /* SKILL_ARACHNE / SKILL_MUDMAN */
     AosArachneShard shard;    /* SKILL_ARACHNE_SHARD */
+    AosRedMinotaur red_minotaur; /* SKILL_RED_MINOTAUR */
+    AosMinotaurBlade minotaur_blade; /* SKILL_MINOTAUR_BLADE */
     AosEnemy *arachne_host;   /* the sub_0802DB84 child's + 0x20 target */
     int shard_parent;         /* the releasing skill's slot (-1 none) */
     uint8_t volley_count;      /* SKILL_DEMON_LORD spawn gate */
@@ -1090,6 +1093,7 @@ typedef struct {
 #define SKILL_COCKATRICE_ROUTINE 0x0802968Cu
 #define SKILL_DRYAD_ROUTINE 0x080282DDu
 #define SKILL_ARACHNE_ROUTINE 0x08028EC1u
+#define SKILL_RED_MINOTAUR_ROUTINE 0x080269BDu
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1131,6 +1135,7 @@ typedef struct {
     const AosAnimSet *cockatrice;     /* skill_cockatrice, sequence 0 */
     const AosAnimSet *dryad;          /* skill_dryad still frame 0 */
     const AosAnimSet *arachne;        /* skill_arachne sequences */
+    const AosAnimSet *red_minotaur;   /* skill_red_minotaur sequences */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
@@ -1181,6 +1186,8 @@ static void place(AriaSkill *skill, int32_t x, int32_t y, bool facing_left, int 
     skill->x = (int32_t)((uint32_t)(int16_t)((x >> 16) + (facing_left ? -dx : dx)) << 16);
     skill->y = (int32_t)((uint32_t)(int16_t)((y >> 16) + dy) << 16);
 }
+
+static AriaSkill *spawn_child(AriaSouls *souls, int kind);
 
 /* Soma's cast hook: sub_08019478's guards and bookkeeping, then the skill
  * entity; souls whose routine is not ported are refused rather than
@@ -1299,6 +1306,8 @@ static int cast_red_soul(void *context) {
                : routine == SKILL_ARACHNE_ROUTINE && record->parameter == 7 &&
                          souls->fish_head
                    ? SKILL_MUDMAN
+               : routine == SKILL_RED_MINOTAUR_ROUTINE && souls->red_minotaur
+                   ? SKILL_RED_MINOTAUR
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1440,6 +1449,24 @@ static int cast_red_soul(void *context) {
         skill->y = skill->arachne.y;
         skill->facing_left = souls->soma->facing_left;
         skill->shard_parent = -1;
+    } else if (kind == SKILL_RED_MINOTAUR) {
+        /* SkillRedMinotaurUse state 0: sub_08031EA4(source, 0, -0x1A),
+         * facing-signed spin fields, charge 0, timer 0x50, songs
+         * 0x1A0 and 0xCF; the sub_08023530 partner registration is the
+         * blade child spawned below. */
+        skill->red_minotaur = aos_red_minotaur_create(
+            souls->soma->x, souls->soma->y, souls->soma->facing_left);
+        skill->x = skill->red_minotaur.x;
+        skill->y = skill->red_minotaur.y;
+        skill->facing_left = souls->soma->facing_left;
+        AriaSkill *blade = spawn_child(souls, SKILL_MINOTAUR_BLADE);
+        if (blade) {
+            blade->soul = skill->soul;
+            blade->shard_parent = skill->slot;
+            blade->facing_left = skill->facing_left;
+            blade->minotaur_blade = (AosMinotaurBlade){0};
+            aos_minotaur_blade_init(&blade->minotaur_blade);
+        }
     } else if (kind == SKILL_DISC_ARMOR) {
         skill->disc_armor = aos_disc_armor_create(
             souls->soma->x, souls->soma->y, souls->soma->facing_left);
@@ -2833,6 +2860,57 @@ static void update_skills(AriaSouls *souls) {
             skill->x = skill->shard.x;
             skill->y = skill->shard.y;
             break;
+        case SKILL_RED_MINOTAUR:
+            /* SkillRedMinotaurUse: counted on its first update with
+             * songs 0x1A0 and 0xCF; state 1 ramps + 0x24 to 0x1FFFF,
+             * state 2 spins + 0x2C by the accelerating + 0x2E for 0x50
+             * frames of + 0x0D, state 3 spins down while + 0x24 drains,
+             * state 4 deletes; the sub_0806D128(e, 4) margin probe and
+             * the + 0x59 bit-4 mark enter state 4 from any state. The
+             * sub_0803E058 affine spin visual is drawn as a rotation,
+             * the + 0x131BE count and the sub_0803E654 variant pick are
+             * not ported. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0x1A0);
+                aos_audio_play_song(0xCF);
+                aos_anim_start(&skill->anim, souls->red_minotaur, 0, false);
+            }
+            aos_anim_step(&skill->anim, souls->red_minotaur);
+            skill->red_minotaur.outside = skill_outside(souls, skill, 4);
+            if (!aos_red_minotaur_update(&skill->red_minotaur)) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->x = skill->red_minotaur.x;
+            skill->y = skill->red_minotaur.y;
+            break;
+        case SKILL_MINOTAUR_BLADE:
+            /* sub_08026858: the partner blade orbits the anchor at
+             * radius 80 px on the shared + 0x2C angle, installs the
+             * {-32,-32,64,64} box (+ 0x72 bits 1|2) at init, disarms
+             * while the anchor spins up (state 2) and rearms in state
+             * 3; it dies with the anchor's state 4. */
+            if (!skill->started) {
+                skill->started = true;
+            }
+            {
+                const AriaSkill *anchor = skill->shard_parent >= 0
+                                              ? &souls->skills[skill->shard_parent]
+                                              : NULL;
+                if (!aos_minotaur_blade_update(
+                        &skill->minotaur_blade,
+                        anchor && anchor->alive && anchor->kind == SKILL_RED_MINOTAUR
+                            ? &anchor->red_minotaur
+                            : NULL)) {
+                    end_skill(souls, skill);
+                    break;
+                }
+            }
+            skill->x = skill->minotaur_blade.x;
+            skill->y = skill->minotaur_blade.y;
+            break;
         case SKILL_FLAME_DEMON:
             /* SkillFlameDemonUse: one counted cast plays song 0xD8, emits
              * a sub_08045CEC(0xC, 6) burst and a fan of 3 or 5
@@ -3673,6 +3751,9 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
              * +0x64/+0x65 frame lookup stands in with the kind's
              * per-frame boxes when exported. */
             box = (AosBox){-8, -8, 16, 16};
+        else if (skill->kind == SKILL_MINOTAUR_BLADE &&
+                 skill->minotaur_blade.attacking)
+            box = (AosBox){-32, -32, 64, 64};  /* 0x4040E0E0 */
         else if (skill->kind == SKILL_AXE && skill->axe.state == 1)
             box = (AosBox){-10, -10, 20, 20};  /* 0x1414F6F6 */
         if (!box.w || !box.h) continue;
@@ -8346,6 +8427,12 @@ int aria_runtime_main(int argc, char **argv) {
                                     arachne->defs[0].count
                                 ? &arachne->set
                                 : NULL;
+            const __typeof__(objects.skills[0]) *red_minotaur =
+                &objects.skills[SKILL_ART_RED_MINOTAUR];
+            souls.red_minotaur = objects_ok && red_minotaur->loaded &&
+                                       red_minotaur->defs[0].count
+                                   ? &red_minotaur->set
+                                   : NULL;
             const __typeof__(objects.skills[0]) *mantle =
                 &objects.skills[SKILL_ART_KILLER_MANTLE];
             souls.killer_mantle = objects_ok && mantle->loaded && mantle->defs[0].count
@@ -8833,6 +8920,10 @@ int aria_runtime_main(int argc, char **argv) {
                            .frames[skill->anim.id][skill->anim.frame])
                 : skill->kind == SKILL_ARACHNE_SHARD
                     ? &objects.skills[SKILL_ART_FISH_HEAD].frames[1][0]
+                : skill->kind == SKILL_RED_MINOTAUR
+                    ? &objects.skills[SKILL_ART_RED_MINOTAUR].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_MINOTAUR_BLADE
+                    ? &objects.skills[SKILL_ART_RED_MINOTAUR].frames[0][0]
                 : skill->kind == SKILL_NEMESIS
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_NEMESIS_SOUL_SEQUENCE][skill->anim.frame]
@@ -8869,6 +8960,12 @@ int aria_runtime_main(int argc, char **argv) {
                                ? (uint16_t)skill->ripper.angle * 360.0 / 65536.0
                            : skill->kind == SKILL_GLADIATOR
                                ? skill->gladiator.angle * 360.0 / 65536.0
+                           : skill->kind == SKILL_RED_MINOTAUR ||
+                                     skill->kind == SKILL_MINOTAUR_BLADE
+                               ? (skill->kind == SKILL_RED_MINOTAUR
+                                      ? skill->red_minotaur.angle
+                                      : skill->minotaur_blade.angle) *
+                                     360.0 / 65536.0
                                : 0;
             /* The afterimages are semi-transparent objects (+ 0x5A mode 1);
              * the blend weights in force are not traced: half here. */

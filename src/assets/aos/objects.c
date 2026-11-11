@@ -425,6 +425,10 @@ static const EntitySpec entities[] = {
      * + 0x65 = 0 frame; the sub_0802D9BC planted box is not in the
      * frames table). */
     STATIC("skill_dryad", 0x081D28F8, 0x0820B238, 0, 0x08232690, 1, 0),
+    /* Resource 16 of 0x080E13BC: SkillArachneUse's record-6 sprite
+     * (parameter 6; Mudman's parameter 7 reuses skill_fish_head's
+     * resource 17). */
+    ENTITY("skill_arachne", 0x081D4104, 0x0820B2A4, 0, 0x082332D0),
     /* Resource 11 of 0x080E13BC: Killer Fish's appearance sequence 1 and
      * looping swim/fall sequence 0. */
     ENTITY("skill_killer_fish", 0x081D18F0, 0x0820B1F0, 0, 0x082321E4),

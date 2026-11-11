@@ -1,3 +1,23 @@
+## Patch 1022 - Red souls 16+21 (Arachne/Mudman) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_arachne.c` ports the shared
+  `SkillArachneUse` (routine 0x08028EC1) for both throw parameters:
+  Arachne (6, flags 0x0001) lingers 0x10 frames after the strike
+  plants the `sub_080239E4` child; Mudman (7, flags 0x0101) plays
+  0xD2, releases three `sub_0802D880` shards and plays sequence 2
+  until its end or the host's +0x24. Flight runs `sub_0806D3D8`
+  capped at 0x80000; the `sub_0806D128(e, 2)` margin probe deletes
+  from any state.
+- `src/assets/aos/objects.c` exports `skill_arachne` (resource 16 of
+  0x080E13BC: tiles 0x081D4104, palette 0x0820B2A4, frames
+  0x082332D0); Mudman and the shards reuse `skill_fish_head`
+  (resource 17). Object library: 1624 sequences.
+- `tests/test_aos_soul_red_arachne.c` covers the flight integration,
+  mirrored vx, the linger timing, the release paths and the shard
+  physics. The child entity, palette row, frame-box lookup and shard
+  window probe are documented as approximated. Remaining soul
+  backlog: 2 red + 5 blue.
+
 ## Patch 1021 - Red soul 33 (Dryad) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_dryad.c` ports

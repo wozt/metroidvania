@@ -52,6 +52,7 @@
 #include "aos/red_souls/aos_soul_red_disc_armor.h"
 #include "aos/red_souls/aos_soul_red_cockatrice.h"
 #include "aos/red_souls/aos_soul_red_dryad.h"
+#include "aos/red_souls/aos_soul_red_arachne.h"
 #include "aos/red_souls/aos_soul_red_were_beast.h"
 #include "aos/red_souls/aos_soul_red_flame_demon.h"
 #include "aos/red_souls/aos_soul_red_devil.h"
@@ -330,7 +331,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
        SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD,
-       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ART_COCKATRICE, SKILL_ART_DRYAD, SKILL_ARTS };
+       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ART_COCKATRICE, SKILL_ART_DRYAD, SKILL_ART_ARACHNE, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -351,7 +352,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
                                                          "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord",
-                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor", "skill_cockatrice", "skill_dryad"};
+                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor", "skill_cockatrice", "skill_dryad", "skill_arachne"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -977,7 +978,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_WEREWOLF, SKILL_KILLER_MANTLE, SKILL_WERE_BEAST,
        SKILL_FLAME_DEMON, SKILL_FLAME_BOLT, SKILL_DEMON_LORD, SKILL_FLAME_SPIRIT,
        SKILL_BIPHRON, SKILL_BIPHRON_TOTEM, SKILL_BALORE, SKILL_KYOMA_DEMON,
-       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL, SKILL_UKOBACK, SKILL_ALTAIR, SKILL_UNE, SKILL_MANDRAGORA, SKILL_CHRONOMAGE, SKILL_DISC_ARMOR, SKILL_COCKATRICE, SKILL_DRYAD };
+       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL, SKILL_UKOBACK, SKILL_ALTAIR, SKILL_UNE, SKILL_MANDRAGORA, SKILL_CHRONOMAGE, SKILL_DISC_ARMOR, SKILL_COCKATRICE, SKILL_DRYAD, SKILL_ARACHNE, SKILL_MUDMAN, SKILL_ARACHNE_SHARD };
 
 typedef struct {
     bool alive, started;
@@ -1032,6 +1033,10 @@ typedef struct {
     AosCockatrice cockatrice; /* SKILL_COCKATRICE */
     AosDryad dryad;           /* SKILL_DRYAD */
     AosEnemy *dryad_host;     /* its + 0x20 child's + 0x20: the struck enemy */
+    AosArachneSoul arachne;   /* SKILL_ARACHNE / SKILL_MUDMAN */
+    AosArachneShard shard;    /* SKILL_ARACHNE_SHARD */
+    AosEnemy *arachne_host;   /* the sub_0802DB84 child's + 0x20 target */
+    int shard_parent;         /* the releasing skill's slot (-1 none) */
     uint8_t volley_count;      /* SKILL_DEMON_LORD spawn gate */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
@@ -1084,6 +1089,7 @@ typedef struct {
 #define SKILL_DISC_ARMOR_ROUTINE 0x08027340u
 #define SKILL_COCKATRICE_ROUTINE 0x0802968Cu
 #define SKILL_DRYAD_ROUTINE 0x080282DDu
+#define SKILL_ARACHNE_ROUTINE 0x08028EC1u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1124,6 +1130,7 @@ typedef struct {
     const AosAnimSet *disc_armor;     /* skill_disc_armor, sequence 0 */
     const AosAnimSet *cockatrice;     /* skill_cockatrice, sequence 0 */
     const AosAnimSet *dryad;          /* skill_dryad still frame 0 */
+    const AosAnimSet *arachne;        /* skill_arachne sequences */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
@@ -1286,6 +1293,12 @@ static int cast_red_soul(void *context) {
                    ? SKILL_COCKATRICE
                : routine == SKILL_DRYAD_ROUTINE && souls->dryad
                    ? SKILL_DRYAD
+               : routine == SKILL_ARACHNE_ROUTINE && record->parameter == 6 &&
+                         souls->arachne
+                   ? SKILL_ARACHNE
+               : routine == SKILL_ARACHNE_ROUTINE && record->parameter == 7 &&
+                         souls->fish_head
+                   ? SKILL_MUDMAN
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1414,6 +1427,19 @@ static int cast_red_soul(void *context) {
         skill->x = skill->dryad.x;
         skill->y = skill->dryad.y;
         skill->facing_left = souls->soma->facing_left;
+    } else if (kind == SKILL_ARACHNE || kind == SKILL_MUDMAN) {
+        /* SkillArachneUse state 0: sub_08031EA4(source, 8, -0x1A), the
+         * record's vx/vy/gravity, box preset 5 + sub_0802DB84, song
+         * record +0x10 when nonzero (0xD1 arachne, none mudman). */
+        const AosThrowRecord *t = &souls->throws[record->parameter];
+        skill->arachne = aos_arachne_create(
+            souls->soma->x, souls->soma->y, souls->soma->facing_left,
+            (uint8_t)record->parameter, (t->flags & 0x100) != 0,
+            t->vx, t->vy, t->gravity);
+        skill->x = skill->arachne.x;
+        skill->y = skill->arachne.y;
+        skill->facing_left = souls->soma->facing_left;
+        skill->shard_parent = -1;
     } else if (kind == SKILL_DISC_ARMOR) {
         skill->disc_armor = aos_disc_armor_create(
             souls->soma->x, souls->soma->y, souls->soma->facing_left);
@@ -2723,6 +2749,90 @@ static void update_skills(AriaSouls *souls) {
             skill->x = skill->dryad.x;
             skill->y = skill->dryad.y;
             break;
+        case SKILL_ARACHNE:
+        case SKILL_MUDMAN: {
+            /* SkillArachneUse: counted on its first update with song
+             * 0xD1 (record 6 only), sequence record +0x0E, box preset 5
+             * upgraded by the +0x64/+0x65 frame lookup; state 1 flies
+             * under sub_0806D3D8 cap 0x80000 until the sub_0802DB84
+             * strike plants the sub_080239E4 child — Arachne then
+             * lingers 0x10 frames blinking on +0x64 = 5, Mudman plays
+             * 0xD2, releases three sub_0802D880 shards and plays
+             * sequence 2 until its end or the host's +0x24; states
+             * 2/3 are stationary and the sub_0806D128(e, 2) margin
+             * probe deletes from any state. The child entity, the
+             * +0x59 bit-4 mark and the palette row +0x0F are not
+             * ported. */
+            const AosAnimSet *art = skill->kind == SKILL_ARACHNE
+                                        ? souls->arachne
+                                        : souls->fish_head;
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                if (skill->parameter == 6) aos_audio_play_song(0xD1);
+                aos_anim_start(&skill->anim, art,
+                               souls->throws[skill->parameter].sequence,
+                               false);
+            }
+            skill->arachne.host_gone = skill->arachne_host &&
+                                       (skill->arachne_host->hp <= 0 ||
+                                        skill->arachne_host->removed);
+            /* sub_0803F17C advances the animation in states 1 and 3
+             * only; state 3 reads its == 3 end. */
+            bool anim_done = false;
+            if (skill->arachne.state == 3)
+                anim_done = aos_anim_step(&skill->anim, art) == 3;
+            else if (skill->arachne.state == 1)
+                aos_anim_step(&skill->anim, art);
+            if (!aos_arachne_update(&skill->arachne,
+                                    skill_outside(souls, skill, 2),
+                                    anim_done)) {
+                end_skill(souls, skill);
+                break;
+            }
+            if (skill->arachne.released && skill->shard_parent < 0) {
+                /* PlaySong 0xD2, sequence 2 and the three-shard fan. */
+                aos_audio_play_song(0xD2);
+                aos_anim_start(&skill->anim, art, 2, false);
+                for (int k = 0; k < 3; ++k) {
+                    AriaSkill *shard = spawn_child(souls, SKILL_ARACHNE_SHARD);
+                    if (!shard) break;
+                    shard->soul = skill->soul;
+                    shard->shard_parent = skill->slot;
+                    shard->shard = aos_arachne_shard_create(
+                        skill->arachne.x, skill->arachne.y,
+                        skill->arachne.vx, aos_random(), aos_random(),
+                        aos_random());
+                    shard->x = shard->shard.x;
+                    shard->y = shard->shard.y;
+                }
+                skill->shard_parent = skill->slot;
+            }
+            skill->x = skill->arachne.x;
+            skill->y = skill->arachne.y;
+            skill->facing_left = skill->arachne.facing_left;
+            break;
+        }
+        case SKILL_ARACHNE_SHARD:
+            /* sub_0802D880: integrates +0x48/+0x4C with the 0x4000
+             * gravity, deletes on the sub_08068AD4 window probe or when
+             * the parent's count drained (orphan). No attack box. */
+            if (!skill->started) {
+                skill->started = true;
+            }
+            if (skill->shard_parent >= 0 &&
+                !souls->skills[skill->shard_parent].alive) {
+                end_skill(souls, skill);
+                break;
+            }
+            if (!aos_arachne_shard_update(&skill->shard,
+                                          skill_outside(souls, skill, 4))) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->x = skill->shard.x;
+            skill->y = skill->shard.y;
+            break;
         case SKILL_FLAME_DEMON:
             /* SkillFlameDemonUse: one counted cast plays song 0xD8, emits
              * a sub_08045CEC(0xC, 6) burst and a fan of 3 or 5
@@ -3557,6 +3667,12 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
              * strike (sub_08042884 replaces the box). */
             box = skill->dryad.planted ? (AosBox){-10, -8, 20, 16}
                                        : (AosBox){-1, -1, 2, 2};
+        else if ((skill->kind == SKILL_ARACHNE || skill->kind == SKILL_MUDMAN) &&
+                 skill->arachne.state <= 3)
+            /* Preset 5 (sub_0804277C + sub_0802DB84); the state-1
+             * +0x64/+0x65 frame lookup stands in with the kind's
+             * per-frame boxes when exported. */
+            box = (AosBox){-8, -8, 16, 16};
         else if (skill->kind == SKILL_AXE && skill->axe.state == 1)
             box = (AosBox){-10, -10, 20, 20};  /* 0x1414F6F6 */
         if (!box.w || !box.h) continue;
@@ -8224,6 +8340,12 @@ int aria_runtime_main(int argc, char **argv) {
                                    dryad->defs[0].count
                                ? &dryad->set
                                : NULL;
+            const __typeof__(objects.skills[0]) *arachne =
+                &objects.skills[SKILL_ART_ARACHNE];
+            souls.arachne = objects_ok && arachne->loaded &&
+                                    arachne->defs[0].count
+                                ? &arachne->set
+                                : NULL;
             const __typeof__(objects.skills[0]) *mantle =
                 &objects.skills[SKILL_ART_KILLER_MANTLE];
             souls.killer_mantle = objects_ok && mantle->loaded && mantle->defs[0].count
@@ -8474,6 +8596,15 @@ int aria_runtime_main(int argc, char **argv) {
                         owners[k]->dryad.counter = 0;
                         owners[k]->dryad_host = attacks[k].target;
                     }
+                    if ((owners[k]->kind == SKILL_ARACHNE ||
+                         owners[k]->kind == SKILL_MUDMAN) &&
+                        !owners[k]->arachne.planted) {
+                        /* sub_0802DB84: the first strike spawns the
+                         * sub_080239E4 child (+ 0x20) and sets + 0x72
+                         * bit 1; later strikes are no-ops. */
+                        owners[k]->arachne.planted = true;
+                        owners[k]->arachne_host = attacks[k].target;
+                    }
                 }
         }
 
@@ -8695,6 +8826,13 @@ int aria_runtime_main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_COCKATRICE].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_DRYAD
                     ? &objects.skills[SKILL_ART_DRYAD].frames[0][0]
+                : skill->kind == SKILL_ARACHNE || skill->kind == SKILL_MUDMAN
+                    ? &((skill->kind == SKILL_ARACHNE
+                             ? objects.skills[SKILL_ART_ARACHNE]
+                             : objects.skills[SKILL_ART_FISH_HEAD])
+                           .frames[skill->anim.id][skill->anim.frame])
+                : skill->kind == SKILL_ARACHNE_SHARD
+                    ? &objects.skills[SKILL_ART_FISH_HEAD].frames[1][0]
                 : skill->kind == SKILL_NEMESIS
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_NEMESIS_SOUL_SEQUENCE][skill->anim.frame]

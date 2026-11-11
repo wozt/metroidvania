@@ -189,6 +189,7 @@ enum {
     AOS_ENEMY_IRON_GOLEM = 0x65,
     AOS_ENEMY_STOLAS = 0x61,
     AOS_ENEMY_DEATH = 0x6B,
+    AOS_ENEMY_MANTICORE = 0x36,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -265,7 +266,11 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_STOLAS_WAVE = 135, AOS_ROLE_STOLAS_GORE = 136,
        AOS_ROLE_DEATH_MIRROR = 137, AOS_ROLE_DEATH_MID = 138,
        AOS_ROLE_DEATH_MID_TAIL = 139, AOS_ROLE_DEATH_SCYTHE = 140,
-       AOS_ROLE_DEATH_SHOT = 141, AOS_ROLE_DEATH_GORE = 142 };
+       AOS_ROLE_DEATH_SHOT = 141, AOS_ROLE_DEATH_GORE = 142,
+       AOS_ROLE_MANTICORE_CHILD0 = 143, AOS_ROLE_MANTICORE_CHILD1 = 144,
+       AOS_ROLE_MANTICORE_CHILD2 = 145, AOS_ROLE_MANTICORE_CHILD3 = 146,
+       AOS_ROLE_MANTICORE_CHILD4 = 147, AOS_ROLE_MANTICORE_CHILD5 = 148,
+       AOS_ROLE_MANTICORE_WING = 149, AOS_ROLE_MANTICORE_SHOT = 150 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -786,6 +791,15 @@ typedef struct AosEnemy {
     uint16_t dth_flags;
     uint8_t dth_idx, dth_g6c, dth_g6e;
     int32_t dth_dx, dth_dy, dth_vx, dth_vy;
+    /* Manticore (id 0x36): the + 0x6E/+ 0x6F attack counters, the
+     * + 0x24/+ 0x25 variant picks and the container + 0x1F child
+     * launch count of its four-state machine; the six children of
+     * sub_080733D4 are roles AOS_ROLE_MANTICORE_CHILD*, the grown
+     * wings of sub_08073C3C AOS_ROLE_MANTICORE_WING and the attack
+     * shot of sub_08074048 AOS_ROLE_MANTICORE_SHOT. */
+    uint16_t mt_phase;
+    uint8_t mt_f6f, mt_cnt24, mt_var25, mt_launched;
+    uint8_t mt_slot, mt_act;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

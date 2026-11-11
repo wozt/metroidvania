@@ -1149,6 +1149,124 @@ static void early_enemy_batch_tests(void) {
 }
 
 
+static void manticore_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { MT_ANIMS = 8 };
+    static const uint8_t ticks8[8] = {4, 4, 4, 4, 4, 4, 4, 4};
+    static AosAnimDef defs[MT_ANIMS];
+    for (int a = 0; a < MT_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks8};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = MT_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < MT_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-32, -64, 64, 72};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 54: hp 440, contact 40, defence 24,
+     * weak 0x0181, resist 0x0000, experience 250, rare 0x0027,
+     * soul blue 19 (the Manticore variant of the shared
+     * Skill_Devil_Manticore_Curly_Use). */
+    static const AosEnemyStats mt = {440, 40, 24, 0x0181, 0x0000, 250};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+
+    /* EnemyManticoreCreate: hp 5000, state 0, the six orbit children
+     * emit over the first updates via boss_parts_spawned. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, 0x36, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &mt));
+    assert(e.state == 0 && e.hp == 440);
+    assert(!e.boss_parts_spawned && e.spawned_count == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, 0x36, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &mt));
+    assert(ed.state == 3);
+    aos_enemy_set_flag_8e_40(false);
+    /* param0 & 3: the gEwramData + 0x4CC variant adds 0x3E8 hp. */
+    AosEnemy ev;
+    assert(aos_enemy_create(&ev, 0x36, 300, 150, 3, 0,
+                            &soma, &layer, &kind, &mt));
+    assert(ev.hp == 440 + 0x3E8);
+
+    /* First update emits up to 8 children; six slots total. */
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(120);
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    int kids = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role >= AOS_ROLE_MANTICORE_CHILD0 &&
+            hit.children[i].role <= AOS_ROLE_MANTICORE_CHILD5)
+            kids++;
+    assert(kids == 6 && e.spawned_count == 6 && e.boss_parts_spawned);
+
+    /* A child flies and dies with its parent. */
+    AosEnemy kid;
+    memset(&kid, 0, sizeof kid);
+    kid.id = 0x36;
+    kid.role = AOS_ROLE_MANTICORE_CHILD0;
+    kid.parent = &e;
+    kid.x = AOS_FIXED(150);
+    kid.y = AOS_FIXED(120);
+    kid.mt_slot = 0;
+    aos_enemy_update(&kid, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(kid.mt_act == 1 && !kid.removed);
+    e.state = 2;
+    aos_enemy_update(&kid, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(kid.removed);
+    e.state = 0;
+
+    /* State 1 attack: the + 0x6E == 0xE marker grows a wing and
+     * fires the shot. */
+    AosEnemy a;
+    assert(aos_enemy_create(&a, 0x36, 150, 120, 0, 0,
+                            &soma, &layer, &kind, &mt));
+    a.x = AOS_FIXED(150);
+    a.y = AOS_FIXED(120);
+    a.state = 1;
+    a.step = 11;
+    a.mt_phase = 0xE;
+    hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    int wing = 0, shot = 0;
+    for (int i = 0; i < hit.child_count; ++i) {
+        if (hit.children[i].role == AOS_ROLE_MANTICORE_WING) wing++;
+        if (hit.children[i].role == AOS_ROLE_MANTICORE_SHOT) shot++;
+    }
+    assert(wing == 1 && shot == 1);
+
+    /* Lethal: hp 0 -> defeated, state 2 flame death, then removed. */
+    AosEnemy el;
+    assert(aos_enemy_create(&el, 0x36, 150, 120, 0, 0,
+                            &soma, &layer, &kind, &mt));
+    el.x = AOS_FIXED(150);
+    el.y = AOS_FIXED(120);
+    el.state = 0;
+    el.hp = 0;
+    hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(el.defeated && el.state == 2 && el.timer <= 0x3C);
+    el.timer = 0;
+    aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(el.removed);
+}
+
 static void death_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -12076,6 +12194,7 @@ int main(void) {
     gladiator_tests();
     golem_tests();
     stolas_tests();
+    manticore_tests();
     death_tests();
     buer_tests();
     white_dragon_tests();

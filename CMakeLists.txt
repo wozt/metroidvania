@@ -289,6 +289,7 @@ set(AOS_ENEMY_SOURCES
     src/runtime/aos/enemies/golem.c
     src/runtime/aos/enemies/stolas.c
     src/runtime/aos/enemies/death.c
+    src/runtime/aos/enemies/manticore.c
     src/runtime/aos/enemies/headhunter.c
     src/runtime/aos/enemies/zombie.c
     src/runtime/aos/enemies/nemesis.c

@@ -410,6 +410,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_WOODEN_GOLEM && id != AOS_ENEMY_GOLEM &&
         id != AOS_ENEMY_FLESH_GOLEM && id != AOS_ENEMY_IRON_GOLEM &&
         id != AOS_ENEMY_STOLAS && id != AOS_ENEMY_DEATH &&
+        id != AOS_ENEMY_MANTICORE &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1383,6 +1384,37 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->boss_parts_spawned = false;
         enemy->spawned_count = 0;
         play_loop(enemy, anims, 1, true);
+        step_anim(enemy, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_MANTICORE) {
+        /* EnemyManticoreCreate 0x08072854: tiles 0x081CBF54, palette
+         * 0x0820A4D0 bank 0, frames 0x082145BC through sub_0807406C;
+         * the + 0x30 param gate and the gEwramData room flags can
+         * delete the spawn; the gEwramData + 0x4CC & 3 variant adds
+         * 0x3E8 hp and + 0x14 to + 0x3C; the + 0x14 container's six
+         * children of sub_08073308 (callback sub_080733D4) emit on
+         * the first updates via boss_parts_spawned; the
+         * gEwramData + 0x8E & 0x40 flag parks state 3; hurt
+         * callbacks sub_080740B8/sub_080740E8 fold into the shared
+         * collide. */
+        /* param0 carries the gEwramData + 0x4CC & 3 variant: + 0x3E8
+         * hp and + 0x14 to the + 0x3C field the collide reads. */
+        if ((enemy->param0 & 3) != 0) {
+            enemy->hp += 0x3E8;
+            enemy->param1 += 0x14;
+        }
+        enemy->mt_phase = 0;
+        enemy->mt_f6f = enemy->mt_cnt24 = enemy->mt_var25 = 0;
+        enemy->mt_launched = 0;
+        enemy->mt_slot = enemy->mt_act = 0;
+        enemy->state = flag_8e_40 ? 3 : 0;
+        enemy->step = 0;
+        enemy->substep = 0;
+        enemy->timer = 0;
+        enemy->boss_parts_spawned = false;
+        enemy->spawned_count = 0;
+        play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
         return true;
     }
@@ -4347,6 +4379,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_death_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,
                                       cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_MANTICORE)
+        return aos_enemy_manticore_update(enemy, soma, layer, kind, weapon,
+                                          weapon_frames, soma_atk, soma_def,
+                                          cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

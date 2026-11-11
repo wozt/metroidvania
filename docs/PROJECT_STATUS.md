@@ -1,3 +1,35 @@
+## Patch 0988 - Manticore ported (id 54)
+
+- `EnemyManticoreCreate` (0x08072854) / `EnemyManticoreUpdate`
+  (0x08072768): tiles `0x081CBF54`, palette `0x0820A4D0` bank 0,
+  frames `0x082145BC` shared by the body, the six children, the
+  grown wings and the attack shot, through `sub_0807406C`.
+- `manticore.c` ports the architecture: state 0 (`sub_080729E0`)
+  is the six-case approach with the player probes, the
+  `0x08526D2C` animation table and the random entries into
+  state 1; state 1 (`sub_08072D68`) is the thirteen-case attack
+  whose `+ 0x6E == 0xE` marker grows a wing (`sub_08073B54`),
+  fires the shot (`sub_08073D98`/`sub_08074048`) and requests
+  songs 0x7A and 0x77; state 2 is the shared `sub_0806AEAC`
+  flame death; state 3 is the dormant tail.
+- The `+ 0x14` container and its six-slot `+ 0x20` sibling chain
+  fold into the persistent `MANTICORE_CHILD0-5` roles emitted
+  under the 8-child cap; the sequential launch gate reads the
+  spawned count instead of the native `+ 0x1F`; the 797-line
+  `sub_08073568` child brain collapses to a sine flight toward
+  the player, the `sub_08073C3C` wing machine to an orbiting
+  hitbox; divergences recorded per aspect.
+- Blue soul 19 (routine `0x0802EFB1` argument 1) is the
+  Manticore variant of the shared
+  `Skill_Devil_Manticore_Curly_Use` already ported through
+  `aos_curly_guardian_update`; the `0x081CBF54`/`0x082145BC`
+  art exported natively; all five aspects `ported`.
+- Unit-tested in `manticore_tests` (create, the `+ 0x4CC & 3`
+  hp variant, dormant, six-child emission, child flight and
+  parent-death removal, the wing/shot marker, lethal state 2
+  and delete); rooms `area_01_room_006`/`area_05_room_009`
+  carry the entity.
+
 ## Patch 0987 - Death ported (id 107)
 
 - `EnemyDeathCreate` (0x080BF2E8) / `EnemyDeathUpdate` (0x080BF5FC):

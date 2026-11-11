@@ -1,3 +1,19 @@
+## Patch 1017 - Red soul 55 (Chronomage) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_chronomage.c` ports
+  `SkillChronomageUse` (routine 0x08024950): the time-stop field —
+  songs 0x1030/0x19D/0xEC at init, `+ 0x20`/`+ 0x24` ramp to 0x10000,
+  the `+ 0x4BE` hold with a 0x16E tick every sixteenth frame, the
+  0x20-frame release and delete. The published `+ 0x12FE4` value is
+  computed but not applied to gameplay; the hold duration is a
+  documented 0x100-frame approximation.
+- `src/assets/aos/objects.c` exports `skill_chronomage` reusing the
+  entry-0x6 Ripper record (tiles 0x081CC8C8, palette 0x0820B068,
+  frames 0x08230AE0).
+- `tests/test_aos_soul_red_chronomage.c` covers the ramps, tick
+  cadence, release timing and zero-hold edge. Remaining soul backlog:
+  9 red + 5 blue.
+
 ## Patch 1016 - Red soul 38 (Mandragora) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_mandragora.c` ports

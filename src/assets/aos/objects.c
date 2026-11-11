@@ -409,6 +409,9 @@ static const EntitySpec entities[] = {
      * frame 11 and its distinct probe table 0x084F139C. */
     {"skill_ripper", 0x081CC8C8, 0x0820B068, 0, 0x08230AE0, 0x084F139C,
      0, 0, 3, {0, 1, 11}},
+    /* Entry 0x6 of 0x080E13BC: SkillChronomageUse reuses the Ripper
+     * record's animation sequences (sequence 0, + 0x5C = 0xD). */
+    ENTITY("skill_chronomage", 0x081CC8C8, 0x0820B068, 0, 0x08230AE0),
     /* Resource 11 of 0x080E13BC: Killer Fish's appearance sequence 1 and
      * looping swim/fall sequence 0. */
     ENTITY("skill_killer_fish", 0x081D18F0, 0x0820B1F0, 0, 0x082321E4),

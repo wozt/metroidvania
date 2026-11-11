@@ -48,6 +48,7 @@
 #include "aos/red_souls/aos_soul_red_altair.h"
 #include "aos/red_souls/aos_soul_red_une.h"
 #include "aos/red_souls/aos_soul_red_mandragora.h"
+#include "aos/red_souls/aos_soul_red_chronomage.h"
 #include "aos/red_souls/aos_soul_red_were_beast.h"
 #include "aos/red_souls/aos_soul_red_flame_demon.h"
 #include "aos/red_souls/aos_soul_red_devil.h"
@@ -326,7 +327,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
        SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD,
-       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ARTS };
+       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -347,7 +348,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
                                                          "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord",
-                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora"};
+                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -973,7 +974,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_WEREWOLF, SKILL_KILLER_MANTLE, SKILL_WERE_BEAST,
        SKILL_FLAME_DEMON, SKILL_FLAME_BOLT, SKILL_DEMON_LORD, SKILL_FLAME_SPIRIT,
        SKILL_BIPHRON, SKILL_BIPHRON_TOTEM, SKILL_BALORE, SKILL_KYOMA_DEMON,
-       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL, SKILL_UKOBACK, SKILL_ALTAIR, SKILL_UNE, SKILL_MANDRAGORA };
+       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL, SKILL_UKOBACK, SKILL_ALTAIR, SKILL_UNE, SKILL_MANDRAGORA, SKILL_CHRONOMAGE };
 
 typedef struct {
     bool alive, started;
@@ -1023,6 +1024,7 @@ typedef struct {
     AosAltair altair;         /* SKILL_ALTAIR */
     AosUne une;             /* SKILL_UNE */
     AosMandragora mandragora; /* SKILL_MANDRAGORA */
+    AosChronomage chronomage; /* SKILL_CHRONOMAGE */
     uint8_t volley_count;      /* SKILL_DEMON_LORD spawn gate */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
@@ -1071,6 +1073,7 @@ typedef struct {
 #define SKILL_ALTAIR_ROUTINE 0x08027A04u
 #define SKILL_UNE_ROUTINE 0x080265C0u
 #define SKILL_MANDRAGORA_ROUTINE 0x0802AD78u
+#define SKILL_CHRONOMAGE_ROUTINE 0x08024950u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1107,6 +1110,7 @@ typedef struct {
     const AosAnimSet *altair;         /* skill_altair, sequences 0-2 */
     const AosAnimSet *une;           /* skill_une, sequence 0 */
     const AosAnimSet *mandragora;     /* skill_mandragora, sequences 0-1 */
+    const AosAnimSet *chronomage;     /* skill_ripper art, sequence 0 */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
@@ -1255,6 +1259,8 @@ static int cast_red_soul(void *context) {
                    ? SKILL_UNE
                : routine == SKILL_MANDRAGORA_ROUTINE && souls->mandragora
                    ? SKILL_MANDRAGORA
+               : routine == SKILL_CHRONOMAGE_ROUTINE && souls->chronomage
+                   ? SKILL_CHRONOMAGE
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1364,6 +1370,13 @@ static int cast_red_soul(void *context) {
         skill->x = skill->student_witch.body.x;
         skill->y = skill->student_witch.body.y;
         skill->facing_left = skill->student_witch.body.mirrored;
+    } else if (kind == SKILL_CHRONOMAGE) {
+        /* The native copies the source + 0x1E into the global + 0x4BE
+         * hold field; the soul record's value is not decoded here, so
+         * the runtime passes a documented 0x100-frame hold. */
+        skill->chronomage = aos_chronomage_create(0x100);
+        place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left,
+              0, -0x30);
     } else if (kind == SKILL_MANDRAGORA) {
         skill->mandragora = aos_mandragora_create();
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left,
@@ -2542,6 +2555,33 @@ static void update_skills(AriaSouls *souls) {
                                seqs[skill->mandragora.state], false);
             break;
         }
+        case SKILL_CHRONOMAGE:
+            /* SkillChronomageUse: counted on its first update, sequence
+             * 0, songs 0x1030, 0x19D and 0xEC at init (the later calls
+             * queue over the earlier ones natively; all three are
+             * requested here), + 0x5C = 0xD, + 0x59 |= 0x12, the
+             * source + 0x46 - 0x30 anchor; state 1 ramps + 0x20/+ 0x24
+             * toward 0x10000 while the + 0x4BE hold counts down with a
+             * 0x16E tick every sixteenth frame, state 2 releases over
+             * 0x20 frames and deletes; the published + 0x12FE4 time
+             * value, the sub_0803E654 variant pick, the sub_0803E058
+             * visual and the conditional release songs are not ported. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0x1030);
+                aos_audio_play_song(0x19D);
+                aos_audio_play_song(0xEC);
+                aos_anim_start(&skill->anim, souls->chronomage, 0, false);
+            }
+            place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left,
+                  0, -0x30);
+            if (!aos_chronomage_update(&skill->chronomage)) {
+                end_skill(souls, skill);
+                break;
+            }
+            if (skill->chronomage.tick) aos_audio_play_song(0x16E);
+            break;
         case SKILL_FLAME_DEMON:
             /* SkillFlameDemonUse: one counted cast plays song 0xD8, emits
              * a sub_08045CEC(0xC, 6) burst and a fan of 3 or 5
@@ -8010,6 +8050,12 @@ int aria_runtime_main(int argc, char **argv) {
                                        mandragora->defs[0].count
                                    ? &mandragora->set
                                    : NULL;
+            const __typeof__(objects.skills[0]) *chronomage =
+                &objects.skills[SKILL_ART_CHRONOMAGE];
+            souls.chronomage = objects_ok && chronomage->loaded &&
+                                       chronomage->defs[0].count
+                                   ? &chronomage->set
+                                   : NULL;
             const __typeof__(objects.skills[0]) *mantle =
                 &objects.skills[SKILL_ART_KILLER_MANTLE];
             souls.killer_mantle = objects_ok && mantle->loaded && mantle->defs[0].count
@@ -8456,6 +8502,8 @@ int aria_runtime_main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_UNE].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_MANDRAGORA
                     ? &objects.skills[SKILL_ART_MANDRAGORA].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_CHRONOMAGE
+                    ? &objects.skills[SKILL_ART_CHRONOMAGE].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_NEMESIS
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_NEMESIS_SOUL_SEQUENCE][skill->anim.frame]

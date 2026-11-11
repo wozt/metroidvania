@@ -1,3 +1,17 @@
+## Patch 1008 - Red soul 50 (Balore) ported
+
+- `SkillBaloreUse` (routine 0x0802C2C4) reuses the tested
+  `AosWereBeast` machine as SKILL_BALORE: counted cast, attack box
+  preset 5, song 0x1A1, `sub_08031EA4(entity, source, 0, 0)` glue to
+  Soma, anim-end or `(source + 0x10 & 0x180) != 0x100` delete. The
+  `sub_080213F4` bonus branch (song 0x19F) is approximated as false —
+  its + 0x13220 record is never populated.
+- `src/assets/aos/objects.c` exports `skill_balore` (entry 0x168 of
+  0x080E13BC: tiles 0x081DB13C, palette 0x0820B49C, frames
+  0x08235C8C); object library: 1597 sequences.
+- No new module: `aos_soul_red_were_beast.c` already covers the shared
+  three-state machine. Remaining soul backlog: 18 red + 5 blue.
+
 ## Patch 1007 - Red soul 37 (Biphron) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_biphron.c` ports

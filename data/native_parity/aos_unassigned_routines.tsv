@@ -33,7 +33,6 @@ aos:asm:asm/code/code_08014548.s:sub_0801FEF8	sub_0801FEF8	unclassified				asm_f
 aos:asm:asm/code/code_080211F0.s:SkillAlastorUse	SkillAlastorUse	abilities	name			asm_function		asm/code/code_080211F0.s	32358	0	22
 aos:asm:asm/code/code_080211F0.s:SkillAltairUse	SkillAltairUse	abilities	name			asm_function		asm/code/code_080211F0.s	13123	0	13
 aos:asm:asm/code/code_080211F0.s:SkillArachneUse	SkillArachneUse	abilities	name			asm_function		asm/code/code_080211F0.s	15671	0	15
-aos:asm:asm/code/code_080211F0.s:SkillBaloreUse	SkillBaloreUse	abilities	name			asm_function		asm/code/code_080211F0.s	22070	0	12
 aos:asm:asm/code/code_080211F0.s:SkillCockatriceUse	SkillCockatriceUse	abilities	name			asm_function		asm/code/code_080211F0.s	16620	0	15
 aos:asm:asm/code/code_080211F0.s:SkillCreakingSkullUse	SkillCreakingSkullUse	abilities	name			asm_function		asm/code/code_080211F0.s	31037	0	8
 aos:asm:asm/code/code_080211F0.s:SkillDiscArmorUse	SkillDiscArmorUse	abilities	name			asm_function		asm/code/code_080211F0.s	12290	0	13
@@ -1053,7 +1052,6 @@ aos:c:src/code/code_080211F0.c:sub_08021344	sub_08021344	unclassified				c_funct
 aos:c:src/code/code_080211F0.c:sub_0802138C	sub_0802138C	unclassified				c_function	0x0802138C	src/code/code_080211F0.c	170	3	0
 aos:c:src/code/code_080211F0.c:sub_080213A4	sub_080213A4	environment	referrers			c_function	0x080213A4	src/code/code_080211F0.c	180	1	0
 aos:c:src/code/code_080211F0.c:sub_080213BC	sub_080213BC	unclassified				c_function	0x080213BC	src/code/code_080211F0.c	189	7	1
-aos:c:src/code/code_080211F0.c:sub_080213F4	sub_080213F4	abilities	referrers			c_function	0x080213F4	src/code/code_080211F0.c	201	3	0
 aos:c:src/code/code_080211F0.c:sub_08021438	sub_08021438	unclassified				c_function	0x08021438	src/code/code_080211F0.c	226	3	1
 aos:c:src/code/code_080211F0.c:sub_08021494	sub_08021494	unclassified				c_function	0x08021494	src/code/code_080211F0.c	247	1	1
 aos:c:src/code/code_080211F0.c:sub_080214D0	sub_080214D0	unclassified				c_function	0x080214D0	src/code/code_080211F0.c	267	0	1

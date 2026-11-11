@@ -434,6 +434,10 @@ static const EntitySpec entities[] = {
      * sub_080286BC totems (0x084F13B4 probes, attack box preset 5). */
     {"skill_biphron", 0x081D3900, 0x0820B280, 0, 0x082331BC, 0x084F13B4,
      0, 0, 0, {0}},
+    /* Entry 0x168 of 0x080E13BC: SkillBaloreUse's glued familiar
+     * (attack box preset 5, no walker probes). */
+    {"skill_balore", 0x081DB13C, 0x0820B49C, 0, 0x08235C8C, 0,
+     0, 0, 0, {0}},
     /* Resource 6 of 0x080E13BC: the Killer Doll soul's decoy (looping
      * sequence 0 or 1). */
     ENTITY("skill_killer_doll", 0x081CF0DC, 0x0820B11C, 0, 0x08231578),

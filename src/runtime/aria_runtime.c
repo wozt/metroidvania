@@ -319,7 +319,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
        SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD,
-       SKILL_ART_BIPHRON, SKILL_ARTS };
+       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -340,7 +340,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
                                                          "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord",
-                                                         "skill_biphron"};
+                                                         "skill_biphron", "skill_balore"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -965,7 +965,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_KILLER_FISH, SKILL_GLADIATOR, SKILL_LIGHTNING, SKILL_DECOY, SKILL_NEMESIS,
        SKILL_WEREWOLF, SKILL_KILLER_MANTLE, SKILL_WERE_BEAST,
        SKILL_FLAME_DEMON, SKILL_FLAME_BOLT, SKILL_DEMON_LORD, SKILL_FLAME_SPIRIT,
-       SKILL_BIPHRON, SKILL_BIPHRON_TOTEM };
+       SKILL_BIPHRON, SKILL_BIPHRON_TOTEM, SKILL_BALORE };
 
 typedef struct {
     bool alive, started;
@@ -1046,6 +1046,7 @@ typedef struct {
 #define SKILL_FLAME_DEMON_ROUTINE 0x080293C4u
 #define SKILL_DEMON_LORD_ROUTINE 0x0802BF68u
 #define SKILL_BIPHRON_ROUTINE 0x08028800u
+#define SKILL_BALORE_ROUTINE 0x0802C2C4u
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1071,6 +1072,7 @@ typedef struct {
     const AosEnemyKind *werewolf_kind; /* its 0x084F13B4 walker probes */
     const AosAnimSet *biphron;        /* skill_biphron, sequence 0 */
     const AosEnemyKind *biphron_kind; /* its 0x084F13B4 walker probes */
+    const AosAnimSet *balore;         /* skill_balore, sequence 0 */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
@@ -1199,6 +1201,8 @@ static int cast_red_soul(void *context) {
                : routine == SKILL_BIPHRON_ROUTINE && souls->biphron &&
                          souls->biphron_kind && souls->biphron_kind->probes.count
                    ? SKILL_BIPHRON
+               : routine == SKILL_BALORE_ROUTINE && souls->balore
+                   ? SKILL_BALORE
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1293,6 +1297,9 @@ static int cast_red_soul(void *context) {
         skill->x = skill->biphron.body.x;
         skill->y = skill->biphron.body.y;
         skill->facing_left = skill->biphron.body.mirrored;
+    } else if (kind == SKILL_BALORE) {
+        skill->were_beast = aos_were_beast_create();
+        place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, 0);
     } else if (kind == SKILL_LIGHTNING) {
         skill->lightning = aos_lightning_create(souls->soma->x, souls->soma->y,
                                                 souls->soma->facing_left, aos_random() & 1);
@@ -2168,6 +2175,25 @@ static void update_skills(AriaSouls *souls) {
             if (!aos_were_beast_update(&skill->were_beast, beast_anim_done, false))
                 end_skill(souls, skill);
             break;
+        case SKILL_BALORE:
+            /* SkillBaloreUse: counted on its first update, attack box
+             * preset 5, song 0x1A1 — the sub_080213F4 bonus branch (shared
+             * with SkillLightningDollUse and Skill_Devil_Manticore_Curly_Use)
+             * is approximated as false because its + 0x13220 record is
+             * never populated; sub_08031EA4(entity, source, 0, 0) re-places
+             * it on Soma every frame, and it ends on the animation end or
+             * the (source + 0x10 & 0x180) != 0x100 check. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0x1A1);
+                aos_anim_start(&skill->anim, souls->balore, 0, false);
+            }
+            place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, 0);
+            bool balore_anim_done = aos_anim_step(&skill->anim, souls->balore) == 3;
+            if (!aos_were_beast_update(&skill->were_beast, balore_anim_done, false))
+                end_skill(souls, skill);
+            break;
         case SKILL_FLAME_DEMON:
             /* SkillFlameDemonUse: one counted cast plays song 0xD8, emits
              * a sub_08045CEC(0xC, 6) burst and a fan of 3 or 5
@@ -2970,7 +2996,7 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
             box = souls->werewolf_kind->attack[0][skill->anim.frame];
         else if (skill->kind == SKILL_KILLER_MANTLE)
             box = (AosBox){-8, -8, 16, 16};    /* preset 5, approximated */
-        else if (skill->kind == SKILL_WERE_BEAST)
+        else if (skill->kind == SKILL_WERE_BEAST || skill->kind == SKILL_BALORE)
             box = (AosBox){-8, -8, 16, 16};    /* preset 5, approximated */
         else if (skill->kind == SKILL_FLAME_BOLT || skill->kind == SKILL_FLAME_SPIRIT)
             box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 / preset 5 */
@@ -7587,6 +7613,11 @@ int aria_runtime_main(int argc, char **argv) {
                                 ? &biphron->set
                                 : NULL;
             souls.biphron_kind = souls.biphron ? &biphron->kind : NULL;
+            const __typeof__(objects.skills[0]) *balore =
+                &objects.skills[SKILL_ART_BALORE];
+            souls.balore = objects_ok && balore->loaded && balore->defs[0].count
+                               ? &balore->set
+                               : NULL;
             const __typeof__(objects.skills[0]) *mantle =
                 &objects.skills[SKILL_ART_KILLER_MANTLE];
             souls.killer_mantle = objects_ok && mantle->loaded && mantle->defs[0].count
@@ -8015,6 +8046,8 @@ int aria_runtime_main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_DEMON_LORD].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_BIPHRON || skill->kind == SKILL_BIPHRON_TOTEM
                     ? &objects.skills[SKILL_ART_BIPHRON].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_BALORE
+                    ? &objects.skills[SKILL_ART_BALORE].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_NEMESIS
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_NEMESIS_SOUL_SEQUENCE][skill->anim.frame]

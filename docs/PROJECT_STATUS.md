@@ -1,3 +1,19 @@
+## Patch 1016 - Red soul 38 (Mandragora) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_mandragora.c` ports
+  `SkillMandragoraUse` (routine 0x0802AD78): stationary plant, song
+  0xDF, attack box preset 5 plus `0x7F7FC0C0`, leaf emission every
+  fourth `+ 0x0D` frame at a sine-offset position (approximated by
+  `AOS_EFFECT_DUST`), `+ 0x6C` hit flag starts the 0x20 + 8 frame
+  death sequence, margin-4 delete. Leaf entity fields, palette
+  effects and flag bookkeeping documented as skipped.
+- `src/assets/aos/objects.c` exports `skill_mandragora` (entry
+  0x12C of 0x080E13BC: tiles 0x081D8928, palette 0x0820B3E8, frames
+  0x08234BB4); object library: 1617 sequences.
+- `tests/test_aos_soul_red_mandragora.c` covers the emission cadence,
+  sine offsets and death timing. Remaining soul backlog: 10 red + 5
+  blue.
+
 ## Patch 1015 - Red soul 25 (Une) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_une.c` ports

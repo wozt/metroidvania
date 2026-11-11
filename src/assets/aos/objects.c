@@ -466,6 +466,10 @@ static const EntitySpec entities[] = {
      * 0x084F13AA walker probes (the shot table lookups are not ported). */
     {"skill_une", 0x081CC0C4, 0x0820B044, 0, 0x082308E8, 0x084F13AA,
      0, 0, 0, {0}},
+    /* Entry 0x12C of 0x080E13BC: SkillMandragoraUse's plant (sequence 0,
+     * + 0x5C = 0xF; the leaf particles of sub_08045CEC are not ported). */
+    {"skill_mandragora", 0x081D8928, 0x0820B3E8, 0, 0x08234BB4, 0,
+     0, 0, 0, {0}},
     /* Resource 6 of 0x080E13BC: the Killer Doll soul's decoy (looping
      * sequence 0 or 1). */
     ENTITY("skill_killer_doll", 0x081CF0DC, 0x0820B11C, 0, 0x08231578),

@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "aos/core/aos_enemy.h"
-#include "aos/core/aos_collision.h"
+#include "../../aos/core/aos_enemy.h"
+#include "../../aos/core/aos_collision.h"
 
 /* SkillUneUse's bouncing walker: sub_0806CAF8 walks it at -+ 0x24 with
  * the 0x084F13AA probes; a wall hit (result & 3) negates and halves the

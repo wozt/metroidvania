@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-11T02:07:08+00:00",
+ "generated_at": "2026-11-11T11:43:47+00:00",
  "git": {
-  "commit": "6f10fb0a",
+  "commit": "ea514aac",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 280,
+   "total": 281,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 214,
+    "functional": 215,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 214,
-   "functional_or_better_percent": 76.4,
-   "with_passing_tests": 267,
+   "functional_or_better": 215,
+   "functional_or_better_percent": 76.5,
+   "with_passing_tests": 268,
    "with_passing_tests_percent": 95.4,
    "unknown_or_blocked": 1,
    "features": [
@@ -259,6 +259,7 @@
     "aos.enemies.killer_fish",
     "aos.enemies.killer_mantle",
     "aos.enemies.kyoma_demon",
+    "aos.enemies.legion",
     "aos.enemies.lightning_doll",
     "aos.enemies.lilith",
     "aos.enemies.lubicant",
@@ -514,20 +515,20 @@
    "areas": [
     "aos"
    ],
-   "total": 135,
+   "total": 136,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 107,
+    "functional": 108,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 107,
-   "functional_or_better_percent": 79.3,
-   "with_passing_tests": 135,
+   "functional_or_better": 108,
+   "functional_or_better_percent": 79.4,
+   "with_passing_tests": 136,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -589,6 +590,7 @@
     "aos.enemies.killer_fish",
     "aos.enemies.killer_mantle",
     "aos.enemies.kyoma_demon",
+    "aos.enemies.legion",
     "aos.enemies.lightning_doll",
     "aos.enemies.lilith",
     "aos.enemies.lubicant",
@@ -14172,6 +14174,105 @@
    }
   },
   {
+   "id": "aos.enemies.legion",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Legion",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/enemies/legion.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyLegionCreate",
+    "EnemyLegionUpdate",
+    "sub_0809C994",
+    "sub_0809D138",
+    "sub_0809D51C",
+    "sub_0809DB00",
+    "sub_0809DF7C",
+    "sub_0809E0C0",
+    "sub_0809DE80",
+    "sub_0809DF00",
+    "sub_0809E888",
+    "sub_0809EF48",
+    "sub_0809F0D0",
+    "sub_0809F224",
+    "sub_0809F304",
+    "sub_0809F410",
+    "sub_0809F6E0",
+    "sub_0809F764",
+    "sub_0809F854",
+    "sub_0809FC0C",
+    "sub_0809FD9C",
+    "sub_0809FE4C",
+    "sub_0809FE78",
+    "sub_0809FED0",
+    "sub_0809FF10",
+    "sub_0809FF44",
+    "sub_0809FF78",
+    "sub_0809FFEC",
+    "sub_080A0030",
+    "sub_080A005C",
+    "PlaySong",
+    "RandomNumberGenerator"
+   ],
+   "limitations": "EnemyLegionCreate (0x0809C6BC) through sub_0809DE80 loads tiles 0x081190C0 — an encoding-3 container of compressed encoding-1 sub-sheets, newly supported by the object exporter — palette 0x0820AC4C and frames 0x082258FC shared with the soldiers, allocates the + 0x14 container (0x1C bytes), gates on the + 0x30 param0 room word and the gEwramData + 0x4CC/+ 0x37E bits, and spawns five sub_0809DF7C soldier entities whose sub_0809E0C0 brains parent-lock, track the player and volley. EnemyLegionUpdate (0x0809C5E8) hides beyond the sub_0806D128(6) margins, runs the shared collide and dispatches four states: state 0 (sub_0809C994) is the coordination machine — the container +0x10 ramp, the sub_0809DB00 soldier AI gate and the attack entries; state 1 (sub_0809D138) is the attack machine with the +0xD timer to 0xC7, the 13-entry jump table and the 0x6F/0x8F songs; state 2 (sub_0809D51C) is the thirteen-case death machine with the 0x6E lethal song and the 0x31/0x6F/0x8E accents over container and child cleanup; state 3 (sub_080A005C) is dormant. Unit-tested in legion_tests.",
+   "next_action": "Port red soul 49 (no update routine ported yet); compare the soldier volley cadence and the state-1 jump-table choreography against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_07_room_037 (enemy id 108 at 256,256): Legion coordinates five soldiers that fan out, track Soma and volley shots"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
+   }
+  },
+  {
    "id": "aos.enemies.lightning_doll",
    "area": "aos",
    "category": "enemies",
@@ -26771,6 +26872,12 @@
  },
  "timeline": [
   {
+   "commit": "ea514aac",
+   "date": "2026-11-11",
+   "subject": "aos: port Creaking Skull and Giant Skeleton (ids 33, 92)",
+   "scope": "project"
+  },
+  {
    "commit": "6f10fb0a",
    "date": "2026-11-11",
    "subject": "aos: port Balore (id 109)",
@@ -27243,12 +27350,6 @@
    "date": "2026-11-09",
    "subject": "Compile Skull Archer family as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "1d9a40bc",
-   "date": "2026-11-09",
-   "subject": "Compile Rock Armor family as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -27309,9 +27410,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1717,
-    "routines_attached_to_features": 1717,
-    "unassigned_routines": 1856,
+    "routines_cited_by_features": 1747,
+    "routines_attached_to_features": 1747,
+    "unassigned_routines": 1826,
     "call_edges": 14228
    }
   },
@@ -29563,12 +29664,12 @@
      },
      "bosses": {
       "total": 11,
-      "implemented": 4,
-      "functional_or_better": 4,
-      "functional_or_better_percent": 36,
+      "implemented": 5,
+      "functional_or_better": 5,
+      "functional_or_better_percent": 45,
       "by_status": {
-       "functional": 4,
-       "not_started": 7
+       "functional": 5,
+       "not_started": 6
       }
      },
      "items": {
@@ -32472,13 +32573,28 @@
      {
       "id": 108,
       "name": "Legion",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Legion",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_07_room_037 (enemy id 108 at 256,256): Legion coordinates five soldiers that fan out, track Soma and volley shots"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.legion",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "n/a",
+       "soul": "partial",
+       "soul_ref": "red:49",
+       "notes": "Soul: drops (soul_index 49, soul_rarity 0 through the boss soul path) and is collected, but its red soul 49 has no ported update yet. Animations: ported from EnemyLegionCreate (0x0809C6BC) / EnemyLegionUpdate (0x0809C5E8) and the sub_0809C994 state-0 coordination machine, the sub_0809D138 state-1 attack, the sub_0809D51C thirteen-case death machine, the sub_0809DF7C soldier spawn block, the sub_0809E0C0 soldier brain and the sub_0809DE80 resource loader — the shared animation record 0x082258FC through the shared play/step helpers; unit-tested in legion_tests. Sounds: PlaySong 0x6F (attack entry), 0x8F (mid-volley accent), 0x31 (soldier shot), 0x6E (lethal) and the 0x6F/0x8E death accents are requested and unit-tested, not listened to. Sprite: tiles 0x081190C0 — an encoding-3 multi-sheet container whose leaves are compressed encoding-1 sub-descriptors — palette 0x0820AC4C, animation record 0x082258FC exported natively, shared by the body and every soldier/shot/gore child. Loot: the enemies.tsv record drops nothing (common/rare item 0). Divergences: the + 0x14 container entity folds into the parent lg_* fields, the five sub_0809DF7C soldier entities fold into the persistent AOS_ROLE_LG_SOLDIER children emitted under the 8-child cap, the sub_0809DB00 ten-case soldier AI and the 0x085281C8-0x0852835C choreography tables collapse to a documented cycle, the state-1 thirteen-case jump table keeps its +0xD timer cadence as a volley window, the state-2 death machine collapses to its song stingers over a gore timer, the soldier projectiles and debris become AOS_ROLE_LG_SHOT/LG_GORE children, the sub_0809DE80 palette merge and the sub_08013CF0/sub_08034498 event calls are approximated or not ported, and there is no emulator comparison."
       }
      },
      {
@@ -32547,17 +32663,17 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 104,
+      "ported": 105,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 104,
+      "ported": 105,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 103,
+      "ported": 104,
       "partial": 0,
       "missing": 0
      },
@@ -32568,11 +32684,11 @@
      },
      "soul": {
       "ported": 70,
-      "partial": 34,
+      "partial": 35,
       "missing": 0
      },
      "complete": 70,
-     "monsters": 104
+     "monsters": 105
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -37052,7 +37168,7 @@
        "id": "05:31",
        "name": "Legion",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 49, soul_rarity 0 through the boss soul path) and is collected, but its red soul 49 has no ported update yet. Animations: ported from EnemyLegionCreate (0x0809C6BC) / EnemyLegionUpdate (0x0809C5E8) and the sub_0809C994 state-0 coordination machine, the sub_0809D138 state-1 attack, the sub_0809D51C thirteen-case death machine, the sub_0809DF7C soldier spawn block, the sub_0809E0C0 soldier brain and the sub_0809DE80 resource loader — the shared animation record 0x082258FC through the shared play/step helpers; unit-tested in legion_tests. Sounds: PlaySong 0x6F (attack entry), 0x8F (mid-volley accent), 0x31 (soldier shot), 0x6E (lethal) and the 0x6F/0x8E death accents are requested and unit-tested, not listened to. Sprite: tiles 0x081190C0 — an encoding-3 multi-sheet container whose leaves are compressed encoding-1 sub-descriptors — palette 0x0820AC4C, animation record 0x082258FC exported natively, shared by the body and every soldier/shot/gore child. Loot: the enemies.tsv record drops nothing (common/rare item 0). Divergences: the + 0x14 container entity folds into the parent lg_* fields, the five sub_0809DF7C soldier entities fold into the persistent AOS_ROLE_LG_SOLDIER children emitted under the 8-child cap, the sub_0809DB00 ten-case soldier AI and the 0x085281C8-0x0852835C choreography tables collapse to a documented cycle, the state-1 thirteen-case jump table keeps its +0xD timer cadence as a volley window, the state-2 death machine collapses to its song stingers over a gore timer, the soldier projectiles and debris become AOS_ROLE_LG_SHOT/LG_GORE children, the sub_0809DE80 palette merge and the sub_08013CF0/sub_08034498 event calls are approximated or not ported, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",

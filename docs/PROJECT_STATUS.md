@@ -1,3 +1,26 @@
+## Patch 0991 - Legion ported (id 108)
+
+- `EnemyLegionCreate` (0x0809C6BC) / `EnemyLegionUpdate`
+  (0x0809C5E8): tiles `0x081190C0` — the first encoding-3
+  graphics container, whose leaves are compressed encoding-1
+  sub-descriptors; `objects.c` now parses the `03 <count> 04 02`
+  block form alongside the encoding-2 raw leaves — palette
+  `0x0820AC4C`, frames `0x082258FC` shared with every child.
+- `legion.c` ports the architecture: the `+0x14` container's
+  five `sub_0809DF7C` soldier entities fold into the persistent
+  `AOS_ROLE_LG_SOLDIER` children emitted under the 8-child cap;
+  state 0 (`sub_0809C994`) is the coordination machine with the
+  container `+0x10` ramp and the `sub_0809DB00` soldier AI gate,
+  state 1 (`sub_0809D138`) is the attack with the `+0xD` timer
+  to 0xC7, the jump-table cadence and songs 0x6F/0x8F, state 2
+  (`sub_0809D51C`) is the death machine with song 0x6E and
+  `LG_GORE` debris, state 3 dormant.
+- Red soul 49 has no ported update routine: the aspect is
+  `partial`.
+- Unit-tested in `legion_tests` (create awake/dormant, five
+  soldier emission, soldier tracking/shot/death-with-parent,
+  attack songs, lethal state 2 and delete).
+
 ## Patch 0990 - Creaking Skull and Giant Skeleton ported (ids 33, 92)
 
 - `EnemyCreakingSkullCreate` (0x0809549C) /

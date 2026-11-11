@@ -41,7 +41,7 @@ typedef struct {
     uint16_t experience;    /* record + 0x10, granted by sub_080683BC */
 } AosEnemyStats;
 
-#define AOS_ENEMY_MAX_ANIMS 20
+#define AOS_ENEMY_MAX_ANIMS 64
 #define AOS_ENEMY_MAX_CHILDREN 8
 #define AOS_ENEMY_MAX_FRAMES 40
 #define AOS_NEMESIS_EFFECT_HISTORY 24
@@ -193,6 +193,7 @@ enum {
     AOS_ENEMY_BALORE = 0x6D,
     AOS_ENEMY_CREAKING_SKULL = 0x21,
     AOS_ENEMY_GIANT_SKELETON = 0x5C,
+    AOS_ENEMY_LEGION = 0x6C,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -278,7 +279,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_BALO_LIMB1 = 153, AOS_ROLE_BALO_BLADE = 154,
        AOS_ROLE_BALO_SHOT = 155, AOS_ROLE_BALO_FX = 156,
        AOS_ROLE_CS_BONE = 157, AOS_ROLE_CS_SHOT = 158,
-       AOS_ROLE_CS_GORE = 159 };
+       AOS_ROLE_CS_GORE = 159, AOS_ROLE_LG_SOLDIER = 160,
+       AOS_ROLE_LG_SHOT = 161, AOS_ROLE_LG_GORE = 162 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -815,6 +817,13 @@ typedef struct AosEnemy {
      * state-0 attack cooldown and `cs_hits` the landed-shot count
      * the state-1 gates read. */
     uint8_t cs_bone, cs_pose, cs_cool, cs_hits;
+    /* Legion (EnemyLegionCreate 0x0809C6BC, EnemyLegionUpdate
+     * 0x0809C5E8): `lg_slot` is the 0..4 soldier index of an
+     * AOS_ROLE_LG_SOLDIER child (the native sub_0809DF7C room
+     * entities), `lg_seq` its attack sequence step and `lg_wait`
+     * the parent state-0 coordination counter the container +0x10
+     * folds into. */
+    uint8_t lg_slot, lg_seq, lg_wait;
     /* Balore (id 0x6D): the + 0x12 animation index the state machines
      * feed to the 0x085287C4 table, the + 0x1C/+ 0x1D frame bytes of
      * the limb children, the + 0x18 hover flag and the orbit angle

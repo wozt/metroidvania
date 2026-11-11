@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 135 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 136 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1717 | 1856 |
+| Castlevania: Aria of Sorrow | 1747 | 1826 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -1877,6 +1877,14 @@ Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_nativ
 Known divergences: The spawn window of sub_080A02AC is approximated: the native latches + 0x14/+ 0x16 and + 0x1C/+ 0x20 against the room scroll at create, the camera is only known on the first update here so they latch lazily; the func_0803F0E4 reveal and death children (records 0x08528364 / 0x0852836C) are approximated by spark drifts; the sub_0806D518 blink table is ported but its sign-extension edge cases collapse to the 40-byte table; the sub_08042B8C knockback, the + 0x5A palette merges, the sub_0806D128 activity window and sub_08021924/sub_080421AC bookkeeping are not ported; and there is no emulator comparison.  
 Next action: Port the red soul 54 update and compare a room fight against an emulator.
 Evidence: in game: `aria area_04_room_012: three Kyoma Demons hold their spawn windows and copy Soma's position`.
+
+[+] **`aos.enemies.legion` — Legion.** EnemyLegionCreate (0x0809C6BC) through sub_0809DE80 loads tiles 0x081190C0 — an encoding-3 container of compressed encoding-1 sub-sheets, newly supported by the object exporter — palette 0x0820AC4C and frames 0x082258FC shared with the soldiers, allocates the + 0x14 container (0x1C bytes), gates on the + 0x30 param0 room word and the gEwramData + 0x4CC/+ 0x37E bits, and spawns five sub_0809DF7C soldier entities whose sub_0809E0C0 brains parent-lock, track the player and volley. EnemyLegionUpdate (0x0809C5E8) hides beyond the sub_0806D128(6) margins, runs the shared collide and dispatches four states: state 0 (sub_0809C994) is the coordination machine — the container +0x10 ramp, the sub_0809DB00 soldier AI gate and the attack entries; state 1 (sub_0809D138) is the attack machine with the +0xD timer to 0xC7, the 13-entry jump table and the 0x6F/0x8F songs; state 2 (sub_0809D51C) is the thirteen-case death machine with the 0x6E lethal song and the 0x31/0x6F/0x8E accents over container and child cleanup; state 3 (sub_080A005C) is dormant. Unit-tested in legion_tests.
+
+Native evidence: `aos:asm:asm/code/code_08090914.s:EnemyLegionCreate`, `aos:asm:asm/code/code_08090914.s:EnemyLegionUpdate`, `aos:asm:asm/code/code_08090914.s:sub_0809C994`, `aos:asm:asm/code/code_08090914.s:sub_0809D138`, `aos:asm:asm/code/code_08090914.s:sub_0809D51C`, `aos:asm:asm/code/code_08090914.s:sub_0809DB00`, `aos:asm:asm/code/code_08090914.s:sub_0809DE80`, `aos:asm:asm/code/code_08090914.s:sub_0809DF00`, `aos:asm:asm/code/code_08090914.s:sub_0809DF7C`, `aos:asm:asm/code/code_08090914.s:sub_0809E0C0`, `aos:asm:asm/code/code_08090914.s:sub_0809E888`, `aos:asm:asm/code/code_08090914.s:sub_0809EF48`, `aos:asm:asm/code/code_08090914.s:sub_0809F0D0`, `aos:asm:asm/code/code_08090914.s:sub_0809F224`, `aos:asm:asm/code/code_08090914.s:sub_0809F304`, `aos:asm:asm/code/code_08090914.s:sub_0809F410`, `aos:asm:asm/code/code_08090914.s:sub_0809F6E0`, `aos:asm:asm/code/code_08090914.s:sub_0809F764`, `aos:asm:asm/code/code_08090914.s:sub_0809F854`, `aos:asm:asm/code/code_08090914.s:sub_0809FC0C`, `aos:asm:asm/code/code_08090914.s:sub_0809FD9C`, `aos:asm:asm/code/code_08090914.s:sub_0809FE4C`, `aos:asm:asm/code/code_08090914.s:sub_0809FE78`, `aos:asm:asm/code/code_08090914.s:sub_0809FED0`, `aos:asm:asm/code/code_08090914.s:sub_0809FF10`, `aos:asm:asm/code/code_08090914.s:sub_0809FF44`, `aos:asm:asm/code/code_08090914.s:sub_0809FF78`, `aos:asm:asm/code/code_08090914.s:sub_0809FFEC`, `aos:asm:asm/code/code_08090914.s:sub_080A0030`, `aos:asm:asm/code/code_08090914.s:sub_080A005C`, `aos:c:src/code_080009A0.c:RandomNumberGenerator`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/core/aos_enemy.c`](../src/runtime/aos/core/aos_enemy.c), [`src/runtime/aos/core/aos_enemy_internal.h`](../src/runtime/aos/core/aos_enemy_internal.h), [`src/runtime/aos/enemies/legion.c`](../src/runtime/aos/enemies/legion.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_enemy.c`](../tests/test_aos_enemy.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Next action: Port red soul 49 (no update routine ported yet); compare the soldier volley cadence and the state-1 jump-table choreography against an emulator.
+Evidence: in game: `aria area_07_room_037 (enemy id 108 at 256,256): Legion coordinates five soldiers that fan out, track Soma and volley shots`.
 
 [+] **`aos.enemies.lightning_doll` — Lightning Doll.** The dormant wake-up, the six random bounded flight paths, the electrical charge with its native attack box and a spark following Soma, the timed landing and takeoff, the inert animation cycle under gEwramData + 0x8E bit 0x40, and the death into five native pieces with their trajectories, bounce, blinking, flame glows, dust and owner lifetime are ported. Its spark loop 0x75 is held (sub_08013D60) when the charge starts and again every 16 frames of the spark countdown above 0x20, and released (sub_08013E18) when the attack ends, while it flashes from a blow and at death; sub_080C8FBC then plays 0x6E, and each floor bounce of piece 1 plays 0x153 (sub_080C9284); all unit-tested. sub_080C997C's step-0 path (0x6E as well) is not reached by the code read.
 

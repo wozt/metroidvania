@@ -82,7 +82,7 @@
 #define MAX_FRAMES 80
 /* Opening actors and SPECIAL objects share one art struct; the shared
  * flame descriptor 0x0820ED60 exports 23 animations, past the enemy
- * AOS_ENEMY_MAX_ANIMS of 20. */
+ * AOS_ENEMY_MAX_ANIMS of 64. */
 #define OBJECT_MAX_ANIMS 24
 #define INDEX_SCHEMA "schema\tmetroidvania-sprite-index-v1"
 #define DEFAULT_ROOMS "assets/extracted/aria/rooms/runtime"
@@ -211,7 +211,8 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [54] = "manticore", [97] = "stolas", [107] = "death",
                                                      [109] = "balore",
                                                      [33] = "creaking_skull",
-                                                     [92] = "giant_skeleton"};
+                                                     [92] = "giant_skeleton",
+                                                     [108] = "legion"};
 /* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold
  * Medusa head (parameter 1 bit 0) and the Ghost Dancer (parameter 0). */
 #define VARIANT_ARTS 5

@@ -412,6 +412,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_STOLAS && id != AOS_ENEMY_DEATH &&
         id != AOS_ENEMY_MANTICORE && id != AOS_ENEMY_BALORE &&
         id != AOS_ENEMY_CREAKING_SKULL && id != AOS_ENEMY_GIANT_SKELETON &&
+        id != AOS_ENEMY_LEGION &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1431,6 +1432,26 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
          * sub_08098E74/sub_08098EA4 fold into the shared collide. */
         enemy->cs_bone = enemy->cs_pose = 0;
         enemy->cs_cool = enemy->cs_hits = 0;
+        enemy->state = flag_8e_40 ? 3 : 0;
+        enemy->step = 0;
+        enemy->substep = 0;
+        enemy->timer = 0;
+        enemy->boss_parts_spawned = false;
+        enemy->spawned_count = 0;
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_LEGION) {
+        /* EnemyLegionCreate 0x0809C6BC: tiles 0x081190C0, palette
+         * 0x0820AC4C (two banks), frames 0x082258FC through
+         * sub_0809DE80 into the + 0x14 container; the + 0x30 param
+         * and gEwramData room gates can delete the spawn; the five
+         * sub_0809DF7C soldier entities emit on the first updates
+         * via boss_parts_spawned; the gEwramData + 0x8E & 0x40
+         * flag parks state 3. */
+        enemy->lg_slot = enemy->lg_seq = 0;
+        enemy->lg_wait = 0;
         enemy->state = flag_8e_40 ? 3 : 0;
         enemy->step = 0;
         enemy->substep = 0;
@@ -4442,6 +4463,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
                                                weapon, weapon_frames,
                                                soma_atk, soma_def, cam_x,
                                                cam_y, random);
+    if (enemy->id == AOS_ENEMY_LEGION)
+        return aos_enemy_legion_update(enemy, soma, layer, kind, weapon,
+                                       weapon_frames, soma_atk, soma_def,
+                                       cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

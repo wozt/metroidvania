@@ -383,6 +383,11 @@ AosHitReport aos_enemy_balore_update(
     const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
     int soma_atk, int soma_def, int cam_x, int cam_y,
     uint32_t (*random)(void));
+AosHitReport aos_enemy_legion_update(
+    AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
+    const AosEnemyKind *kind, const AosWeaponEntity *weapon,
+    const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
+    int cam_x, int cam_y, uint32_t (*random)(void));
 AosHitReport aos_enemy_creaking_skull_update(
     AosEnemy *enemy, AosSoma *soma, const AosCollision *layer,
     const AosEnemyKind *kind, const AosWeaponEntity *weapon,

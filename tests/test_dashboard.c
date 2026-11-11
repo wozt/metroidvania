@@ -398,7 +398,7 @@ static void test_bestiary(const FusionJson *data) {
     EXPECT(partial_count == 0, "partial Aria count %zu", partial_count);
     EXPECT(working_count == COUNT(working), "functional Aria count %zu", working_count);
     static const char *const bosses[] = {"Great Armor",
-        "Big Golem", "Headhunter", "Legion", "Julius Belmont",
+        "Big Golem", "Headhunter", "Julius Belmont",
         "Graham Jones", "Chaos"};
     for (size_t index = 0; index < COUNT(bosses); ++index) {
         const FusionJson *boss = row_named(aos_bosses, bosses[index]);

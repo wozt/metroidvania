@@ -261,6 +261,7 @@ static const EntitySpec entities[] = {
     ENTITY("balore", 0x081193FC, 0x0820B92C, 7, 0x08244220),
     ENTITY("creaking_skull", 0x081CC044, 0x0820AB38, 0, 0x082232B8),
     ENTITY("giant_skeleton", 0x081CC044, 0x0820AB38, 0, 0x082232B8),
+    ENTITY("legion", 0x081190C0, 0x0820AC4C, 0, 0x082258FC),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),
@@ -828,9 +829,11 @@ static bool load_tile_sheet(const FusionRom *rom, uint32_t descriptor,
     *sheet = (TileSheet){0};
     const uint8_t *header = slice(rom, descriptor, 4, "graphics descriptor",
                                   error, error_size);
-    /* Encoding 2 containers carry a block count in header[1] instead
-     * of the depth byte; every other encoding needs depth 4. */
-    if (!header || (header[0] != 2 && header[1] != 4) ||
+    /* Encoding 2/3 containers carry a block count in header[1]
+     * instead of the depth byte; every other encoding needs depth
+     * 4. */
+    if (!header ||
+        (header[0] != 2 && header[0] != 3 && header[1] != 4) ||
         header[2] == 0 || header[3] == 0) {
         set_error(error, error_size, "unsupported object graphics descriptor");
         return false;
@@ -849,22 +852,26 @@ static bool load_tile_sheet(const FusionRom *rom, uint32_t descriptor,
         memcpy(sheet->data, tiles, sheet->size);
         return true;
     }
-    if (header[0] == 2) {
-        /* A multi-sheet container (Death's and Balore's tiles): a
-         * sequence of blocks `02 <count> 04 02` each followed by
-         * count pointers to uncompressed sub-descriptors (encoding
-         * 0, depth 4), each width_tiles x height_tiles tiles; the
+    if (header[0] == 2 || header[0] == 3) {
+        /* A multi-sheet container (Death's and Balore's tiles, and
+         * Legion's encoding-3 variant): a sequence of blocks
+         * `<tag> <count> 04 02` — tag 2 for uncompressed leaves,
+         * tag 3 for compressed ones — each followed by count
+         * pointers to sub-descriptors: encoding 0 (depth 4, raw
+         * tiles inline) or encoding 1 (`01 <depth> <w> <h> <ptr>`,
+         * LZ77 tiles), each width_tiles x height_tiles tiles; the
          * game loads them into VRAM contiguously, so the sheets
          * concatenate in order (a shared sub-sheet may repeat). */
+        const uint8_t tag = header[0];
         size_t total = 0;
         uint32_t offsets[32];
-        uint8_t dims[32][2];
+        uint8_t dims[32][2], comp[32];
         unsigned count = 0;
         uint32_t at = descriptor;
         for (unsigned block = 0; block < 8; ++block) {
             const uint8_t *bh = slice(rom, at, 4, "sheet block header",
                                       error, error_size);
-            if (!bh || bh[0] != 2)
+            if (!bh || bh[0] != tag || bh[2] != 4 || bh[3] != 2)
                 break;
             unsigned n = bh[1];
             if (n == 0 || n > 8 || count + n > 32) {
@@ -877,9 +884,9 @@ static bool load_tile_sheet(const FusionRom *rom, uint32_t descriptor,
             if (!entries) goto failed;
             for (unsigned i = 0; i < n; ++i) {
                 uint32_t sub = read_u32(entries + i * 4);
-                const uint8_t *sh = slice(rom, sub, 4, "sub-sheet header",
+                const uint8_t *sh = slice(rom, sub, 8, "sub-sheet header",
                                           error, error_size);
-                if (!sh || sh[0] != 0 || sh[1] != 4) {
+                if (!sh || (sh[0] != 0 && sh[0] != 1) || sh[1] != 4) {
                     set_error(error, error_size,
                               "unsupported object sub-sheet encoding");
                     goto failed;
@@ -887,6 +894,7 @@ static bool load_tile_sheet(const FusionRom *rom, uint32_t descriptor,
                 offsets[count] = sub;
                 dims[count][0] = sh[2];
                 dims[count][1] = sh[3];
+                comp[count] = (uint8_t)(sh[0] == 1);
                 total += (size_t)sh[2] * sh[3] * TILE_BYTES;
                 if (count == 0) {
                     sheet->width_tiles = sh[2];
@@ -914,11 +922,48 @@ static bool load_tile_sheet(const FusionRom *rom, uint32_t descriptor,
         size_t pos = 0;
         for (unsigned i = 0; i < count; ++i) {
             size_t n = (size_t)dims[i][0] * dims[i][1] * TILE_BYTES;
-            const uint8_t *tiles = slice(rom, offsets[i] + 4, n,
-                                         "sub-sheet tiles", error,
-                                         error_size);
-            if (!tiles) goto failed;
-            memcpy(sheet->data + pos, tiles, n);
+            if (!comp[i]) {
+                const uint8_t *tiles = slice(rom, offsets[i] + 4, n,
+                                             "sub-sheet tiles", error,
+                                             error_size);
+                if (!tiles) goto failed;
+                memcpy(sheet->data + pos, tiles, n);
+            } else {
+                const uint8_t *tp = slice(rom, offsets[i] + 4, 4,
+                                          "sub-sheet tile pointer",
+                                          error, error_size);
+                if (!tp) goto failed;
+                uint32_t off = 0;
+                if (!pointer_offset(rom, read_u32(tp), 4, &off,
+                                    "sub-sheet tile data", error,
+                                    error_size)) goto failed;
+                size_t expanded = fusion_gba_uncompressed_size(
+                    rom->data + off, rom->size - off);
+                if (expanded < n + 4) {
+                    set_error(error, error_size,
+                              "compressed sub-sheet tiles are short");
+                    goto failed;
+                }
+                uint8_t *decoded = malloc(expanded);
+                size_t written = 0;
+                if (!decoded || !fusion_gba_lz77_uncompress(
+                        rom->data + off, rom->size - off, decoded,
+                        expanded, &written) || written < n + 4) {
+                    free(decoded);
+                    set_error(error, error_size,
+                              "invalid compressed sub-sheet tiles");
+                    goto failed;
+                }
+                size_t skip = written >= n + 4 && decoded[0] == 0 ? 4 : 0;
+                if (written - skip < n) {
+                    free(decoded);
+                    set_error(error, error_size,
+                              "compressed sub-sheet tiles are short");
+                    goto failed;
+                }
+                memcpy(sheet->data + pos, decoded + skip, n);
+                free(decoded);
+            }
             pos += n;
         }
         return true;

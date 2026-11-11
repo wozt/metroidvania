@@ -277,6 +277,13 @@ static const EntitySpec entities[] = {
      * 0x0821F240 through sub_0803B924; the fourteen sub_0806DFF8
      * children of sub_0808E164 share the sheet. */
     ENTITY("great_armor", 0x081CC004, 0x0820A8F8, 0, 0x0821F240),
+    /* EnemyGrahamCreate 0x080D2424: the conductor entity carries no
+     * graphics of its own; the visible fighter is the sub_080D4168
+     * shadow clone — tiles 0x081FB2BC, palette 0x0820C090, frames
+     * 0x08253D60 through sub_0806E0D0 — and the sub_080D31D0 weak
+     * point reads tiles 0x081FD2C0, palette 0x0820C158, frames
+     * 0x08254D84. The clone sheet stands in as the kind art. */
+    ENTITY("graham", 0x081FB2BC, 0x0820C090, 0, 0x08253D60),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

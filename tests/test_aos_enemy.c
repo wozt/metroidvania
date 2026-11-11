@@ -12864,9 +12864,135 @@ static void great_armor_tests(void) {
     assert(e.removed);
 }
 
+static void graham_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { GR_ANIMS = 4 };
+    static const uint8_t ticks4[4] = {4, 4, 4, 4};
+    static AosAnimDef defs[GR_ANIMS];
+    for (int a = 0; a < GR_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks4};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = GR_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < GR_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-64, -128,
+                                                       128, 96};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 111: hp 5000, contact 100, defence 80,
+     * weak 0x0000, resist 0x0FC0. */
+    static const AosEnemyStats gr = {5000, 100, 80, 0x0000, 0x0FC0, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+
+    /* Create: awake flag -> state 3 intro; the dormant gEwramData
+     * + 0x8E & 0x40 gate parks state 0xD0. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, 0x6F, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &gr));
+    assert(e.state == 3);
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    int parts = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_GRAHAM_CLONE ||
+            hit.children[i].role == AOS_ROLE_GRAHAM_CORE)
+            parts++;
+    assert(parts == 2);
+    /* Intro: song 0x1DD once, then state 1 hands off the fight. */
+    int frames = 0;
+    while (e.state == 3 && frames < 0x200) {
+        aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.state == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x1DD) >= 1);
+
+    /* State 1 runs the 0x50 partner timer then idles as the fight
+     * conductor; a lethal hit enters the 0xF0 cinematic. */
+    e.step = 0;
+    aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(e.step == 1 && e.timer == 0x50);
+    e.hp = 0;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(e.defeated && e.state == 0xF0);
+
+    /* The cinematic keeps its case cadence and song accents and
+     * deletes on the cycle-gated flag. */
+    frames = 0;
+    while (e.state == 0xF0 && frames < 0x400) {
+        aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.state == 0xF0 || e.removed);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x1DE) >= 1);
+
+    /* A GRAHAM_CLONE child mirrors the conductor; the CORE hovers
+     * above it; both die with the parent. */
+    AosEnemy cl;
+    memset(&cl, 0, sizeof cl);
+    cl.id = 0x6F;
+    cl.role = AOS_ROLE_GRAHAM_CLONE;
+    cl.parent = &e;
+    cl.x = AOS_FIXED(100);
+    cl.y = AOS_FIXED(100);
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(200);
+    e.mirrored = false;
+    e.removed = false;
+    aos_enemy_update(&cl, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(!cl.removed && cl.x == AOS_FIXED(150) - 0x80000 &&
+           cl.y == AOS_FIXED(200));
+    AosEnemy core;
+    memset(&core, 0, sizeof core);
+    core.id = 0x6F;
+    core.role = AOS_ROLE_GRAHAM_CORE;
+    core.parent = &e;
+    core.x = AOS_FIXED(100);
+    core.y = AOS_FIXED(100);
+    aos_enemy_update(&core, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(core.x == AOS_FIXED(150) &&
+           core.y == AOS_FIXED(200) - 0xA00000);
+    e.removed = true;
+    aos_enemy_update(&cl, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(cl.removed);
+    e.removed = false;
+
+    /* The dormant gEwramData + 0x8E & 0x40 gate parks state 0xD0,
+     * a native bx lr stub. */
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy d;
+    assert(aos_enemy_create(&d, 0x6F, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &gr));
+    assert(d.state == 0xD0);
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(d.state == 0xD0 && !d.removed);
+    aos_enemy_set_flag_8e_40(false);
+}
+
 int main(void) {
     great_armor_tests();
     big_golem_tests();
+    graham_tests();
     peeping_eye_tests();
     skeleton_bone_tests();
     soul_attack_tests();

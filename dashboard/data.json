@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-11T15:27:37+00:00",
+ "generated_at": "2026-11-11T15:49:28+00:00",
  "git": {
-  "commit": "834fda91",
+  "commit": "1a247d20",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 284,
+   "total": 285,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 218,
+    "functional": 219,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 218,
+   "functional_or_better": 219,
    "functional_or_better_percent": 76.8,
-   "with_passing_tests": 271,
+   "with_passing_tests": 272,
    "with_passing_tests_percent": 95.4,
    "unknown_or_blocked": 1,
    "features": [
@@ -251,6 +251,7 @@
     "aos.enemies.gladiator",
     "aos.enemies.golem",
     "aos.enemies.gorgon",
+    "aos.enemies.graham",
     "aos.enemies.great_armor",
     "aos.enemies.gremlin",
     "aos.enemies.harpy",
@@ -518,20 +519,20 @@
    "areas": [
     "aos"
    ],
-   "total": 139,
+   "total": 140,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 111,
+    "functional": 112,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 111,
-   "functional_or_better_percent": 79.9,
-   "with_passing_tests": 139,
+   "functional_or_better": 112,
+   "functional_or_better_percent": 80.0,
+   "with_passing_tests": 140,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -585,6 +586,7 @@
     "aos.enemies.gladiator",
     "aos.enemies.golem",
     "aos.enemies.gorgon",
+    "aos.enemies.graham",
     "aos.enemies.great_armor",
     "aos.enemies.gremlin",
     "aos.enemies.harpy",
@@ -13492,6 +13494,106 @@
       "ctest": [
        "native_golden_aos",
        "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
+   }
+  },
+  {
+   "id": "aos.enemies.graham",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Graham Jones",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/core/aos_enemy.h",
+    "src/runtime/aos/enemies/graham.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyGrahamCreate",
+    "EnemyGrahamUpdate",
+    "sub_080D26A8",
+    "sub_080D27C8",
+    "sub_080D2BDC",
+    "sub_080D31D0",
+    "sub_080D32F8",
+    "sub_080D4168",
+    "sub_080D42A8",
+    "sub_080D2584",
+    "sub_080D2850",
+    "sub_080D5F88",
+    "sub_0806DFF8",
+    "sub_0806E0D0",
+    "sub_080683BC",
+    "sub_0800C5A8",
+    "sub_08034498",
+    "sub_08013CF0",
+    "sub_0803B9D0",
+    "sub_0803B800",
+    "sub_0803B924",
+    "sub_0803E058",
+    "sub_0806D128",
+    "sub_08068AD4",
+    "sub_0806AE54",
+    "sub_0806B120",
+    "sub_0806DF20",
+    "sub_0806E314",
+    "sub_0806C1B0",
+    "sub_0806DF40",
+    "sub_0806E140",
+    "sub_0806D244",
+    "sub_08021924",
+    "sub_08021530",
+    "sub_08042848",
+    "sub_080428B4",
+    "sub_080421AC",
+    "sub_0804277C",
+    "sub_0806D4C0",
+    "sub_0806E1B8",
+    "PlaySong",
+    "RandomNumberGenerator",
+    "RandomNumberGenerator2",
+    "ArcTan2",
+    "SetPlayerInput"
+   ],
+   "limitations": "The gEwramData + 0x4E4 partner slot table and the sub_080D2584 Object20 dialogue entities are not ported; the sub_080D26A8 state-1 cases collapse to the clone/core emit plus the 0x50 partner timer; the state-3 partner-death gate into 0xF0 is approximated by the lethal-hit path; the seven-case sub_080D2BDC cinematic keeps its case cadence and song accents with the sub_080D5F88/sub_080D2850 scripted spawns flame-folded and the SetPlayerInput locks dropped; the ~7000-line sub_080D42A8/sub_080D32F8 child combat brains are not ported (the clone mirrors the conductor); the gEwramData + 0x42C/+ 0x8E/+ 0x13266/+ 0x37E create gates keep only the + 0x8E & 0x40 dormant park; and there is no emulator comparison. EnemyGrahamCreate (0x080D2424) gates on gEwramData + 0x42C bit 0x10000, the + 0x30 param path through sub_080D2584(.,5) vs state 2, the + 0x13266/+ 0x37E/+ 0x4CC & 3 cleared-spawn delete and the + 0x8E & 0x40 dormant park (state 0xD0), runs sub_0800C5A8/sub_08034498/sub_08013CF0 story calls and otherwise emits the sub_080D4168 shadow clone (tiles 0x081FB2BC, palette 0x0820C090, frames 0x08253D60) and state 3; EnemyGrahamUpdate (0x080D5DF4) dispatches state 1 to sub_080D26A8 (partner-slot machine: claim/position, SetPlayerInput lock, + 0xD = 0x50 countdown, sub_080D2584 re-arms and the partner-state checks), states 2 and 0xD0 to empty stubs, state 0xF0 to sub_080D2BDC (seven cases: + 0x16 or-ed with 0x20, + 0xD = 0x8C, song 0x1DE/0x1DB variant, the + 0xD = 0x20 sub_080D5F88 anchor spawn, the sub_080D2850/sub_080D2584 scripted emits under SetPlayerInput locks and the sub_0800C5A8(1) release) and state 3 to sub_080D27C8 (song 0x1DD on the + 0x16 & 4 gate, the sub_080D31D0 weak point 0x081FD2C0/0x0820C158/0x08254D84, the partner + 0x36 match and + 0x3E & 2 dead flag -> sub_080683BC -> 0xF0). Unit-tested in graham_tests.",
+   "next_action": "Port the sub_080D42A8/sub_080D32F8 child combat brains and the sub_080D2584 Object20 dialogue path; decode the state-1 partner choreography and compare against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c"
+    ],
+    "in_game_check": [
+     "aria area_09_room_004 (enemy id 111): Graham Jones loads with the exported object library and runs the conductor state machine"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
       ],
       "outcome": "passed",
       "exists": true
@@ -27252,6 +27354,12 @@
  },
  "timeline": [
   {
+   "commit": "1a247d20",
+   "date": "2026-11-11",
+   "subject": "Port Great Armor (id 60)",
+   "scope": "project"
+  },
+  {
    "commit": "834fda91",
    "date": "2026-11-11",
    "subject": "Port Big Golem (id 69)",
@@ -27724,12 +27832,6 @@
    "date": "2026-11-09",
    "subject": "Compile Buer family as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "4ca7b3f0",
-   "date": "2026-11-09",
-   "subject": "Compile Peeping Eye family as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -27790,9 +27892,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1806,
-    "routines_attached_to_features": 1806,
-    "unassigned_routines": 1767,
+    "routines_cited_by_features": 1818,
+    "routines_attached_to_features": 1818,
+    "unassigned_routines": 1755,
     "call_edges": 14228
    }
   },
@@ -30044,12 +30146,12 @@
      },
      "bosses": {
       "total": 11,
-      "implemented": 8,
-      "functional_or_better": 8,
-      "functional_or_better_percent": 72,
+      "implemented": 9,
+      "functional_or_better": 9,
+      "functional_or_better_percent": 81,
       "by_status": {
-       "functional": 8,
-       "not_started": 3
+       "functional": 9,
+       "not_started": 2
       }
      },
      "items": {
@@ -33064,13 +33166,27 @@
      {
       "id": 111,
       "name": "Graham Jones",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Graham Jones",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c"
+       ],
+       "in_game_check": [
+        "aria area_09_room_004 (enemy id 111): Graham Jones loads with the exported object library and runs the conductor state machine"
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.graham",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "n/a",
+       "soul": "n/a",
+       "soul_ref": "none",
+       "notes": "Soul: the enemies.tsv record drops nothing and has no soul (n/a). Animations: ported from EnemyGrahamCreate (0x080D2424) / EnemyGrahamUpdate (0x080D5DF4) and the sub_080D26A8 state-1 partner machine, the sub_080D27C8 state-3 intro, the sub_080D2BDC seven-case state-0xF0 cinematic, the sub_080D31D0 weak-point and sub_080D4168 shadow-clone spawners — the animation record 0x08253D60 through the shared play/step helpers; unit-tested in graham_tests. Sounds: PlaySong 0x1DD (state-3 intro), 0x1DE and 0xEF (state-0xF0 cinematic accents) are requested and unit-tested, not listened to. Sprite: the conductor entity carries no graphics natively; the sub_080D4168 shadow clone reads tiles 0x081FB2BC, palette 0x0820C090, frames 0x08253D60 — exported natively as Enemy/graham — and the sub_080D31D0 weak point reads tiles 0x081FD2C0, palette 0x0820C158, frames 0x08254D84, folded into the AOS_ROLE_GRAHAM_CORE child on the shared kind. Loot: the enemies.tsv record drops nothing (common/rare item 0). Divergences: the gEwramData + 0x4E4 partner slot table and the sub_080D2584 Object20 dialogue entities are not ported, the sub_080D26A8 state-1 cases collapse to the clone/core emit plus the 0x50 partner timer, the state-3 partner-death gate into 0xF0 is approximated by the lethal-hit path, the seven-case sub_080D2BDC cinematic keeps its case cadence and song accents with the sub_080D5F88/sub_080D2850 scripted spawns flame-folded and the SetPlayerInput locks dropped, the ~7000-line sub_080D42A8/sub_080D32F8 child combat brains are not ported (the clone mirrors the conductor), the gEwramData + 0x42C/+ 0x8E/+ 0x13266/+ 0x37E create gates keep only the + 0x8E & 0x40 dormant park, and there is no emulator comparison."
       }
      },
      {
@@ -33088,17 +33204,17 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 108,
+      "ported": 109,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 108,
+      "ported": 109,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 107,
+      "ported": 108,
       "partial": 0,
       "missing": 0
      },
@@ -33112,8 +33228,8 @@
       "partial": 35,
       "missing": 0
      },
-     "complete": 73,
-     "monsters": 108
+     "complete": 74,
+     "monsters": 109
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [

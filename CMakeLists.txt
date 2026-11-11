@@ -296,6 +296,7 @@ set(AOS_ENEMY_SOURCES
     src/runtime/aos/enemies/belmont.c
     src/runtime/aos/enemies/big_golem.c
     src/runtime/aos/enemies/great_armor.c
+    src/runtime/aos/enemies/graham.c
     src/runtime/aos/enemies/headhunter.c
     src/runtime/aos/enemies/zombie.c
     src/runtime/aos/enemies/nemesis.c

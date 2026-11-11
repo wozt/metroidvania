@@ -1,3 +1,28 @@
+## Patch 1000 - Graham Jones ported (id 111)
+
+- `EnemyGrahamCreate` (0x080D2424) / `EnemyGrahamUpdate` (0x080D5DF4):
+  the conductor entity carries no graphics natively; the visible
+  fighter is the `sub_080D4168` shadow clone (tiles 0x081FB2BC,
+  palette 0x0820C090, frames 0x08253D60) exported as `Enemy/graham`,
+  and the `sub_080D31D0` weak point (tiles 0x081FD2C0, palette
+  0x0820C158, frames 0x08254D84) folds into `AOS_ROLE_GRAHAM_CORE`.
+- State 3 `sub_080D27C8` keeps the decoded intro (song 0x1DD, the
+  weak-point setup) and hands the fight to state 1 `sub_080D26A8`
+  (partner-slot machine collapsed to the clone/core emit plus the
+  0x50 timer); states 2 and 0xD0 stay native stubs; state 0xF0
+  `sub_080D2BDC` keeps the seven-case cinematic cadence with songs
+  0x1DE/0x1DB and 0xEF, flame-folded scripted spawns and the
+  cycle-gated delete. A lethal hit enters 0xF0 like the native
+  `sub_080683BC` path; the dormant `+0x8E & 0x40` create gate parks
+  state 0xD0.
+- The `gEwramData + 0x4E4` partner table, the `sub_080D2584`
+  Object20 dialogue entities, the `SetPlayerInput` locks and the
+  ~7000-line `sub_080D42A8`/`sub_080D32F8` child combat brains are
+  documented divergences; the enemies.tsv record drops nothing and
+  has no soul, so the five aspects are ported/n/a; `graham_tests`
+  covers create, the clone/core emission, the intro song, the state-1
+  timer, the cinematic accents and the dormant gate.
+
 ## Patch 0999 - Great Armor ported (id 60)
 
 - `EnemyGreatArmorCreate` (0x0808A43C) / `EnemyGreatArmorUpdate`

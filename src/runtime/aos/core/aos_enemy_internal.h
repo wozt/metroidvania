@@ -871,7 +871,7 @@ AosHitReport aos_enemy_headhunter_update(
     AosEnemy *enemy, AosSoma *soma, const AosEnemyKind *kind,
     const AosWeaponEntity *weapon,
     const AosWeaponFrames *weapon_frames, int soma_atk, int soma_def,
-    int cam_x, int cam_y);
+    int cam_x, int cam_y, uint32_t (*random)(void));
 void aos_enemy_headhunter_head_update(AosEnemy *head,
                                       const AosEnemyKind *kind,
                                       uint32_t (*random)(void));

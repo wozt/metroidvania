@@ -1,3 +1,20 @@
+## Patch 0994 - Headhunter state-1 attack machine
+
+- `sub_08082FFC` is now dispatched for `state == 1`: the full
+  48-case table decoded — the leap (case 1, song 0x85), the four
+  random-gated attack groups entered at cases 0/10/20/30/40, the
+  dash beats of cases 22/32/42 (song 0x67 on case 22) and the
+  decoded returns to state 0 (cases 12/14 -> step 0xC, 37 -> 0x1E
+  flee, 43/47 -> 0x32).
+- The state-0 aggro probe (`sub_0806CFFC` box test) hands the body
+  to state 1 case 0 once Soma closes in; the frame-gated waits
+  (11/13/21/24/31/34/41/44) advance on the animation end because
+  the native + 0xB writes belong to the still-unported head actors.
+- Documented approximations: the `sub_080858B8` shots fold into
+  `spawn_flame_at`, the player-tracking aim math of the dash cases
+  is reduced to a shared drift, and the ten shared particles of
+  `sub_08083FD0` cases 6-7 remain absent.
+
 ## Patch 0993 - Julius Belmont ported (id 110)
 
 - `EnemyBelmontCreate` (0x080CFAB0) / `EnemyBelmontUpdate`

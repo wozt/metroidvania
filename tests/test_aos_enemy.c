@@ -130,6 +130,72 @@ static void headhunter_death_tests(void) {
         aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
                          10, 4, 10, 20, never_zero);
     assert(body.step == 3 && body.timer == 60);
+    /* The sub_08081EBC aggro probe hands the body to the state-1
+     * attack machine (sub_08082FFC) once Soma is in range. */
+    aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(body.state == 1 && body.step == 0);
+    aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(body.step == 1 && body.anim.id == 3 && body.vx == 0);
+    /* Case 1's leap ends on the animation-end gate back to state 0. */
+    for (int i = 0; i < 40 && body.state == 1; ++i)
+        aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, never_zero);
+    assert(body.state == 0 && body.step == 3 && body.timer == 0x3C);
+    /* Case 10's random gate: 0 passes (<= 0x31) to case 11, 100 fails
+     * to case 13 with animation 7. */
+    body.state = 1;
+    body.step = 10;
+    body.timer = 0;
+    script = (const uint32_t[]){0};
+    script_at = 0;
+    aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, scripted);
+    assert(body.step == 11);
+    script = (const uint32_t[]){150};
+    script_at = 0;
+    body.step = 10;
+    aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, scripted);
+    assert(body.step == 13 && body.anim.id == 7);
+    /* Cases 12/14 count + 0xD to 0x63 then return to state 0 step 0xC
+     * with the velocities cleared and animation 6. */
+    body.step = 12;
+    body.timer = 0;
+    for (int i = 0; i < 100; ++i)
+        aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, never_zero);
+    assert(body.state == 0 && body.step == 0xC && body.vx == 0 &&
+           body.vy == 0 && body.anim.id == 6);
+    /* Case 22's dash fires the sub_080858B8 fold (song 0x67) on the
+     * + 0xD > 0x13 multiple-of-4 tick, then advances at 0x2D. */
+    body.state = 1;
+    body.step = 22;
+    body.timer = 0x14;
+    aos_audio_clear();
+    AosHitReport dash = aos_enemy_update(&body, &soma, &layer, &kind,
+                                         NULL, NULL, 10, 4, 10, 20,
+                                         never_zero);
+    assert(dash.effect_count > 0 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x67) == 1);
+    body.timer = 0x2D;
+    aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(body.step == 23 && body.timer == 0);
+    /* Cases 37 and 47 hand control back to state 0 with their decoded
+     * step writes (0x1E flee / 0x32 exit). */
+    body.step = 37;
+    aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(body.state == 0 && body.step == 0x1E && body.vflip &&
+           body.anim.id == 0xE);
+    body.vflip = false;
+    body.state = 1;
+    body.step = 47;
+    aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(body.state == 0 && body.step == 0x32);
     body.removed = true;
     AosEnemy orphan = built.children[0];
     aos_enemy_update(&orphan, &soma, &layer, &kind, NULL, NULL,

@@ -432,6 +432,8 @@ static const EntitySpec entities[] = {
     /* Resource 5 of 0x080E13BC: SkillRedMinotaurUse's anchor and its
      * sub_08026858 orbiting blade share the record's sequences. */
     ENTITY("skill_red_minotaur", 0x081CE8D8, 0x0820B0F8, 0, 0x082313A0),
+    /* Resource 23 of 0x080E13BC: SkillNightmareUse's rising wisp. */
+    ENTITY("skill_nightmare", 0x081D7920, 0x0820B3A0, 0, 0x082346F8),
     /* Resource 11 of 0x080E13BC: Killer Fish's appearance sequence 1 and
      * looping swim/fall sequence 0. */
     ENTITY("skill_killer_fish", 0x081D18F0, 0x0820B1F0, 0, 0x082321E4),

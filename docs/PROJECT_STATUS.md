@@ -1,3 +1,28 @@
+## Patch 1024 - Red soul 31 (Nightmare) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_nightmare.c` ports
+  `SkillNightmareUse` (routine 0x0802A9DC), the last red soul: the
+  wisp placed at `sub_08031EA4(source, 8, 0)` jitters x by
+  `(rng & 0x7FFFF) - 0x40000` and y upward by `(rng & 0x7FFFF) -
+  0x140000` every state-1 frame while spawning the
+  `sub_08045CEC(x, y, 0, 7)` trail (modeled as a soul-storm effect)
+  and ramping `+0x24` by 0x1000; past 0xFFFF the state-2 init runs
+  and both states integrate the facing-signed `+0x48/+0x50` drift
+  under the `sub_0806D3D8` 0x80000 cap until the
+  `sub_0806D128(e, 3)` margin probe or the `+0x59` bit-4 mark
+  deletes. Songs 0x19A and 0xE1 play at the cast; the `+0x58` bit 6
+  is inverted at init so the sprite faces away from the drift.
+- `src/assets/aos/objects.c` exports `skill_nightmare` (resource 23
+  of 0x080E13BC: tiles 0x081D7920, palette 0x0820B3A0, frames
+  0x082346F8). Object library: 1626 sequences.
+- `tests/test_aos_soul_red_nightmare.c` covers the placement, the
+  facing-signed drift fields, the upward jitter, the charge ramp
+  timing, the drift cap and the margin/mark deletes. The
+  `sub_0803E654` variant pick, the `+0x64/+0x65` frame attack box
+  (preset-5 approximation), the trail entity's own velocities and
+  the `sub_0802383C` partner touches are documented as not ported.
+  All 30 red souls are now ported; remaining soul backlog: 5 blue.
+
 ## Patch 1023 - Red soul 48 (Red Minotaur) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_minotaur.c` ports

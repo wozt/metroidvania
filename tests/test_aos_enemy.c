@@ -1149,6 +1149,146 @@ static void early_enemy_batch_tests(void) {
 }
 
 
+static void creaking_skull_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { CS_ANIMS = 4 };
+    static const uint8_t ticks4[4] = {4, 4, 4, 4};
+    static AosAnimDef defs[CS_ANIMS];
+    for (int a = 0; a < CS_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks4};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = CS_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < CS_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-32, -64, 64, 72};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 33: hp 240, contact 35, defence 10,
+     * weak 0x0020, resist 0x0010, experience 110, soul blue 14;
+     * id 92: hp 2000, contact 75, defence 50, weak 0x0020,
+     * resist 0x0410, experience 1200, soul red 41. */
+    static const AosEnemyStats cs33 = {240, 35, 10, 0x0020, 0x0010, 110};
+    static const AosEnemyStats cs92 = {2000, 75, 50, 0x0020, 0x0410, 1200};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+
+    /* Both ids share the create: hp from the record, state 0 awake,
+     * state 3 dormant under the global flag. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, 0x21, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &cs33));
+    assert(e.state == 0 && e.hp == 240);
+    assert(!e.boss_parts_spawned && e.spawned_count == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, 0x5C, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &cs92));
+    assert(ed.state == 3 && ed.hp == 2000);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* The thirteen bone children emit over two updates (8-child
+     * cap): 8 then 5. */
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(120);
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    int bones = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_CS_BONE) bones++;
+    assert(bones == 8 && e.spawned_count == 8);
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    bones = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_CS_BONE) bones++;
+    assert(bones == 5 && e.spawned_count == 13 &&
+           e.boss_parts_spawned);
+
+    /* A bone child tracks its parent and dies with it. */
+    AosEnemy b;
+    memset(&b, 0, sizeof b);
+    b.id = 0x21;
+    b.role = AOS_ROLE_CS_BONE;
+    b.parent = &e;
+    b.cs_bone = 3;
+    b.x = AOS_FIXED(150);
+    b.y = AOS_FIXED(120);
+    aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(!b.removed && b.y < e.y);
+    e.state = 2;
+    aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(b.removed);
+    e.state = 0;
+
+    /* State 1 volley: two CS_SHOT children then back to state 0. */
+    AosEnemy a;
+    assert(aos_enemy_create(&a, 0x21, 150, 120, 0, 0,
+                            &soma, &layer, &kind, &cs33));
+    a.x = AOS_FIXED(150);
+    a.y = AOS_FIXED(120);
+    a.state = 1;
+    a.substep = 1;
+    a.timer = 0x10;
+    a.boss_parts_spawned = true;
+    a.spawned_count = 13;
+    hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    int shots = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_CS_SHOT) shots++;
+    assert(shots == 1);
+    a.timer = 0x28;
+    hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    shots = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_CS_SHOT) shots++;
+    assert(shots == 1);
+    a.state = 1;
+    a.substep = 2;
+    aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(a.state == 0 && a.step == 1);
+
+    /* Lethal: hp 0 -> defeated, state 2 death machine with gore,
+     * then the delete. */
+    AosEnemy el;
+    assert(aos_enemy_create(&el, 0x5C, 150, 120, 0, 0,
+                            &soma, &layer, &kind, &cs92));
+    el.x = AOS_FIXED(150);
+    el.y = AOS_FIXED(120);
+    el.state = 1;
+    el.hp = 0;
+    hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(el.defeated && el.state == 2);
+    el.timer = 0;
+    hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    int gore = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_CS_GORE) gore++;
+    assert(gore == 1);
+    /* timer already 0 path removes on the NEXT state-2 update;
+     * run once more to reach removed. */
+    aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(el.removed);
+}
+
 static void balore_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -12101,7 +12241,7 @@ int main(void) {
     /* The bat climbs from its record to the ceiling and hangs there. */
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
     AosEnemy bat;
-    assert(!aos_enemy_create(&bat, 0x21, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    assert(!aos_enemy_create(&bat, 0x67, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert((bat.y >> 16) == 16 && bat.state == 1 && bat.mirrored);
 
@@ -12327,6 +12467,7 @@ int main(void) {
     gladiator_tests();
     golem_tests();
     stolas_tests();
+    creaking_skull_tests();
     balore_tests();
     manticore_tests();
     death_tests();

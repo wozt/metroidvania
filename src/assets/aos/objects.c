@@ -259,6 +259,8 @@ static const EntitySpec entities[] = {
     ENTITY("death", 0x08119498, 0x0820BC1C, 0, 0x08249C48),
     ENTITY("manticore", 0x081CBF54, 0x0820A4D0, 0, 0x082145BC),
     ENTITY("balore", 0x081193FC, 0x0820B92C, 7, 0x08244220),
+    ENTITY("creaking_skull", 0x081CC044, 0x0820AB38, 0, 0x082232B8),
+    ENTITY("giant_skeleton", 0x081CC044, 0x0820AB38, 0, 0x082232B8),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-11T01:52:51+00:00",
+ "generated_at": "2026-11-11T02:07:08+00:00",
  "git": {
-  "commit": "63512504",
+  "commit": "6f10fb0a",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 278,
+   "total": 280,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 56,
-    "functional": 212,
+    "functional": 214,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 212,
-   "functional_or_better_percent": 76.3,
-   "with_passing_tests": 132,
-   "with_passing_tests_percent": 47.5,
+   "functional_or_better": 214,
+   "functional_or_better_percent": 76.4,
+   "with_passing_tests": 267,
+   "with_passing_tests_percent": 95.4,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -223,6 +223,7 @@
     "aos.enemies.catoblepas",
     "aos.enemies.chronomage",
     "aos.enemies.cockatrice",
+    "aos.enemies.creaking_skull",
     "aos.enemies.curly",
     "aos.enemies.dead_crusader",
     "aos.enemies.dead_warrior",
@@ -243,6 +244,7 @@
     "aos.enemies.ghost",
     "aos.enemies.ghost_dancer",
     "aos.enemies.giant_ghost",
+    "aos.enemies.giant_skeleton",
     "aos.enemies.giant_worm",
     "aos.enemies.gladiator",
     "aos.enemies.golem",
@@ -408,8 +410,8 @@
    },
    "functional_or_better": 92,
    "functional_or_better_percent": 100.0,
-   "with_passing_tests": 85,
-   "with_passing_tests_percent": 92.4,
+   "with_passing_tests": 92,
+   "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.particles",
@@ -512,21 +514,21 @@
    "areas": [
     "aos"
    ],
-   "total": 133,
+   "total": 135,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 28,
-    "functional": 105,
+    "functional": 107,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 105,
-   "functional_or_better_percent": 78.9,
-   "with_passing_tests": 24,
-   "with_passing_tests_percent": 18.0,
+   "functional_or_better": 107,
+   "functional_or_better_percent": 79.3,
+   "with_passing_tests": 135,
+   "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "aos.audio.play_song",
@@ -551,6 +553,7 @@
     "aos.enemies.catoblepas",
     "aos.enemies.chronomage",
     "aos.enemies.cockatrice",
+    "aos.enemies.creaking_skull",
     "aos.enemies.curly",
     "aos.enemies.dead_crusader",
     "aos.enemies.dead_warrior",
@@ -571,6 +574,7 @@
     "aos.enemies.ghost",
     "aos.enemies.ghost_dancer",
     "aos.enemies.giant_ghost",
+    "aos.enemies.giant_skeleton",
     "aos.enemies.giant_worm",
     "aos.enemies.gladiator",
     "aos.enemies.golem",
@@ -683,8 +687,8 @@
    },
    "functional_or_better": 8,
    "functional_or_better_percent": 34.8,
-   "with_passing_tests": 9,
-   "with_passing_tests_percent": 39.1,
+   "with_passing_tests": 22,
+   "with_passing_tests_percent": 95.7,
    "unknown_or_blocked": 0,
    "features": [
     "assets.aria_early_enemy_components_0477",
@@ -731,8 +735,8 @@
    },
    "functional_or_better": 5,
    "functional_or_better_percent": 33.3,
-   "with_passing_tests": 10,
-   "with_passing_tests_percent": 66.7,
+   "with_passing_tests": 12,
+   "with_passing_tests_percent": 80.0,
    "unknown_or_blocked": 0,
    "features": [
     "tools.dashboard",
@@ -833,8 +837,8 @@
    },
    "functional_or_better": 2,
    "functional_or_better_percent": 66.7,
-   "with_passing_tests": 0,
-   "with_passing_tests_percent": 0.0,
+   "with_passing_tests": 2,
+   "with_passing_tests_percent": 66.7,
    "unknown_or_blocked": 1,
    "features": [
     "platform.dashboard_offline",
@@ -999,7 +1003,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -1013,11 +1017,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -2439,7 +2441,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -2453,11 +2455,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -4783,7 +4783,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -4797,11 +4797,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -6443,15 +6441,13 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -6594,15 +6590,13 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -7455,7 +7449,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -7479,11 +7473,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -7614,7 +7606,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -7648,11 +7640,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -8813,13 +8803,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -9050,15 +9040,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -9154,15 +9142,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -9251,15 +9237,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -9368,15 +9352,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -9442,15 +9424,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -9570,15 +9550,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -9660,15 +9638,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -9798,15 +9774,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -9901,15 +9875,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -9978,15 +9950,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -10065,15 +10035,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -10175,15 +10143,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -10261,15 +10227,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -10353,15 +10317,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -10438,15 +10400,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -10529,15 +10489,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -10604,15 +10562,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -10678,15 +10634,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -10777,15 +10731,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -10881,15 +10833,153 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
+   }
+  },
+  {
+   "id": "aos.enemies.creaking_skull",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Creaking Skull",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/core/aos_enemy.h",
+    "src/runtime/aos/enemies/creaking_skull.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyCreakingSkullCreate",
+    "EnemyCreakingSkullUpdate",
+    "EnemyGiantSkeletonCreate",
+    "EnemyGiantSkeletonUpdate",
+    "sub_08095898",
+    "sub_08096A94",
+    "sub_08097A14",
+    "sub_08097B94",
+    "sub_08097D1C",
+    "sub_08097D84",
+    "sub_08097EC4",
+    "sub_08097FFC",
+    "sub_0809808C",
+    "sub_080987B0",
+    "sub_0809884C",
+    "sub_080989DC",
+    "sub_08098BC0",
+    "sub_08098BE0",
+    "sub_08098C08",
+    "sub_08098C1C",
+    "sub_08098C38",
+    "sub_08098C54",
+    "sub_08098C84",
+    "sub_08098CF0",
+    "sub_08098DB4",
+    "sub_08098DF0",
+    "sub_08098E00",
+    "sub_08098E74",
+    "sub_08098EA4",
+    "sub_08094D28",
+    "sub_08095000",
+    "sub_0809508C",
+    "sub_080951A0",
+    "sub_08095250",
+    "sub_08095288",
+    "sub_080952A0",
+    "sub_080952EC",
+    "sub_0806DFF8",
+    "sub_0806D128",
+    "sub_0806AE54",
+    "sub_0806D4C0",
+    "sub_0806C250",
+    "sub_0806C2CC",
+    "sub_0806B04C",
+    "sub_0806AF98",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0803B800",
+    "sub_0803B924",
+    "sub_0803B9D0",
+    "sub_0803AFB8",
+    "sub_08068264",
+    "sub_0803E654",
+    "sub_0803E058",
+    "sub_0804277C",
+    "sub_08042848",
+    "sub_080428B4",
+    "sub_0806E314",
+    "sub_08021654",
+    "sub_08021530",
+    "sub_0806B7D8",
+    "sub_08042B8C",
+    "sub_08021924",
+    "sub_08068AD4",
+    "sub_0806D288",
+    "sub_0806D5C0",
+    "sub_080009E4",
+    "ArcTan2",
+    "EntityCreateInRange",
+    "PlaySong",
+    "RandomNumberGenerator",
+    "RandomNumberGenerator2"
+   ],
+   "limitations": "The + 0x1C container entity folds into the persistent CS_BONE children emitted under the 8-child cap; the thirteen container records collapse to fixed spine offsets; the two ~2000-line choreography machines keep their case order and songs while the per-case bone-target tables collapse to a documented spine cycle; the sub_0809808C bone brain keeps its parent lock, sine wobble and death-on-parent with approximated case tables; the sub_08098CF0 debris becomes CS_GORE children; the sub_08098E00 room gate, the gEwramData flag checks and the + 0x5A palette merge are covered by the shared spawn/collide paths or not ported; and there is no emulator comparison. EnemyCreakingSkullCreate (0x0809549C) loads tiles 0x081CC044, palette 0x0820AB38 and frames 0x082232B8 shared by the body and the thirteen bone children, runs the + 0x30 param and gEwramData room gates, builds the 0x9C container with thirteen sub_0806DFF8 children of callback sub_0809808C indexed by the 0x0811903C/49/56/63 tables, bakes the two sub_08098BE0 bone poses through sub_08097D84 and parks state 3 under the global 0x8E & 0x40 else state 0. EnemyCreakingSkullUpdate (0x08095320) clears + 0x21, runs the sub_0806D128(6) gate, the sub_08068AD4 probe and sub_0806AE54, the sub_0806D4C0 collision and the container hit box, then dispatches state 0 sub_08095898 (the sixteen-case machine), state 1 sub_08096A94 (the attack), state 2 (the + 0xD death countdown with the container delete) and state 3 sub_08097A14 (dormant). EnemyGiantSkeletonCreate/Update are thunks to the same routines. Unit-tested in creaking_skull_tests.",
+   "next_action": "Compare the bone choreography, the attack volleys and the death timing against an emulator; port the full sub_08095898/sub_08096A94 case tables and the sub_0809808C bone brain.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
     ],
-    "verified_on": null
+    "in_game_check": [
+     "aria area_08_room_006: the Giant Skeleton rises on its thirteen bones and fights; area_00_room_010 carries the Creaking Skull."
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -10963,15 +11053,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -11041,15 +11129,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -11120,15 +11206,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -11219,15 +11303,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -11293,15 +11375,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -11423,15 +11503,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -11518,15 +11596,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -11617,15 +11693,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -11690,15 +11764,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -11789,15 +11861,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -11862,15 +11932,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -11957,15 +12025,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -12047,15 +12113,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -12121,15 +12185,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -12201,15 +12263,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -12331,15 +12391,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -12411,15 +12469,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -12487,15 +12543,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -12567,15 +12621,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -12651,15 +12703,125 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
+   }
+  },
+  {
+   "id": "aos.enemies.giant_skeleton",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Giant Skeleton",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/core/aos_enemy.h",
+    "src/runtime/aos/enemies/creaking_skull.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyGiantSkeletonCreate",
+    "EnemyGiantSkeletonUpdate",
+    "EnemyCreakingSkullCreate",
+    "EnemyCreakingSkullUpdate",
+    "sub_08095898",
+    "sub_08096A94",
+    "sub_08097A14",
+    "sub_0809808C",
+    "sub_08098C54",
+    "sub_08098C84",
+    "sub_08098CF0",
+    "sub_0806DFF8",
+    "sub_0806D128",
+    "sub_0806AE54",
+    "sub_0806D4C0",
+    "sub_0806C250",
+    "sub_0806C2CC",
+    "sub_0806B04C",
+    "sub_0806AF98",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0803B800",
+    "sub_0803B924",
+    "sub_0803B9D0",
+    "sub_0803E654",
+    "sub_0803E058",
+    "sub_0804277C",
+    "sub_08042848",
+    "sub_080428B4",
+    "sub_0806E314",
+    "sub_08021654",
+    "sub_08021530",
+    "sub_0806B7D8",
+    "sub_08042B8C",
+    "sub_08021924",
+    "sub_08068AD4",
+    "sub_0806D288",
+    "sub_0806D5C0",
+    "sub_080009E4",
+    "ArcTan2",
+    "EntityCreateInRange",
+    "PlaySong",
+    "RandomNumberGenerator",
+    "RandomNumberGenerator2"
+   ],
+   "limitations": "The Giant Skeleton shares the Creaking Skull implementation through its thunks: the + 0x1C container entity folds into the persistent CS_BONE children emitted under the 8-child cap; the thirteen container records collapse to fixed spine offsets; the two ~2000-line choreography machines keep their case order and songs while the per-case bone-target tables collapse to a documented spine cycle; the sub_0809808C bone brain keeps its parent lock, sine wobble and death-on-parent with approximated case tables; the sub_08098CF0 debris becomes CS_GORE children; the sub_08098E00 room gate, the gEwramData flag checks and the + 0x5A palette merge are covered by the shared spawn/collide paths or not ported; and there is no emulator comparison. EnemyGiantSkeletonCreate (0x08098EF8) and EnemyGiantSkeletonUpdate (0x08098EEC) are thunks forwarding to EnemyCreakingSkullCreate (0x0809549C) / EnemyCreakingSkullUpdate (0x08095320); the port dispatches id 0x5C to the same aos_enemy_creaking_skull_update with its own enemies.tsv stats (hp 2000, contact 75, defence 50, weak 0x0020, resist 0x0410, experience 1200, rare item 0x002D, red soul 41).",
+   "next_action": "Compare the bone choreography, the attack volleys and the death timing against an emulator; port the full sub_08095898/sub_08096A94 case tables, the sub_0809808C bone brain and the throw parameter 4 (the 0x0200 frame-derived box flag).",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
     ],
-    "verified_on": null
+    "in_game_check": [
+     "aria area_08_room_006 and area_11_room_006: the Giant Skeleton boss fight."
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -12749,15 +12911,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -12888,15 +13048,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -13018,15 +13176,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -13098,15 +13254,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -13171,15 +13325,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -13256,15 +13408,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -13425,15 +13575,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -13555,15 +13703,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -13645,15 +13791,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -13730,15 +13874,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -13824,15 +13966,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -13923,15 +14063,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -14024,15 +14162,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -14111,15 +14247,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -14223,15 +14357,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -14303,15 +14435,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -14412,15 +14542,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -14510,15 +14638,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -14649,15 +14775,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -14730,15 +14854,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -14814,15 +14936,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -14896,15 +15016,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -14992,15 +15110,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -15092,15 +15208,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -15171,15 +15285,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -15264,15 +15376,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -15364,15 +15474,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -15449,15 +15557,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -15567,15 +15673,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -15665,15 +15769,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -15747,15 +15849,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -15826,15 +15926,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -15922,15 +16020,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -16004,15 +16100,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -16085,15 +16179,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -16158,15 +16250,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -16247,15 +16337,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -16326,15 +16414,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -16411,15 +16497,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -16486,15 +16570,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -16579,15 +16661,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -16694,15 +16774,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -16838,15 +16916,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -16938,15 +17014,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -17049,15 +17123,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -17129,15 +17201,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -17250,15 +17320,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -17360,15 +17428,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -17455,15 +17521,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -17563,15 +17627,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -17645,15 +17707,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -17758,15 +17818,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -17866,15 +17924,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -17974,15 +18030,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -18090,15 +18144,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -18182,15 +18234,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -18265,15 +18315,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -18383,15 +18431,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -18513,15 +18559,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -18610,7 +18654,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -18624,11 +18668,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -18700,15 +18742,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -18787,15 +18827,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -18872,7 +18910,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -18886,11 +18924,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -18953,15 +18989,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -19349,13 +19383,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -19759,7 +19793,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -19773,9 +19807,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -20175,13 +20209,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -22174,15 +22208,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -22873,7 +22905,7 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -22887,11 +22919,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -23244,7 +23274,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -23308,9 +23338,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -23886,13 +23916,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -24207,13 +24237,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -24335,7 +24365,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -24409,9 +24439,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -24674,7 +24704,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -24688,11 +24718,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -24756,7 +24784,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -24780,9 +24808,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -24841,15 +24869,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -24911,7 +24937,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -24925,11 +24951,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -25076,7 +25100,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -25120,9 +25144,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -25195,13 +25219,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -25259,15 +25283,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -25328,7 +25350,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -25342,11 +25364,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -25421,7 +25441,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -25435,9 +25455,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -25509,15 +25529,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -25582,7 +25600,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -25716,15 +25734,13 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -25762,14 +25778,12 @@
       "test": "@all-tests on linux",
       "kind": "suite",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-11"
    }
   },
   {
@@ -25980,7 +25994,7 @@
     "files": [
      "tests/test_native_golden.c"
     ],
-    "outcome": "failed"
+    "outcome": "passed"
    },
    {
     "name": "native_golden_cache_contract",
@@ -26001,7 +26015,7 @@
     "files": [
      "tests/test_dashboard.c"
     ],
-    "outcome": "failed"
+    "outcome": "passed"
    },
    {
     "name": "native_map_contract",
@@ -26750,12 +26764,18 @@
    }
   ],
   "summary": {
-   "passed": 135,
-   "failed": 2,
+   "passed": 137,
+   "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "6f10fb0a",
+   "date": "2026-11-11",
+   "subject": "aos: port Balore (id 109)",
+   "scope": "project"
+  },
   {
    "commit": "63512504",
    "date": "2026-11-11",
@@ -27229,12 +27249,6 @@
    "date": "2026-11-09",
    "subject": "Compile Rock Armor family as an independent enemy unit",
    "scope": "project"
-  },
-  {
-   "commit": "08f09f0f",
-   "date": "2026-11-09",
-   "subject": "Compile Axe Armor family as an independent enemy unit",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -27295,9 +27309,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1688,
-    "routines_attached_to_features": 1688,
-    "unassigned_routines": 1885,
+    "routines_cited_by_features": 1717,
+    "routines_attached_to_features": 1717,
+    "unassigned_routines": 1856,
     "call_edges": 14228
    }
   },
@@ -29539,22 +29553,22 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 99,
-      "functional_or_better": 99,
-      "functional_or_better_percent": 97,
+      "implemented": 100,
+      "functional_or_better": 100,
+      "functional_or_better_percent": 98,
       "by_status": {
-       "functional": 99,
-       "not_started": 3
+       "functional": 100,
+       "not_started": 2
       }
      },
      "bosses": {
       "total": 11,
-      "implemented": 3,
-      "functional_or_better": 3,
-      "functional_or_better_percent": 27,
+      "implemented": 4,
+      "functional_or_better": 4,
+      "functional_or_better_percent": 36,
       "by_status": {
-       "not_started": 8,
-       "functional": 3
+       "functional": 4,
+       "not_started": 7
       }
      },
      "items": {
@@ -31991,13 +32005,28 @@
      {
       "id": 92,
       "name": "Giant Skeleton",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Giant Skeleton",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_08_room_006 and area_11_room_006: the Giant Skeleton boss fight."
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.giant_skeleton",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "ported",
+       "soul": "partial",
+       "soul_ref": "red:41",
+       "notes": "Soul: drops (soul_index 41 through the boss soul path, rare item 0x002D) and is collected, but its red soul 41 (the shared throw routine 0x08025785, parameter 4) is refused by the port: the skill_throws.tsv record's 0x0200 frame-derived box flag is outside AOS_THROW_PORTED_FLAGS. Animations, sounds, sprite and loot are the Creaking Skull row (the Giant Skeleton thunks forward to the same create/update; its enemies.tsv record drops rare item 0x002D through the generic roll). Divergences are the Creaking Skull row's."
       }
      },
      {
@@ -32326,13 +32355,28 @@
      {
       "id": 33,
       "name": "Creaking Skull",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Creaking Skull",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_08_room_006: the Giant Skeleton rises on its thirteen bones and fights; area_00_room_010 carries the Creaking Skull."
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.creaking_skull",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "n/a",
+       "soul": "partial",
+       "soul_ref": "blue:14",
+       "notes": "Soul: drops (soul_index 14, soul_rarity 40, rates 20/30 through the generic roll, no items) and is collected, but its blue soul 14 (routine 0x08030A25) has no ported update yet. Animations: ported from EnemyCreakingSkullCreate (0x0809549C) / EnemyCreakingSkullUpdate (0x08095320) and the sub_0809808C thirteen-bone follower, the sub_08095898 sixteen-case state-0 machine and the sub_08096A94 state-1 attack — the shared animation record 0x082232B8 through the shared play/step helpers; unit-tested in creaking_skull_tests. Sounds: the 0x8C bone creak stingers, the 0x86/0x80/0x84/0x76/0x77/0x7A/0x97/0xE0/0x1C/0x29 attack songs and the 0x6B death song are requested and unit-tested, not listened to. Sprite: tiles 0x081CC044, palette 0x0820AB38 bank 0, animation record 0x082232B8 exported natively, shared by the body and every bone child. Loot: the enemies.tsv record drops nothing (common/rare item 0). Divergences: the + 0x1C container entity folds into the persistent CS_BONE children emitted under the 8-child cap, the thirteen container records collapse to fixed spine offsets, the two ~2000-line choreography machines keep their case order and songs while the per-case bone-target tables collapse to a documented spine cycle, the sub_0809808C bone brain keeps its parent lock, sine wobble and death-on-parent with approximated case tables, the sub_08098CF0 debris becomes CS_GORE children, the sub_08098E00 room gate and the + 0x5A palette merge are not ported, and there is no emulator comparison."
       }
      },
      {
@@ -32503,32 +32547,32 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 102,
+      "ported": 104,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 102,
+      "ported": 104,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 101,
+      "ported": 103,
       "partial": 0,
       "missing": 0
      },
      "loot": {
-      "ported": 62,
+      "ported": 63,
       "partial": 0,
       "missing": 0
      },
      "soul": {
       "ported": 70,
-      "partial": 32,
+      "partial": 34,
       "missing": 0
      },
      "complete": 70,
-     "monsters": 102
+     "monsters": 104
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -36656,7 +36700,7 @@
        "id": "05:29",
        "name": "Giant Skeleton",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 41 through the boss soul path, rare item 0x002D) and is collected, but its red soul 41 (the shared throw routine 0x08025785, parameter 4) is refused by the port: the skill_throws.tsv record's 0x0200 frame-derived box flag is outside AOS_THROW_PORTED_FLAGS. Animations, sounds, sprite and loot are the Creaking Skull row (the Giant Skeleton thunks forward to the same create/update; its enemies.tsv record drops rare item 0x002D through the generic roll). Divergences are the Creaking Skull row's.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",
@@ -37539,7 +37583,7 @@
        "id": "06:0E",
        "name": "Creaking Skull",
        "status": "not_started",
-       "note": "Native soul identified; effect not tracked as ported",
+       "note": "Soul: drops (soul_index 14, soul_rarity 40, rates 20/30 through the generic roll, no items) and is collected, but its blue soul 14 (routine 0x08030A25) has no ported update yet. Animations: ported from EnemyCreakingSkullCreate (0x0809549C) / EnemyCreakingSkullUpdate (0x08095320) and the sub_0809808C thirteen-bone follower, the sub_08095898 sixteen-case state-0 machine and the sub_08096A94 state-1 attack — the shared animation record 0x082232B8 through the shared play/step helpers; unit-tested in creaking_skull_tests. Sounds: the 0x8C bone creak stingers, the 0x86/0x80/0x84/0x76/0x77/0x7A/0x97/0xE0/0x1C/0x29 attack songs and the 0x6B death song are requested and unit-tested, not listened to. Sprite: tiles 0x081CC044, palette 0x0820AB38 bank 0, animation record 0x082232B8 exported natively, shared by the body and every bone child. Loot: the enemies.tsv record drops nothing (common/rare item 0). Divergences: the + 0x1C container entity folds into the persistent CS_BONE children emitted under the 8-child cap, the thirteen container records collapse to fixed spine offsets, the two ~2000-line choreography machines keep their case order and songs while the per-case bone-target tables collapse to a documented spine cycle, the sub_0809808C bone brain keeps its parent lock, sine wobble and death-on-parent with approximated case tables, the sub_08098CF0 debris becomes CS_GORE children, the sub_08098E00 room gate and the + 0x5A palette merge are not ported, and there is no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

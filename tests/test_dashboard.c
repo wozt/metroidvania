@@ -380,7 +380,8 @@ static void test_bestiary(const FusionJson *data) {
         "Lilith", "Succubus", "Triton", "Devil", "Arc Demon",
         "Demon Lord", "Flame Demon", "Quezlcoatl", "Alastor",
         "Man Eater", "Gladiator", "Wooden Golem", "Golem",
-        "Flesh Golem", "Iron Golem", "Stolas"};
+        "Flesh Golem", "Iron Golem", "Stolas",
+        "Giant Skeleton"};
     size_t partial_count = 0, working_count = 0;
     for (size_t index = 0; index < aos_monsters->count; ++index) {
         const FusionJson *monster = &aos_monsters->items[index];
@@ -396,7 +397,7 @@ static void test_bestiary(const FusionJson *data) {
     }
     EXPECT(partial_count == 0, "partial Aria count %zu", partial_count);
     EXPECT(working_count == COUNT(working), "functional Aria count %zu", working_count);
-    static const char *const bosses[] = {"Creaking Skull", "Great Armor",
+    static const char *const bosses[] = {"Great Armor",
         "Big Golem", "Headhunter", "Legion", "Julius Belmont",
         "Graham Jones", "Chaos"};
     for (size_t index = 0; index < COUNT(bosses); ++index) {

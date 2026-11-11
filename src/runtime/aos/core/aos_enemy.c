@@ -411,6 +411,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_FLESH_GOLEM && id != AOS_ENEMY_IRON_GOLEM &&
         id != AOS_ENEMY_STOLAS && id != AOS_ENEMY_DEATH &&
         id != AOS_ENEMY_MANTICORE && id != AOS_ENEMY_BALORE &&
+        id != AOS_ENEMY_CREAKING_SKULL && id != AOS_ENEMY_GIANT_SKELETON &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1408,6 +1409,28 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->mt_f6f = enemy->mt_cnt24 = enemy->mt_var25 = 0;
         enemy->mt_launched = 0;
         enemy->mt_slot = enemy->mt_act = 0;
+        enemy->state = flag_8e_40 ? 3 : 0;
+        enemy->step = 0;
+        enemy->substep = 0;
+        enemy->timer = 0;
+        enemy->boss_parts_spawned = false;
+        enemy->spawned_count = 0;
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_CREAKING_SKULL || id == AOS_ENEMY_GIANT_SKELETON) {
+        /* EnemyCreakingSkullCreate 0x0809549C (the Giant Skeleton
+         * thunks forward): tiles 0x081CC044, palette 0x0820AB38,
+         * frames 0x082232B8 shared by the body and the thirteen bone
+         * children; the + 0x30 param gate and the gEwramData room
+         * flags can delete the spawn; the + 0x1C container's
+         * thirteen children of sub_0809808C emit on the first
+         * updates via boss_parts_spawned; the gEwramData + 0x8E &
+         * 0x40 flag parks state 3; the hurt/death callbacks
+         * sub_08098E74/sub_08098EA4 fold into the shared collide. */
+        enemy->cs_bone = enemy->cs_pose = 0;
+        enemy->cs_cool = enemy->cs_hits = 0;
         enemy->state = flag_8e_40 ? 3 : 0;
         enemy->step = 0;
         enemy->substep = 0;
@@ -4413,6 +4436,12 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_balore_update(enemy, soma, layer, kind, weapon,
                                        weapon_frames, soma_atk, soma_def,
                                        cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_CREAKING_SKULL ||
+        enemy->id == AOS_ENEMY_GIANT_SKELETON)
+        return aos_enemy_creaking_skull_update(enemy, soma, layer, kind,
+                                               weapon, weapon_frames,
+                                               soma_atk, soma_def, cam_x,
+                                               cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

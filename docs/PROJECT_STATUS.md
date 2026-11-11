@@ -1,3 +1,26 @@
+## Patch 0990 - Creaking Skull and Giant Skeleton ported (ids 33, 92)
+
+- `EnemyCreakingSkullCreate` (0x0809549C) /
+  `EnemyCreakingSkullUpdate` (0x08095320): tiles `0x081CC044`,
+  palette `0x0820AB38`, frames `0x082232B8` shared by the body
+  and the thirteen bone children; `EnemyGiantSkeletonCreate` /
+  `EnemyGiantSkeletonUpdate` are thunks to the same routines.
+- `creaking_skull.c` ports the architecture: the + 0x1C
+  container's thirteen `sub_0806DFF8` children (callback
+  `sub_0809808C`) fold into the persistent `CS_BONE` roles emitted
+  under the 8-child cap; state 0 (`sub_08095898`, sixteen cases)
+  approaches with the 0x8C creak stingers, state 1
+  (`sub_08096A94`) attacks with shot volleys and the native
+  songs, state 2 is the + 0xD death countdown with `CS_GORE`
+  debris, state 3 dormant.
+- Blue soul 14 (Creaking Skull) and the throw parameter 4 of red
+  soul 41 (Giant Skeleton, flag 0x0200 outside
+  `AOS_THROW_PORTED_FLAGS`) are not ported: both aspects are
+  `partial`.
+- Unit-tested in `creaking_skull_tests` (both ids, dormant,
+  thirteen-bone emission, bone tracking/death, volley, lethal
+  state 2 and delete).
+
 ## Patch 0989 - Balore ported (id 109)
 
 - `EnemyBaloreCreate` (0x080B5C38) / `EnemyBaloreUpdate`

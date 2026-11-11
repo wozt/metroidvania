@@ -45,7 +45,6 @@ aos:asm:asm/code/code_080211F0.s:SkillNightmareUse	SkillNightmareUse	abilities	n
 aos:asm:asm/code/code_080211F0.s:SkillRedMinotaurUse	SkillRedMinotaurUse	abilities	name			asm_function		asm/code/code_080211F0.s	11109	0	11
 aos:asm:asm/code/code_080211F0.s:SkillSkyFishUse	SkillSkyFishUse	abilities	name			asm_function		asm/code/code_080211F0.s	28016	0	15
 aos:asm:asm/code/code_080211F0.s:SkillSlimeUse	SkillSlimeUse	abilities	name			asm_function		asm/code/code_080211F0.s	23700	0	15
-aos:asm:asm/code/code_080211F0.s:SkillStudentWitchUse	SkillStudentWitchUse	abilities	name			asm_function		asm/code/code_080211F0.s	8328	0	14
 aos:asm:asm/code/code_080211F0.s:SkillUkobackUse	SkillUkobackUse	abilities	name			asm_function		asm/code/code_080211F0.s	17899	0	15
 aos:asm:asm/code/code_080211F0.s:SkillUneUse	SkillUneUse	abilities	name			asm_function		asm/code/code_080211F0.s	10605	0	13
 aos:asm:asm/code/code_080211F0.s:sub_08025620	sub_08025620	abilities	referrers			asm_function	0x08025620	asm/code/code_080211F0.s	8666	0	5

@@ -1,3 +1,23 @@
+## Patch 1011 - Red soul 15 (Student Witch / Basilisk) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_student_witch.c` ports
+  `SkillStudentWitchUse` (routine 0x08025360), the soul both the
+  Student Witch and the Basilisk drop as red:15: state 0 places it
+  through `sub_08031EA4(entity, source, 8, -0x1A)` with attack box 5
+  plus the `0x1018F0F4` box; state 1 walks at -0x20000 with the
+  `0x084F12BC` probes (mode 8) — result&8 plays song 0x1A0 once,
+  result&3 lingers 0x10 frames; the `sub_0806D128(e, 4)` margin probe
+  forces state 3 and state 3 deletes.
+- `src/assets/aos/objects.c` exports `skill_student_witch` (entry
+  0x30 of 0x080E13BC: tiles 0x081CE0D4, palette 0x0820B0D4, frames
+  0x08231350); object library: 1601 sequences. Documented
+  divergences: the rng&7 animation-variant pick, + 0x54/+ 0x5C fields
+  and the + 0x58 bit-5 margin flag are not ported.
+- `tests/test_aos_soul_red_student_witch.c` covers placement, the
+  walk/contact song, linger, margin-forced delete. Remaining soul
+  backlog: 15 red souls + 5 blue (basilisk and student_witch both
+  complete: 90 -> 92).
+
 ## Patch 1010 - Red soul 49 (Legion) ported
 
 - `SkillLegionUse` (routine 0x0802C0D4) reuses the tested

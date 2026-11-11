@@ -446,6 +446,10 @@ static const EntitySpec entities[] = {
      * (attack box preset 5, no walker probes). */
     {"skill_legion", 0x081DA938, 0x0820B478, 0, 0x08235684, 0,
      0, 0, 0, {0}},
+    /* Entry 0x30 of 0x080E13BC: SkillStudentWitchUse's running ghost,
+     * shared by red soul 15 (Student Witch and Basilisk). */
+    {"skill_student_witch", 0x081CE0D4, 0x0820B0D4, 0, 0x08231350,
+     0x084F12BC, 0, 0, 0, {0}},
     /* Resource 6 of 0x080E13BC: the Killer Doll soul's decoy (looping
      * sequence 0 or 1). */
     ENTITY("skill_killer_doll", 0x081CF0DC, 0x0820B11C, 0, 0x08231578),

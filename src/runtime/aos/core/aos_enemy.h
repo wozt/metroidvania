@@ -129,6 +129,7 @@ enum {
     AOS_ENEMY_LIGHTNING_DOLL = 0x3B,
     AOS_ENEMY_GREAT_ARMOR = 0x3C,
     AOS_ENEMY_GRAHAM = 0x6F,
+    AOS_ENEMY_CHAOS = 0x70,
     AOS_ENEMY_NEEDLES = 0x3F,
     AOS_ENEMY_CAGNAZZO = 0x49,
     AOS_ENEMY_RIPPER = 0x4A,
@@ -291,7 +292,7 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_BG_CHILD0 = 167, AOS_ROLE_BG_CHILD1 = 168,
        AOS_ROLE_BG_CHILD2 = 169, AOS_ROLE_BG_CHILD3 = 170,
        AOS_ROLE_GA_PART = 171, AOS_ROLE_GRAHAM_CLONE = 172,
-       AOS_ROLE_GRAHAM_CORE = 173 };
+       AOS_ROLE_GRAHAM_CORE = 173, AOS_ROLE_CHAOS_PART = 174 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -365,6 +366,13 @@ typedef struct AosEnemy {
     uint8_t hh_phase;       /* Headhunter body +0x18: active head, 1..3 */
     uint8_t hh_head_done;   /* Headhunter state-2 case 1: linked heads finished */
     uint8_t hh_f1a, hh_f1b; /* Headhunter state-0 +0x1A flags / +0x1B anim */
+    /* Chaos (0x70): +0x15 fired flags, +0x18 enable mask, the
+     * +0x19/+0x1A/+0x1B staggered timers of sub_080A1FEC and the
+     * drifting core record position (+0xC/+0x10 of the +0x20
+     * record) with its +0x14 spin accumulator. */
+    uint8_t ch_f15, ch_f18, ch_t19, ch_t1a, ch_t1b;
+    int32_t ch_cx, ch_cy;
+    uint32_t ch_spin;
     bool buer_fire_mirrored; /* linked second sprite's +0x58 bit 0x40, separate from parent */
     /* Death step-one linked-fire displacement: +1 X/Y on every third
      * tick, then -1 on the following tick; carried into death step two.

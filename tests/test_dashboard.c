@@ -275,7 +275,7 @@ static void test_bestiary(const FusionJson *data) {
     EXPECT(red_souls->count == 55 && blue_souls->count == 24 &&
            yellow_souls->count == 35 && ability_souls->count == 6,
            "Aria soul families");
-    EXPECT(integer_at(fusion_json_member(aos, "aspects"), "complete") == 75,
+    EXPECT(integer_at(fusion_json_member(aos, "aspects"), "complete") == 76,
            "complete Aria monsters");
     const FusionJson *mzm_monster_coverage = fusion_json_member(mzm_coverage, "monsters");
     const FusionJson *mzm_item_coverage = fusion_json_member(mzm_coverage, "items");
@@ -397,11 +397,11 @@ static void test_bestiary(const FusionJson *data) {
     }
     EXPECT(partial_count == 0, "partial Aria count %zu", partial_count);
     EXPECT(working_count == COUNT(working), "functional Aria count %zu", working_count);
-    static const char *const bosses[] = {"Chaos"};
-    for (size_t index = 0; index < COUNT(bosses); ++index) {
-        const FusionJson *boss = row_named(aos_bosses, bosses[index]);
-        EXPECT(boss && !strcmp(text_of(boss, "status"), "not_started"),
-               "%s boss discovered", bosses[index]);
+    /* Every Aria boss is now ported; the not_started boss list is empty. */
+    for (size_t index = 0; index < aos_bosses->count; ++index) {
+        const FusionJson *boss = &aos_bosses->items[index];
+        EXPECT(strcmp(text_of(boss, "status"), "not_started"),
+               "%s boss not ported", text_of(boss, "name"));
     }
     for (size_t index = 0; index < aos_items->count; ++index)
         EXPECT(strcmp(text_of(&aos_items->items[index], "status"), "not_started") &&

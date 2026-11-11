@@ -289,6 +289,12 @@ static const EntitySpec entities[] = {
      * three sub_08083FD0 heads read the 0x08118F14 sub-sheet of the
      * same container and share the frame record. */
     ENTITY("headhunter", 0x08118F00, 0x0820A780, 0, 0x0821C190),
+    /* EnemyChaosCreate/sub_080A42D4: tiles 0x081191CC through
+     * sub_0803B800, palette bank 0x0820AD70, frames 0x08225EF8.
+     * EnemyChaos2Create reads tiles 0x08119224, the same palette
+     * bank and frames 0x08226B58 — a second kind the runtime cannot
+     * select per variant, so the phase-2 form shares this art. */
+    ENTITY("chaos", 0x081191CC, 0x0820AD70, 0, 0x08225EF8),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

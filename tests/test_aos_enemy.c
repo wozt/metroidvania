@@ -12989,10 +12989,136 @@ static void graham_tests(void) {
     aos_enemy_set_flag_8e_40(false);
 }
 
+static void chaos_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { CH_ANIMS = 4 };
+    static const uint8_t ticks4[4] = {4, 4, 4, 4};
+    static AosAnimDef defs[CH_ANIMS];
+    for (int a = 0; a < CH_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks4};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = CH_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < CH_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-64, -128,
+                                                       128, 96};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 112: hp 9999, contact 110, defence 120,
+     * weak 0x0000, resist 0x0410, no drops or soul. */
+    static const AosEnemyStats ch = {9999, 110, 120, 0x0000, 0x0410, 0};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+
+    /* Phase 1 (param1 = 0): state 0 intro keeps its decoded case
+     * cadence and songs, then state 1 housekeeping, then state 3
+     * drift; the three CHAOS_PART children emit on the first
+     * update. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, 0x70, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &ch));
+    assert(e.state == 0 && e.hp == 9999);
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    int parts = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_CHAOS_PART) parts++;
+    assert(parts == 3);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x32) >= 1);
+    /* Run the intro through state 1 and into the state-3 drift. */
+    int frames = 0;
+    while (e.state != 3 && frames < 0x800) {
+        aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.state == 3);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x52) >= 1);
+    /* The drift machine ramps the velocities and accumulates the
+     * spin pattern once its 0x78 lead-in ends (song 0x149 plays at
+     * that transition). */
+    frames = 0;
+    while (e.step != 2 && frames < 0x100) {
+        aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(e.step == 2);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x149) >= 1);
+    int32_t cx = e.ch_cx;
+    aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(e.ch_cx != cx);
+
+    /* Phase 2 (param1 = 1): the 0xBB8 hp variant enters its own
+     * machine; a lethal hit runs the state-3 death cinematic. */
+    AosEnemy e2;
+    assert(aos_enemy_create(&e2, 0x70, 300, 150, 0, 1,
+                            &soma, &layer, &kind, &ch));
+    assert(e2.state == 0 && e2.hp == 0xBB8);
+    e2.hp = 0;
+    aos_enemy_update(&e2, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(e2.defeated && e2.state == 3);
+    frames = 0;
+    while (!e2.removed && frames < 0x200) {
+        aos_enemy_update(&e2, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(e2.removed);
+
+    /* A CHAOS_PART child orbits the core record and dies with the
+     * parent. */
+    AosEnemy pt;
+    memset(&pt, 0, sizeof pt);
+    pt.id = 0x70;
+    pt.role = AOS_ROLE_CHAOS_PART;
+    pt.variant = 0;
+    pt.parent = &e;
+    pt.x = AOS_FIXED(100);
+    pt.y = AOS_FIXED(100);
+    e.ch_cx = AOS_FIXED(200);
+    e.ch_cy = AOS_FIXED(200);
+    e.removed = false;
+    aos_enemy_update(&pt, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(!pt.removed && pt.x == AOS_FIXED(200) + 0x60000 &&
+           pt.y == AOS_FIXED(200) - 0x40000);
+    e.removed = true;
+    aos_enemy_update(&pt, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(pt.removed);
+    e.removed = false;
+
+    /* The dormant + 0x8E & 0x40 gate parks state 4. */
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy d;
+    assert(aos_enemy_create(&d, 0x70, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &ch));
+    assert(d.state == 4);
+    aos_enemy_update(&d, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(d.state == 4 && !d.removed);
+    aos_enemy_set_flag_8e_40(false);
+}
+
 int main(void) {
     great_armor_tests();
     big_golem_tests();
     graham_tests();
+    chaos_tests();
     peeping_eye_tests();
     skeleton_bone_tests();
     soul_attack_tests();

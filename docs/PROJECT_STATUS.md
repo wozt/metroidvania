@@ -1,3 +1,27 @@
+## Patch 1002 - Chaos ported (id 112): every Aria boss is now ported
+
+- `src/runtime/aos/enemies/chaos.c` ports the two-phase final boss:
+  `EnemyChaosCreate` (0x080A1E38) / `EnemyChaosUpdate` (0x080A4340)
+  for phase 1 and the `param1` `EnemyChaos2Create` (0x080A712C) /
+  `EnemyChaos2Update` (0x080A6ED4) collapsed machine for phase 2,
+  sharing the one `Enemy/chaos` kind (phase-2 art tiles
+  0x08119224 / frames 0x08226B58 is a documented divergence).
+- Phase 1 keeps the `sub_080A20D0` intro cadence (song 0x32, the
+  0x78 beat, the 0x51 part-pulse marker), the `sub_080A1FEC`
+  housekeeping (the + 0x18 story-mask protocol approximated by the
+  three staggered timers), the `sub_080A43E4` restore and the
+  `sub_080A22A0` drift machine with its 0x149 lead-in. The three
+  `sub_080A2A4C` parts are `AOS_ROLE_CHAOS_PART` fixed-orbit
+  children. Phase 2 runs a documented intro/attack/death cycle over
+  the `sub_080A4508`/`sub_080A4728`/`sub_080A49E0` machines; the
+  `sub_080A4C0C` hurt callback and lethal path enter it, and song
+  0x1010 marks the palette-flash exits and the 0x167 attack accent.
+- Chaos drops nothing and has no soul, so all five aspects are
+  `ported`/`n/a`: Aria's complete-aspect count reaches 76 and the
+  dashboard boss list is empty. `chaos_tests` covers create gates,
+  intro/attack songs, the phase-2 entry, part children and the
+  lethal/death path.
+
 ## Patch 1001 - Headhunter completed (id 106)
 
 - The missing native resources are now wired: `Enemy/headhunter`

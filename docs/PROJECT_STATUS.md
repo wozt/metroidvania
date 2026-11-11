@@ -1,3 +1,19 @@
+## Patch 1015 - Red soul 25 (Une) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_une.c` ports
+  `SkillUneUse` (routine 0x080265C0): bouncing walker, `+ 0x24` =
+  0xA0000 halved/negated on walls with the 0x084F13AA probes, `+ 0x4C`
+  hop velocity -0x18000 with `+ 0x54` gravity, first floor contact
+  plays song 0xE0 then a 0x80-frame linger ending in song 0xE8, box
+  preset 5 with the `sub_0802D9B4` callback. The table-driven shots,
+  the `+ 0x6C` hit flag and flag bookkeeping documented as skipped.
+- `src/assets/aos/objects.c` exports `skill_une` (entry 0 of
+  0x080E13BC: tiles 0x081CC0C4, palette 0x0820B044, frames
+  0x082308E8, probes 0x084F13AA); object library: 1615 sequences.
+- `tests/test_aos_soul_red_une.c` covers the hop landing, contact
+  cadence, linger and delete gates. Remaining soul backlog: 11 red +
+  5 blue.
+
 ## Patch 1014 - Red soul 20 (Altair) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_altair.c` ports

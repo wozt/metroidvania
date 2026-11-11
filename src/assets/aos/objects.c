@@ -258,6 +258,7 @@ static const EntitySpec entities[] = {
     ENTITY("stolas", 0x081CC064, 0x0820AC28, 0, 0x08225224),
     ENTITY("death", 0x08119498, 0x0820BC1C, 0, 0x08249C48),
     ENTITY("manticore", 0x081CBF54, 0x0820A4D0, 0, 0x082145BC),
+    ENTITY("balore", 0x081193FC, 0x0820B92C, 7, 0x08244220),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),
@@ -825,7 +826,10 @@ static bool load_tile_sheet(const FusionRom *rom, uint32_t descriptor,
     *sheet = (TileSheet){0};
     const uint8_t *header = slice(rom, descriptor, 4, "graphics descriptor",
                                   error, error_size);
-    if (!header || header[1] != 4 || header[2] == 0 || header[3] == 0) {
+    /* Encoding 2 containers carry a block count in header[1] instead
+     * of the depth byte; every other encoding needs depth 4. */
+    if (!header || (header[0] != 2 && header[1] != 4) ||
+        header[2] == 0 || header[3] == 0) {
         set_error(error, error_size, "unsupported object graphics descriptor");
         return false;
     }
@@ -844,42 +848,58 @@ static bool load_tile_sheet(const FusionRom *rom, uint32_t descriptor,
         return true;
     }
     if (header[0] == 2) {
-        /* A multi-sheet container (Death's tiles): header[2] pointers
-         * to uncompressed sub-descriptors (encoding 0, depth 4), each
-         * width_tiles x height_tiles tiles; the game loads them into
-         * VRAM contiguously, so the sheets concatenate in order. */
-        unsigned count = header[2];
+        /* A multi-sheet container (Death's and Balore's tiles): a
+         * sequence of blocks `02 <count> 04 02` each followed by
+         * count pointers to uncompressed sub-descriptors (encoding
+         * 0, depth 4), each width_tiles x height_tiles tiles; the
+         * game loads them into VRAM contiguously, so the sheets
+         * concatenate in order (a shared sub-sheet may repeat). */
         size_t total = 0;
-        uint32_t offsets[16];
-        uint8_t dims[16][2];
-        if (count == 0 || count > 16) {
+        uint32_t offsets[32];
+        uint8_t dims[32][2];
+        unsigned count = 0;
+        uint32_t at = descriptor;
+        for (unsigned block = 0; block < 8; ++block) {
+            const uint8_t *bh = slice(rom, at, 4, "sheet block header",
+                                      error, error_size);
+            if (!bh || bh[0] != 2)
+                break;
+            unsigned n = bh[1];
+            if (n == 0 || n > 8 || count + n > 32) {
+                set_error(error, error_size, "unsupported object sheet count");
+                goto failed;
+            }
+            const uint8_t *entries = slice(rom, at + 4, n * 4,
+                                           "sheet pointer table", error,
+                                           error_size);
+            if (!entries) goto failed;
+            for (unsigned i = 0; i < n; ++i) {
+                uint32_t sub = read_u32(entries + i * 4);
+                const uint8_t *sh = slice(rom, sub, 4, "sub-sheet header",
+                                          error, error_size);
+                if (!sh || sh[0] != 0 || sh[1] != 4) {
+                    set_error(error, error_size,
+                              "unsupported object sub-sheet encoding");
+                    goto failed;
+                }
+                offsets[count] = sub;
+                dims[count][0] = sh[2];
+                dims[count][1] = sh[3];
+                total += (size_t)sh[2] * sh[3] * TILE_BYTES;
+                if (count == 0) {
+                    sheet->width_tiles = sh[2];
+                } else if (sh[2] != sheet->width_tiles) {
+                    set_error(error, error_size,
+                              "object sub-sheets differ in width");
+                    goto failed;
+                }
+                count++;
+            }
+            at += 4 + n * 4;
+        }
+        if (count == 0) {
             set_error(error, error_size, "unsupported object sheet count");
             goto failed;
-        }
-        const uint8_t *entries = slice(rom, descriptor + 4, count * 4,
-                                       "sheet pointer table", error,
-                                       error_size);
-        if (!entries) goto failed;
-        for (unsigned i = 0; i < count; ++i) {
-            uint32_t sub = read_u32(entries + i * 4);
-            const uint8_t *sh = slice(rom, sub, 4, "sub-sheet header",
-                                      error, error_size);
-            if (!sh || sh[0] != 0 || sh[1] != 4) {
-                set_error(error, error_size,
-                          "unsupported object sub-sheet encoding");
-                goto failed;
-            }
-            offsets[i] = sub;
-            dims[i][0] = sh[2];
-            dims[i][1] = sh[3];
-            total += (size_t)sh[2] * sh[3] * TILE_BYTES;
-            if (i == 0) {
-                sheet->width_tiles = sh[2];
-            } else if (sh[2] != sheet->width_tiles) {
-                set_error(error, error_size,
-                          "object sub-sheets differ in width");
-                goto failed;
-            }
         }
         free(sheet->data);
         sheet->data = malloc(total);
@@ -889,15 +909,15 @@ static bool load_tile_sheet(const FusionRom *rom, uint32_t descriptor,
             sheet->data = NULL;
             return false;
         }
-        size_t at = 0;
+        size_t pos = 0;
         for (unsigned i = 0; i < count; ++i) {
             size_t n = (size_t)dims[i][0] * dims[i][1] * TILE_BYTES;
             const uint8_t *tiles = slice(rom, offsets[i] + 4, n,
                                          "sub-sheet tiles", error,
                                          error_size);
             if (!tiles) goto failed;
-            memcpy(sheet->data + at, tiles, n);
-            at += n;
+            memcpy(sheet->data + pos, tiles, n);
+            pos += n;
         }
         return true;
     }

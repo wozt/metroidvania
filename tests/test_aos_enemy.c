@@ -1149,6 +1149,139 @@ static void early_enemy_batch_tests(void) {
 }
 
 
+static void balore_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { BL_ANIMS = 8 };
+    static const uint8_t ticks8[8] = {4, 4, 4, 4, 4, 4, 4, 4};
+    static AosAnimDef defs[BL_ANIMS];
+    for (int a = 0; a < BL_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks8};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = BL_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < BL_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-32, -64, 64, 72};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 109: hp 4000, contact 65, defence 60,
+     * weak 0x0000, resist 0x0400, experience 16000,
+     * soul red 50 (not ported). */
+    static const AosEnemyStats bl = {4000, 65, 60, 0x0000, 0x0400, 16000};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+
+    /* EnemyBaloreCreate: hp 4000, state 0, the three part children
+     * emit over the first updates via boss_parts_spawned. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, 0x6D, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &bl));
+    assert(e.state == 0 && e.hp == 4000 && e.bl_idx == 4);
+    assert(!e.boss_parts_spawned && e.spawned_count == 0);
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, 0x6D, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &bl));
+    assert(ed.state == 5);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* First update emits the wing + two limbs (cap allows all 3). */
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(120);
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    int wing = 0, l0 = 0, l1 = 0;
+    for (int i = 0; i < hit.child_count; ++i) {
+        if (hit.children[i].role == AOS_ROLE_BALO_WING) wing++;
+        if (hit.children[i].role == AOS_ROLE_BALO_LIMB0) l0++;
+        if (hit.children[i].role == AOS_ROLE_BALO_LIMB1) l1++;
+    }
+    assert(wing == 1 && l0 == 1 && l1 == 1);
+    assert(e.spawned_count == 3 && e.boss_parts_spawned);
+
+    /* State 0 -> state 1 on the first update. */
+    assert(e.state == 1);
+
+    /* The wing child orbits the parent and dies with it. */
+    AosEnemy w;
+    memset(&w, 0, sizeof w);
+    w.id = 0x6D;
+    w.role = AOS_ROLE_BALO_WING;
+    w.parent = &e;
+    w.x = AOS_FIXED(150);
+    w.y = AOS_FIXED(120);
+    aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(!w.removed && w.state >= 1);
+    e.state = 4;
+    e.phase |= 4;
+    aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(w.removed);
+    e.state = 1;
+    e.phase &= ~4;
+
+    /* State 1 rise: substep machine with the two FX spawns and
+     * song 0x1D4. */
+    AosEnemy r;
+    assert(aos_enemy_create(&r, 0x6D, 150, 120, 0, 0,
+                            &soma, &layer, &kind, &bl));
+    r.x = AOS_FIXED(150);
+    r.y = AOS_FIXED(120);
+    r.state = 1;
+    r.substep = 1;
+    r.timer = 0x18;
+    hit = aos_enemy_update(&r, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    int fx = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_BALO_FX) fx++;
+    assert(fx == 1);
+
+    /* State 3 attack: substep 0 spawns two blades + song 0x1D5. */
+    AosEnemy a;
+    assert(aos_enemy_create(&a, 0x6D, 150, 120, 0, 0,
+                            &soma, &layer, &kind, &bl));
+    a.x = AOS_FIXED(150);
+    a.y = AOS_FIXED(120);
+    a.state = 3;
+    a.substep = 0;
+    hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    int blades = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_BALO_BLADE) blades++;
+    assert(blades == 2 && a.substep == 1 && a.timer == 0x60);
+
+    /* Lethal: hp 0 -> defeated, state 4 death machine, then the
+     * case-6 delete. */
+    AosEnemy el;
+    assert(aos_enemy_create(&el, 0x6D, 150, 120, 0, 0,
+                            &soma, &layer, &kind, &bl));
+    el.x = AOS_FIXED(150);
+    el.y = AOS_FIXED(120);
+    el.state = 2;
+    el.hp = 0;
+    aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(el.defeated && el.state == 4);
+    el.substep = 6;
+    el.timer = 0;
+    hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(el.removed);
+}
+
 static void manticore_tests(void) {
     aos_audio_clear();
     aos_enemy_set_flag_8e_40(false);
@@ -12194,6 +12327,7 @@ int main(void) {
     gladiator_tests();
     golem_tests();
     stolas_tests();
+    balore_tests();
     manticore_tests();
     death_tests();
     buer_tests();

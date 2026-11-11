@@ -190,6 +190,7 @@ enum {
     AOS_ENEMY_STOLAS = 0x61,
     AOS_ENEMY_DEATH = 0x6B,
     AOS_ENEMY_MANTICORE = 0x36,
+    AOS_ENEMY_BALORE = 0x6D,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -270,7 +271,10 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_MANTICORE_CHILD0 = 143, AOS_ROLE_MANTICORE_CHILD1 = 144,
        AOS_ROLE_MANTICORE_CHILD2 = 145, AOS_ROLE_MANTICORE_CHILD3 = 146,
        AOS_ROLE_MANTICORE_CHILD4 = 147, AOS_ROLE_MANTICORE_CHILD5 = 148,
-       AOS_ROLE_MANTICORE_WING = 149, AOS_ROLE_MANTICORE_SHOT = 150 };
+       AOS_ROLE_MANTICORE_WING = 149, AOS_ROLE_MANTICORE_SHOT = 150,
+       AOS_ROLE_BALO_WING = 151, AOS_ROLE_BALO_LIMB0 = 152,
+       AOS_ROLE_BALO_LIMB1 = 153, AOS_ROLE_BALO_BLADE = 154,
+       AOS_ROLE_BALO_SHOT = 155, AOS_ROLE_BALO_FX = 156 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -800,6 +804,15 @@ typedef struct AosEnemy {
     uint16_t mt_phase;
     uint8_t mt_f6f, mt_cnt24, mt_var25, mt_launched;
     uint8_t mt_slot, mt_act;
+    /* Balore (id 0x6D): the + 0x12 animation index the state machines
+     * feed to the 0x085287C4 table, the + 0x1C/+ 0x1D frame bytes of
+     * the limb children, the + 0x18 hover flag and the orbit angle
+     * of the wing child of sub_080B41E0; the three body parts are
+     * roles AOS_ROLE_BALO_WING/LIMB0/LIMB1, the sub_080B5094 and
+     * sub_080B53F8 attacks AOS_ROLE_BALO_BLADE/SHOT and the
+     * sub_080B4FB0 effects AOS_ROLE_BALO_FX. */
+    uint8_t bl_idx, bl_f1c, bl_f1d, bl_hover;
+    int32_t bl_ang, bl_fade;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

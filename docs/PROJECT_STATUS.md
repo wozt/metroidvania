@@ -1,3 +1,28 @@
+## Patch 0989 - Balore ported (id 109)
+
+- `EnemyBaloreCreate` (0x080B5C38) / `EnemyBaloreUpdate`
+  (0x080B5DC0): tiles `0x081193FC` — a two-block encoding-2
+  multi-sheet container (five 16x16 sub-sheet entries, one
+  shared, exported by the extended `objects.c` branch) —
+  palette `0x0820B92C` bank 7, frames `0x08244220`.
+- `balore.c` ports the architecture: state 0 claims the channel
+  into state 1 (`sub_080B569C`, the rise with two `sub_080B4FB0`
+  effects and song 0x1D4), state 2 (`sub_080B577C`) is the sine
+  hover with the player-delta animation index and the
+  hp <= 0x7CF phase gate, state 3 (`sub_080B5860`) attacks with
+  two `sub_080B5094` blades, song 0x1D5 and the `sub_080B53F8`
+  shot, state 4 (`sub_080B594C`) is the seven-case death with
+  songs 0x1D6/0x77/0x7C and the gore burst, state 5 dormant.
+- The three `sub_0806DFF8` part entities fold into the
+  persistent `BALO_WING/LIMB0/LIMB1` roles; the OAM slot writes
+  collapse into `BALO_FX` children; the blade/shot flights are
+  sine approximations; divergences recorded per aspect.
+- Red soul 50 is not ported (aspect `partial`); rooms
+  `area_08_room_001` carry the entity.
+- Unit-tested in `balore_tests` (create, dormant, three-part
+  emission, wing orbit/death, rise FX, blade volley, lethal
+  state 4 and delete).
+
 ## Patch 0988 - Manticore ported (id 54)
 
 - `EnemyManticoreCreate` (0x08072854) / `EnemyManticoreUpdate`

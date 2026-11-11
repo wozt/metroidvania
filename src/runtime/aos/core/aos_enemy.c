@@ -410,7 +410,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_WOODEN_GOLEM && id != AOS_ENEMY_GOLEM &&
         id != AOS_ENEMY_FLESH_GOLEM && id != AOS_ENEMY_IRON_GOLEM &&
         id != AOS_ENEMY_STOLAS && id != AOS_ENEMY_DEATH &&
-        id != AOS_ENEMY_MANTICORE &&
+        id != AOS_ENEMY_MANTICORE && id != AOS_ENEMY_BALORE &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1409,6 +1409,32 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->mt_launched = 0;
         enemy->mt_slot = enemy->mt_act = 0;
         enemy->state = flag_8e_40 ? 3 : 0;
+        enemy->step = 0;
+        enemy->substep = 0;
+        enemy->timer = 0;
+        enemy->boss_parts_spawned = false;
+        enemy->spawned_count = 0;
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_BALORE) {
+        /* EnemyBaloreCreate 0x080B5C38 through sub_080B45C0: tiles
+         * 0x081193FC, palette 0x0820B92C bank 7 (bank 0 dormant),
+         * frames 0x08244220 shared by the body and the three part
+         * entities; the param0 + 0x4CC/+ 0x37E gates and the
+         * sub_080B67A8 cutscene spawn fold into param0 (documented);
+         * + 0x5C = 0x1E, + 0x12 = 4, + 0x20 = 0x10000 (the wing
+         * orbit radius is a fixed 0x10000 in balore.c); the three children of
+         * sub_080B41E0/sub_080B4370/sub_080B44C4 emit on the first
+         * updates via boss_parts_spawned; the 0x8E & 0x40 flag
+         * parks state 5; the hurt callback sub_080B6AE8 enters the
+         * state-4 death machine through the lethal pass. */
+        enemy->bl_idx = 4;
+        enemy->bl_f1c = enemy->bl_f1d = 0;
+        enemy->bl_hover = 0;
+        enemy->bl_ang = enemy->bl_fade = 0;
+        enemy->state = flag_8e_40 ? 5 : 0;
         enemy->step = 0;
         enemy->substep = 0;
         enemy->timer = 0;
@@ -4383,6 +4409,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_manticore_update(enemy, soma, layer, kind, weapon,
                                           weapon_frames, soma_atk, soma_def,
                                           cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_BALORE)
+        return aos_enemy_balore_update(enemy, soma, layer, kind, weapon,
+                                       weapon_frames, soma_atk, soma_def,
+                                       cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

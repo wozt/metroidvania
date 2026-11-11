@@ -56,7 +56,6 @@ aos:asm:asm/code/code_080211F0.s:SkillSlimeUse	SkillSlimeUse	abilities	name			as
 aos:asm:asm/code/code_080211F0.s:SkillStudentWitchUse	SkillStudentWitchUse	abilities	name			asm_function		asm/code/code_080211F0.s	8328	0	14
 aos:asm:asm/code/code_080211F0.s:SkillUkobackUse	SkillUkobackUse	abilities	name			asm_function		asm/code/code_080211F0.s	17899	0	15
 aos:asm:asm/code/code_080211F0.s:SkillUneUse	SkillUneUse	abilities	name			asm_function		asm/code/code_080211F0.s	10605	0	13
-aos:asm:asm/code/code_080211F0.s:SkillWerewolfUse	SkillWerewolfUse	abilities	name			asm_function		asm/code/code_080211F0.s	14478	0	13
 aos:asm:asm/code/code_080211F0.s:Skill_Werejaguar_Weretiger_Use	Skill_Werejaguar_Weretiger_Use	abilities	name			asm_function		asm/code/code_080211F0.s	12635	0	11
 aos:asm:asm/code/code_080211F0.s:sub_08025620	sub_08025620	abilities	referrers			asm_function	0x08025620	asm/code/code_080211F0.s	8666	0	5
 aos:asm:asm/code/code_080211F0.s:sub_080256AC	sub_080256AC	abilities	referrers			asm_function	0x080256AC	asm/code/code_080211F0.s	8737	1	5
@@ -1108,7 +1107,6 @@ aos:c:src/code/code_080211F0.c:sub_080235C8	sub_080235C8	unclassified		technical
 aos:c:src/code/code_080211F0.c:sub_08023724	sub_08023724	abilities	referrers			c_function	0x08023724	src/code/code_080211F0.c	2198	0	4
 aos:c:src/code/code_080211F0.c:sub_08023724_inline_0	sub_08023724_inline_0	abilities	referrers			c_function		src/code/code_080211F0.c	2178	1	0
 aos:c:src/code/code_080211F0.c:sub_0802383C	sub_0802383C	abilities	referrers			c_function	0x0802383C	src/code/code_080211F0.c	2254	3	6
-aos:c:src/code/code_080211F0.c:sub_0802393C	sub_0802393C	abilities	referrers			c_function	0x0802393C	src/code/code_080211F0.c	2307	2	3
 aos:c:src/code/code_080211F0.c:sub_08023E50	sub_08023E50	unclassified		technical	exclusive_callees	c_function	0x08023E50	src/code/code_080211F0.c	2592	0	11
 aos:c:src/code/code_080211F0.c:sub_08024530	sub_08024530	unclassified		technical	exclusive_callees	c_function	0x08024530	src/code/code_080211F0.c	2883	0	15
 aos:c:src/code/code_080211F0.c:sub_08024530_inline_0	sub_08024530_inline_0	unclassified				c_function		src/code/code_080211F0.c	2858	1	0

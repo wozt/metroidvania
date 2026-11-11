@@ -38,6 +38,7 @@
 #include "aos/red_souls/aos_soul_red_fish_head.h"
 #include "aos/red_souls/aos_soul_red_killer_fish.h"
 #include "aos/red_souls/aos_soul_red_gladiator.h"
+#include "aos/red_souls/aos_soul_red_werewolf.h"
 #include "aos/red_souls/aos_soul_red_devil.h"
 #include "aos/red_souls/aos_soul_red_ghost.h"
 #include "aos/red_souls/aos_soul_red_siren.h"
@@ -312,7 +313,8 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_LIGHTNING, SKILL_ART_KILLER_DOLL, SKILL_ART_CURLY, SKILL_ART_GIANT_GHOST,
        SKILL_ART_WITCH, SKILL_ART_PILLAR, SKILL_ART_FLYING_ARMOR, SKILL_ART_DEATH,
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
-       SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM, SKILL_ARTS };
+       SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
+       SKILL_ART_WEREWOLF, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -331,7 +333,8 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_great_armor",
                                                          "skill_devil_spark",
                                                          "skill_shadow_knight",
-                                                         "skill_alura_une", "skill_big_golem"};
+                                                         "skill_alura_une", "skill_big_golem",
+                                                         "skill_werewolf"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -953,7 +956,8 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_DEVIL, SKILL_DEVIL_FIRE, SKILL_CROW, SKILL_FLEA, SKILL_GHOST,
        SKILL_GHOST_SOUL, SKILL_SIREN, SKILL_SKULL, SKILL_VALKYRIE, SKILL_NEEDLES,
        SKILL_RIPPER, SKILL_MILLIONE_EMITTER, SKILL_MILLIONE_CHILD, SKILL_FISH_HEAD,
-       SKILL_KILLER_FISH, SKILL_GLADIATOR, SKILL_LIGHTNING, SKILL_DECOY, SKILL_NEMESIS };
+       SKILL_KILLER_FISH, SKILL_GLADIATOR, SKILL_LIGHTNING, SKILL_DECOY, SKILL_NEMESIS,
+       SKILL_WEREWOLF };
 
 typedef struct {
     bool alive, started;
@@ -990,6 +994,7 @@ typedef struct {
     AosLightning lightning; /* SKILL_LIGHTNING */
     AosDecoy decoy;         /* SKILL_DECOY */
     AosNemesisSoul nemesis; /* SKILL_NEMESIS */
+    AosWerewolf werewolf;   /* SKILL_WEREWOLF */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
     AosDaggerTrail dagger_trail;
@@ -1022,6 +1027,7 @@ typedef struct {
 #define SKILL_LIGHTNING_ROUTINE 0x080277B1u
 #define SKILL_KILLER_DOLL_ROUTINE 0x08024F39u
 #define SKILL_NEMESIS_ROUTINE 0x080251F1u
+#define SKILL_WEREWOLF_ROUTINE 0x080284FCu
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1040,6 +1046,8 @@ typedef struct {
     const AosAnimSet *killer_fish;  /* resource 11, sequences 0-1 */
     const AosAnimSet *gladiator;    /* resource 24, sequence/frame 0 */
     const AosAnimSet *lightning;    /* resource 9, sequence 0 */
+    const AosAnimSet *werewolf;     /* resource 14, sequence 0 */
+    const AosEnemyKind *werewolf_kind; /* its 0x084F13B4 walker probes */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
@@ -1154,6 +1162,9 @@ static int cast_red_soul(void *context) {
                : routine == SKILL_GLADIATOR_ROUTINE && souls->gladiator &&
                          souls->gladiator_kind && souls->gladiator_kind->probes.count
                    ? SKILL_GLADIATOR
+               : routine == SKILL_WEREWOLF_ROUTINE && souls->werewolf &&
+                         souls->werewolf_kind && souls->werewolf_kind->probes.count
+                   ? SKILL_WEREWOLF
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1219,6 +1230,12 @@ static int cast_red_soul(void *context) {
     } else if (kind == SKILL_NEMESIS) {
         skill->nemesis = aos_nemesis_soul_create();
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -8);
+    } else if (kind == SKILL_WEREWOLF) {
+        skill->werewolf = aos_werewolf_create(souls->soma->x, souls->soma->y,
+                                              souls->soma->facing_left);
+        skill->x = skill->werewolf.body.x;
+        skill->y = skill->werewolf.body.y;
+        skill->facing_left = skill->werewolf.body.mirrored;
     } else if (kind == SKILL_LIGHTNING) {
         skill->lightning = aos_lightning_create(souls->soma->x, souls->soma->y,
                                                 souls->soma->facing_left, aos_random() & 1);
@@ -2032,6 +2049,32 @@ static void update_skills(AriaSouls *souls) {
             skill->facing_left = skill->flea.body.mirrored;
             break;
         }
+        case SKILL_WEREWOLF:
+            /* SkillWerewolfUse: sub_0802393C must find its floor on the
+             * first update or the cast deletes itself; on success it is
+             * counted, plays song 0x1B2 and sequence 0 once while
+             * sub_0806CAF8 walks it at -0x4000 with the 0x084F13B4 probes
+             * (mode 4); its animation end deletes it. */
+            if (!skill->started) {
+                if (!aos_werewolf_ground_ok(&skill->werewolf, souls->layer)) {
+                    end_skill(souls, skill);
+                    break;
+                }
+                aos_werewolf_land(&skill->werewolf, souls->layer,
+                                  &souls->werewolf_kind->probes);
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0x1B2);
+                aos_anim_start(&skill->anim, souls->werewolf, 0, false);
+            }
+            aos_werewolf_update(&skill->werewolf, souls->layer,
+                                &souls->werewolf_kind->probes);
+            if (aos_anim_step(&skill->anim, souls->werewolf) == 3)
+                end_skill(souls, skill);
+            skill->x = skill->werewolf.body.x;
+            skill->y = skill->werewolf.body.y;
+            skill->facing_left = skill->werewolf.body.mirrored;
+            break;
         case SKILL_GHOST:
             /* SkillGhostUse: one counted, invisible owner plays 0xD6 and
              * emits two sub_0802A49C spirits, then releases itself. */
@@ -2658,6 +2701,9 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
         else if (skill->kind == SKILL_VALKYRIE && souls->valkyrie_kind &&
                  skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
             box = souls->valkyrie_kind->attack[0][skill->anim.frame];
+        else if (skill->kind == SKILL_WEREWOLF && souls->werewolf_kind &&
+                 skill->anim.frame < AOS_ENEMY_MAX_FRAMES)
+            box = souls->werewolf_kind->attack[0][skill->anim.frame];
         else if (skill->kind == SKILL_LIGHTNING)
             box = aos_lightning_box(&skill->lightning);
         else if (skill->kind == SKILL_SKULL && souls->skull_kind &&
@@ -7258,6 +7304,11 @@ int aria_runtime_main(int argc, char **argv) {
             souls.lightning = objects_ok && lightning->loaded && lightning->defs[0].count
                                   ? &lightning->set
                                   : NULL;
+            const __typeof__(objects.skills[0]) *werewolf = &objects.skills[SKILL_ART_WEREWOLF];
+            souls.werewolf = objects_ok && werewolf->loaded && werewolf->defs[0].count
+                                 ? &werewolf->set
+                                 : NULL;
+            souls.werewolf_kind = souls.werewolf ? &werewolf->kind : NULL;
             const __typeof__(objects.skills[0]) *killer_doll =
                 &objects.skills[SKILL_ART_KILLER_DOLL];
             souls.killer_doll = objects_ok && killer_doll->loaded &&
@@ -7648,6 +7699,8 @@ int aria_runtime_main(int argc, char **argv) {
                     ? (skill->valkyrie.hidden
                            ? NULL
                            : &objects.skills[SKILL_ART_VALKYRIE].frames[0][skill->anim.frame])
+                : skill->kind == SKILL_WEREWOLF
+                    ? &objects.skills[SKILL_ART_WEREWOLF].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_LIGHTNING
                     ? &objects.skills[SKILL_ART_LIGHTNING].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_DECOY

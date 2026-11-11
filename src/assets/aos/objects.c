@@ -414,6 +414,10 @@ static const EntitySpec entities[] = {
     ENTITY("skill_killer_fish", 0x081D18F0, 0x0820B1F0, 0, 0x082321E4),
     /* Resource 17 of 0x080E13BC: Fish Head's accelerating sequence 0. */
     ENTITY("skill_fish_head", 0x081D4908, 0x0820B2C8, 0, 0x082338A4),
+    /* Resource 14 of 0x080E13BC: SkillWerewolfUse's werewolf (sequence 0
+     * once) with its 0x084F13B4 walker probes. */
+    {"skill_werewolf", 0x081D30FC, 0x0820B25C, 0, 0x082331BC, 0x084F13B4,
+     0, 0, 0, {0}},
     /* Resource 6 of 0x080E13BC: the Killer Doll soul's decoy (looping
      * sequence 0 or 1). */
     ENTITY("skill_killer_doll", 0x081CF0DC, 0x0820B11C, 0, 0x08231578),

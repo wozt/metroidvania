@@ -1,3 +1,19 @@
+## Patch 1003 - Red soul 23 (Werewolf) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_werewolf.c` ports
+  `SkillWerewolfUse` (routine 0x080284FD): the soul spawns the
+  Werewolf-art walker beside Soma, lands it through the
+  `sub_0802393C` floor-cell scan, walks it across the screen on the
+  native probe set (`werewolf_kind->probes`, 0x084F13B4), and
+  expires it at the screen margins.
+- `src/assets/aos/objects.c` exports the `skill_werewolf` art
+  (object library: 1591 sequences); `aria_runtime.c` dispatches the
+  routine to `SKILL_WEREWOLF` with the usual MP/slot checks.
+- `tests/test_aos_soul_red_werewolf.c` covers creation, the floor
+  snap, walk direction, the wall stop and expiry. Werewolf's soul
+  aspect moves `partial` -> `ported`; the remaining red-soul
+  backlog is 25 routines plus 5 blue guardians.
+
 ## Patch 1002 - Chaos ported (id 112): every Aria boss is now ported
 
 - `src/runtime/aos/enemies/chaos.c` ports the two-phase final boss:

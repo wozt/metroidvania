@@ -1,3 +1,45 @@
+## Patch 1027 - Blue soul 23 (Alastor) ported — all blue souls done
+
+- `src/runtime/aos/blue_souls/aos_soul_blue_alastor.c` ports
+  `SkillAlastorUse` (routine 0x080314AD), a toggled 3 MP/s guardian:
+  the upkeep `sub_0802DF2C` runs only while the state is below 6 and
+  its end enters state 6 — the shrink-out (`+0x2C += +0x2E << 4`,
+  `+0x28` drains by 0x1000 under the native signed compare, then
+  `sub_0802DD84` and delete). State 0 copies the source's pixel
+  position with y - 0x10, sets `+0x2E = +-0x100` from the facing
+  and inverts the sprite bit, registers the type-6 contact and plays
+  song 0x19E. State 1 whirls `+0x2C` while `+0x28` ramps past
+  0xFFFF. States 2-5 cycle: state 2 homes once toward the focus
+  point (y - 0x28), counts `+0xD` and adds the `sin(+0xD * 0x200)
+  >> 9` wobble; state 3 keeps the aim under 0x300000 with the
+  `sin(+0xD * 0x100 + 0x4000) >> 2` vertical wobble integrated
+  through `sub_0806D3D8` and the 63/64 `+0x48` decay; state 4 picks
+  the nearest of the four `+0x13194` homing slots (`sub_0802D484`,
+  none -> state 2 with `+0xD = 0x80`) and stores
+  `-(rng & 0xF) << 16` in `+0x34`; state 5 disarms `+0x72` bit 1,
+  counts `+0xD` down and homes once toward `(tx, ty + +0x34)`
+  before falling back to state 2 — always on the same update,
+  because `sub_0806E43C` returns the constant 2, so the rotating
+  contact box the tail registers for state 5 is unreachable
+  natively; the damage path is the type-6 contact armed by `+0x72`
+  bit 1 in states 2-4, approximated by `{-16,-16,32,32}` with
+  power 0x19 and elements 1.
+- Notably the guardian never translates: `sub_0806E43C`'s homing
+  travels `sub_08068CDC` with a distance of 2, which shifts 2 >> 8
+  = 0 pixels, so `+0x48`/`+0x4C` stay zero and only the `+0x2C`
+  angle evolves (plus the small state-3 `+0x4C` drift).
+- `src/assets/aos/objects.c` exports `skill_alastor` (tiles
+  0x081E3980, palette 0x0820B700, frames 0x08237AFC); the draw
+  approximates the `sub_0803E058` angle/scale affine by a rotated,
+  scaled blit. `tests/test_aos_soul_blue_alastor.c` covers the cast
+  placement, the ramp, the state 2-5 cycle, the target pick, the
+  no-target reload and the state-6 shrink-out. Also fixed the
+  Creaking Skull child roll: the native sign check compares the
+  zero-extended halfword, so its delete branch was dead code.
+- All 25 blue souls are now ported; the alastor aspect row flips to
+  ported (complete Aria monsters 110 -> 111). Remaining guardian
+  routines: Giant Bat and Final Guard.
+
 ## Patch 1026 - Blue soul 14 (Creaking Skull) ported
 
 - `src/runtime/aos/blue_souls/aos_soul_blue_creaking_skull.c` ports

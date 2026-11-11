@@ -440,6 +440,9 @@ static const EntitySpec entities[] = {
     /* SkillCreakingSkullUse's guardian and its three orbiting skulls
      * (blue soul 14): the shared record both routines load. */
     ENTITY("skill_creaking_skull", 0x081E1970, 0x0820B670, 0, 0x0823767C),
+    /* SkillAlastorUse's parked guardian (blue soul 23): its own
+     * record, drawn through the sub_0803E058 angle/scale affine. */
+    ENTITY("skill_alastor", 0x081E3980, 0x0820B700, 0, 0x08237AFC),
     /* Resource 11 of 0x080E13BC: Killer Fish's appearance sequence 1 and
      * looping swim/fall sequence 0. */
     ENTITY("skill_killer_fish", 0x081D18F0, 0x0820B1F0, 0, 0x082321E4),

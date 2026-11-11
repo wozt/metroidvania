@@ -59,15 +59,10 @@ static void creaking_child_a_update(AosCreakingChild *child,
     child->facing_left = skull->facing_left;
     switch (child->state) {
     case 0: {
-        /* sub_0803E654(0): the palette-variant roll; a negative
-         * (int16) result deletes the child through the fade path. */
-        int16_t roll = (int16_t)(random() & 0xFFFF);
-        if (roll < 0) {
-            child->dead = true;
-            return;
-        }
-        /* + 0x58 bits 0-4 take the roll; + 0x65 takes the
-         * 0x080E1AF8[index] pick {2, 1} — read at draw time. */
+        /* sub_0803E654(0): the palette-variant roll. The native's
+         * sign check compares the zero-extended halfword, so the
+         * delete branch is unreachable — the child always inits. */
+        uint16_t roll = (uint16_t)(random() & 0xFFFF);
         child->variant = (uint8_t)(roll & 0x1F);
         child->angle = (int16_t)record->angles[child->index];
         child->state = 1;

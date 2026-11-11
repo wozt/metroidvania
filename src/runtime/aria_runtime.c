@@ -44,6 +44,7 @@
 #include "aos/red_souls/aos_soul_red_kyoma_demon.h"
 #include "aos/red_souls/aos_soul_red_student_witch.h"
 #include "aos/red_souls/aos_soul_red_slime.h"
+#include "aos/red_souls/aos_soul_red_ukoback.h"
 #include "aos/red_souls/aos_soul_red_were_beast.h"
 #include "aos/red_souls/aos_soul_red_flame_demon.h"
 #include "aos/red_souls/aos_soul_red_devil.h"
@@ -322,7 +323,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
        SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD,
-       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ARTS };
+       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -343,7 +344,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
                                                          "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord",
-                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime"};
+                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -969,7 +970,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_WEREWOLF, SKILL_KILLER_MANTLE, SKILL_WERE_BEAST,
        SKILL_FLAME_DEMON, SKILL_FLAME_BOLT, SKILL_DEMON_LORD, SKILL_FLAME_SPIRIT,
        SKILL_BIPHRON, SKILL_BIPHRON_TOTEM, SKILL_BALORE, SKILL_KYOMA_DEMON,
-       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL };
+       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL, SKILL_UKOBACK };
 
 typedef struct {
     bool alive, started;
@@ -1015,6 +1016,7 @@ typedef struct {
     AosStudentWitch student_witch; /* SKILL_STUDENT_WITCH */
     AosSlime slime;           /* SKILL_SLIME */
     AosSlimeTrail slime_trail; /* SKILL_SLIME_TRAIL */
+    AosUkoback ukoback;       /* SKILL_UKOBACK */
     uint8_t volley_count;      /* SKILL_DEMON_LORD spawn gate */
     AosEnemy *ripper_target; /* sub_080239E4's +0x20 */
     int fire_target;        /* its + 0x20: the room entity chased, -1 for none */
@@ -1059,6 +1061,7 @@ typedef struct {
 #define SKILL_LEGION_ROUTINE 0x0802C0D4u
 #define SKILL_STUDENT_WITCH_ROUTINE 0x08025360u
 #define SKILL_SLIME_ROUTINE 0x0802CFC4u
+#define SKILL_UKOBACK_ROUTINE 0x0802A0DCu
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1090,6 +1093,7 @@ typedef struct {
     const AosAnimSet *student_witch; /* skill_student_witch, sequence 0 */
     const AosEnemyKind *witch_kind;  /* its 0x084F12BC walker probes */
     const AosAnimSet *slime;         /* skill_slime, sequence 0 */
+    const AosAnimSet *ukoback;       /* skill_ukoback, sequence 0 */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
@@ -1229,6 +1233,8 @@ static int cast_red_soul(void *context) {
                    ? SKILL_STUDENT_WITCH
                : routine == SKILL_SLIME_ROUTINE && souls->slime
                    ? SKILL_SLIME
+               : routine == SKILL_UKOBACK_ROUTINE && souls->ukoback
+                   ? SKILL_UKOBACK
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1338,6 +1344,9 @@ static int cast_red_soul(void *context) {
         skill->x = skill->student_witch.body.x;
         skill->y = skill->student_witch.body.y;
         skill->facing_left = skill->student_witch.body.mirrored;
+    } else if (kind == SKILL_UKOBACK) {
+        skill->ukoback = aos_ukoback_create();
+        place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, 0);
     } else if (kind == SKILL_SLIME) {
         skill->slime = aos_slime_create(souls->soma->x, souls->soma->y,
                                         souls->soma->facing_left, aos_random());
@@ -2368,6 +2377,27 @@ static void update_skills(AriaSouls *souls) {
             skill->y = ty;
             break;
         }
+        case SKILL_UKOBACK:
+            /* SkillUkobackUse: counted with song 0xDC, attack box preset 5
+             * (with the sub_0802D9B4 callback, not ported) plus the
+             * 0x1010F8F8 box, sub_08031EA4(entity, source, 8, -0x1A) glue;
+             * + 0x24 ramps 0x1000/frame to 0xFFFF through state 1's 0xF0
+             * timer (+ 0x18 force-end not traced), then state 2 decays
+             * -0x2000/frame until <= 0 deletes; the sub_0806D128(e, 2)
+             * margin probe deletes from any state. The sub_0803E654
+             * variant pick, + 0x58 bits 0-4 and the sub_0803E058/
+             * sub_0803E6BC bookkeeping are not ported. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0xDC);
+                aos_anim_start(&skill->anim, souls->ukoback, 0, false);
+            }
+            place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, 0);
+            if (!aos_ukoback_update(&skill->ukoback, false,
+                                    skill_outside(souls, skill, 2)))
+                end_skill(souls, skill);
+            break;
         case SKILL_FLAME_DEMON:
             /* SkillFlameDemonUse: one counted cast plays song 0xD8, emits
              * a sub_08045CEC(0xC, 6) burst and a fan of 3 or 5
@@ -7814,6 +7844,11 @@ int aria_runtime_main(int argc, char **argv) {
             souls.slime = objects_ok && slime->loaded && slime->defs[0].count
                               ? &slime->set
                               : NULL;
+            const __typeof__(objects.skills[0]) *ukoback =
+                &objects.skills[SKILL_ART_UKOBACK];
+            souls.ukoback = objects_ok && ukoback->loaded && ukoback->defs[0].count
+                                ? &ukoback->set
+                                : NULL;
             const __typeof__(objects.skills[0]) *mantle =
                 &objects.skills[SKILL_ART_KILLER_MANTLE];
             souls.killer_mantle = objects_ok && mantle->loaded && mantle->defs[0].count
@@ -8252,6 +8287,8 @@ int aria_runtime_main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_STUDENT_WITCH].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_SLIME || skill->kind == SKILL_SLIME_TRAIL
                     ? &objects.skills[SKILL_ART_SLIME].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_UKOBACK
+                    ? &objects.skills[SKILL_ART_UKOBACK].frames[0][skill->anim.frame]
                 : skill->kind == SKILL_NEMESIS
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_NEMESIS_SOUL_SEQUENCE][skill->anim.frame]

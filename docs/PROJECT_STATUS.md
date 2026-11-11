@@ -1,3 +1,19 @@
+## Patch 1013 - Red soul 28 (Ukoback) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_ukoback.c` ports
+  `SkillUkobackUse` (routine 0x0802A0DC): lingering ghost, song 0xDC,
+  `sub_08031EA4` glue, attack box preset 5 (with the `sub_0802D9B4`
+  callback) plus `0x1010F8F8`, `+ 0x24` ramp 0x1000/frame to 0xFFFF
+  through the 0xF0 timer, state-2 decay -0x2000/frame, margin-2
+  delete. Palette-variant pick and `sub_0803E058`/`sub_0803E6BC`
+  bookkeeping documented as skipped.
+- `src/assets/aos/objects.c` exports `skill_ukoback` (entry 0x108 of
+  0x080E13BC: tiles 0x081D711C, palette 0x0820B37C, frames
+  0x0823469C); object library: 1605 sequences.
+- `tests/test_aos_soul_red_ukoback.c` covers the ramp/decay timers,
+  margin delete and force-end. Remaining soul backlog: 13 red + 5
+  blue.
+
 ## Patch 1012 - Red soul 32 (Slime) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_slime.c` ports

@@ -1,3 +1,36 @@
+## Patch 1026 - Blue soul 14 (Creaking Skull) ported
+
+- `src/runtime/aos/blue_souls/aos_soul_blue_creaking_skull.c` ports
+  `SkillCreakingSkullUse` (routine 0x08030A25), a toggled 5 MP/s
+  guardian: the upkeep `sub_0802DE5C` deletes outright on drain; the
+  anchor copies Soma's pixel position with y - 0x14 and the inverse
+  `+0x58` bit 6; state 0 arms record A[0] (`0x080E1AA8`) and the
+  three children; state 1 ramps `+0x28` by 0x1000 past 0xFFFF;
+  states 2/3 cycle the `0x084F13DC` table through `+0xB` (a NULL
+  entry restarts it), pulsing `+0x30` for one frame per record;
+  state 4 holds `+0xD` frames then advances. With `+0xC` set the
+  native re-reads `gEwramData + 0x1311C[source->+0x28]` —
+  approximated by the `empowered` parameter the runtime leaves
+  false — switching to table B (`0x084F13E8`) whose index-3 end
+  plays song 0x9B.
+- The three skulls of `sub_0802DD00`/`sub_08030650`/`sub_08030754`
+  are embedded (`AosCreakingChild[3]`) instead of the shared
+  `+0x13144` slot table: children 0/1 run the aim/turn state
+  machine on the record's per-child angles (state 2's
+  `(target - dir8) / record_hw0` velocity, state 3's snap), child 0
+  sits on the parent and child 1 orbits at `24 * scale` px on the
+  `record_low - 0x8000` base — the native `+0x2C` pointer-reuse
+  quirk kept through `native_low`; child 2 registers the
+  `{-16,-16,32,32}` contact box (power 0x28, no elements) and
+  orbits at an alternating 0x30/0x10 radius while `+0x31` is
+  nonzero.
+- `src/assets/aos/objects.c` exports `skill_creaking_skull` (the
+  shared record: tiles 0x081E1970, palette 0x0820B670, frames
+  0x0823767C). `tests/test_aos_soul_blue_creaking_skull.c` covers
+  the ramp, the record cycle and restart, the flag_30 child pulse,
+  table B's song edge and the upkeep end.
+- Remaining blue backlog: 1 routine — Alastor (0x080314AD).
+
 ## Patch 1025 - Blue soul 21 (Sky Fish) ported
 
 - `src/runtime/aos/blue_souls/aos_soul_blue_sky_fish.c` ports

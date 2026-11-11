@@ -66,6 +66,7 @@
 #include "aos/blue_souls/aos_soul_blue_death.h"
 #include "aos/blue_souls/aos_soul_blue_ghost.h"
 #include "aos/blue_souls/aos_soul_blue_sky_fish.h"
+#include "aos/blue_souls/aos_soul_blue_creaking_skull.h"
 #include "aos/red_souls/aos_soul_red_lightning.h"
 #include "aos/red_souls/aos_soul_red_killer_doll.h"
 #include "aos/red_souls/aos_soul_red_nemesis.h"
@@ -334,7 +335,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
        SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD,
-       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ART_COCKATRICE, SKILL_ART_DRYAD, SKILL_ART_ARACHNE, SKILL_ART_RED_MINOTAUR, SKILL_ART_NIGHTMARE, SKILL_ART_SKY_FISH, SKILL_ARTS };
+       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ART_COCKATRICE, SKILL_ART_DRYAD, SKILL_ART_ARACHNE, SKILL_ART_RED_MINOTAUR, SKILL_ART_NIGHTMARE, SKILL_ART_SKY_FISH, SKILL_ART_CREAKING_SKULL, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -355,7 +356,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
                                                          "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord",
-                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor", "skill_cockatrice", "skill_dryad", "skill_arachne", "skill_red_minotaur", "skill_nightmare", "skill_sky_fish"};
+                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor", "skill_cockatrice", "skill_dryad", "skill_arachne", "skill_red_minotaur", "skill_nightmare", "skill_sky_fish", "skill_creaking_skull"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -1616,6 +1617,7 @@ static bool skill_outside(const AriaSouls *souls, const AriaSkill *skill, int n)
 #define GUARDIAN_DEATH_ROUTINE 0x08030519u
 #define GUARDIAN_PERSEPHONE_ROUTINE 0x080300A5u
 #define GUARDIAN_SKY_FISH_ROUTINE 0x0802F1A5u
+#define GUARDIAN_CREAKING_SKULL_ROUTINE 0x08030A25u
 #define GUARDIAN_GREAT_ARMOR_ROUTINE 0x08031949u
 #define GUARDIAN_SHADOW_KNIGHT_ROUTINE 0x0802F549u
 #define GUARDIAN_ALURA_UNE_ROUTINE 0x0802E961u
@@ -1639,6 +1641,7 @@ typedef struct {
     AosShadowKnightGuardian shadow_knight;
     AosAluraUneGuardian alura_une;
     AosSkyFishGuardian sky_fish;
+    AosCreakingSkullGuardian creaking_skull;
     bool anim_ended;             /* the guardian's sequence ended (+ 0x6C bit 2) */
     struct {
         bool alive;
@@ -1672,6 +1675,7 @@ typedef struct {
     const AosAnimSet *shadow_knight_art; /* Enemy/skill_shadow_knight, NULL when missing */
     const AosAnimSet *alura_une_art; /* Enemy/skill_alura_une, NULL when missing */
     const AosAnimSet *sky_fish_art;  /* Enemy/skill_sky_fish, NULL when missing */
+    const AosAnimSet *creaking_skull_art; /* Enemy/skill_creaking_skull */
     const AosAnimSet *big_golem_art; /* Enemy/skill_big_golem, NULL when missing */
     const AosEnemyKind *big_golem_kind; /* its frame attack boxes */
     const AosEnemyKind *shadow_knight_kind; /* its frame attack boxes */
@@ -1696,6 +1700,7 @@ static void start_guardian(void *context) {
         !(routine == GUARDIAN_ALURA_UNE_ROUTINE && guardian->alura_une_art) &&
         !(routine == GUARDIAN_BIG_GOLEM_ROUTINE && guardian->big_golem_art) &&
         !(routine == GUARDIAN_SKY_FISH_ROUTINE && guardian->sky_fish_art) &&
+        !(routine == GUARDIAN_CREAKING_SKULL_ROUTINE && guardian->creaking_skull_art) &&
         !(routine == GUARDIAN_BUER_ROUTINE && guardian->buer_art) &&
         !(routine == GUARDIAN_CATOBLEPAS_ROUTINE && guardian->catoblepas_art) &&
         !(routine == GUARDIAN_PILLAR_ROUTINE && guardian->pillar_art) &&
@@ -1732,6 +1737,7 @@ static void start_guardian(void *context) {
         guardian->shadow_knight = (AosShadowKnightGuardian){0};
         guardian->alura_une = (AosAluraUneGuardian){0};
         guardian->sky_fish = (AosSkyFishGuardian){0};
+        guardian->creaking_skull = (AosCreakingSkullGuardian){0};
         guardian->anim_ended = false;
         guardian->imp_target = -1;
     }
@@ -2003,6 +2009,22 @@ static void update_guardian(AriaGuardian *guardian) {
                      (int)(aos_random() & 0x1F) - 0x10,
                 .y = (guardian->sky_fish.y >> 16) - 0x28 +
                      (int)(aos_random() & 0x1F) - 0x10};
+    } else if (guardian->routine == GUARDIAN_CREAKING_SKULL_ROUTINE) {
+        /* SkillCreakingSkullUse: the anchor rides 0x14 px above Soma
+         * with his inverse facing; the three orbiting skulls are
+         * embedded (the native uses the shared + 0x13144 slot
+         * table). empowered is the + 0x1311C slot read — not
+         * modelled, so table A only. */
+        bool first = guardian->core.state == 0;
+        if (!aos_creaking_skull_guardian_update(&guardian->creaking_skull, &guardian->core,
+                                                guardian->stats, guardian->records,
+                                                soma->held, soma->pressed, &soma->flags,
+                                                soma->x, soma->y, soma->facing_left,
+                                                false, aos_random))
+            return;
+        if (guardian->creaking_skull.song_9b) aos_audio_play_song(0x9B);
+        if (first) aos_anim_start(&guardian->anim, guardian->creaking_skull_art, 0, true);
+        aos_anim_step(&guardian->anim, guardian->creaking_skull_art);
     }
 }
 
@@ -2149,6 +2171,20 @@ static int guardian_attacks(const AriaGuardian *guardian,
                 AOS_TYPE_GUARDIAN};
         }
         return count;
+    }
+    if (guardian->routine == GUARDIAN_CREAKING_SKULL_ROUTINE) {
+        /* Only child 2 registers a contact box natively
+         * (sub_08042884 0x2020F0F0: -16, -16, 32 x 32); the parent's
+         * + 0x131C2 power 0x28 with no elements feeds it. Children
+         * 0/1's contact path is not decoded — documented. */
+        const AosCreakingChild *child = &guardian->creaking_skull.children[2];
+        if (child->dead || !child->attacking) return 0;
+        attacks[0] = (AosSoulAttack){
+            aos_entity_rect((AosBox){-16, -16, 32, 32}, child->x >> 16,
+                            child->y >> 16, child->facing_left, false),
+            aos_guardian_power(guardian->stats, 0x28, false), 0, false, NULL,
+            AOS_TYPE_GUARDIAN};
+        return 1;
     }
     return 0;
 }
@@ -7694,6 +7730,9 @@ int aria_runtime_main(int argc, char **argv) {
     if (objects_ok && objects.skills[SKILL_ART_SKY_FISH].loaded &&
         objects.skills[SKILL_ART_SKY_FISH].defs[0].count)
         guardian.sky_fish_art = &objects.skills[SKILL_ART_SKY_FISH].set;
+    if (objects_ok && objects.skills[SKILL_ART_CREAKING_SKULL].loaded &&
+        objects.skills[SKILL_ART_CREAKING_SKULL].defs[0].count)
+        guardian.creaking_skull_art = &objects.skills[SKILL_ART_CREAKING_SKULL].set;
     if (objects_ok && objects.skills[SKILL_ART_SHADOW_KNIGHT].loaded &&
         objects.skills[SKILL_ART_SHADOW_KNIGHT].defs[1].count) {
         guardian.shadow_knight_art = &objects.skills[SKILL_ART_SHADOW_KNIGHT].set;
@@ -9306,6 +9345,39 @@ int aria_runtime_main(int argc, char **argv) {
                 SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
                                          guardian.sky_fish.facing_left ? SDL_FLIP_HORIZONTAL
                                                                         : SDL_FLIP_NONE);
+            }
+        }
+        /* SkillCreakingSkullUse: the anchor above Soma and its three
+         * skulls on the shared record; children 0/1 draw the
+         * 0x080E1AF8 sequence pick {2, 1}, child 2 sequence 0. */
+        if (guardian.core.active && guardian.routine == GUARDIAN_CREAKING_SKULL_ROUTINE) {
+            const AriaGuardian *g = &guardian;
+            for (int k = -1; k < AOS_CREAKING_SKULL_CHILDREN; ++k) {
+                int32_t px;
+                int32_t py;
+                bool flip;
+                int seq;
+                if (k < 0) {
+                    if (!g->core.state || g->anim.frame >= AOS_ENEMY_MAX_FRAMES) continue;
+                    px = g->creaking_skull.x; py = g->creaking_skull.y;
+                    flip = g->creaking_skull.facing_left; seq = 0;
+                } else {
+                    const AosCreakingChild *child = &g->creaking_skull.children[k];
+                    if (child->dead || child->state == 0) continue;
+                    px = child->x; py = child->y; flip = child->facing_left;
+                    seq = k == 2 ? 0 : (k == 0 ? 2 : 1);
+                }
+                const AriaFrame *art =
+                    &objects.skills[SKILL_ART_CREAKING_SKULL].frames[seq]
+                         [k < 0 ? g->anim.frame : 0];
+                if (!art->texture) continue;
+                int cx = px >> 16, cy = py >> 16;
+                float x = flip ? (float)(cx - art->offset_x) - art->w
+                               : (float)(cx + art->offset_x);
+                SDL_FRect rect = {x - (float)cam_x, (float)(cy + art->offset_y - cam_y),
+                                  art->w, art->h};
+                SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
+                                         flip ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
             }
         }
         /* Catoblepas' clouds (sub_08030D6C's sequence 0). */

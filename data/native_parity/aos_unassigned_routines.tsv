@@ -31,7 +31,6 @@ aos:asm:asm/code/code_08014548.s:sub_0801FCAC	sub_0801FCAC	unclassified				asm_f
 aos:asm:asm/code/code_08014548.s:sub_0801FD24	sub_0801FD24	unclassified		technical	exclusive_callees	asm_function	0x0801FD24	asm/code/code_08014548.s	23373	1	4
 aos:asm:asm/code/code_08014548.s:sub_0801FEF8	sub_0801FEF8	unclassified				asm_function	0x0801FEF8	asm/code/code_08014548.s	23611	0	36
 aos:asm:asm/code/code_080211F0.s:SkillAlastorUse	SkillAlastorUse	abilities	name			asm_function		asm/code/code_080211F0.s	32358	0	22
-aos:asm:asm/code/code_080211F0.s:SkillCreakingSkullUse	SkillCreakingSkullUse	abilities	name			asm_function		asm/code/code_080211F0.s	31037	0	8
 aos:asm:asm/code/code_080211F0.s:SkillFinalGuardUse	SkillFinalGuardUse	abilities	name			asm_function		asm/code/code_080211F0.s	29334	0	9
 aos:asm:asm/code/code_080211F0.s:SkillGiantBatUse	SkillGiantBatUse	abilities	name			asm_function		asm/code/code_080211F0.s	27256	0	7
 aos:asm:asm/code/code_080211F0.s:SkillManEaterUse	SkillManEaterUse	abilities	name			asm_function		asm/code/code_080211F0.s	22580	0	12
@@ -64,8 +63,6 @@ aos:asm:asm/code/code_080211F0.s:sub_0802DB3C	sub_0802DB3C	abilities	referrers		
 aos:asm:asm/code/code_080211F0.s:sub_0802DBD0	sub_0802DBD0	abilities	referrers			asm_function	0x0802DBD0	asm/code/code_080211F0.s	25292	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802DC10	sub_0802DC10	abilities	referrers			asm_function	0x0802DC10	asm/code/code_080211F0.s	25327	0	1
 aos:asm:asm/code/code_080211F0.s:sub_0802EF28	sub_0802EF28	unclassified				asm_function	0x0802EF28	asm/code/code_080211F0.s	27708	0	1
-aos:asm:asm/code/code_080211F0.s:sub_08030650	sub_08030650	abilities	referrers			asm_function	0x08030650	asm/code/code_080211F0.s	30550	0	3
-aos:asm:asm/code/code_080211F0.s:sub_08030754	sub_08030754	abilities	referrers			asm_function	0x08030754	asm/code/code_080211F0.s	30682	0	9
 aos:asm:asm/code/code_080211F0.s:sub_08031394	sub_08031394	unclassified		technical	exclusive_callees	asm_function	0x08031394	asm/code/code_080211F0.s	32213	0	1
 aos:asm:asm/code/code_080211F0.s:sub_08031400	sub_08031400	unclassified		technical	exclusive_callees	asm_function	0x08031400	asm/code/code_080211F0.s	32272	0	4
 aos:asm:asm/code/code_080211F0.s:sub_08031D6C	sub_08031D6C	unclassified				asm_function	0x08031D6C	asm/code/code_080211F0.s	33439	0	0

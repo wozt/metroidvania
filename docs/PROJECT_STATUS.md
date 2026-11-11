@@ -1,3 +1,33 @@
+## Patch 1025 - Blue soul 21 (Sky Fish) ported
+
+- `src/runtime/aos/blue_souls/aos_soul_blue_sky_fish.c` ports
+  `SkillSkyFishUse` (routine 0x0802F1A5), a toggled 60 MP/s
+  guardian: every update copies Soma's position and facing and sets
+  `+0x59` bit 2; state 0 loads the record and plays song 0x99 (the
+  cast is refused into state 4 when the source flags carry 0x82);
+  state 1 runs the two-per-frame `sub_08045B44` sparkle spawns for
+  0x10 frames of `+0x0D` then state 2 with `+0x30` set, the
+  `+0x131B8` bit 0x800 and song 0x1A8; state 2 keeps the `+0x1325C`
+  bit 0, plays 0x95 every 0x3C frames of `+0x32` and ends into state
+  4 past 0x12B; state 4 becomes state 5 with `+0x0D = 0xF0` (song
+  0x1A2 when the source flags carry 0x20) and deletes through
+  `sub_0802DD84` once the timer drains, trailing a sparkle pair
+  every eighth frame. The tail's `+0x32`-driven `+0x131F2`/`+0x131F8`
+  accumulations are exposed as fields; their readers are not ported.
+- `src/assets/aos/objects.c` exports `skill_sky_fish` (the skill's
+  own record: tiles 0x081DD950, palette 0x0820B550, frames
+  0x08236868 — not the ambient `sky_fish` enemy art).
+- `tests/test_aos_soul_blue_sky_fish.c` covers the state-0 refusal
+  and record load, the sparkle cadence, the 0x10/0xF0 timers, the
+  state-2 cruise length and the drain-to-delete. The sparkle pair is
+  approximated by `AOS_EFFECT_SPARKLE` drifts at the native spawn
+  box; the upkeep `sub_0802DF2C` and end `sub_0802DD84` are the
+  shared guardian paths. The aspect rows of `witch` (blue soul 5,
+  ghost routine argument 0) and `devil` (blue soul 18, transform
+  routine argument 0) are confirmed already covered by the shared
+  guardian tests and marked ported. Remaining blue backlog: 2
+  routines — Creaking Skull (0x08030A25) and Alastor (0x080314AD).
+
 ## Patch 1024 - Red soul 31 (Nightmare) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_nightmare.c` ports

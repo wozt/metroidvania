@@ -65,6 +65,7 @@
 #include "aos/blue_souls/aos_soul_blue_imp.h"
 #include "aos/blue_souls/aos_soul_blue_death.h"
 #include "aos/blue_souls/aos_soul_blue_ghost.h"
+#include "aos/blue_souls/aos_soul_blue_sky_fish.h"
 #include "aos/red_souls/aos_soul_red_lightning.h"
 #include "aos/red_souls/aos_soul_red_killer_doll.h"
 #include "aos/red_souls/aos_soul_red_nemesis.h"
@@ -333,7 +334,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
        SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD,
-       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ART_COCKATRICE, SKILL_ART_DRYAD, SKILL_ART_ARACHNE, SKILL_ART_RED_MINOTAUR, SKILL_ART_NIGHTMARE, SKILL_ARTS };
+       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ART_COCKATRICE, SKILL_ART_DRYAD, SKILL_ART_ARACHNE, SKILL_ART_RED_MINOTAUR, SKILL_ART_NIGHTMARE, SKILL_ART_SKY_FISH, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -354,7 +355,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
                                                          "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord",
-                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor", "skill_cockatrice", "skill_dryad", "skill_arachne", "skill_red_minotaur", "skill_nightmare"};
+                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor", "skill_cockatrice", "skill_dryad", "skill_arachne", "skill_red_minotaur", "skill_nightmare", "skill_sky_fish"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -1614,6 +1615,7 @@ static bool skill_outside(const AriaSouls *souls, const AriaSkill *skill, int n)
 #define GUARDIAN_FLYING_ARMOR_ROUTINE 0x0802E23Du
 #define GUARDIAN_DEATH_ROUTINE 0x08030519u
 #define GUARDIAN_PERSEPHONE_ROUTINE 0x080300A5u
+#define GUARDIAN_SKY_FISH_ROUTINE 0x0802F1A5u
 #define GUARDIAN_GREAT_ARMOR_ROUTINE 0x08031949u
 #define GUARDIAN_SHADOW_KNIGHT_ROUTINE 0x0802F549u
 #define GUARDIAN_ALURA_UNE_ROUTINE 0x0802E961u
@@ -1636,6 +1638,7 @@ typedef struct {
     AosGreatArmorGuardian great_armor;
     AosShadowKnightGuardian shadow_knight;
     AosAluraUneGuardian alura_une;
+    AosSkyFishGuardian sky_fish;
     bool anim_ended;             /* the guardian's sequence ended (+ 0x6C bit 2) */
     struct {
         bool alive;
@@ -1668,6 +1671,7 @@ typedef struct {
     const AosAnimSet *great_armor_art; /* Enemy/skill_great_armor, NULL when missing */
     const AosAnimSet *shadow_knight_art; /* Enemy/skill_shadow_knight, NULL when missing */
     const AosAnimSet *alura_une_art; /* Enemy/skill_alura_une, NULL when missing */
+    const AosAnimSet *sky_fish_art;  /* Enemy/skill_sky_fish, NULL when missing */
     const AosAnimSet *big_golem_art; /* Enemy/skill_big_golem, NULL when missing */
     const AosEnemyKind *big_golem_kind; /* its frame attack boxes */
     const AosEnemyKind *shadow_knight_kind; /* its frame attack boxes */
@@ -1691,6 +1695,7 @@ static void start_guardian(void *context) {
         !(routine == GUARDIAN_SHADOW_KNIGHT_ROUTINE && guardian->shadow_knight_art) &&
         !(routine == GUARDIAN_ALURA_UNE_ROUTINE && guardian->alura_une_art) &&
         !(routine == GUARDIAN_BIG_GOLEM_ROUTINE && guardian->big_golem_art) &&
+        !(routine == GUARDIAN_SKY_FISH_ROUTINE && guardian->sky_fish_art) &&
         !(routine == GUARDIAN_BUER_ROUTINE && guardian->buer_art) &&
         !(routine == GUARDIAN_CATOBLEPAS_ROUTINE && guardian->catoblepas_art) &&
         !(routine == GUARDIAN_PILLAR_ROUTINE && guardian->pillar_art) &&
@@ -1726,6 +1731,7 @@ static void start_guardian(void *context) {
         guardian->great_armor = (AosGreatArmorGuardian){0};
         guardian->shadow_knight = (AosShadowKnightGuardian){0};
         guardian->alura_une = (AosAluraUneGuardian){0};
+        guardian->sky_fish = (AosSkyFishGuardian){0};
         guardian->anim_ended = false;
         guardian->imp_target = -1;
     }
@@ -1969,6 +1975,34 @@ static void update_guardian(AriaGuardian *guardian) {
         if (first) aos_anim_start(&guardian->anim, guardian->imp_art, 0, true);
         if (guardian->core.state != AOS_IMP_LEAVING)
             aos_anim_step(&guardian->anim, guardian->imp_art);
+    } else if (guardian->routine == GUARDIAN_SKY_FISH_ROUTINE) {
+        /* SkillSkyFishUse: the shoulder pet copies Soma's position and
+         * facing every update; states 1 and 5 spawn their sparkle
+         * bursts (sub_08045B44), the songs 0x99/0x1A8/0x95/0x1A2 fire on
+         * their native edges; its looping sequence steps each update. */
+        bool first = guardian->core.state == 0;
+        if (!aos_sky_fish_guardian_update(&guardian->sky_fish, &guardian->core,
+                                          guardian->stats, guardian->records,
+                                          soma->held, soma->pressed, &soma->flags,
+                                          soma->x, soma->y, soma->facing_left,
+                                          aos_random))
+            return;
+        if (guardian->sky_fish.song_99) aos_audio_play_song(0x99);
+        if (guardian->sky_fish.song_1a8) aos_audio_play_song(0x1A8);
+        if (guardian->sky_fish.song_95) aos_audio_play_song(0x95);
+        if (guardian->sky_fish.song_1a2) aos_audio_play_song(0x1A2);
+        if (first) aos_anim_start(&guardian->anim, guardian->sky_fish_art, 0, true);
+        aos_anim_step(&guardian->anim, guardian->sky_fish_art);
+        /* sub_08045B44(x +- 16, y - 0x28 +- 16, 4, 8): the native spawn
+         * issues it twice per update; both requests carry the same box. */
+        for (int k = 0; guardian->sky_fish.fx && k < 2 &&
+                       guardian->effect_count < 2; ++k)
+            guardian->effects[guardian->effect_count++] = (AosEffect){
+                .kind = AOS_EFFECT_SPARKLE, .drift = true,
+                .x = (guardian->sky_fish.x >> 16) +
+                     (int)(aos_random() & 0x1F) - 0x10,
+                .y = (guardian->sky_fish.y >> 16) - 0x28 +
+                     (int)(aos_random() & 0x1F) - 0x10};
     }
 }
 
@@ -7657,6 +7691,9 @@ int aria_runtime_main(int argc, char **argv) {
     if (objects_ok && objects.skills[SKILL_ART_ALURA_UNE].loaded &&
         objects.skills[SKILL_ART_ALURA_UNE].defs[0].count)
         guardian.alura_une_art = &objects.skills[SKILL_ART_ALURA_UNE].set;
+    if (objects_ok && objects.skills[SKILL_ART_SKY_FISH].loaded &&
+        objects.skills[SKILL_ART_SKY_FISH].defs[0].count)
+        guardian.sky_fish_art = &objects.skills[SKILL_ART_SKY_FISH].set;
     if (objects_ok && objects.skills[SKILL_ART_SHADOW_KNIGHT].loaded &&
         objects.skills[SKILL_ART_SHADOW_KNIGHT].defs[1].count) {
         guardian.shadow_knight_art = &objects.skills[SKILL_ART_SHADOW_KNIGHT].set;
@@ -9252,6 +9289,23 @@ int aria_runtime_main(int argc, char **argv) {
                 SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
                                          guardian.imp.mirrored ? SDL_FLIP_HORIZONTAL
                                                                : SDL_FLIP_NONE);
+            }
+        }
+        /* SkillSkyFishUse's shoulder pet: on Soma with his facing. */
+        if (guardian.core.active && guardian.routine == GUARDIAN_SKY_FISH_ROUTINE &&
+            guardian.core.state && guardian.anim.frame < AOS_ENEMY_MAX_FRAMES) {
+            const AriaFrame *art =
+                &objects.skills[SKILL_ART_SKY_FISH].frames[0][guardian.anim.frame];
+            if (art->texture) {
+                int fx = guardian.sky_fish.x >> 16, fy = guardian.sky_fish.y >> 16;
+                float x = guardian.sky_fish.facing_left
+                              ? (float)(fx - art->offset_x) - art->w
+                              : (float)(fx + art->offset_x);
+                SDL_FRect rect = {x - (float)cam_x, (float)(fy + art->offset_y - cam_y),
+                                  art->w, art->h};
+                SDL_RenderTextureRotated(renderer, art->texture, NULL, &rect, 0, NULL,
+                                         guardian.sky_fish.facing_left ? SDL_FLIP_HORIZONTAL
+                                                                        : SDL_FLIP_NONE);
             }
         }
         /* Catoblepas' clouds (sub_08030D6C's sequence 0). */

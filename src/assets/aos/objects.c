@@ -434,6 +434,9 @@ static const EntitySpec entities[] = {
     ENTITY("skill_red_minotaur", 0x081CE8D8, 0x0820B0F8, 0, 0x082313A0),
     /* Resource 23 of 0x080E13BC: SkillNightmareUse's rising wisp. */
     ENTITY("skill_nightmare", 0x081D7920, 0x0820B3A0, 0, 0x082346F8),
+    /* SkillSkyFishUse's shoulder pet (blue soul 21): its own record,
+     * not the sky_fish enemy's. */
+    ENTITY("skill_sky_fish", 0x081DD950, 0x0820B550, 0, 0x08236868),
     /* Resource 11 of 0x080E13BC: Killer Fish's appearance sequence 1 and
      * looping swim/fall sequence 0. */
     ENTITY("skill_killer_fish", 0x081D18F0, 0x0820B1F0, 0, 0x082321E4),

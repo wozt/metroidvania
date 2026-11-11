@@ -1,3 +1,14 @@
+## Patch 0997 - Headhunter dash shots (sub_080858B8/sub_0808597C)
+
+- The state-1 dash cases 22/32/42 now emit the real
+  `sub_080858B8` projectile as `AOS_ROLE_HH_SHOT` running the
+  `sub_0808597C` machine: 31/32 velocity damping, the 0x40000
+  speed cap, the 0x3B delete and player collision.
+- Case 22 keeps its decoded facing velocity and (+/-29,+28)
+  offset; cases 32/42 use the ArcTan2 aim approximated by a
+  normalized direction with the decoded (+/-16,+28) and
+  (+/-24,-32) offsets.
+
 ## Patch 0996 - Headhunter attack actors and scatter particles
 
 - `sub_08083FD0` case 5 now emits the four `sub_08083C1C` attack

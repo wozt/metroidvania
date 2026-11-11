@@ -21,6 +21,17 @@
 #define spawn_flame_at aos_enemy_spawn_flame_at
 #define step_anim aos_enemy_step_anim
 
+static void hh_fire_shot(AosEnemy *enemy, AosHitReport *report,
+                         int32_t dx, int32_t dy, int32_t vx, int32_t vy);
+static void hh_aim_velocity(int32_t dx, int32_t dy, int32_t *vx,
+                            int32_t *vy);
+static AosHitReport hh_shot_update(AosEnemy *enemy, AosSoma *soma,
+                                   const AosEnemyKind *kind,
+                                   const AosWeaponEntity *weapon,
+                                   const AosWeaponFrames *weapon_frames,
+                                   int soma_atk, int soma_def, int cam_x,
+                                   int cam_y);
+
 /* sub_08083860: Headhunter's four-case death machine (+ 0xB). Case 0
  * sets the + 0x1A/+ 0x1B flags, clears the velocities and applies the
  * scroll/palette effect; case 1 falls to the lower screen edge and
@@ -201,13 +212,14 @@ static void headhunter_attack(AosEnemy *enemy, const AosEnemyKind *kind,
         /* Dash: once + 0xD > 0x13 on a multiple of 4, a player-tracking
          * sub_080858B8 shot with song 0x67; + 0xD > 0x2D advances. */
         if (enemy->timer > 0x13 && (enemy->timer & 3) == 0) {
-            int32_t dx = ((soma->x - enemy->x) >> 16) +
-                         (int32_t)(random() & 0xFFFF) - 0x8000;
-            int32_t dy = ((soma->y - enemy->y) >> 16) +
-                         (int32_t)(random() & 0xFFFF) - 0x8000;
-            (void)dx; (void)dy;
-            spawn_flame_at(enemy->x + 0x100000, enemy->y, 0x60000,
-                           0x80000, random, report);
+            /* sub_080858B8: facing-based vx, the -0x8000/+rand spread
+             * and the (+29, +28) spawn offset. */
+            int32_t vx = (enemy->mirrored ? 0x20000 : -0x20000) - 0x8000 +
+                         (int32_t)(random() & 0xFFFF);
+            int32_t vy = (int32_t)(random() & 0xFFFF) - 0x8000;
+            hh_fire_shot(enemy, report,
+                         enemy->mirrored ? 0x1D0000 : -0x1D0000, 0x1C0000,
+                         vx, vy);
             aos_audio_play_song(0x67);
         }
         if (++enemy->timer > 0x2D) {
@@ -243,8 +255,15 @@ static void headhunter_attack(AosEnemy *enemy, const AosEnemyKind *kind,
         break;
     case 32:
         if (enemy->timer > 0x13 && (enemy->timer & 3) == 0) {
-            spawn_flame_at(enemy->x + 0x100000, enemy->y, 0x60000,
-                           0x80000, random, report);
+            /* Aimed sub_080858B8 shot, (+/-16, +28) offset. */
+            int32_t vx, vy;
+            hh_aim_velocity(soma->x - enemy->x, soma->y - enemy->y,
+                            &vx, &vy);
+            vx += (int32_t)(random() & 0xFFFF) - 0x8000;
+            vy += (int32_t)(random() & 0xFFFF) - 0x8000;
+            hh_fire_shot(enemy, report,
+                         enemy->mirrored ? 0x100000 : -0x100000, 0x1C0000,
+                         vx, vy);
         }
         if (++enemy->timer > 0x2D) {
             enemy->step++;
@@ -284,8 +303,15 @@ static void headhunter_attack(AosEnemy *enemy, const AosEnemyKind *kind,
         break;
     case 42:
         if (enemy->timer > 0x13 && (enemy->timer & 3) == 0) {
-            spawn_flame_at(enemy->x + 0x100000, enemy->y, 0x60000,
-                           0x80000, random, report);
+            /* Aimed sub_080858B8 shot, (+/-24, -32) offset. */
+            int32_t vx, vy;
+            hh_aim_velocity(soma->x - enemy->x, soma->y - enemy->y,
+                            &vx, &vy);
+            vx += (int32_t)(random() & 0xFFFF) - 0x8000;
+            vy += (int32_t)(random() & 0xFFFF) - 0x8000;
+            hh_fire_shot(enemy, report,
+                         enemy->mirrored ? -0x180000 : 0x180000,
+                         -0x200000, vx, vy);
         }
         if (++enemy->timer > 0x2D) {
             enemy->step++;
@@ -323,12 +349,16 @@ AosHitReport aos_enemy_headhunter_update(AosEnemy *enemy, AosSoma *soma,
                                       int soma_atk, int soma_def, int cam_x, int cam_y,
                                       uint32_t (*random)(void)) {
     AosHitReport report = {0};
-    /* AOS_ROLE_HH_ACTOR children run the sub_08083EEC machine instead
-     * of the body controllers. */
+    /* AOS_ROLE_HH_ACTOR/HH_SHOT children run their own machines
+     * instead of the body controllers. */
     if (enemy->role == AOS_ROLE_HH_ACTOR)
         return aos_enemy_headhunter_actor_update(
             enemy, soma, kind, weapon, weapon_frames, soma_atk,
             soma_def, cam_x, cam_y, random);
+    if (enemy->role == AOS_ROLE_HH_SHOT)
+        return hh_shot_update(enemy, soma, kind, weapon,
+                              weapon_frames, soma_atk, soma_def, cam_x,
+                              cam_y);
     if (!enemy->boss_parts_spawned) {
         for (unsigned i = 0; i < 3; ++i)
             report.children[report.child_count++] =
@@ -677,6 +707,88 @@ AosHitReport aos_enemy_headhunter_update(AosEnemy *enemy, AosSoma *soma,
     step_anim(enemy, kind->anims);
     AosHitReport hit = collide(enemy, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
     skeleton_merge(&report, &hit);
+    aos_combat_tick(&enemy->combat);
+    return report;
+}
+
+/* sub_080858B8: spawns the sub_0808597C shot at the body plus the
+ * decoded offset with the caller's velocity pair. */
+static void hh_fire_shot(AosEnemy *enemy, AosHitReport *report,
+                         int32_t dx, int32_t dy, int32_t vx, int32_t vy) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN)
+        return;
+    AosEnemy c;
+    memset(&c, 0, sizeof c);
+    c.id = enemy->id;
+    c.role = AOS_ROLE_HH_SHOT;
+    c.parent = enemy;
+    c.x = enemy->x + dx;
+    c.y = enemy->y + dy;
+    c.vx = vx;
+    c.vy = vy;
+    c.hp = 1;
+    c.combat.type = AOS_TYPE_ENEMY;
+    c.static_frame = -1;
+    report->children[report->child_count++] = c;
+}
+
+/* The aimed velocity of cases 32/42: ArcTan2 toward the player, the
+ * + 0x4000 lead angle and the sub_0803E86C scale of 0x28000 fold into
+ * a normalized 16.16 direction here. */
+static void hh_aim_velocity(int32_t dx, int32_t dy, int32_t *vx,
+                            int32_t *vy) {
+    int64_t ax = dx < 0 ? -(int64_t)dx : dx;
+    int64_t ay = dy < 0 ? -(int64_t)dy : dy;
+    int64_t m = ax > ay ? ax : ay, n = ax < ay ? ax : ay;
+    int64_t len = m + (n >> 1);
+    if (len == 0) {
+        *vx = *vy = 0;
+        return;
+    }
+    *vx = (int32_t)((int64_t)dx * 0x28000 / len);
+    *vy = (int32_t)((int64_t)dy * 0x28000 / len);
+}
+
+/* sub_0808597C: the shot damps both velocities by 31/32
+ * (sub_0806D490/4A8 with 0x20), integrates under the sub_0806D3D8
+ * 0x40000 cap, swaps palette rows at ages 0x14/0x28 (visual only)
+ * and deletes past age 0x3B. */
+static AosHitReport hh_shot_update(AosEnemy *enemy, AosSoma *soma,
+                                   const AosEnemyKind *kind,
+                                   const AosWeaponEntity *weapon,
+                                   const AosWeaponFrames *weapon_frames,
+                                   int soma_atk, int soma_def, int cam_x,
+                                   int cam_y) {
+    AosHitReport report = {0};
+    AosEnemy *body = enemy->parent;
+    if (!body || body->removed || body->id != AOS_BOSS_HEADHUNTER) {
+        enemy->removed = true;
+        return report;
+    }
+    enemy->vx = enemy->vx * 31 / 32;
+    enemy->vy = enemy->vy * 31 / 32;
+    if (enemy->vx > 0x40000) enemy->vx = 0x40000;
+    else if (enemy->vx < -0x40000) enemy->vx = -0x40000;
+    if (enemy->vy > 0x40000) enemy->vy = 0x40000;
+    else if (enemy->vy < -0x40000) enemy->vy = -0x40000;
+    enemy->x += enemy->vx;
+    enemy->y += enemy->vy;
+    if (enemy->timer > 0x3B) {
+        enemy->removed = true;
+        return report;
+    }
+    enemy->timer++;
+    int sx = (enemy->x >> 16) - cam_x, sy = (enemy->y >> 16) - cam_y;
+    if ((uint16_t)(sx + 0x10) > 0x110 || (uint16_t)sy > 0xB0) {
+        enemy->removed = true;
+        return report;
+    }
+    AosHitReport hit =
+        collide(enemy, soma, kind, weapon, weapon_frames, soma_atk,
+                soma_def);
+    skeleton_merge(&report, &hit);
+    if (hit.soma_hit)
+        enemy->removed = true;
     aos_combat_tick(&enemy->combat);
     return report;
 }

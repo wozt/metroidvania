@@ -225,7 +225,7 @@ static void headhunter_death_tests(void) {
                          10, 4, 10, 20, never_zero);
     assert(body.state == 0 && body.step == 0xC && body.vx == 0 &&
            body.vy == 0 && body.anim.id == 6);
-    /* Case 22's dash fires the sub_080858B8 fold (song 0x67) on the
+    /* Case 22's dash fires the sub_080858B8 shot (song 0x67) on the
      * + 0xD > 0x13 multiple-of-4 tick, then advances at 0x2D. */
     body.state = 1;
     body.step = 22;
@@ -234,8 +234,25 @@ static void headhunter_death_tests(void) {
     AosHitReport dash = aos_enemy_update(&body, &soma, &layer, &kind,
                                          NULL, NULL, 10, 4, 10, 20,
                                          never_zero);
-    assert(dash.effect_count > 0 &&
+    assert(dash.child_count == 1 &&
+           dash.children[0].role == AOS_ROLE_HH_SHOT &&
+           dash.children[0].parent == &body &&
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x67) == 1);
+    /* The sub_0808597C shot damps 31/32, caps at 0x40000 and deletes
+     * past age 0x3B. */
+    AosEnemy proj = dash.children[0];
+    proj.vx = 0x20000;
+    proj.vy = -0x20000;
+    int32_t proj_x = proj.x, proj_y = proj.y;
+    aos_enemy_update(&proj, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(proj.vx == 0x20000 * 31 / 32 && proj.vy == -0x20000 * 31 / 32 &&
+           proj.x == proj_x + proj.vx && proj.y == proj_y + proj.vy &&
+           proj.timer == 1);
+    proj.timer = 0x3C;
+    aos_enemy_update(&proj, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(proj.removed);
     body.timer = 0x2D;
     aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 10, 20, never_zero);

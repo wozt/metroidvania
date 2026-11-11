@@ -11534,6 +11534,163 @@ static void golem_tests(void) {
     assert(el.defeated);
 }
 
+static void stolas_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int r = 20; r < 24; ++r)
+        for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
+    enum { ST_ANIMS = 8 };
+    static const uint8_t ticks8[8] = {4, 4, 4, 4, 4, 4, 4, 4};
+    static AosAnimDef defs[ST_ANIMS];
+    for (int a = 0; a < ST_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks8};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = ST_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < ST_ANIMS; ++a)
+        for (int f = 0; f < 8; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-32, -64, 64, 72};
+            kind.sprites[a][f] = (uint8_t)(a * 8 + f < 32 ? a * 8 + f : 0);
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    for (int i = 0; i < 40; ++i) kind.blink[i] = (uint8_t)(i & 1);
+    /* enemies.tsv id 97: hp 1500, contact 70, defence 40,
+     * weak 0x0820, resist 0x0010, experience 1500. */
+    static const AosEnemyStats st = {1500, 70, 40, 0x0820, 0x0010, 1500};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+
+    /* EnemyStolasCreate: state 0 (or 3 under the dormant flag), the
+     * six record homes of table 0x0852813C and the + 0xD divider. */
+    AosEnemy e;
+    assert(aos_enemy_create(&e, 0x61, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &st));
+    assert(e.state == 0 && e.sto_d == 1 && e.hp == 1500);
+    assert(e.param0 == 0xD && e.param1 == 0x52);
+    static const int8_t homes[6][2] = {
+        {2, -32}, {2, -24}, {2, -14}, {8, -31}, {8, -23}, {8, -13},
+    };
+    for (int i = 0; i < 6; ++i)
+        assert(e.sto_rec[i].x == ((int32_t)homes[i][0] << 16) &&
+               e.sto_rec[i].y == ((int32_t)homes[i][1] << 16));
+    aos_enemy_set_flag_8e_40(true);
+    AosEnemy ed;
+    assert(aos_enemy_create(&ed, 0x61, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &st));
+    assert(ed.state == 3);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* The first update primes the records (sub_0809B7F0/B6B0/C324)
+     * and emits the six bones (sub_0806DFF8 x6). */
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(120);
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    assert(e.sto_c == 1);
+    int bones = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role >= AOS_ROLE_STOLAS_BONE0 &&
+            hit.children[i].role <= AOS_ROLE_STOLAS_BONE5)
+            bones++;
+    assert(bones == 6 && e.spawned_count == 6 && e.boss_parts_spawned);
+    AosEnemy bone0 = hit.children[0];
+    assert(bone0.role == AOS_ROLE_STOLAS_BONE0 && bone0.parent == &e &&
+           bone0.sto_slot == 0 && bone0.sto_tgt == 1 &&
+           bone0.static_frame == 43);
+
+    /* sub_0809B9D4 state 0: the bone rides its record offset. */
+    hit = aos_enemy_update(&bone0, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    (void)hit;
+    assert(bone0.x == e.x + e.sto_rec[0].x &&
+           bone0.y == e.y + e.sto_rec[0].y);
+
+    /* The parent death detaches the bones into state 1 (timer 0x3C). */
+    e.state = 2;
+    hit = aos_enemy_update(&bone0, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(bone0.state == 1 && bone0.timer == 0x3C);
+
+    /* State 0 aggro: the player in the 0xA0 box walks the 7-case
+     * machine toward the state-1 fan attack. */
+    AosEnemy w;
+    assert(aos_enemy_create(&w, 0x61, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &st));
+    w.x = AOS_FIXED(150);
+    w.y = AOS_FIXED(120);
+    for (int i = 0; i < 40 && w.step != 1; ++i)
+        aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(w.step >= 1 && w.step <= 6);
+
+    /* State 1 entry: song 0x11F, the aimed shot, five fan bolts and
+     * the wave. */
+    w.state = 1;
+    w.step = 0;
+    w.timer = 0;
+    hit = aos_enemy_update(&w, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    int shot = 0, fan = 0, wave = 0;
+    for (int i = 0; i < hit.child_count; ++i) {
+        if (hit.children[i].role == AOS_ROLE_STOLAS_SHOT) shot++;
+        if (hit.children[i].role == AOS_ROLE_STOLAS_FAN) fan++;
+        if (hit.children[i].role == AOS_ROLE_STOLAS_WAVE) wave++;
+    }
+    /* Bones may still be emitting under the 8-child cap; the
+     * projectiles fill the rest. */
+    assert(shot >= 1 && fan >= 1 && wave >= 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x11F) >= 1);
+    assert(w.state == 1 && w.step == 1);
+
+    /* The wave projectile flies and dies on its timer. */
+    AosEnemy wv;
+    memset(&wv, 0, sizeof wv);
+    wv.id = 0x61;
+    wv.role = AOS_ROLE_STOLAS_WAVE;
+    wv.parent = &w;
+    wv.state = 0;
+    wv.hp = 1;
+    wv.timer = 0x2F;
+    wv.x = w.x;
+    wv.y = w.y;
+    wv.vx = 0x50000;
+    for (int i = 0; i < 0x30; ++i)
+        aos_enemy_update(&wv, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(wv.removed);
+
+    /* Death: hp 0 enters the lethal path (song 0x6E, state 2, timer
+     * 0x3C); state 2 spawns gore on the tick masks. */
+    AosEnemy el;
+    assert(aos_enemy_create(&el, 0x61, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &st));
+    el.x = AOS_FIXED(150);
+    el.y = AOS_FIXED(120);
+    el.hp = 0;
+    hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    /* The lethal sets + 0xD = 0x3C and the same-frame state-2 pass
+     * decrements it to 0x3B. */
+    assert(el.defeated && el.state == 2 && el.timer == 0x3B);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x6E) >= 1);
+    el.timer = 8;
+    hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    int gore = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_STOLAS_GORE) gore++;
+    assert(gore >= 1);
+    el.timer = 1;
+    aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(el.removed);
+}
+
 int main(void) {
     peeping_eye_tests();
     skeleton_bone_tests();
@@ -11785,6 +11942,7 @@ int main(void) {
     maneater_tests();
     gladiator_tests();
     golem_tests();
+    stolas_tests();
     buer_tests();
     white_dragon_tests();
     giant_ghost_tests();

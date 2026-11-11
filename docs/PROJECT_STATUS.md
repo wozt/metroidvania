@@ -1,3 +1,37 @@
+## Patch 0986 - Stolas ported (id 97)
+
+- `EnemyStolasCreate` (0x0809A6C0) / `EnemyStolasUpdate` (0x0809A4AC):
+  tiles `0x081CC064`, palette `0x0820AC28` bank 0, frames `0x08225224`
+  through `sub_0809C4E4`, the `0x4E` orbit container through
+  `sub_0806C2CC`, six limb children through `sub_0806DFF8` (callback
+  `sub_0809B9D4`, frame bytes 43-45/40-42 of table `0x081190A0`,
+  slot/tgt tables `0x081190AC`/`0x081190A6`) and the dormant
+  `gEwramData + 0x8E & 0x40` flag parking state 3.
+- `stolas.c` ports the architecture: the `+0x1C` container's six
+  `0x30`-byte orbit records fold into `sto_rec[6]` with the
+  `+0x68`/`+0xF8` extras; `sto_config`/`sto_step_record` reproduce
+  the `sub_0809B7F0`/`sub_0809B6B0` launch staging, the `sub_0809B478`
+  ArcTan2 orbit math and the `sub_0809C324` launch pass; the six
+  `AOS_ROLE_STOLAS_BONE*` children ride their records, aim slots
+  {1,3,4} at their target records and detach on the parent death.
+- State 0 (`sub_0809AA48`) keeps the 7-case orbit attack cycle with
+  the decoded record speed table; state 1 (`sub_0809AF14`) fires
+  song 0x11F with the aimed shot (`sub_0809BD5C`/`BE78`), five fan
+  bolts (`sub_0809BF7C`/`C054`) and the wave (`sub_0809C0C8`/`C1A0`);
+  state 2 rains `sub_0809C224`/`C488` gore and deletes at the timer
+  end; the lethal `sub_0809B928` plays song 0x6E with timer 0x3C.
+- The 7/14-case machines keep their case order and timers but
+  collapse the wall probes, movement waits and palette merges —
+  divergences recorded per aspect in `aos_monster_aspects.tsv`.
+- Yellow soul 33 (routine `0x0803226D`, already ported) and the
+  `0x081CC064`/`0x08225224` art exported natively (111 frame rows);
+  all five aspects `ported`.
+- Unit-tested in `stolas_tests` (create, record homes, dormant,
+  six bones over the child cap, record ride, detach, aggro cycle,
+  song-0x11F projectile burst, wave lifetime, lethal, gore, delete);
+  verified live in `area_09_room_007`/`area_11_room_010` — parent
+  states 0/1 with roles 127-135 updating and contact damage landing.
+
 ## Patch 0985 - Golem family ported (ids 34, 53, 80, 101)
 
 - `EnemyGolemCreate` (0x0807E508) / `EnemyGolemUpdate` (0x0807E35C)

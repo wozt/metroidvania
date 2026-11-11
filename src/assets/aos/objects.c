@@ -251,6 +251,11 @@ static const EntitySpec entities[] = {
     ENTITY("golem", 0x081CBFAC, 0x0820A6FC, 0, 0x08219804),
     ENTITY("flesh_golem", 0x081CBFB4, 0x0820A6FC, 0, 0x08219804),
     ENTITY("iron_golem", 0x081CBFAC, 0x0820A6FC, 0, 0x08219804),
+    /* Stolas (sub_0809C4E4 in EnemyStolasCreate): tiles 0x081CC064,
+     * palette bank 0x0820AC28, frames 0x08225224 — shared by the
+     * body, the six bones, the shot/fan/wave projectiles and the
+     * death gore. */
+    ENTITY("stolas", 0x081CC064, 0x0820AC28, 0, 0x08225224),
     ENTITY("werejaguar", 0x081CBF7C, 0x0820A5C4, 0, 0x08216A40),
     ENTITY("weretiger", 0x081CBF7C, 0x0820A5C4, 1, 0x08216A40),
     STATIC("blue_crow", 0x081F4274, 0x0820BF10, 0, 0x0824EC04, 1, 8),

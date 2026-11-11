@@ -409,6 +409,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_GLADIATOR &&
         id != AOS_ENEMY_WOODEN_GOLEM && id != AOS_ENEMY_GOLEM &&
         id != AOS_ENEMY_FLESH_GOLEM && id != AOS_ENEMY_IRON_GOLEM &&
+        id != AOS_ENEMY_STOLAS &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
         id != AOS_ENEMY_CURLY && id != AOS_ENEMY_DURGA && id != AOS_ENEMY_VALKYRIE &&
@@ -1314,6 +1315,48 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->step = 0;
         enemy->timer = 0;
         enemy->boss_parts_spawned = false;
+        play_loop(enemy, anims, 0, true);
+        step_anim(enemy, anims);
+        return true;
+    }
+    if (id == AOS_ENEMY_STOLAS) {
+        /* EnemyStolasCreate 0x0809A6C0: the + 0x1C container's six
+         * 0x30-byte records fold into sto_rec — homes from the
+         * variant-0 table 0x0852813C, the slot 2/5 extras
+         * sto_x68/sto_xf8 = 0xC000, the + 0x14 = -29 wait and the
+         * + 0x22 attack mask zeroed; the six limb children of
+         * sub_0806DFF8 (callback sub_0809B9D4, frames 43..45/40..42
+         * of table 0x081190A0, slot/tgt tables 0x081190AC/0x081190A6)
+         * emit on the first updates via boss_parts_spawned; the
+         * gEwramData + 0x8E & 0x40 flag parks state 3 (sub_0809C530);
+         * hurt callbacks sub_0809C3D8/sub_0809C41C and the
+         * sub_0809C534/sub_0809C564 boxes fold into the shared
+         * collide. */
+        enemy->sto_d = 1;
+        enemy->sto_b = enemy->sto_c = 0;
+        enemy->sto_atk = 0;
+        enemy->sto_cnt = 0;
+        enemy->sto_x68 = 0xC000;
+        enemy->sto_xf8 = 0xC000;
+        if (!enemy->param0) enemy->param0 = 0xD;
+        if (!enemy->param1) enemy->param1 = 0x52;
+        static const int8_t homes[6][2] = {
+            {2, -32}, {2, -24}, {2, -14}, {8, -31}, {8, -23}, {8, -13},
+        };
+        for (int i = 0; i < 6; ++i) {
+            enemy->sto_rec[i].x = (int32_t)homes[i][0] << 16;
+            enemy->sto_rec[i].y = (int32_t)homes[i][1] << 16;
+            enemy->sto_rec[i].ang = 0x40000;
+            enemy->sto_rec[i].spd = enemy->sto_rec[i].ang2 = 0;
+            enemy->sto_rec[i].dist = 0;
+            enemy->sto_rec[i].flag = 0;
+            enemy->sto_rec[i].sub = -1;
+        }
+        enemy->state = flag_8e_40 ? 3 : 0;
+        enemy->step = 0;
+        enemy->timer = 0;
+        enemy->boss_parts_spawned = false;
+        enemy->spawned_count = 0;
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
         return true;
@@ -2812,6 +2855,16 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                     enemy->state = 2;
                     enemy->step = enemy->substep = 0;
                     enemy->timer = 0x4A;
+                } else if (enemy->id == AOS_ENEMY_STOLAS &&
+                           enemy->role == AOS_ROLE_ENEMY) {
+                    /* sub_0809B928 lethal: sub_080683BC defeated, sound
+                     * 0x6E, + 0xD = 0x3C, state 2, step 0 — the
+                     * update's death machine spawns the gore. */
+                    aos_audio_play_song(0x6E);
+                    enemy->defeated = true;
+                    enemy->state = 2;
+                    enemy->step = enemy->substep = 0;
+                    enemy->timer = 0x3C;
                 } else if (enemy->id == AOS_ENEMY_MERMAN &&
                            enemy->role == AOS_ROLE_ENEMY) {
                     /* sub_080715B4: sound 0x6E, animation 1, 40-frame
@@ -4251,6 +4304,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_golem_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,
                                       cam_x, cam_y, random);
+    if (enemy->id == AOS_ENEMY_STOLAS)
+        return aos_enemy_stolas_update(enemy, soma, layer, kind, weapon,
+                                       weapon_frames, soma_atk, soma_def,
+                                       cam_x, cam_y, random);
     if (enemy->id == AOS_ENEMY_KYOMA_DEMON && enemy->role == AOS_ROLE_ENEMY)
         return aos_enemy_kyoma_update(enemy, soma, layer, kind, weapon,
                                       weapon_frames, soma_atk, soma_def,

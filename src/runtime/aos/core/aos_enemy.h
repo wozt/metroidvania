@@ -187,6 +187,7 @@ enum {
     AOS_ENEMY_GOLEM = 0x35,
     AOS_ENEMY_FLESH_GOLEM = 0x50,
     AOS_ENEMY_IRON_GOLEM = 0x65,
+    AOS_ENEMY_STOLAS = 0x61,
 };
 
 /* Boss ids live outside the ordinary monster-aspect inventory. */
@@ -255,7 +256,12 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_GOLEM_PART4 = 120, AOS_ROLE_GOLEM_PART5 = 121,
        AOS_ROLE_GOLEM_PART6 = 122, AOS_ROLE_GOLEM_PART7 = 123,
        AOS_ROLE_GOLEM_PART8 = 124, AOS_ROLE_GOLEM_PART9 = 125,
-       AOS_ROLE_GOLEM_DEBRIS = 126 };
+       AOS_ROLE_GOLEM_DEBRIS = 126,
+       AOS_ROLE_STOLAS_BONE0 = 127, AOS_ROLE_STOLAS_BONE1 = 128,
+       AOS_ROLE_STOLAS_BONE2 = 129, AOS_ROLE_STOLAS_BONE3 = 130,
+       AOS_ROLE_STOLAS_BONE4 = 131, AOS_ROLE_STOLAS_BONE5 = 132,
+       AOS_ROLE_STOLAS_SHOT = 133, AOS_ROLE_STOLAS_FAN = 134,
+       AOS_ROLE_STOLAS_WAVE = 135, AOS_ROLE_STOLAS_GORE = 136 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -266,6 +272,17 @@ typedef struct {
     bool mirrored, hidden;
     int32_t x, y;
 } AosNemesisHelper;
+
+/* One of Stolas's six orbit records (the + 0x1C container's 0x30-byte
+ * slots): x/y the 16.16 anchor offset, ang the + 8 held angle,
+ * spd/ang2 the + 0x10/+ 0x14 launch pair, flag the + 0x18
+ * 0x80000000 anchor mask, sub the + 0x1C anchor slot and dist the
+ * + 0x28 orbit radius. */
+typedef struct {
+    int32_t x, y, ang, spd, ang2, dist;
+    uint32_t flag;
+    int32_t sub;
+} AosStoRec;
 
 typedef struct AosEnemy {
     uint8_t id;             /* + 0x36 */
@@ -737,6 +754,25 @@ typedef struct AosEnemy {
     uint8_t go_var, go_mode, go_piece;
     int16_t go_ax, go_ay;
     int32_t go_cx, go_cy, go_ang, go_life;
+    /* Stolas (EnemyStolasCreate 0x0809A6C0 / update 0x0809A4AC): the
+     * + 0x1C container's six 0x30-byte orbit records fold into
+     * `sto_rec` — x/y the 16.16 anchor offset, `ang` the + 8 held
+     * angle, `spd`/`ang2` the + 0x10/+ 0x14 launch pair, `flag` the
+     * + 0x18 0x80000000 anchor mask, `sub` the + 0x1C anchor slot and
+     * `dist` the + 0x28 orbit radius.  `sto_slot`/`sto_tgt` are the
+     * bone child's + 0x20/+ 0x21 record indices, `sto_anim` its + 0x44
+     * frame byte, `sto_b`/`sto_c` the + 0xB/+ 0xC machine bytes,
+     * `sto_d` the + 0xD launch divider, `sto_atk` the + 0x22 per-slot
+     * attack mask, `sto_cnt` the + 0x26 living-add count and
+     * `sto_x68`/`sto_xf8` the container's + 0x68/+ 0xF8 extras.  The
+     * six bone children (sub_0809B9D4), the shot (sub_0809BE78), the
+     * five fan projectiles (sub_0809C054), the wave (sub_0809C1A0)
+     * and the gore (sub_0809C488) are persistent children of roles
+     * AOS_ROLE_STOLAS_*. */
+    AosStoRec sto_rec[6];
+    uint8_t sto_slot, sto_tgt, sto_anim, sto_b, sto_c, sto_d;
+    uint16_t sto_atk, sto_cnt;
+    int32_t sto_x68, sto_xf8;
     AosCombat combat;
     AosAnimState anim;
 } AosEnemy;

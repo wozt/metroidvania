@@ -73,7 +73,6 @@ aos:asm:asm/code/code_08039340.s:sub_08039820	sub_08039820	unclassified				asm_f
 aos:asm:asm/code/code_08039340.s:sub_08039A6C	sub_08039A6C	unclassified				asm_function	0x08039A6C	asm/code/code_08039340.s	925	0	0
 aos:asm:asm/code/code_08039340.s:sub_0803ACE0	sub_0803ACE0	unclassified				asm_function	0x0803ACE0	asm/code/code_08039340.s	3286	1	1
 aos:asm:asm/code/code_08039340.s:sub_0803B184	sub_0803B184	unclassified				asm_function	0x0803B184	asm/code/code_08039340.s	3885	3	5
-aos:asm:asm/code/code_08040A38.s:Object0DUpdate	Object0DUpdate	environment	name			asm_function		asm/code/code_08040A38.s	30939	0	4
 aos:asm:asm/code/code_08040A38.s:sub_08041474	sub_08041474	unclassified				asm_function	0x08041474	asm/code/code_08040A38.s	43	0	0
 aos:asm:asm/code/code_08040A38.s:sub_080415A8	sub_080415A8	unclassified				asm_function	0x080415A8	asm/code/code_08040A38.s	215	3	0
 aos:asm:asm/code/code_08040A38.s:sub_08041688	sub_08041688	unclassified				asm_function	0x08041688	asm/code/code_08040A38.s	324	1	0

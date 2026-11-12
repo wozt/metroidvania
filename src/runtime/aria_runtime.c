@@ -23,6 +23,7 @@
 #include "aos/game/aos_object07.h"
 #include "aos/game/aos_object0c.h"
 #include "aos/game/aos_object0f.h"
+#include "aos/game/aos_object0d.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -423,6 +424,7 @@ typedef struct {
     AosObject07 object07;   /* object 0x07: ambient motes */
     AosObject0c object0c;   /* object 0x0C: room-region triggers */
     AosObject0f object0f;   /* object 0x0F: destructible prop */
+    AosObject0d object0d;   /* object 0x0D: swinging object */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4689,6 +4691,41 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     .kind = AOS_EFFECT_SPARKLE, .direct = true,
                     .x = e->object0f.particle_x,
                     .y = e->object0f.particle_y};
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 13) {
+            /* Object0DCreate / Object0DUpdate (sUnk_084F0DF8[13] /
+             * sUnk_084F0ED8[13]): the swinging object. The + 0x13190
+             * focus and the sub_080421AC attack match are approximated
+             * by a proximity window and the weapon hitbox overlap. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object0d_create(&e->object0d, e->param0, e->param1,
+                                    &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            bool focused = (uint16_t)(ssx - osx + 0x80) <= 0x100 &&
+                           (uint16_t)(ssy - osy + 0x40) <= 0x80;
+            int wx, wy, ww, wh;
+            bool attacked = combat->weapon && combat->weapon_frames &&
+                            aos_weapon_hitbox(combat->weapon, soma,
+                                              combat->weapon_frames,
+                                              &wx, &wy, &ww, &wh) &&
+                            ww > 1 && wh > 1 &&
+                            !(wx + ww - 1 < e->x - 8 || e->x + 8 < wx ||
+                              wy + wh - 1 < e->y - 16 || e->y < wy);
+            aos_object0d_update(&e->object0d, (int16_t)osy, focused,
+                                attacked, soma->x < ((int32_t)e->x) << 16);
+            if (e->object0d.song >= 0) {
+                sound = e->object0d.song;
+                printf("Object0D %zu: song 0x%X\n", i, e->object0d.song);
+            }
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {

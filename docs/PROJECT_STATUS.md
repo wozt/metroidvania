@@ -1,3 +1,21 @@
+## Patch 1041 - Aria Object0D swinging object ported
+
+- `src/runtime/aos/game/aos_object0d.c` ports Object0DCreate
+  (0x08050710) and Object0DUpdate (0x080507BC), the swinging object
+  dispatched through sUnk_084F0DF8[13] / sUnk_084F0ED8[13]; its art
+  was already exported as special_13.
+- Create covers the sub_0806E0D0 resource load (failure deletes),
+  the + 0x5C/+ 0x59/+ 0x72 marks and the 0x122006F0 preset.
+- Update reproduces the low-screen + 0x58 mark, the sub_08021278
+  registration, the one-shot + 0x13190 focus init and the attack
+  re-arm (song 0x112, swing -+0x100 by the x compare, speed 0x100)
+  and the pendulum integration with both clamps.
+- Divergences documented: focus/attack approximated by proximity
+  and weapon overlap, no + 0x131B4 consumer, affine draw reduced
+  to the static animation.
+- Tests: `tests/test_aos_object0d.c` covers the focus init, the
+  attack re-arm, the integration/clamps and the screen mark.
+
 ## Patch 1040 - Aria Object0F destructible prop ported
 
 - `src/runtime/aos/game/aos_object0f.c` ports Object0FCreate

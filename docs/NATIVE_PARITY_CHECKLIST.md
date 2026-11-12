@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 151 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 152 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1922 | 1651 |
+| Castlevania: Aria of Sorrow | 1923 | 1650 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2515,6 +2515,15 @@ Tests: [`tests/test_aos_object01.c`](../tests/test_aos_object01.c), [`tests/test
 Dependencies: `aos.objects.cutscene_director`, `aos.objects.special_sprites`.  
 Known divergences: The child entities (type 0x49, drawFunc sub_0803B9D0, + 0x540 = 0x11, + 0x549 = 0) fold into up to three static draws of the exported special_01 still; the + 0x1316C slot is scoped per room instead of session-wide; child positions keep the table coordinates as room pixels rather than screen-minus-BG1 storage; the sUnk_080E1DB4 callback row (sub_080337EC/sub_080338B4/sub_08033984/sub_08033AC0/sub_080220F4) is not invoked.  
 Next action: Port the remaining special object create/update pairs and compare a room with Object01 records against an emulator.
+
+[~] **`aos.objects.swinging_object` — Object0D swinging object.** Object0DCreate (0x08050710) loads tiles 0x081CBE74, palette 0x08209F54 and frames 0x0821017C through sub_0806E0D0, picks a palette variant through sub_0803E654, sets + 0x5C = 0x16, + 0x59 bit 1, + 0x72 bit 1 and presets 0x122006F0, deleting on load failure. Object0DUpdate (0x080507BC) marks + 0x58 bit 0x20 below screen y 0xA8, registers through sub_08021278, re-arms the swing (PlaySong 0x112, + 0x1C = -+0x100 by the Soma x compare, + 0x20 = 0x100) once on + 0x13190 focus or on an attack result with bits 0x1A, then integrates the pendulum: + 0x18 steps + 0x1C by 0x10 toward zero, accumulates, drops + 0x20 by 0x20 on sign crossings, clamps + 0x1C to -+0x20 and + 0x18 to -+0x1000 before the affine draw. Unit-tested in test_aos_object0d.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:Object0DCreate`, `aos:asm:asm/code/code_08040A38.s:Object0DUpdate`, `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_080428F0`, `aos:asm:asm/code/code_08060B98.s:sub_0806E0D0`, `aos:c:src/code/code_080211F0.c:sub_08021278`, `aos:c:src/code/code_08039340.c:sub_0803E058`, `aos:c:src/code/code_08039340.c:sub_0803E654`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/game/aos_object0d.c`](../src/runtime/aos/game/aos_object0d.c), [`src/runtime/aos/game/aos_object0d.h`](../src/runtime/aos/game/aos_object0d.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object0d.c`](../tests/test_aos_object0d.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The + 0x13190 focus pointer and the sub_080421AC attack-slot match are approximated by a proximity window and the weapon hitbox overlap; the sub_08021278 + 0x131B4 registration has no runtime consumer so enemies cannot target the object; the sub_0803E058 affine rotation draw is approximated by the static special_13 animation; the palette variant pick and the 0x122006F0 preset collapse into the exported art; and there is no emulator comparison.  
+Next action: Wire the + 0x131B4 registry into enemy targeting and port the sub_0803E058 rotation draw.
 
 ### Rooms, areas and maps
 

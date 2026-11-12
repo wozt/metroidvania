@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T01:24:36+00:00",
+ "generated_at": "2026-11-12T01:38:25+00:00",
  "git": {
-  "commit": "e42d7b67",
+  "commit": "b2b6bb0d",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 296,
+   "total": 297,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 65,
+    "partial": 66,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 74.7,
-   "with_passing_tests": 283,
+   "functional_or_better_percent": 74.4,
+   "with_passing_tests": 284,
    "with_passing_tests_percent": 95.6,
    "unknown_or_blocked": 1,
    "features": [
@@ -338,6 +338,7 @@
     "aos.objects.region_trigger",
     "aos.objects.special_sprites",
     "aos.objects.static_children",
+    "aos.objects.swinging_object",
     "aos.player.soma_controller",
     "aos.progression.equipment_stats",
     "aos.progression.experience",
@@ -530,11 +531,11 @@
    "areas": [
     "aos"
    ],
-   "total": 151,
+   "total": 152,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 37,
+    "partial": 38,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -542,8 +543,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 75.5,
-   "with_passing_tests": 151,
+   "functional_or_better_percent": 75.0,
+   "with_passing_tests": 152,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -684,6 +685,7 @@
     "aos.objects.region_trigger",
     "aos.objects.special_sprites",
     "aos.objects.static_children",
+    "aos.objects.swinging_object",
     "aos.player.soma_controller",
     "aos.progression.equipment_stats",
     "aos.progression.experience",
@@ -21664,6 +21666,67 @@
    }
   },
   {
+   "id": "aos.objects.swinging_object",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object0D swinging object",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object0d.c",
+    "src/runtime/aos/game/aos_object0d.h",
+    "src/runtime/aria_runtime.c"
+   ],
+   "tests": [
+    "tests/test_aos_object0d.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object0DCreate",
+    "Object0DUpdate",
+    "sub_0806E0D0",
+    "sub_0803E654",
+    "sub_08021278",
+    "sub_080421AC",
+    "sub_0803E058",
+    "sub_080428F0",
+    "PlaySong"
+   ],
+   "limitations": "The + 0x13190 focus pointer and the sub_080421AC attack-slot match are approximated by a proximity window and the weapon hitbox overlap; the sub_08021278 + 0x131B4 registration has no runtime consumer so enemies cannot target the object; the sub_0803E058 affine rotation draw is approximated by the static special_13 animation; the palette variant pick and the 0x122006F0 preset collapse into the exported art; and there is no emulator comparison. Object0DCreate (0x08050710) loads tiles 0x081CBE74, palette 0x08209F54 and frames 0x0821017C through sub_0806E0D0, picks a palette variant through sub_0803E654, sets + 0x5C = 0x16, + 0x59 bit 1, + 0x72 bit 1 and presets 0x122006F0, deleting on load failure. Object0DUpdate (0x080507BC) marks + 0x58 bit 0x20 below screen y 0xA8, registers through sub_08021278, re-arms the swing (PlaySong 0x112, + 0x1C = -+0x100 by the Soma x compare, + 0x20 = 0x100) once on + 0x13190 focus or on an attack result with bits 0x1A, then integrates the pendulum: + 0x18 steps + 0x1C by 0x10 toward zero, accumulates, drops + 0x20 by 0x20 on sign crossings, clamps + 0x1C to -+0x20 and + 0x18 to -+0x1000 before the affine draw. Unit-tested in test_aos_object0d.",
+   "next_action": "Wire the + 0x131B4 registry into enemy targeting and port the sub_0803E058 rotation draw.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object0d.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object0d.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object0d"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.player.soma_controller",
    "area": "aos",
    "category": "player",
@@ -28750,6 +28813,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object0d",
+    "files": [
+     "tests/test_aos_object0d.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_weapon",
     "files": [
      "tests/test_aos_weapon.c"
@@ -28835,12 +28905,18 @@
    }
   ],
   "summary": {
-   "passed": 171,
+   "passed": 172,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "b2b6bb0d",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object0F destructible prop",
+   "scope": "project"
+  },
   {
    "commit": "e42d7b67",
    "date": "2026-11-12",
@@ -29314,12 +29390,6 @@
    "date": "2026-11-10",
    "subject": "Port Fish Head (Aos enemy id 65) via the shared Bone Pillar routines",
    "scope": "project"
-  },
-  {
-   "commit": "a59a69db",
-   "date": "2026-11-10",
-   "subject": "Port Alura Une (Aria enemy 0x4D) with scythe and orbit-blade children",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -29380,9 +29450,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1922,
-    "routines_attached_to_features": 1922,
-    "unassigned_routines": 1651,
+    "routines_cited_by_features": 1923,
+    "routines_attached_to_features": 1923,
+    "unassigned_routines": 1650,
     "call_edges": 14228
    }
   },

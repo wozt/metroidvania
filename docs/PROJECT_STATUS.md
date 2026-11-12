@@ -1,3 +1,24 @@
+## Patch 1056 - Aria Object2A screen-space oscillator ported
+
+- `src/runtime/aos/game/aos_object2a.c` ports Object2ACreate
+  (0x08057438), Object2AUpdate (0x08057744) and the sub_08057538
+  state machine, dispatched through sUnk_084F0ED8[42]. The sprite
+  lives in the bgInfo[1] scroll frame: + 0x10/+ 0x14 accumulate in
+  screen space and the epilogue subtracts the current scroll, so
+  the world draw position keeps the sprite screen-locked. States
+  0/2 accelerate + 0x48 toward the two x targets with a 0x800
+  ramp and a (px + 1) * 0x1000 proportional creep; states 1/3
+  count the u8 timer and toggle the direction on exit.
+- Four sprite records at 0x08526510 index param1 (+ 0x32) and
+  are exported as special_42_v00-v03 (palette banks 6/6/0/0).
+- Runtime wiring: SPECIAL id 42 spawns on the camera window,
+  tracks e->x/e->y from the world draw position, approximates
+  the + 0x13190 focus slot and the attack read with player
+  proximity and the weapon hitbox.
+- Tests: `tests/test_aos_object2a.c` covers record validation,
+  the ramp, the scroll-frame epilogue, the ping-pong cycle and
+  the focus/attack counters.
+
 ## Patch 1055 - Aria Object28 orb sibling ported
 
 - `src/runtime/aos/game/aos_object28.c` ports Object28Create

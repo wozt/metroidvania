@@ -733,7 +733,10 @@ static const EntitySpec special_objects[] = {
  * (room-used values 0-14); record byte0 selects a {gfx,palette,frames}
  * triple at 0x08526214 + group*12 (groups 0-13) and byte1 the palette
  * bank argument. Id 18: param0 indexes the 24-byte records at
- * 0x085263A8 (gfx@0, palette@4, frames@8, bank@0xC), values 0-3. */
+ * 0x085263A8 (gfx@0, palette@4, frames@8, bank@0xC), values 0-3.
+ * Id 42: param1 (+ 0x32) indexes the 16-byte records at 0x08526510
+ * (gfx@0, palette@4, frames@8, preset@0xC, bank@0xD, wait@0xE),
+ * values 0-3; the runtime maps entity->param1 to the _vP suffix. */
 static const EntitySpec special14_variants[] = {
     ENTITY("special_14_v00", 0x081CBE34, 0x08209E34, 0, 0x0820F64C),
     ENTITY("special_14_v01", 0x081CBE3C, 0x08209E58, 0, 0x0820F7C4),
@@ -757,6 +760,13 @@ static const EntitySpec special18_variants[] = {
     ENTITY("special_18_v01", 0x081CBE6C, 0x08209F30, 0, 0x08210028),
     ENTITY("special_18_v02", 0x081CBEAC, 0x0820A100, 0, 0x08210C30),
     ENTITY("special_18_v03", 0x081CBEAC, 0x0820A100, 0, 0x08210C30),
+};
+
+static const EntitySpec special42_variants[] = {
+    ENTITY("special_42_v00", 0x081CBEDC, 0x0820A1C4, 6, 0x0821154C),
+    ENTITY("special_42_v01", 0x081CBEE4, 0x0820A1C4, 6, 0x082115F8),
+    ENTITY("special_42_v02", 0x081CBEF4, 0x0820A308, 0, 0x082118D8),
+    ENTITY("special_42_v03", 0x081CBF04, 0x0820A350, 0, 0x08211D44),
 };
 
 /* Id 15 (Object0FCreate): a shared-flame object. sub_0803AFB8 resolves
@@ -2096,6 +2106,11 @@ bool fusion_aos_export_objects(const FusionRom *rom,
          success && index < sizeof special18_variants / sizeof special18_variants[0];
          ++index)
         success = export_entity(rom, &library, &special18_variants[index],
+                                "Object", &object_rows, error, error_size);
+    for (size_t index = 0;
+         success && index < sizeof special42_variants / sizeof special42_variants[0];
+         ++index)
+        success = export_entity(rom, &library, &special42_variants[index],
                                 "Object", &object_rows, error, error_size);
     for (size_t index = 0;
          success && index < sizeof special15_variants / sizeof special15_variants[0];

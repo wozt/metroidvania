@@ -34,6 +34,7 @@
 #include "aos/game/aos_object16.h"
 #include "aos/game/aos_object24.h"
 #include "aos/game/aos_object27.h"
+#include "aos/game/aos_object2a.h"
 #include "aos/game/aos_object2b.h"
 #include "aos/game/aos_object2d.h"
 #include "aos/game/aos_object2e.h"
@@ -449,6 +450,7 @@ typedef struct {
     AosObject16 object16;   /* object 0x16: boss-intro zoom director */
     AosObject24 object24;   /* object 0x24: ambient flickering sprite */
     AosObject27 object27;   /* object 0x27: spinning attack orb */
+    AosObject2A object2a;   /* object 0x2A: screen-space oscillator */
     AosObject2B object2b;   /* object 0x2B: plain animated sprite */
     AosObject2D object2d;   /* object 0x2D: proximity attack sprite */
     AosObject2E object2e;   /* object 0x2E: one-shot breakable prop */
@@ -5041,6 +5043,45 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             aos_object27_update(&e->object27, target_far);
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 42) {
+            /* Object2AUpdate (sUnk_084F0ED8[42]; Object2ACreate's
+             * sprite attach, attack records and sub_08057774 load
+             * stay under special_sprites/special_42_v*, the
+             * bgInfo[1] scroll frame is approximated by the logic
+             * camera): the screen-space horizontal oscillator.
+             * The + 0x13190 focus slot and the sub_080421AC armed
+             * read are approximated by the player-near window and
+             * the weapon hitbox overlap. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object2a_create(&e->object2a, e->param0, e->param1,
+                                    (int32_t)e->x << 16,
+                                    (int32_t)e->y << 16,
+                                    (int32_t)cam_x << 16,
+                                    (int32_t)cam_y << 16);
+                continue;
+            }
+            int32_t sx = (int32_t)cam_x << 16, sy = (int32_t)cam_y << 16;
+            int wbx = (int)(e->object2a.out_x >> 16);
+            int wby = (int)(e->object2a.out_y >> 16);
+            int32_t osx = (int32_t)e->x << 16, osy = (int32_t)e->y << 16;
+            int32_t ssx = soma->x, ssy = soma->y;
+            bool focus = (uint32_t)(ssx - osx + 0x100000) <= 0x200000 &&
+                         (uint32_t)(ssy - osy + 0xC0000) <= 0x180000;
+            int wx, wy, ww, wh;
+            bool attack = combat->weapon && combat->weapon_frames &&
+                          aos_weapon_hitbox(combat->weapon, soma,
+                                            combat->weapon_frames,
+                                            &wx, &wy, &ww, &wh) &&
+                          ww > 1 && wh > 1 &&
+                          !(wx + ww - 1 < wbx - 8 || wbx + 8 < wx ||
+                            wy + wh - 1 < wby - 8 || wby + 24 < wy);
+            aos_object2a_update(&e->object2a, sx, sy, focus, attack);
+            e->x = (int)(e->object2a.out_x >> 16);
+            e->y = (int)(e->object2a.out_y >> 16);
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 43) {
             /* Object2BUpdate (sUnk_084F0ED8[43]; Object2BCreate's
              * sprite attach stays under special_sprites, art
@@ -6548,6 +6589,10 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         } else if (e->id == 14 && variant_key > 14) {
             /* Object0E's 15 config records map onto special_14_v00-v14. */
             variant_key = 14;
+        } else if (e->id == 42) {
+            /* Object2A's 0x08526510 records index param1 (+ 0x32),
+             * not param0 — the _vP suffix carries param1. */
+            variant_key = e->param1;
         }
         for (int v = 0; v < 24; ++v)
             if (objects->special_variants[v].id == e->id &&

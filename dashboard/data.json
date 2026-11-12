@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T15:19:41+00:00",
+ "generated_at": "2026-11-12T15:51:11+00:00",
  "git": {
-  "commit": "d9af47ef",
+  "commit": "204d300e",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 311,
+   "total": 312,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 80,
+    "partial": 81,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 71.1,
-   "with_passing_tests": 298,
+   "functional_or_better_percent": 70.8,
+   "with_passing_tests": 299,
    "with_passing_tests_percent": 95.8,
    "unknown_or_blocked": 1,
    "features": [
@@ -345,6 +345,7 @@
     "aos.objects.proximity_trigger",
     "aos.objects.region_trigger",
     "aos.objects.save_point_remover",
+    "aos.objects.screen_space_oscillator",
     "aos.objects.special_sprites",
     "aos.objects.spin_synced",
     "aos.objects.spinning_attack_orb",
@@ -545,11 +546,11 @@
    "areas": [
     "aos"
    ],
-   "total": 166,
+   "total": 167,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 52,
+    "partial": 53,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -557,8 +558,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 68.7,
-   "with_passing_tests": 166,
+   "functional_or_better_percent": 68.3,
+   "with_passing_tests": 167,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -706,6 +707,7 @@
     "aos.objects.proximity_trigger",
     "aos.objects.region_trigger",
     "aos.objects.save_point_remover",
+    "aos.objects.screen_space_oscillator",
     "aos.objects.special_sprites",
     "aos.objects.spin_synced",
     "aos.objects.spinning_attack_orb",
@@ -22137,6 +22139,74 @@
    }
   },
   {
+   "id": "aos.objects.screen_space_oscillator",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object2A screen-space horizontal oscillator",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object2a.c",
+    "src/runtime/aos/game/aos_object2a.h",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_object2a.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object2ACreate",
+    "Object2AUpdate",
+    "sub_08057538",
+    "sub_08057774",
+    "sub_080577DC",
+    "sub_0804277C",
+    "sub_080428B4",
+    "sub_08042848",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_080421AC",
+    "sub_0802138C",
+    "sub_0803B800",
+    "sub_08068264",
+    "sub_0803B924"
+   ],
+   "limitations": "The bgInfo[1] scroll frame (gEwramData + 0xA094 xPos/yPos) is approximated by the logic camera so the screen-locking only tracks the main view, the + 0x13190 focus slot compare is approximated by a player-near window counting sub_0802138C calls, the sub_080421AC armed-slot read is approximated by a weapon hitbox overlap against a small box at the draw position, the sub_080428B4/sub_08042848 attack and hurt records (the 0x08118640 five-word stack copy indexed by param1 * 4) and the sub_0804277C(8) attack preset are exposed as the hitbox_word field but not attached to the combat system, the sub_080577DC draw-position swap and the sub_0803F2C8 preset argument are not applied to the exported animation, param1 outside 0-3 marks the object invalid where the native create would EntityDelete, and there is no emulator comparison. Object2ACreate (0x08057438) copies the five-word 0x08118640 record to the stack, loads the 0x08526510[param1] sprite triple through sub_08057774 (tiles via sub_0803B800, palette slot sub_08068264(palette, bank), frames, draw callback sub_080577DC snapshotting + 0x24/+ 0x28 over + 0x40/+ 0x44), presets sub_0804277C(8) plus the param1-indexed stack word through sub_080428B4/sub_08042848, ORs + 0x72 with 6, runs sub_0803F2C8(record + 0xC, 0, 1), sets + 0x5C = 0x12, + 0xA = 0 and derives + 0x18/+ 0x10/+ 0x14/+ 0x1C/+ 0x24/+ 0x28 from the entity position, the bgInfo[1] scroll and param0 << 16 with + 0x20 = (+ 0x18 > + 0x1C). Object2AUpdate (0x08057744) registers the entity, runs sub_08057538 while + 0xA == 0, then sub_0803F17C and sub_080421AC. sub_08057538 is a four-state ping-pong in the scroll frame: states 0 and 2 integrate + 0x48 toward + 0x1C and + 0x18, ramping 0x800 a frame beyond 0xFFFFF and switching to a (px + 1) * 0x1000 distance-proportional creep inside it (mirrored negative for + 0x20 set), arrival zeroes + 0x48 and reloads the u8 + 0xD from the record + 0xE halfword, states 1 and 3 count + 0xD down as a signed byte and toggle + 0x20 on exit; the epilogue writes + 0x40/+ 0x44/+ 0x24/+ 0x28 = accumulator minus the current scroll so the sprite stays screen-locked, and a + 0x13190 slot match calls sub_0802138C. Art exported as special_42_v00-v03. Unit-tested in test_aos_object2a.",
+   "next_action": "Attach the 0x08118640 attack records to the combat system and identify the bgInfo[1] scroll consumer difference versus the logic camera once a room uses id 42.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object2a.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object2a.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object2a"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.special_sprites",
    "area": "aos",
    "category": "environment",
@@ -29822,6 +29892,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object2a",
+    "files": [
+     "tests/test_aos_object2a.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_object2b",
     "files": [
      "tests/test_aos_object2b.c"
@@ -29935,12 +30012,18 @@
    }
   ],
   "summary": {
-   "passed": 186,
+   "passed": 187,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "204d300e",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object28 orb sibling",
+   "scope": "project"
+  },
   {
    "commit": "d9af47ef",
    "date": "2026-11-12",
@@ -30414,12 +30497,6 @@
    "date": "2026-11-10",
    "subject": "Port Persephone (Aria of Sorrow enemy id 0x24)",
    "scope": "project"
-  },
-  {
-   "commit": "16b2a939",
-   "date": "2026-11-10",
-   "subject": "Port Arachne (id 0x17): ceiling crawler with five linked legs and web rain",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -30480,9 +30557,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1985,
-    "routines_attached_to_features": 1985,
-    "unassigned_routines": 1588,
+    "routines_cited_by_features": 1991,
+    "routines_attached_to_features": 1991,
+    "unassigned_routines": 1582,
     "call_edges": 14228
    }
   },

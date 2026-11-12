@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 166 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 167 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1985 | 1588 |
+| Castlevania: Aria of Sorrow | 1991 | 1582 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2560,6 +2560,15 @@ Tests: [`tests/test_aos_object11.c`](../tests/test_aos_object11.c).
 Dependencies: `aos.objects.special_sprites`, `aos.objects.enemy_spawners`.  
 Known divergences: The + 0x124C slot deletion is modelled by clearing the room save flag rather than deleting a fixed entity slot; the type-0x1A helper entity is folded into the marker (no art, no sprite); the + 0x42C bit-1 hold approximates the B button through the runtime input word; no consumer of the helper + 0x14 counter is ported; and there is no emulator comparison.  
 Next action: Find the consumer of the helper + 0x14 hold counter and port the + 0x124C slot entity properly.
+
+[~] **`aos.objects.screen_space_oscillator` — Object2A screen-space horizontal oscillator.** Object2ACreate (0x08057438) copies the five-word 0x08118640 record to the stack, loads the 0x08526510[param1] sprite triple through sub_08057774 (tiles via sub_0803B800, palette slot sub_08068264(palette, bank), frames, draw callback sub_080577DC snapshotting + 0x24/+ 0x28 over + 0x40/+ 0x44), presets sub_0804277C(8) plus the param1-indexed stack word through sub_080428B4/sub_08042848, ORs + 0x72 with 6, runs sub_0803F2C8(record + 0xC, 0, 1), sets + 0x5C = 0x12, + 0xA = 0 and derives + 0x18/+ 0x10/+ 0x14/+ 0x1C/+ 0x24/+ 0x28 from the entity position, the bgInfo[1] scroll and param0 << 16 with + 0x20 = (+ 0x18 > + 0x1C). Object2AUpdate (0x08057744) registers the entity, runs sub_08057538 while + 0xA == 0, then sub_0803F17C and sub_080421AC. sub_08057538 is a four-state ping-pong in the scroll frame: states 0 and 2 integrate + 0x48 toward + 0x1C and + 0x18, ramping 0x800 a frame beyond 0xFFFFF and switching to a (px + 1) * 0x1000 distance-proportional creep inside it (mirrored negative for + 0x20 set), arrival zeroes + 0x48 and reloads the u8 + 0xD from the record + 0xE halfword, states 1 and 3 count + 0xD down as a signed byte and toggle + 0x20 on exit; the epilogue writes + 0x40/+ 0x44/+ 0x24/+ 0x28 = accumulator minus the current scroll so the sprite stays screen-locked, and a + 0x13190 slot match calls sub_0802138C. Art exported as special_42_v00-v03. Unit-tested in test_aos_object2a.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_0804277C`, `aos:asm:asm/code/code_08040A38.s:sub_08042848`, `aos:asm:asm/code/code_08040A38.s:sub_080428B4`, `aos:asm:asm/code/code_08050A3C.s:Object2ACreate`, `aos:asm:asm/code/code_08050A3C.s:Object2AUpdate`, `aos:asm:asm/code/code_08050A3C.s:sub_08057538`, `aos:asm:asm/code/code_08050A3C.s:sub_08057774`, `aos:asm:asm/code/code_08050A3C.s:sub_080577DC`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:c:src/code/code_080211F0.c:sub_0802138C`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`.  
+Local implementation: [`src/runtime/aos/game/aos_object2a.c`](../src/runtime/aos/game/aos_object2a.c), [`src/runtime/aos/game/aos_object2a.h`](../src/runtime/aos/game/aos_object2a.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object2a.c`](../tests/test_aos_object2a.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The bgInfo[1] scroll frame (gEwramData + 0xA094 xPos/yPos) is approximated by the logic camera so the screen-locking only tracks the main view, the + 0x13190 focus slot compare is approximated by a player-near window counting sub_0802138C calls, the sub_080421AC armed-slot read is approximated by a weapon hitbox overlap against a small box at the draw position, the sub_080428B4/sub_08042848 attack and hurt records (the 0x08118640 five-word stack copy indexed by param1 * 4) and the sub_0804277C(8) attack preset are exposed as the hitbox_word field but not attached to the combat system, the sub_080577DC draw-position swap and the sub_0803F2C8 preset argument are not applied to the exported animation, param1 outside 0-3 marks the object invalid where the native create would EntityDelete, and there is no emulator comparison.  
+Next action: Attach the 0x08118640 attack records to the combat system and identify the bgInfo[1] scroll consumer difference versus the logic camera once a room uses id 42.
 
 [~] **`aos.objects.special_sprites` — SPECIAL room object sprites (ids 13,16,19,20,21,23,24,25,27).** sub_0806E0D0(entity, gfx, palette, bank, frames) is decoded: most ObjectXXCreate functions pass hard-coded sprite resources while entity + 0x30/+ 0x32 carry the room record's param0/param1 and select behaviour through per-object state tables (Object14Update indexes 0x08526408 by param0). The nine resource triplets were extracted from the create functions and exported as Object/special_NN/anim_M sequences with metadata/object_frames.tsv (metroidvania-aos-object-frames-v1); empty native animations are skipped. The runtime loads the object index into special_objects[64] and draws each spawned SPECIAL entity. Source-derived and unit-tested, not emulator-compared. Object1A and Object1E dispatch entries are verified bx lr no-ops in both directions; Object1DUpdate and Object23Update run only the shared sub_0803F17C animation step.
 

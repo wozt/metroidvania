@@ -28,6 +28,7 @@
 #include "aos/game/aos_object11.h"
 #include "aos/game/aos_object12.h"
 #include "aos/game/aos_object13.h"
+#include "aos/game/aos_object19.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -433,6 +434,7 @@ typedef struct {
     AosObject11 object11;   /* object 0x11: save-point remover marker */
     AosObject12 object12;   /* object 0x12: param-driven animated sprite */
     AosObject13 object13;   /* object 0x13: swinging chandelier trigger */
+    AosObject19 object19;   /* object 0x19: rectangular patrol mover */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4855,6 +4857,30 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 if (word >= 0 && word < AOS_WALL_EVENT_WORDS)
                     aria_events[word] |= 1u << (e->param1 & 31);
             }
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 25) {
+            /* Object19Update (sUnk_084F0ED8[25]; Object19Create's
+             * sprite attach is the special_sprites coverage): the
+             * four-leg patrol machine. The sub_0803E058 affine
+             * rotation draw and the sub_080421AC attack-slot read
+             * are approximated by the static animation. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object19_create(&e->object19, e->param0, e->param1,
+                                    ((int32_t)e->x) << 16,
+                                    ((int32_t)e->y) << 16, 0);
+                continue;
+            }
+            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            bool near = (uint16_t)(ssx - osx + 0x10) <= 0xB0 &&
+                        (uint16_t)(ssy - osy) <= 0x110;
+            aos_object19_update(&e->object19, near);
+            e->x = (int)(e->object19.fx >> 16);
+            e->y = (int)(e->object19.fy >> 16);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {

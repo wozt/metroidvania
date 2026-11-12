@@ -1,3 +1,23 @@
+## Patch 1046 - Aria Object19 patrol mover ported
+
+- `src/runtime/aos/game/aos_object19.c` ports Object19Update
+  (0x08053D10), the four-leg patrol mover dispatched through
+  sUnk_084F0ED8[25]; Object19Create's sprite attach stays under
+  special_sprites.
+- Update reproduces the (-0x10, 0, 0xB0, 0x110) probe gate, the
+  + 0x58 bit marks, the + 0x14/+ 0x16 angle accumulator and the
+  0x0852646C leg table: right param0 frames, down 22.0, left
+  param0 frames, up 22.0, with param1 mirroring the horizontal
+  legs, + 0x18 counting down and + 0x40/+ 0x44 integrating.
+- Runtime wiring: SPECIAL id 25 spawns on the camera window,
+  feeds the probe from a player-near window and writes the
+  fixed-point drift back to e->x/e->y.
+- Divergences documented: the sub_0803E058 affine rotation draw
+  and the sub_080421AC attack-slot read are approximated.
+- Tests: `tests/test_aos_object19.c` covers the probe skip, the
+  leg arming/order, the param0/param1 parameters, the angle
+  accumulator and the full rectangle cycle.
+
 ## Patch 1045 - Aria Object13 swing event trigger ported
 
 - `src/runtime/aos/game/aos_object13.c` ports Object13Update

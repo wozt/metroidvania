@@ -1,3 +1,29 @@
+## Patch 1037 - Aria Object07 ambient motes ported
+
+- `src/runtime/aos/game/aos_object07.c` ports Object07Create
+  (0x0804F6E4) and Object07Update (0x0804F770), the ambient-mote
+  object dispatched through sUnk_084F0DF8[7] / sUnk_084F0ED8[7] —
+  the last special object used by exported rooms.
+- Create dispatches param0: 0 spawns the 0x085255AC[param1]-count
+  ambient motes (roll & 0xF picks parallax layer 0-3 and palette
+  hint, layer 3 anchors camera-relative) plus the four anchored
+  children from the 0x085255DC records and 0x085255C4[param0]
+  offsets; 1 arms the + 0x10/+ 0x12 BG-anim cycler; 2 motes only;
+  3 clears + 0x4C4 and sets + 0x42C bit 0x800; 4 calls sub_08013EEC
+  when param1 != 0.
+- Update runs the 0x08525D9C record cycler for param0 1 (the
+  sub_0803C918 tile DMA reduced to the frame index) and the mote
+  machine otherwise: fixed-point drift, the 0x0852559C parallax
+  factors against the + 0xA094 scroll, screen-anchor wrap
+  re-randomizing on each edge; anchored children drift at
+  + 0x50 = 0x80 minus scroll / 0xC.
+- Runtime wiring: SPECIAL id 7 entities spawn on the camera window
+  and feed the BG scroll as fixed-point; child art is not exported
+  yet so the simulated motes are tracked but not drawn (documented).
+- Tests: `tests/test_aos_object07.c` covers the param0 dispatch,
+  the count table, the layer roll, anchored positions, the anim
+  cycler, the global-write flags and both drift paths.
+
 ## Patch 1036 - Aria Object03 escort director ported
 
 - `src/runtime/aos/game/aos_object03.c` ports Object03Create

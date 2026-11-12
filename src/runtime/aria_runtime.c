@@ -20,6 +20,7 @@
 #include "aos/game/aos_object04.h"
 #include "aos/game/aos_object05.h"
 #include "aos/game/aos_object06.h"
+#include "aos/game/aos_object07.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -417,6 +418,7 @@ typedef struct {
     AosObject04 object04;   /* object 0x04: directional cutscene director */
     AosObject05 object05;   /* object 0x05: proximity trigger */
     AosObject06 object06;   /* object 0x06: cinematic trigger */
+    AosObject07 object07;   /* object 0x07: ambient motes */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4602,6 +4604,24 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     .x = e->object06.fx_x << 16,
                     .y = e->object06.fx_y << 16,
                     .vy = -0x1000};
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 7) {
+            /* Object07Create / Object07Update: the ambient-mote object.
+             * The parent has no sprite; param0 dispatches child spawns
+             * (ambient motes + anchored children), the BG-anim cycler
+             * (param0 1) or global writes (param0 3/4). Child sprite
+             * art (0x081CBE5C family) is not exported yet — the mote
+             * positions are tracked but not drawn. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object07_create(&e->object07, e->param0, e->param1,
+                                    cam_x, cam_y, aos_random);
+                continue;
+            }
+            aos_object07_update(&e->object07, cam_x, cam_y,
+                                cam_x << 16, cam_y << 16, aos_random);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 148 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 149 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1903 | 1670 |
+| Castlevania: Aria of Sorrow | 1910 | 1663 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2416,6 +2416,15 @@ Tests: [`tests/test_aos_door.c`](../tests/test_aos_door.c), [`tests/test_native_
 Known divergences: The cleanup state 0x63 (entered when + 0x59 bit 2 is clear; its setter is not traced) is not modelled. Door state now synchronizes gEwramData + 0x42C bits 0x101 for the pickup path and yellow-soul hold check; other readers and + 0xA074 bit 1 are not modelled; sounds 0x114 / 0x115 are reported, not played. Other door kinds are separate objects outside this entry.  
 Next action: Trace the setter of + 0x59 bit 2 to model the cleanup state 0x63.
 Evidence: in game: `aria area_00_room_016: walking right from (1200, 150) the door at x 1272 opens (frame 40), Soma walks through (frame 110) and arrives in room 0/28 (frame 150)`.
+
+[~] **`aos.objects.ambient_motes` — Object07 ambient motes.** Object07Create (0x0804F6E4) dispatches param0: 0 spawns the param1-count ambient motes plus four anchored children, 1 arms the BG-anim cycler, 2 motes only, 3 clears + 0x4C4 and sets + 0x42C bit 0x800, 4 calls sub_08013EEC when param1 != 0. Object07Update (0x0804F770) runs the frame cycler for param0 1 and the + 0x48 = 0xE40 window write otherwise; the mote drift integrates fixed-point positions with the 0x0852559C parallax factors and screen-anchor wrap, the anchored children drift at + 0x50 = 0x80 minus scroll / 0xC. Unit-tested in aos_object07.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:Object07Create`, `aos:asm:asm/code/code_08040A38.s:Object07Update`, `aos:asm:asm/code/code_08040A38.s:sub_0804F160`, `aos:asm:asm/code/code_08040A38.s:sub_0804F374`, `aos:asm:asm/code/code_08040A38.s:sub_0804F504`, `aos:asm:asm/code/code_08040A38.s:sub_0804F5C4`, `aos:asm:asm/code/code_08040A38.s:sub_0804F690`, `aos:c:src/code_080009A0.c:EntityCreateInRange`.  
+Local implementation: [`src/runtime/aos/game/aos_object07.c`](../src/runtime/aos/game/aos_object07.c), [`src/runtime/aos/game/aos_object07.h`](../src/runtime/aos/game/aos_object07.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object07.c`](../tests/test_aos_object07.c).
+Dependencies: `aos.objects.escort_director`.  
+Known divergences: The child sprite art (tiles 0x081CBE5C/0x081CBEB4 families) is not exported so motes and anchored children are simulated but not drawn; the sub_080009E4 sine velocity split, the sub_0803C918 tile DMA behind the param0 == 1 cycler, the + 0xA094 factor bytes (approximated 0x40/1:1), sub_08013EEC and sub_0803C674 are reduced to flags; EntityCreateInRange slot allocation is replaced by fixed module arrays.  
+Next action: Export the 0x081CBE5C/0x081CBEB4 child art and draw the simulated motes and anchored children, then port the tile-DMA cycler for param0 == 1.
 
 [~] **`aos.objects.cinematic_trigger` — Object06 cinematic trigger.** Object06Create (0x0804EC3C) near branch fires on the 0x38 x 0x22 probe OR the + 0x37E bit 2, locking state 0xA with SetPlayerInput(1, 0); far seals the column and picks 0x14/0x63/0. Object06Update (0x0804ED30) keeps the + 0x58 off-screen bit (bit 0x40 = right half picks the forced direction), runs the state-0 particle idle and probe trigger (song 0x111, fades, snapshot), the state-1 forced walk with the + 0xD countdown, the state-2 column clear and + 0x42C release gated on the cinematic flag, and the state-3 unconditional force. Unit-tested in aos_object06.
 

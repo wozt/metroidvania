@@ -752,6 +752,18 @@ static const EntitySpec special18_variants[] = {
  * The variant suffix carries the resolved row, not the raw param0: the
  * runtime compares (param0 >> 8) ?: 7 for this id. Rows seen in rooms:
  * 6 (param0 0x600), 7 (param0 0 and low-byte variants) and 9 (0x900). */
+/* Id 7 children (Object07Create's sub_0804F374/sub_0804F5C4 spawns):
+ * the mote tiles 0x081CBE5C, palette 0x08209EE8 and frames 0x0820FE44
+ * parent param0 == 2 selects the alternate 0x081CBEB4/0x0820A100/
+ * 0x08210DB0 set. The OBJ palette rows + 0x5C = 0x19/0x1A/0x1D are a
+ * runtime slot assignment (sub_080681D8) and collapse to bank 0 here;
+ * the _vP suffix carries a pseudo param0 the Object07 draw path maps
+ * from the parent param0. */
+static const EntitySpec special07_variants[] = {
+    ENTITY("special_07_v100", 0x081CBE5C, 0x08209EE8, 0, 0x0820FE44),
+    ENTITY("special_07_v101", 0x081CBEB4, 0x0820A100, 0, 0x08210DB0),
+};
+
 static const EntitySpec special15_variants[] = {
     ENTITY("special_15_v6", 0x081C15F4, 0x0826F8A4, 6, 0x0820ED60),
     ENTITY("special_15_v7", 0x081C15F4, 0x0826F8A4, 7, 0x0820ED60),
@@ -2074,6 +2086,11 @@ bool fusion_aos_export_objects(const FusionRom *rom,
          success && index < sizeof special15_variants / sizeof special15_variants[0];
          ++index)
         success = export_entity(rom, &library, &special15_variants[index],
+                                "Object", &object_rows, error, error_size);
+    for (size_t index = 0;
+         success && index < sizeof special07_variants / sizeof special07_variants[0];
+         ++index)
+        success = export_entity(rom, &library, &special07_variants[index],
                                 "Object", &object_rows, error, error_size);
     for (size_t index = 0;
          success && index < sizeof effects / sizeof effects[0]; ++index)

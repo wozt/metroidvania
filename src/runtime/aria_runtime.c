@@ -4610,9 +4610,9 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* Object07Create / Object07Update: the ambient-mote object.
              * The parent has no sprite; param0 dispatches child spawns
              * (ambient motes + anchored children), the BG-anim cycler
-             * (param0 1) or global writes (param0 3/4). Child sprite
-             * art (0x081CBE5C family) is not exported yet — the mote
-             * positions are tracked but not drawn. */
+             * (param0 1) or global writes (param0 3/4). Child sprites
+             * draw through special_07_v100/v101 in the special-object
+             * pass. */
             if (!e->spawned) {
                 if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
                 e->spawned = true;
@@ -5979,6 +5979,49 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                                           frame->offset_x - cam_x),
                                   (float)(e->object01.child_y[c] +
                                           frame->offset_y - cam_y),
+                                  frame->w, frame->h};
+                SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+            }
+            continue;
+        }
+        if (e->id == 7) {
+            /* Object07's children are the sprites: ambient motes and the
+             * four anchored records share the exported mote art; parent
+             * param0 == 2 selects the alternate set (v101). Positions
+             * are fixed-point screen pixels (fx >> 16). */
+            const __typeof__(objects->special_objects[0]) *child_art = NULL;
+            for (int v = 0; v < 24; ++v)
+                if (objects->special_variants[v].id == 7 &&
+                    objects->special_variants[v].param0 ==
+                        (e->param0 == 2 ? 101 : 100) &&
+                    objects->special_variants[v].loaded) {
+                    child_art = &objects->special_variants[v];
+                    break;
+                }
+            if (!child_art || !child_art->defs[0].count) continue;
+            unsigned total = 0;
+            for (unsigned f = 0; f < child_art->defs[0].count; ++f)
+                total += child_art->ticks[0][f];
+            if (!total) continue;
+            unsigned t = (step / 4) % total, index = 0;
+            while (index + 1 < child_art->defs[0].count &&
+                   t >= child_art->ticks[0][index])
+                t -= child_art->ticks[0][index++];
+            const AriaFrame *frame = &child_art->frames[0][index];
+            if (!frame->texture) continue;
+            for (int c = 0; c < e->object07.ambient_count; ++c) {
+                const AosObject07Mote *m = &e->object07.motes[c];
+                if (!m->alive) continue;
+                SDL_FRect rect = {(float)((m->fx >> 16) + frame->offset_x),
+                                  (float)((m->fy >> 16) + frame->offset_y),
+                                  frame->w, frame->h};
+                SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+            }
+            for (int c = 0; c < e->object07.anchor_count; ++c) {
+                const AosObject07Anchor *a = &e->object07.anchors[c];
+                if (!a->alive) continue;
+                SDL_FRect rect = {(float)((a->fx >> 16) + frame->offset_x),
+                                  (float)((a->fy >> 16) + frame->offset_y),
                                   frame->w, frame->h};
                 SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
             }

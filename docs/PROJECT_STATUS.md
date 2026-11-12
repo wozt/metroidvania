@@ -1,3 +1,17 @@
+## Patch 1038 - Aria Object07 child art exported and drawn
+
+- `src/assets/aos/objects.c` exports the Object07 child sprite sets:
+  special_07_v100 (tiles 0x081CBE5C, palette 0x08209EE8, frames
+  0x0820FE44) and special_07_v101, the param0 == 2 alternate
+  (0x081CBEB4/0x0820A100/0x08210DB0). The + 0x5C OBJ palette rows
+  collapse to bank 0 (sub_080681D8 slot assignment is a runtime
+  detail); child animation runs animation 0 of the frames table
+  rather than the native + 0x1C layer pick.
+- `draw_special_objects` gained an id-7 block that blits every live
+  mote and anchored child at its fixed-point screen position; the
+  Aria object golden fixture was regenerated for the two new
+  exports (169/169 CTest entries pass).
+
 ## Patch 1037 - Aria Object07 ambient motes ported
 
 - `src/runtime/aos/game/aos_object07.c` ports Object07Create
@@ -18,8 +32,9 @@
   re-randomizing on each edge; anchored children drift at
   + 0x50 = 0x80 minus scroll / 0xC.
 - Runtime wiring: SPECIAL id 7 entities spawn on the camera window
-  and feed the BG scroll as fixed-point; child art is not exported
-  yet so the simulated motes are tracked but not drawn (documented).
+  and feed the BG scroll as fixed-point; the child art is exported
+  as special_07_v100/v101 and the motes and anchored children draw
+  through the special-object pass.
 - Tests: `tests/test_aos_object07.c` covers the param0 dispatch,
   the count table, the layer roll, anchored positions, the anim
   cycler, the global-write flags and both drift paths.

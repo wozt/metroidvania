@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 147 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 148 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1901 | 1672 |
+| Castlevania: Aria of Sorrow | 1903 | 1670 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2452,6 +2452,15 @@ Tests: [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.objects.static_children`.  
 Known divergences: The record + 0xC u16 stored at entity + 0x34 and the record tail parameters are not modelled (enemy param0/param1 run as 0 like the cleared + 0x30/+ 0x32); the spawned enemy is appended as a new entity rather than reusing the object slot; unported enemy ids under the gate spawn nothing, matching an absent kind; Object0AUpdate/Object0BUpdate are bx lr natively because the record installs the enemy update on entity + 0.  
 Next action: Audit the + 0x34 record field against enemy creates that read it, then port the remaining object pairs.
+
+[~] **`aos.objects.escort_director` — Object03 escort director.** Object03Create (0x0804E4A0) always seals the three-block column and picks 0x14/0x63/0 — no probe, no one-shot. Object03Update (0x0804E52C) keeps the + 0x58 off-screen bit and runs the escort state 0 (skipped while + 0x13220 holds; without the cinematic flag it advances to state 2; with it, the two unsigned Soma windows and the twin-partner abreast check arm + 0xD = 4 into state 1), the state-1 forced walk countdown, the state-2 column clear + song 0x113 + + 0x42C release gated on the cinematic flag, and the state-3 unconditional force. Unit-tested in aos_object03.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:Object03Create`, `aos:asm:asm/code/code_08040A38.s:Object03Update`, `aos:asm:asm/code/code_08040A38.s:sub_0804DF3C`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:c:src/code_080009A0.c:SetPlayerInput`, `aos:c:src/code_08001194.c:sub_08002200`, `aos:c:src/code_08001194.c:sub_08002248`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/game/aos_object03.c`](../src/runtime/aos/game/aos_object03.c), [`src/runtime/aos/game/aos_object03.h`](../src/runtime/aos/game/aos_object03.h), [`src/runtime/aos/core/aos_collision.c`](../src/runtime/aos/core/aos_collision.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object03.c`](../tests/test_aos_object03.c).
+Dependencies: `aos.objects.cinematic_trigger`.  
+Known divergences: The + 0x13220 escort-busy word, the + 0x4CC bit 6 cinematic flag and the + 0x13114/+ 0x13118 partner entities are not modelled — the runtime passes cinematic false so state 0 takes the direct state-0 -> 2 path; the winOut blend and the sub_0804DF3C sprite attach are approximated by the exported art; states 4+ are native no-ops.  
+Next action: Model the + 0x13220/+ 0x13114/+ 0x13118 escort entities and the + 0x4CC cinematic flag, then compare a scripted escort scene against an emulator.
 
 [~] **`aos.objects.proximity_trigger` — Object05 proximity trigger.** Object05Create (0x0804F00C) runs the shared sub_0804DF3C init, writes + 0x65 = 0x7D and + 0x5A = (+ 0x5A & 0x87)  or  0x38, applies the winOut blend and arms + 0x14 = 0x30 when the 0x38 x 0x22 probe around (soma_x - 0x1C, soma_y) hits; params are unused and no blocks are sealed. Object05Update (0x0804F084) keeps the + 0x58 off-screen bit and the state-0 timer cycle: +2 saturating at 0x30 inside the (u16)(ex_sx - soma_sx + 0x28) <= 0x4F window, -2 clearing at <= 2 outside, with the 0x110 x 0xC0 probe at (-0x10, 0) playing song 0x113 on both edges. Unit-tested in aos_object05.
 

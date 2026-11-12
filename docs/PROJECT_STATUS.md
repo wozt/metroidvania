@@ -1,3 +1,32 @@
+## Patch 1036 - Aria Object03 escort director ported
+
+- `src/runtime/aos/game/aos_object03.c` ports Object03Create
+  (0x0804E4A0) and Object03Update (0x0804E52C), the escort director
+  dispatched through sUnk_084F0DF8[3] / sUnk_084F0ED8[3] — the most
+  used remaining special object (28 exported rooms).
+- Create ALWAYS seals the three-block column at the entity anchor
+  (y - 8, y - 0x18, y - 0x28) with no probe, no one-shot and no
+  input; the entry state is 0x14/0x63/0 for param0 1/3.
+- Update keeps the + 0x58 off-screen bit (+ 0x58 bit 0x40 picks the
+  forced direction) and runs the escort machine: state 0 is skipped
+  while + 0x13220 holds, advances straight to state 2 without the
+  + 0x4CC bit 6 cinematic flag, and with it waits on the two unsigned
+  Soma windows ((ex_sx - soma_sx + 0x18) <= 0x2F forces the walk,
+  (+ 0x13) <= 0x26 gates) plus the twin-partner abreast check
+  (+ 0x13114 inside its window, + 0x13118 at equal screen x) arming
+  + 0xD = 4 into state 1; state 1 is the forced walk countdown;
+  state 2 clears the column once with song 0x113, counts to 0x30,
+  releases + 0x42C bits 0x101 and advances only while the cinematic
+  flag holds; state 3 forces unconditionally.
+- Runtime wiring: SPECIAL id 3 entities spawn on the camera window,
+  seal their column at create and feed input->held / the song; the
+  + 0x13220/+ 0x4CC/+ 0x13114/+ 0x13118 globals are not modelled so
+  the cinematic escort branch is dormant (documented divergence).
+- Tests: `tests/test_aos_object03.c` covers the always-seal create,
+  the param0 states, the escort-busy freeze, the cinematic-off
+  shortcut, both Soma windows, the partner gate, the countdown and
+  the gated release.
+
 ## Patch 1035 - Aria Object06 cinematic trigger ported
 
 - `src/runtime/aos/game/aos_object06.c` ports Object06Create

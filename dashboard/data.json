@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T00:54:04+00:00",
+ "generated_at": "2026-11-12T00:57:05+00:00",
  "git": {
-  "commit": "f572e37c",
+  "commit": "b1d76022",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 292,
+   "total": 293,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 61,
+    "partial": 62,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 75.7,
-   "with_passing_tests": 279,
-   "with_passing_tests_percent": 95.5,
+   "functional_or_better_percent": 75.4,
+   "with_passing_tests": 280,
+   "with_passing_tests_percent": 95.6,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -331,6 +331,7 @@
     "aos.objects.cutscene_director",
     "aos.objects.directional_director",
     "aos.objects.enemy_spawners",
+    "aos.objects.escort_director",
     "aos.objects.proximity_trigger",
     "aos.objects.special_sprites",
     "aos.objects.static_children",
@@ -526,11 +527,11 @@
    "areas": [
     "aos"
    ],
-   "total": 147,
+   "total": 148,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 33,
+    "partial": 34,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -538,8 +539,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 77.6,
-   "with_passing_tests": 147,
+   "functional_or_better_percent": 77.0,
+   "with_passing_tests": 148,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -673,6 +674,7 @@
     "aos.objects.cutscene_director",
     "aos.objects.directional_director",
     "aos.objects.enemy_spawners",
+    "aos.objects.escort_director",
     "aos.objects.proximity_trigger",
     "aos.objects.special_sprites",
     "aos.objects.static_children",
@@ -21198,6 +21200,67 @@
    }
   },
   {
+   "id": "aos.objects.escort_director",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object03 escort director",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object03.c",
+    "src/runtime/aos/game/aos_object03.h",
+    "src/runtime/aos/core/aos_collision.c",
+    "src/runtime/aria_runtime.c"
+   ],
+   "tests": [
+    "tests/test_aos_object03.c"
+   ],
+   "dependencies": [
+    "aos.objects.cinematic_trigger"
+   ],
+   "native_routines": [
+    "Object03Create",
+    "Object03Update",
+    "sub_0804DF3C",
+    "sub_08068AD4",
+    "sub_08002200",
+    "sub_08002248",
+    "SetPlayerInput",
+    "PlaySong"
+   ],
+   "limitations": "The + 0x13220 escort-busy word, the + 0x4CC bit 6 cinematic flag and the + 0x13114/+ 0x13118 partner entities are not modelled — the runtime passes cinematic false so state 0 takes the direct state-0 -> 2 path; the winOut blend and the sub_0804DF3C sprite attach are approximated by the exported art; states 4+ are native no-ops. Object03Create (0x0804E4A0) always seals the three-block column and picks 0x14/0x63/0 — no probe, no one-shot. Object03Update (0x0804E52C) keeps the + 0x58 off-screen bit and runs the escort state 0 (skipped while + 0x13220 holds; without the cinematic flag it advances to state 2; with it, the two unsigned Soma windows and the twin-partner abreast check arm + 0xD = 4 into state 1), the state-1 forced walk countdown, the state-2 column clear + song 0x113 + + 0x42C release gated on the cinematic flag, and the state-3 unconditional force. Unit-tested in aos_object03.",
+   "next_action": "Model the + 0x13220/+ 0x13114/+ 0x13118 escort entities and the + 0x4CC cinematic flag, then compare a scripted escort scene against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object03.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object03.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object03"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.proximity_trigger",
    "area": "aos",
    "category": "environment",
@@ -28441,6 +28504,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object03",
+    "files": [
+     "tests/test_aos_object03.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_object05",
     "files": [
      "tests/test_aos_object05.c"
@@ -28540,12 +28610,18 @@
    }
   ],
   "summary": {
-   "passed": 167,
+   "passed": 168,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "b1d76022",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object06 cinematic trigger",
+   "scope": "project"
+  },
   {
    "commit": "f572e37c",
    "date": "2026-11-12",
@@ -29019,12 +29095,6 @@
    "date": "2026-11-10",
    "subject": "Move MZM cutscene modules into src/runtime/mzm/cutscenes/",
    "scope": "project"
-  },
-  {
-   "commit": "6e6409d9",
-   "date": "2026-11-10",
-   "subject": "Move MZM title modules into src/runtime/mzm/title/",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -29085,9 +29155,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1901,
-    "routines_attached_to_features": 1901,
-    "unassigned_routines": 1672,
+    "routines_cited_by_features": 1903,
+    "routines_attached_to_features": 1903,
+    "unassigned_routines": 1670,
     "call_edges": 14228
    }
   },

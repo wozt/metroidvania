@@ -16,6 +16,7 @@
 #include "aos/game/aos_door.h"
 #include "aos/game/aos_object01.h"
 #include "aos/game/aos_object02.h"
+#include "aos/game/aos_object03.h"
 #include "aos/game/aos_object04.h"
 #include "aos/game/aos_object05.h"
 #include "aos/game/aos_object06.h"
@@ -411,6 +412,7 @@ typedef struct {
     AosDoor door;
     AosWall wall;           /* objects 0x08 and 0x09 */
     AosObject02 object02;   /* object 0x02: the cutscene director */
+    AosObject03 object03;   /* object 0x03: escort director */
     AosObject01 object01;   /* object 0x01: conditional static children */
     AosObject04 object04;   /* object 0x04: directional cutscene director */
     AosObject05 object05;   /* object 0x05: proximity trigger */
@@ -4478,6 +4480,34 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             if (e->object01.deleted) continue;
             aos_object01_update(&e->object01);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 3) {
+            /* Object03Create / Object03Update: the escort director —
+             * the column is always sealed at create; state 0 waits on
+             * the + 0x13220/+ 0x4CC globals and the partner entities
+             * (none modelled: cinematic false takes the direct
+             * state-0 -> 2 path). */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object03_create(&e->object03, layer, e->param0,
+                                    e->param1, e->x - cam_x, e->x, e->y);
+                continue;
+            }
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            aos_object03_update(&e->object03, layer, cam_x, cam_y,
+                                e->x, e->y, ssx, ssy,
+                                false, false, 0x4000, 0x4000);
+            if (e->object03.force_zero || e->object03.forced) {
+                input->active = true;
+                input->held = e->object03.forced;
+            }
+            if (e->object03.song >= 0) {
+                sound = e->object03.song;
+                printf("Object03 %zu: song 0x%X\n", i, e->object03.song);
+            }
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 4) {

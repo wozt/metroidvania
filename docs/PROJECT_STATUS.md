@@ -1,3 +1,34 @@
+## Patch 1029 - Red soul 27 (Man-Eater) ported
+
+- `src/runtime/aos/red_souls/aos_soul_red_man_eater.c` ports
+  `SkillManEaterUse` (routine 0x0802C6ED), the lunging bite: the
+  state-0 init rolls the variant (`rng % 3` into `+ 0xB`,
+  `+ 0xC = variant * 5`), places the entity through
+  `sub_08031EA4(source, 8, -0x1A)` — 8 px along the facing, 0x1A px
+  up — sets `+ 0x48 = +-0x12000` by the facing, registers the type-5
+  contact whose `sub_0802D9B4` callback only sets `+ 0x18 = 1`,
+  packs the `0x0C0CFAFA` box ({-6,-6,12,12}), arms `+ 0x72` bit 4,
+  plays song 0x15E and bumps the `+ 0x131BE` counter. State 1 flies
+  straight for 30 frames of `+ 0x24` with `+ 0x65 = + 0xC +
+  tick / 10` under the `sub_0806D3D8` 0x80000 cap, then lingers
+  `+ 0xD = 0x30` frames into state 2, the `+ 0xF = 1` fade of
+  `0x10` frames into state 3, and state 3's own countdown deletes
+  through the `+ 0x13124` slot clear and counter drop. A contact
+  while the state is <= 2 sticks the bite: `vx = 0`,
+  `+ 0x65 = + 0xC + 4`, state 4 for `0x10` frames back into state 3.
+- `src/assets/aos/objects.c` exports `skill_man_eater` (resource 32
+  of `0x080E13BC`: tiles 0x0825EB14, palette 0x08266470, frames
+  0x0826702C, 15 stills); `tests/test_aos_soul_red_man_eater.c`
+  covers the placement, the variant roll, the state-1 frame
+  selector, the linger/fade timings, the stuck-bite conversion and
+  the margin delete. The `+ 0x13124` slot table and `+ 0x131BE`
+  counter are global bookkeeping with no modelled reader.
+- Every red-soul routine in `red_souls.tsv` now has a ported update;
+  `aos_unassigned_routines.tsv` drops `SkillManEaterUse` and the
+  `man_eater` aspect row corrects its soul reference to red:27 (the
+  enemies.tsv `soul_type` 0 index 27 record; the earlier yellow:27
+  claim duplicated Quezlcoatl's stat soul).
+
 ## Patch 1028 - Blue souls 2 (Giant Bat) and 7 (Final Guard) ported
 
 - `src/runtime/aos/blue_souls/aos_soul_blue_giant_bat.c` ports

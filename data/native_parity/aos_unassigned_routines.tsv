@@ -30,7 +30,6 @@ aos:asm:asm/code/code_08014548.s:sub_0801FBE4	sub_0801FBE4	unclassified				asm_f
 aos:asm:asm/code/code_08014548.s:sub_0801FCAC	sub_0801FCAC	unclassified				asm_function	0x0801FCAC	asm/code/code_08014548.s	23306	1	0
 aos:asm:asm/code/code_08014548.s:sub_0801FD24	sub_0801FD24	unclassified		technical	exclusive_callees	asm_function	0x0801FD24	asm/code/code_08014548.s	23373	1	4
 aos:asm:asm/code/code_08014548.s:sub_0801FEF8	sub_0801FEF8	unclassified				asm_function	0x0801FEF8	asm/code/code_08014548.s	23611	0	36
-aos:asm:asm/code/code_080211F0.s:SkillManEaterUse	SkillManEaterUse	abilities	name			asm_function		asm/code/code_080211F0.s	22580	0	12
 aos:asm:asm/code/code_080211F0.s:sub_08025620	sub_08025620	abilities	referrers			asm_function	0x08025620	asm/code/code_080211F0.s	8666	0	5
 aos:asm:asm/code/code_080211F0.s:sub_080256AC	sub_080256AC	abilities	referrers			asm_function	0x080256AC	asm/code/code_080211F0.s	8737	1	5
 aos:asm:asm/code/code_080211F0.s:sub_08026858	sub_08026858	abilities	referrers			asm_function	0x08026858	asm/code/code_080211F0.s	10924	0	5

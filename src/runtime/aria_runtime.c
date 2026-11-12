@@ -55,6 +55,7 @@
 #include "aos/red_souls/aos_soul_red_arachne.h"
 #include "aos/red_souls/aos_soul_red_minotaur.h"
 #include "aos/red_souls/aos_soul_red_nightmare.h"
+#include "aos/red_souls/aos_soul_red_man_eater.h"
 #include "aos/red_souls/aos_soul_red_were_beast.h"
 #include "aos/red_souls/aos_soul_red_flame_demon.h"
 #include "aos/red_souls/aos_soul_red_devil.h"
@@ -338,7 +339,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
        SKILL_ART_PERSEPHONE, SKILL_ART_GREAT_ARMOR, SKILL_ART_DEVIL_SPARK,
        SKILL_ART_SHADOW_KNIGHT, SKILL_ART_ALURA_UNE, SKILL_ART_BIG_GOLEM,
        SKILL_ART_WEREWOLF, SKILL_ART_KILLER_MANTLE, SKILL_ART_WERE_BEAST, SKILL_ART_DEMON_LORD,
-       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ART_COCKATRICE, SKILL_ART_DRYAD, SKILL_ART_ARACHNE, SKILL_ART_RED_MINOTAUR, SKILL_ART_NIGHTMARE, SKILL_ART_SKY_FISH, SKILL_ART_CREAKING_SKULL, SKILL_ART_ALASTOR, SKILL_ART_FINAL_GUARD, SKILL_ARTS };
+       SKILL_ART_BIPHRON, SKILL_ART_BALORE, SKILL_ART_KYOMA_DEMON, SKILL_ART_LEGION, SKILL_ART_STUDENT_WITCH, SKILL_ART_SLIME, SKILL_ART_UKOBACK, SKILL_ART_ALTAIR, SKILL_ART_UNE, SKILL_ART_MANDRAGORA, SKILL_ART_CHRONOMAGE, SKILL_ART_DISC_ARMOR, SKILL_ART_COCKATRICE, SKILL_ART_DRYAD, SKILL_ART_ARACHNE, SKILL_ART_RED_MINOTAUR, SKILL_ART_NIGHTMARE, SKILL_ART_MAN_EATER, SKILL_ART_SKY_FISH, SKILL_ART_CREAKING_SKULL, SKILL_ART_ALASTOR, SKILL_ART_FINAL_GUARD, SKILL_ARTS };
 static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_archer", "skill_bone",
                                                          "skill_shared", "skill_blades",
                                                          "skill_devil", "skill_crow",
@@ -985,7 +986,7 @@ enum { SKILL_BAT, SKILL_BOW, SKILL_ARROW, SKILL_THROW, SKILL_SPOUT, SKILL_DROP, 
        SKILL_WEREWOLF, SKILL_KILLER_MANTLE, SKILL_WERE_BEAST,
        SKILL_FLAME_DEMON, SKILL_FLAME_BOLT, SKILL_DEMON_LORD, SKILL_FLAME_SPIRIT,
        SKILL_BIPHRON, SKILL_BIPHRON_TOTEM, SKILL_BALORE, SKILL_KYOMA_DEMON,
-       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL, SKILL_UKOBACK, SKILL_ALTAIR, SKILL_UNE, SKILL_MANDRAGORA, SKILL_CHRONOMAGE, SKILL_DISC_ARMOR, SKILL_COCKATRICE, SKILL_DRYAD, SKILL_ARACHNE, SKILL_MUDMAN, SKILL_ARACHNE_SHARD, SKILL_RED_MINOTAUR, SKILL_MINOTAUR_BLADE, SKILL_NIGHTMARE };
+       SKILL_LEGION, SKILL_STUDENT_WITCH, SKILL_SLIME, SKILL_SLIME_TRAIL, SKILL_UKOBACK, SKILL_ALTAIR, SKILL_UNE, SKILL_MANDRAGORA, SKILL_CHRONOMAGE, SKILL_DISC_ARMOR, SKILL_COCKATRICE, SKILL_DRYAD, SKILL_ARACHNE, SKILL_MUDMAN, SKILL_ARACHNE_SHARD, SKILL_RED_MINOTAUR, SKILL_MINOTAUR_BLADE, SKILL_NIGHTMARE, SKILL_MAN_EATER };
 
 typedef struct {
     bool alive, started;
@@ -1045,6 +1046,7 @@ typedef struct {
     AosRedMinotaur red_minotaur; /* SKILL_RED_MINOTAUR */
     AosMinotaurBlade minotaur_blade; /* SKILL_MINOTAUR_BLADE */
     AosNightmare nightmare;   /* SKILL_NIGHTMARE */
+    AosManEater man_eater;     /* SKILL_MAN_EATER */
     AosEnemy *arachne_host;   /* the sub_0802DB84 child's + 0x20 target */
     int shard_parent;         /* the releasing skill's slot (-1 none) */
     uint8_t volley_count;      /* SKILL_DEMON_LORD spawn gate */
@@ -1102,6 +1104,7 @@ typedef struct {
 #define SKILL_ARACHNE_ROUTINE 0x08028EC1u
 #define SKILL_RED_MINOTAUR_ROUTINE 0x080269BDu
 #define SKILL_NIGHTMARE_ROUTINE 0x0802A9DCu
+#define SKILL_MAN_EATER_ROUTINE 0x0802C6EDu
 
 /* What a cast needs: the soul state and where its entity goes. */
 typedef struct {
@@ -1145,6 +1148,7 @@ typedef struct {
     const AosAnimSet *arachne;        /* skill_arachne sequences */
     const AosAnimSet *red_minotaur;   /* skill_red_minotaur sequences */
     const AosAnimSet *nightmare;      /* skill_nightmare sequences */
+    const AosAnimSet *man_eater;       /* skill_man_eater stills */
     const AosAnimSet *killer_doll;  /* resource 6, sequences 0-1 */
     const AosEnemyKind *gladiator_kind; /* its probes at 0x084F13C8 */
     const int *bone_ids;            /* its exported still frames */
@@ -1319,6 +1323,8 @@ static int cast_red_soul(void *context) {
                    ? SKILL_RED_MINOTAUR
                : routine == SKILL_NIGHTMARE_ROUTINE && souls->nightmare
                    ? SKILL_NIGHTMARE
+               : routine == SKILL_MAN_EATER_ROUTINE && souls->man_eater
+                   ? SKILL_MAN_EATER
                                                                 : -1;
     if (kind < 0) return -1;
     int slot = aos_red_soul_try(&souls->caster, souls->stats, souls->records,
@@ -1487,6 +1493,15 @@ static int cast_red_soul(void *context) {
         skill->x = skill->nightmare.x;
         skill->y = skill->nightmare.y;
         skill->facing_left = skill->nightmare.facing_left;
+    } else if (kind == SKILL_MAN_EATER) {
+        /* SkillManEaterUse state 0: sub_08031EA4(source, 8, -0x1A),
+         * the rng % 3 variant, vx -+0x12000 by the facing, state 1;
+         * song 0x15E is played on the first update. */
+        skill->man_eater = aos_man_eater_create(
+            souls->soma->x, souls->soma->y, souls->soma->facing_left, aos_random);
+        skill->x = skill->man_eater.x;
+        skill->y = skill->man_eater.y;
+        skill->facing_left = souls->soma->facing_left;
     } else if (kind == SKILL_DISC_ARMOR) {
         skill->disc_armor = aos_disc_armor_create(
             souls->soma->x, souls->soma->y, souls->soma->facing_left);
@@ -3119,6 +3134,30 @@ static void update_skills(AriaSouls *souls) {
             skill->x = skill->nightmare.x;
             skill->y = skill->nightmare.y;
             break;
+        case SKILL_MAN_EATER:
+            /* SkillManEaterUse: one counted cast plays song 0x15E;
+             * state 1 flies straight with + 0x65 = variant * 5 +
+             * tick / 10 under the 0x80000 cap until + 0x24 passes
+             * 0x1D, then lingers 0x30 frames into the + 0xF = 1 fade
+             * of 0x10 frames into the delete bookkeeping. A type-5
+             * contact (+ 0x18 via sub_0802D9B4) while the state is
+             * <= 2 sticks the bite: vx 0, frame base + 4, state 4
+             * for 0x10 frames back into state 3. The + 0x13124 slot
+             * table and + 0x131BE counter are global bookkeeping with
+             * no modelled reader. */
+            if (!skill->started) {
+                skill->started = true;
+                souls->caster.active++;
+                aos_audio_play_song(0x15E);
+            }
+            skill->man_eater.outside = skill_outside(souls, skill, 2);
+            if (!aos_man_eater_update(&skill->man_eater, aos_random)) {
+                end_skill(souls, skill);
+                break;
+            }
+            skill->x = skill->man_eater.x;
+            skill->y = skill->man_eater.y;
+            break;
         case SKILL_FLAME_DEMON:
             /* SkillFlameDemonUse: one counted cast plays song 0xD8, emits
              * a sub_08045CEC(0xC, 6) burst and a fan of 3 or 5
@@ -3964,6 +4003,8 @@ static int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack
             box = (AosBox){-32, -32, 64, 64};  /* 0x4040E0E0 */
         else if (skill->kind == SKILL_NIGHTMARE)
             box = (AosBox){-8, -8, 16, 16};    /* frame box, approximated */
+        else if (skill->kind == SKILL_MAN_EATER && skill->man_eater.state <= 4)
+            box = (AosBox){-6, -6, 12, 12};    /* 0x0C0CFAFA */
         else if (skill->kind == SKILL_AXE && skill->axe.state == 1)
             box = (AosBox){-10, -10, 20, 20};  /* 0x1414F6F6 */
         if (!box.w || !box.h) continue;
@@ -8661,6 +8702,12 @@ int aria_runtime_main(int argc, char **argv) {
                                       nightmare->defs[0].count
                                   ? &nightmare->set
                                   : NULL;
+            const __typeof__(objects.skills[0]) *man_eater =
+                &objects.skills[SKILL_ART_MAN_EATER];
+            souls.man_eater = objects_ok && man_eater->loaded &&
+                                      man_eater->static_count >= 15
+                                  ? &man_eater->set
+                                  : NULL;
             const __typeof__(objects.skills[0]) *mantle =
                 &objects.skills[SKILL_ART_KILLER_MANTLE];
             souls.killer_mantle = objects_ok && mantle->loaded && mantle->defs[0].count
@@ -8920,6 +8967,8 @@ int aria_runtime_main(int argc, char **argv) {
                         owners[k]->arachne.planted = true;
                         owners[k]->arachne_host = attacks[k].target;
                     }
+                    if (owners[k]->kind == SKILL_MAN_EATER)
+                        owners[k]->man_eater.hit = true;
                 }
         }
 
@@ -9154,6 +9203,12 @@ int aria_runtime_main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_RED_MINOTAUR].frames[0][0]
                 : skill->kind == SKILL_NIGHTMARE
                     ? &objects.skills[SKILL_ART_NIGHTMARE].frames[0][skill->anim.frame]
+                : skill->kind == SKILL_MAN_EATER
+                    ? (skill->man_eater.frame <
+                               objects.skills[SKILL_ART_MAN_EATER].static_count
+                           ? &objects.skills[SKILL_ART_MAN_EATER]
+                                  .statics[skill->man_eater.frame]
+                           : NULL)
                 : skill->kind == SKILL_NEMESIS
                     ? &objects.skills[SKILL_ART_DEVIL]
                            .frames[AOS_NEMESIS_SOUL_SEQUENCE][skill->anim.frame]

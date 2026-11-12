@@ -434,6 +434,11 @@ static const EntitySpec entities[] = {
     ENTITY("skill_red_minotaur", 0x081CE8D8, 0x0820B0F8, 0, 0x082313A0),
     /* Resource 23 of 0x080E13BC: SkillNightmareUse's rising wisp. */
     ENTITY("skill_nightmare", 0x081D7920, 0x0820B3A0, 0, 0x082346F8),
+    /* Resource 32 of 0x080E13BC: SkillManEaterUse's bite — the
+     * + 0x65 still-frame selector picks variant * 5 + tick / 10, or
+     * base + 4 once the sub_0802D9B4 contact sticks it. */
+    STATIC("skill_man_eater", 0x0825EB14, 0x08266470, 0, 0x0826702C, 15,
+           0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14),
     /* SkillSkyFishUse's shoulder pet (blue soul 21): its own record,
      * not the sky_fish enemy's. */
     ENTITY("skill_sky_fish", 0x081DD950, 0x0820B550, 0, 0x08236868),

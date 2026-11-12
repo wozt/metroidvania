@@ -33,6 +33,7 @@
 #include "aos/game/aos_object15.h"
 #include "aos/game/aos_object16.h"
 #include "aos/game/aos_object24.h"
+#include "aos/game/aos_object27.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -443,6 +444,7 @@ typedef struct {
     AosObject15 object15;   /* object 0x15: story cutscene director */
     AosObject16 object16;   /* object 0x16: boss-intro zoom director */
     AosObject24 object24;   /* object 0x24: ambient flickering sprite */
+    AosObject27 object27;   /* object 0x27: spinning attack orb */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -5009,6 +5011,28 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             aos_object24_update(&e->object24, aos_random());
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 39) {
+            /* Object27Update (sUnk_084F0ED8[39]; Object27Create's
+             * sprite attach, attack preset and camera-derived + 0x3C
+             * stay under special_sprites): the spinning attack orb.
+             * The + 0x14 target link has no runtime slot — the
+             * player-near window stands in for its + 0x18 > 0x77
+             * gate and the sub_0803E238 angular step is exposed as
+             * the angle accumulator. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object27_create(&e->object27, (uint8_t)e->param1);
+                continue;
+            }
+            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            bool target_far = (uint16_t)(ssx - osx + 0x10) <= 0x70 &&
+                              (uint16_t)(ssy - osy) <= 0x10;
+            aos_object27_update(&e->object27, target_far);
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {
             /* Object02Create / Object02Update (sUnk_084F0DF8[2] /
              * sUnk_084F0ED8[2]): the cutscene director. Screen pixels
@@ -6435,7 +6459,14 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                 art = &objects->special_variants[v];
                 break;
             }
-        if (!art) art = &objects->special_objects[e->id];
+        if (!art) {
+            /* Object27 shares the chandelier art: its create loads
+             * the same tiles/palette-frames triple as special_19. */
+            if (e->id == 39)
+                art = &objects->special_objects[25];
+            else
+                art = &objects->special_objects[e->id];
+        }
         if (!art->loaded || !art->defs[0].count) continue;
         unsigned total = 0;
         for (unsigned f = 0; f < art->defs[0].count; ++f) total += art->ticks[0][f];

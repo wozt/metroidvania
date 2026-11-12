@@ -1,3 +1,29 @@
+## Patch 1051 - Aria Object27 spinning attack orb ported
+
+- `src/runtime/aos/game/aos_object27.c` ports Object27Create
+  (0x08058258) and Object27Update (0x08058464), the spinning
+  attack orb dispatched through sUnk_084F0ED8[39]; the sprite
+  attach, attack preset and camera-derived + 0x3C stay under
+  special_sprites and the orb draws through the special_19 art.
+- Create reproduces the chandelier resource triple, the
+  sub_0804277C(8, sub_080584D8, 0) preset, the sub_0803F2C8
+  preset, the + 0x5C = 0x12 / + 0x59 bit-1 / + 0x58 bit-0x20
+  marks.
+- Update reproduces the + 0xB four-state machine: the + 0x14
+  target gate (> 0x77), the + 0x48 spin ramp 0xC000 -> 0x40000
+  by 0x800, the state-2 + 0xD = 0x1E hold with the attack
+  refresh, and the state-3 bleed back to 0xC000 with the
+  + 0x58 bit-0x20 reset mark.
+- Runtime wiring: SPECIAL id 39 spawns on the camera window,
+  the player-near window stands in for the + 0x14 target link
+  and the sub_0803E238 angular step is the angle accumulator.
+- Divergences documented: the linked-entity slot, the
+  sub_0803E238 positional application, the hurt callback and
+  the camera-word + 0x3C derivation are approximated.
+- Tests: `tests/test_aos_object27.c` covers the create marks,
+  the target gate, the spin ramp/clamp, the state-2 hold and
+  wrap, and the state-3 bleed/reset.
+
 ## Patch 1050 - Aria Object24 flickering ambient sprite ported
 
 - `src/runtime/aos/game/aos_object24.c` ports Object24Create

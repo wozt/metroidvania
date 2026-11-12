@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 161 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 162 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1963 | 1610 |
+| Castlevania: Aria of Sorrow | 1968 | 1605 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2626,6 +2626,15 @@ Tests: [`tests/test_aos_object16.c`](../tests/test_aos_object16.c).
 Dependencies: `aos.objects.special_sprites`, `aos.objects.story_cutscene_director`.  
 Known divergences: The + 0x42C input flags have no runtime fields (the player-near window stands in for the bit-0 arm and the state machine is otherwise driven the same way), the sub_08068AD4 probe collapses to a player-near window, the + 0x13110 focus slot compare uses entity positions, the BgAffineSet BG zoom is exposed on the object but no camera/affine consumer reads it, the sub_0803CC70 + 0x2C record pick, sub_080235C8/sub_0802DFF0 side effects, the sub_08011F44 0x08522ABC dialogue record, the sub_08011AD0 camera call and the type-0x49 particle children (sub_08052C20 callback with their RNG offsets) are not ported, songs 0x157/0x1AE and the fade pair are outputs only, and there is no emulator comparison.  
 Next action: Wire the zoom output into the BG affine path and port the particle children once a type-0x49 draw exists.
+
+[~] **`aos.objects.spinning_attack_orb` — Object27 spinning attack orb.** Object27Create (0x08058258) loads the chandelier triple (tiles 0x081CBE7C, palette sub_08068264(0x08209FD8, 2), frames 0x08210264), presets sub_0804277C(8, sub_080584D8, 0), sub_0803F2C8(2, 0, 1) and the + 0x3C byte from the + 0x131FE/+ 0x1327E camera words, sets + 0x5C = 0x12, + 0x59 bit 1 and + 0x58 bit 0x20. Object27Update (0x08058464) runs sub_08058344 while + 0xA == 0 then the sub_0803F17C step and the sub_080421AC read: the + 0xB machine waits in state 0 for the + 0x14 entity's + 0x18 u16 above 0x77, ramps + 0x48 from 0xC000 by 0x800 a frame through state 1 (clamping to 0x40000 into state 2 with + 0xD = 0x1E and the attack-preset refresh), holds state 2 for the + 0xD countdown, bleeds + 0x48 by 0x800 in state 3 back to 0xC000 and resets to state 0 with + 0x58 bit 0x20. Unit-tested in test_aos_object27.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_0804277C`, `aos:asm:asm/code/code_08050A3C.s:Object27Create`, `aos:asm:asm/code/code_08050A3C.s:Object27Update`, `aos:asm:asm/code/code_08050A3C.s:sub_08058344`, `aos:asm:asm/code/code_08050A3C.s:sub_0805848C`, `aos:asm:asm/code/code_08050A3C.s:sub_080584D8`, `aos:c:src/code/code_080211F0.c:sub_08021654`, `aos:c:src/code/code_08039340.c:sub_0803E238`, `aos:c:src/code/code_08039340.c:sub_0803E654`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`.  
+Local implementation: [`src/runtime/aos/game/aos_object27.c`](../src/runtime/aos/game/aos_object27.c), [`src/runtime/aos/game/aos_object27.h`](../src/runtime/aos/game/aos_object27.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object27.c`](../tests/test_aos_object27.c).
+Dependencies: `aos.objects.special_sprites`, `aos.objects.swing_event_trigger`.  
+Known divergences: The + 0x14 linked-entity slot has no runtime equivalent (the player-near window stands in for its + 0x18 > 0x77 gate and the native clear of that u16 is not applied), the sub_0803E238 angular application is exposed as the angle accumulator with no positional consumer, the sub_0804277C attack preset and the sub_080584D8/sub_08021654 hurt callback are not ported, the + 0x3C camera-derived byte is fed from param1 instead of the + 0x131FE/+ 0x1327E words, the sub_0803E654 palette variant merge and the sub_0803F17C/sub_080421AC per-frame calls are approximated, the orb draws through the special_19 art with a different palette bank than native, and there is no emulator comparison.  
+Next action: Port the sub_0803E238 positional application and the sub_080584D8 hurt callback once the attack-slot consumers exist.
 
 [~] **`aos.objects.story_cutscene_director` — Object15 story cutscene director.** Object15Create (0x0805296C) loads the special_21 art (0x081CBEE4/0x0820A1C4/0x082115F8), presets + 0x18 = 0x6000 and + 0x1C = 0x200000, links a type-0x1B child through sub_080528E0 and picks state 4 with the + 0x42C bit-0 lock when the gEwramData + 0x348 word already carries bit 0x8000000, else state 1. Object15Update (0x08052A34) runs five states: state 1 enters state 2 on the (0x10, 0x60, 0x7F, 0x20) probe, the flag40 and a clear sub_08021304 gate, locking input and running sub_0800C5A8(0); state 2 forces SetPlayerInput(1, 0) while + 0x1C exceeds 0x90000 else (1, the direction word), advances + 0x18 by 0x40, fires the fade pair at + 0x1C == 0x100000 and counts + 0x1C down by 0x4000 to state 3; state 3 forces the direction word, shows the param0-selected dialogue record, clears the + 0x42C bit 1 and fades with an external state advance; state 4 forces the x-compare direction (0x20/0x10) and returns to state 2 on its probe. Unit-tested in test_aos_object15.
 

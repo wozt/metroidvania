@@ -223,8 +223,6 @@ aos:asm:asm/code/code_08050A3C.s:Object25Create	Object25Create	environment	name	
 aos:asm:asm/code/code_08050A3C.s:Object25Update	Object25Update	environment	name			asm_function		asm/code/code_08050A3C.s	14106	0	4
 aos:asm:asm/code/code_08050A3C.s:Object26Create	Object26Create	environment	name			asm_function		asm/code/code_08050A3C.s	14656	0	7
 aos:asm:asm/code/code_08050A3C.s:Object26Update	Object26Update	environment	name			asm_function		asm/code/code_08050A3C.s	14763	0	2
-aos:asm:asm/code/code_08050A3C.s:Object27Create	Object27Create	environment	name			asm_function		asm/code/code_08050A3C.s	15217	1	7
-aos:asm:asm/code/code_08050A3C.s:Object27Update	Object27Update	environment	name			asm_function		asm/code/code_08050A3C.s	15482	0	3
 aos:asm:asm/code/code_08050A3C.s:Object28Create	Object28Create	environment	name			asm_function		asm/code/code_08050A3C.s	14868	1	7
 aos:asm:asm/code/code_08050A3C.s:Object28Update	Object28Update	environment	name			asm_function		asm/code/code_08050A3C.s	15133	0	3
 aos:asm:asm/code/code_08050A3C.s:Object29Create	Object29Create	environment	name			asm_function		asm/code/code_08050A3C.s	12895	0	7
@@ -330,9 +328,6 @@ aos:asm:asm/code/code_08050A3C.s:sub_08057F4C	sub_08057F4C	environment	referrers
 aos:asm:asm/code/code_08050A3C.s:sub_08058094	sub_08058094	environment	referrers			asm_function	0x08058094	asm/code/code_08050A3C.s	14982	1	2
 aos:asm:asm/code/code_08050A3C.s:sub_080581DC	sub_080581DC	environment	referrers			asm_function	0x080581DC	asm/code/code_08050A3C.s	15154	1	3
 aos:asm:asm/code/code_08050A3C.s:sub_08058228	sub_08058228	environment	referrers			asm_function	0x08058228	asm/code/code_08050A3C.s	15191	0	1
-aos:asm:asm/code/code_08050A3C.s:sub_08058344	sub_08058344	environment	referrers			asm_function	0x08058344	asm/code/code_08050A3C.s	15331	1	2
-aos:asm:asm/code/code_08050A3C.s:sub_0805848C	sub_0805848C	environment	referrers			asm_function	0x0805848C	asm/code/code_08050A3C.s	15503	1	3
-aos:asm:asm/code/code_08050A3C.s:sub_080584D8	sub_080584D8	environment	referrers			asm_function	0x080584D8	asm/code/code_08050A3C.s	15540	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_08058554	sub_08058554	environment	referrers			asm_function	0x08058554	asm/code/code_08050A3C.s	15607	1	4
 aos:asm:asm/code/code_08050A3C.s:sub_0805866C	sub_0805866C	environment	referrers			asm_function	0x0805866C	asm/code/code_08050A3C.s	15752	0	2
 aos:asm:asm/code/code_08050A3C.s:sub_0805869C	sub_0805869C	environment	referrers			asm_function	0x0805869C	asm/code/code_08050A3C.s	15777	1	2

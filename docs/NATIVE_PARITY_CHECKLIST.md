@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 155 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 156 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1942 | 1631 |
+| Castlevania: Aria of Sorrow | 1946 | 1627 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2542,6 +2542,15 @@ Tests: [`tests/test_aos_object01.c`](../tests/test_aos_object01.c), [`tests/test
 Dependencies: `aos.objects.cutscene_director`, `aos.objects.special_sprites`.  
 Known divergences: The child entities (type 0x49, drawFunc sub_0803B9D0, + 0x540 = 0x11, + 0x549 = 0) fold into up to three static draws of the exported special_01 still; the + 0x1316C slot is scoped per room instead of session-wide; child positions keep the table coordinates as room pixels rather than screen-minus-BG1 storage; the sUnk_080E1DB4 callback row (sub_080337EC/sub_080338B4/sub_08033984/sub_08033AC0/sub_080220F4) is not invoked.  
 Next action: Port the remaining special object create/update pairs and compare a room with Object01 records against an emulator.
+
+[~] **`aos.objects.swing_event_trigger` — Object13 swinging chandelier event trigger.** Object13Create (0x08051A2C, covered by special_sprites) loads tiles 0x081CBE7C/palette 0x08209FD8/frames 0x08210264 and spawns eleven type-0x49 chain links (sub_080515F0 for links 0-9, sub_0805170C for the head) linked through + 0x18, marking the parent + 0xA = 0xFF on allocation failure. Object13Update (0x08051B0C) runs the + 0xA == 0xFF three-tick delete, clamps + 0x50 to 0x2300, fires the + 0x344[param1] event bit once when the amplitude beats the param0 threshold (0x2100/0x1200) inside the phase window [0xAC01,0xB3FF] (phase -= 0x40, amplitude -= 0x100), decays the amplitude by 4 while advancing the u16 phase by 0x200 and exposes the sub_080009E4(phase) * amplitude >> 16 sway. Unit-tested in test_aos_object13.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object13Update`, `aos:asm:asm/code/code_08050A3C.s:sub_080515F0`, `aos:asm:asm/code/code_08050A3C.s:sub_0805170C`, `aos:c:src/code/code_080211F0.c:sub_08021278`, `aos:c:src/code_080009A0.c:sub_080009E4`, `aos:c:src/code_08001194.c:sub_08001E58`.  
+Local implementation: [`src/runtime/aos/game/aos_object13.c`](../src/runtime/aos/game/aos_object13.c), [`src/runtime/aos/game/aos_object13.h`](../src/runtime/aos/game/aos_object13.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/runtime/aos/math/aos_math.c`](../src/runtime/aos/math/aos_math.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object13.c`](../tests/test_aos_object13.c).
+Dependencies: `aos.objects.special_sprites`, `aos.environment.breakable_walls`.  
+Known divergences: The eleven chain-link children (sub_080515F0 link physics, sub_0805170C head, the sub_08001E58 terrain probe and the gEwramData + 0x4E4 partner-slot read) are not ported — only the parent's swing math and event trigger are; the children's draw offsets are absent so the chain renders as the single special_19 sprite; the + 0xA == 0xFF spawn-failure delete countdown is kept but no create path sets it (child allocation failure is not modelled); the initial + 0x48/+ 0x50/+ 0xA values come from the unverified entity init and are passed as zeros; and there is no emulator comparison.  
+Next action: Port the chain-link children and their draw offsets, then trace the initial swing state.
 
 [~] **`aos.objects.swinging_object` — Object0D swinging object.** Object0DCreate (0x08050710) loads tiles 0x081CBE74, palette 0x08209F54 and frames 0x0821017C through sub_0806E0D0, picks a palette variant through sub_0803E654, sets + 0x5C = 0x16, + 0x59 bit 1, + 0x72 bit 1 and presets 0x122006F0, deleting on load failure. Object0DUpdate (0x080507BC) marks + 0x58 bit 0x20 below screen y 0xA8, registers through sub_08021278, re-arms the swing (PlaySong 0x112, + 0x1C = -+0x100 by the Soma x compare, + 0x20 = 0x100) once on + 0x13190 focus or on an attack result with bits 0x1A, then integrates the pendulum: + 0x18 steps + 0x1C by 0x10 toward zero, accumulates, drops + 0x20 by 0x20 on sign crossings, clamps + 0x1C to -+0x20 and + 0x18 to -+0x1000 before the affine draw. Unit-tested in test_aos_object0d.
 

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T12:51:52+00:00",
+ "generated_at": "2026-11-12T13:00:52+00:00",
  "git": {
-  "commit": "80351911",
+  "commit": "eae823da",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 300,
+   "total": 301,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 69,
+    "partial": 70,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 73.7,
-   "with_passing_tests": 287,
+   "functional_or_better_percent": 73.4,
+   "with_passing_tests": 288,
    "with_passing_tests_percent": 95.7,
    "unknown_or_blocked": 1,
    "features": [
@@ -341,6 +341,7 @@
     "aos.objects.save_point_remover",
     "aos.objects.special_sprites",
     "aos.objects.static_children",
+    "aos.objects.swing_event_trigger",
     "aos.objects.swinging_object",
     "aos.player.soma_controller",
     "aos.progression.equipment_stats",
@@ -534,11 +535,11 @@
    "areas": [
     "aos"
    ],
-   "total": 155,
+   "total": 156,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 41,
+    "partial": 42,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -546,8 +547,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 73.5,
-   "with_passing_tests": 155,
+   "functional_or_better_percent": 73.1,
+   "with_passing_tests": 156,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -691,6 +692,7 @@
     "aos.objects.save_point_remover",
     "aos.objects.special_sprites",
     "aos.objects.static_children",
+    "aos.objects.swing_event_trigger",
     "aos.objects.swinging_object",
     "aos.player.soma_controller",
     "aos.progression.equipment_stats",
@@ -21868,6 +21870,67 @@
    }
   },
   {
+   "id": "aos.objects.swing_event_trigger",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object13 swinging chandelier event trigger",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object13.c",
+    "src/runtime/aos/game/aos_object13.h",
+    "src/runtime/aria_runtime.c",
+    "src/runtime/aos/math/aos_math.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_object13.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites",
+    "aos.environment.breakable_walls"
+   ],
+   "native_routines": [
+    "Object13Update",
+    "sub_080515F0",
+    "sub_0805170C",
+    "sub_08001E58",
+    "sub_080009E4",
+    "sub_08021278"
+   ],
+   "limitations": "The eleven chain-link children (sub_080515F0 link physics, sub_0805170C head, the sub_08001E58 terrain probe and the gEwramData + 0x4E4 partner-slot read) are not ported — only the parent's swing math and event trigger are; the children's draw offsets are absent so the chain renders as the single special_19 sprite; the + 0xA == 0xFF spawn-failure delete countdown is kept but no create path sets it (child allocation failure is not modelled); the initial + 0x48/+ 0x50/+ 0xA values come from the unverified entity init and are passed as zeros; and there is no emulator comparison. Object13Create (0x08051A2C, covered by special_sprites) loads tiles 0x081CBE7C/palette 0x08209FD8/frames 0x08210264 and spawns eleven type-0x49 chain links (sub_080515F0 for links 0-9, sub_0805170C for the head) linked through + 0x18, marking the parent + 0xA = 0xFF on allocation failure. Object13Update (0x08051B0C) runs the + 0xA == 0xFF three-tick delete, clamps + 0x50 to 0x2300, fires the + 0x344[param1] event bit once when the amplitude beats the param0 threshold (0x2100/0x1200) inside the phase window [0xAC01,0xB3FF] (phase -= 0x40, amplitude -= 0x100), decays the amplitude by 4 while advancing the u16 phase by 0x200 and exposes the sub_080009E4(phase) * amplitude >> 16 sway. Unit-tested in test_aos_object13.",
+   "next_action": "Port the chain-link children and their draw offsets, then trace the initial swing state.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object13.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object13.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object13"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.swinging_object",
    "area": "aos",
    "category": "environment",
@@ -29043,6 +29106,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object13",
+    "files": [
+     "tests/test_aos_object13.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_weapon",
     "files": [
      "tests/test_aos_weapon.c"
@@ -29128,12 +29198,18 @@
    }
   ],
   "summary": {
-   "passed": 175,
+   "passed": 176,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "eae823da",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object12 param-driven animated sprite",
+   "scope": "project"
+  },
   {
    "commit": "80351911",
    "date": "2026-11-12",
@@ -29607,12 +29683,6 @@
    "date": "2026-11-10",
    "subject": "Aria: port Witch (0x2A) with companion, bolt and spark entities",
    "scope": "project"
-  },
-  {
-   "commit": "12cc3608",
-   "date": "2026-11-10",
-   "subject": "Aria: port Student Witch (0x16) with witch bolt projectile",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -29673,9 +29743,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1942,
-    "routines_attached_to_features": 1942,
-    "unassigned_routines": 1631,
+    "routines_cited_by_features": 1946,
+    "routines_attached_to_features": 1946,
+    "unassigned_routines": 1627,
     "call_edges": 14228
    }
   },

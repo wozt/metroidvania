@@ -1,3 +1,26 @@
+## Patch 1045 - Aria Object13 swing event trigger ported
+
+- `src/runtime/aos/game/aos_object13.c` ports Object13Update
+  (0x08051B0C), the parent side of the swinging chandelier
+  dispatched through sUnk_084F0ED8[19]; Object13Create's sprite
+  attach and eleven chain-link children stay under
+  special_sprites.
+- Update reproduces the + 0xA == 0xFF three-tick delete, the
+  + 0x50 amplitude cap (0x2300), the + 0x344[param1] event fire
+  (param0 threshold 0x2100/0x1200, phase window
+  [0xAC01,0xB3FF], phase -= 0x40, amplitude -= 0x100), the -4
+  amplitude decay with the + 0x200 u16 phase advance and the
+  sub_080009E4 sway product through the exact aos_sine port.
+- Runtime wiring: SPECIAL id 19 spawns on the camera window,
+  reads/writes aria_events for the param1 bit and skips draw
+  once deleted.
+- Divergences documented: the eleven chain-link children
+  (sub_080515F0/sub_0805170C physics and draw offsets) are not
+  ported; initial swing state is passed as zeros.
+- Tests: `tests/test_aos_object13.c` covers the cap, the phase
+  advance, the event thresholds/window/one-shot and the delete
+  countdown.
+
 ## Patch 1044 - Aria Object12 param-driven sprite ported
 
 - `src/runtime/aos/game/aos_object12.c` ports Object12Create

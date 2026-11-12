@@ -27,6 +27,7 @@
 #include "aos/game/aos_object0e.h"
 #include "aos/game/aos_object11.h"
 #include "aos/game/aos_object12.h"
+#include "aos/game/aos_object13.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -431,6 +432,7 @@ typedef struct {
     AosObject0e object0e;   /* object 0x0E: breakable prop variants */
     AosObject11 object11;   /* object 0x11: save-point remover marker */
     AosObject12 object12;   /* object 0x12: param-driven animated sprite */
+    AosObject13 object13;   /* object 0x13: swinging chandelier trigger */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4832,6 +4834,29 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                 e->param1 == 1, aos_random);
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 19) {
+            /* Object13Update (sUnk_084F0ED8[19]; Object13Create's
+             * sprite attach and eleven chain-link children are the
+             * special_sprites coverage): the swing phase/amplitude
+             * machine and its + 0x344 event trigger. The link
+             * physics of sub_080515F0/sub_0805170C is not ported. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object13_create(&e->object13, e->param0, e->param1,
+                                    0, 0, 0);
+                continue;
+            }
+            if (e->object13.deleted) continue;   /* native EntityDelete */
+            aos_object13_update(&e->object13,
+                                aos_wall_event(aria_events, e->param1));
+            if (e->object13.event_fired) {
+                int word = (int16_t)e->param1 >> 5;
+                if (word >= 0 && word < AOS_WALL_EVENT_WORDS)
+                    aria_events[word] |= 1u << (e->param1 & 31);
+            }
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {
             /* Object02Create / Object02Update (sUnk_084F0DF8[2] /
              * sUnk_084F0ED8[2]): the cutscene director. Screen pixels
@@ -6175,6 +6200,7 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (e->id == 4 && e->object04.deleted) continue;
         if (e->id == 15 && e->object0f.finished) continue;
         if (e->id == 14 && e->object0e.finished) continue;
+        if (e->id == 19 && e->object13.deleted) continue;
         if (e->id == 1) {
             /* Object01's children are the sprites: draw the exported
              * still at each record coordinate (room pixels). */

@@ -209,7 +209,6 @@ aos:asm:asm/code/code_08040A38.s:sub_0804F84C	sub_0804F84C	unclassified				asm_f
 aos:asm:asm/code/code_08040A38.s:sub_0804F85C	sub_0804F85C	unclassified				asm_function	0x0804F85C	asm/code/code_08040A38.s	28955	1	0
 aos:asm:asm/code/code_08040A38.s:sub_08050920	sub_08050920	environment	referrers			asm_function	0x08050920	asm/code/code_08040A38.s	31125	0	9
 aos:asm:asm/code/code_08050A3C.s:Object10Update	Object10Update	environment	name			asm_function		asm/code/code_08050A3C.s	968	0	5
-aos:asm:asm/code/code_08050A3C.s:Object13Update	Object13Update	environment	name			asm_function		asm/code/code_08050A3C.s	2143	0	2
 aos:asm:asm/code/code_08050A3C.s:Object15Update	Object15Update	environment	name			asm_function		asm/code/code_08050A3C.s	4087	0	8
 aos:asm:asm/code/code_08050A3C.s:Object16Create	Object16Create	environment	name			asm_function		asm/code/code_08050A3C.s	4728	0	3
 aos:asm:asm/code/code_08050A3C.s:Object16Update	Object16Update	environment	name			asm_function		asm/code/code_08050A3C.s	4425	0	15
@@ -266,8 +265,6 @@ aos:asm:asm/code/code_08050A3C.s:Object36Update	Object36Update	environment	name	
 aos:asm:asm/code/code_08050A3C.s:Object37Create	Object37Create	environment	name			asm_function		asm/code/code_08050A3C.s	20163	0	6
 aos:asm:asm/code/code_08050A3C.s:Object37Update	Object37Update	environment	name			asm_function		asm/code/code_08050A3C.s	20765	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_08050F1C	sub_08050F1C	environment	referrers			asm_function	0x08050F1C	asm/code/code_08050A3C.s	628	0	5
-aos:asm:asm/code/code_08050A3C.s:sub_080515F0	sub_080515F0	environment	referrers			asm_function	0x080515F0	asm/code/code_08050A3C.s	1494	0	7
-aos:asm:asm/code/code_08050A3C.s:sub_0805170C	sub_0805170C	environment	referrers			asm_function	0x0805170C	asm/code/code_08050A3C.s	1635	0	14
 aos:asm:asm/code/code_08050A3C.s:sub_08051BF8	sub_08051BF8	unclassified		technical	exclusive_callees	asm_function	0x08051BF8	asm/code/code_08050A3C.s	2268	1	6
 aos:asm:asm/code/code_08050A3C.s:sub_08051CC4	sub_08051CC4	unclassified		technical	exclusive_callees	asm_function	0x08051CC4	asm/code/code_08050A3C.s	2370	2	4
 aos:asm:asm/code/code_08050A3C.s:sub_08051E60	sub_08051E60	unclassified		technical	exclusive_callees	asm_function	0x08051E60	asm/code/code_08050A3C.s	2565	0	14
@@ -1237,7 +1234,6 @@ aos:c:src/code_08001194.c:HBlankEffectSetup	HBlankEffectSetup	unclassified				c_
 aos:c:src/code_08001194.c:sub_08001B40	sub_08001B40	unclassified				c_function	0x08001B40	src/code_08001194.c	799	5	0
 aos:c:src/code_08001194.c:sub_08001BA0	sub_08001BA0	unclassified				c_function	0x08001BA0	src/code_08001194.c	850	5	0
 aos:c:src/code_08001194.c:sub_08001CCC	sub_08001CCC	unclassified				c_function	0x08001CCC	src/code_08001194.c	998	2	3
-aos:c:src/code_08001194.c:sub_08001E58	sub_08001E58	unclassified				c_function	0x08001E58	src/code_08001194.c	1139	12	3
 aos:c:src/code_08001194.c:sub_08001FE8	sub_08001FE8	unclassified				c_function	0x08001FE8	src/code_08001194.c	1307	1	1
 aos:c:src/code_08001194.c:sub_08002028	sub_08002028	unclassified				c_function	0x08002028	src/code_08001194.c	1322	6	1
 aos:c:src/code_08001194.c:sub_080020D8	sub_080020D8	unclassified				c_function	0x080020D8	src/code_08001194.c	1392	4	3

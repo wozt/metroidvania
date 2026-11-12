@@ -1,3 +1,21 @@
+## Patch 1055 - Aria Object28 orb sibling ported
+
+- `src/runtime/aos/game/aos_object28.c` ports Object28Create
+  (0x08057FA8) and Object28Update (0x080581B4), the Object27
+  orb's sibling dispatched through sUnk_084F0ED8[40]. The
+  + 0xB four-state machine in sub_08058094 is
+  instruction-identical to Object27's over the same
+  chandelier resources; the only native differences (the
+  sub_0803F2C8 preset argument 4 vs 2, the sub_08058228 hurt
+  wrapper and the + 0x1A vs + 0x18 target gate) are unmodelled
+  divergences, so the module delegates to the Object27
+  implementation.
+- Runtime wiring: SPECIAL id 40 spawns on the camera window
+  with the same proximity approximation and draws through
+  the special_19 art.
+- Tests: `tests/test_aos_object28.c` covers the delegated
+  machine end to end.
+
 ## Patch 1054 - Aria Object2E one-shot breakable prop ported
 
 - `src/runtime/aos/game/aos_object2e.c` ports Object2ECreate

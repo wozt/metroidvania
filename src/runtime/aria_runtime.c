@@ -37,6 +37,7 @@
 #include "aos/game/aos_object2b.h"
 #include "aos/game/aos_object2d.h"
 #include "aos/game/aos_object2e.h"
+#include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -451,6 +452,7 @@ typedef struct {
     AosObject2B object2b;   /* object 0x2B: plain animated sprite */
     AosObject2D object2d;   /* object 0x2D: proximity attack sprite */
     AosObject2E object2e;   /* object 0x2E: one-shot breakable prop */
+    AosObject28 object28;   /* object 0x28: Object27 orb sibling */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -5109,6 +5111,25 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 40) {
+            /* Object28Update (sUnk_084F0ED8[40]; Object28Create's
+             * sprite attach stays under special_sprites): the
+             * Object27 orb sibling — same machine over the same
+             * chandelier art, approximated identically. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object28_create(&e->object28, (uint8_t)e->param1);
+                continue;
+            }
+            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            bool target_far = (uint16_t)(ssx - osx + 0x10) <= 0x70 &&
+                              (uint16_t)(ssy - osy) <= 0x10;
+            aos_object28_update(&e->object28, target_far);
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {
             /* Object02Create / Object02Update (sUnk_084F0DF8[2] /
              * sUnk_084F0ED8[2]): the cutscene director. Screen pixels
@@ -6536,9 +6557,10 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                 break;
             }
         if (!art) {
-            /* Object27 shares the chandelier art: its create loads
-             * the same tiles/palette-frames triple as special_19. */
-            if (e->id == 39)
+            /* Object27/Object28 share the chandelier art: their
+             * creates load the same tiles/palette-frames triple
+             * as special_19. */
+            if (e->id == 39 || e->id == 40)
                 art = &objects->special_objects[25];
             else
                 art = &objects->special_objects[e->id];

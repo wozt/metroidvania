@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T15:08:22+00:00",
+ "generated_at": "2026-11-12T15:19:41+00:00",
  "git": {
-  "commit": "23526f49",
+  "commit": "d9af47ef",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 310,
+   "total": 311,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 79,
+    "partial": 80,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 71.3,
-   "with_passing_tests": 297,
+   "functional_or_better_percent": 71.1,
+   "with_passing_tests": 298,
    "with_passing_tests_percent": 95.8,
    "unknown_or_blocked": 1,
    "features": [
@@ -348,6 +348,7 @@
     "aos.objects.special_sprites",
     "aos.objects.spin_synced",
     "aos.objects.spinning_attack_orb",
+    "aos.objects.spinning_orb_sibling",
     "aos.objects.static_children",
     "aos.objects.story_cutscene_director",
     "aos.objects.swing_event_trigger",
@@ -544,11 +545,11 @@
    "areas": [
     "aos"
    ],
-   "total": 165,
+   "total": 166,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 51,
+    "partial": 52,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -556,8 +557,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 69.1,
-   "with_passing_tests": 165,
+   "functional_or_better_percent": 68.7,
+   "with_passing_tests": 166,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -708,6 +709,7 @@
     "aos.objects.special_sprites",
     "aos.objects.spin_synced",
     "aos.objects.spinning_attack_orb",
+    "aos.objects.spinning_orb_sibling",
     "aos.objects.static_children",
     "aos.objects.story_cutscene_director",
     "aos.objects.swing_event_trigger",
@@ -22330,6 +22332,71 @@
    }
   },
   {
+   "id": "aos.objects.spinning_orb_sibling",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object28 Object27 orb sibling",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object28.c",
+    "src/runtime/aos/game/aos_object28.h",
+    "src/runtime/aos/game/aos_object27.c",
+    "src/runtime/aria_runtime.c"
+   ],
+   "tests": [
+    "tests/test_aos_object28.c"
+   ],
+   "dependencies": [
+    "aos.objects.spinning_attack_orb",
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object28Create",
+    "Object28Update",
+    "sub_08058094",
+    "sub_080581DC",
+    "sub_08058228",
+    "sub_0804277C",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0803E238",
+    "sub_0803E654",
+    "sub_08021654"
+   ],
+   "limitations": "The + 0x14 linked-entity slot and its + 0x1A gate field have no runtime equivalent (the player-near window stands in), the sub_0803E238 angular application is exposed as the angle accumulator with no positional consumer, the create-time sub_0803F2C8 preset argument (4 vs Object27's 2), the sub_08058228 hurt callback wrapper, the sub_0804277C attack preset, the sub_0803E654 palette variant and the camera-word + 0x3C derivation are not ported (identical approximations to Object27), and there is no emulator comparison. Object28Create (0x08057FA8) is instruction-identical to Object27Create except the sub_0803F2C8 preset argument (4 instead of 2) and the hurt callback wrapper sub_08058228; it loads the same chandelier triple, presets the same camera-derived + 0x3C byte and marks. Object28Update (0x080581B4) runs sub_08058094, the same four-state + 0xB machine as Object27 (target + 0x1A > 0x77 gate, + 0x48 ramp 0xC000 -> 0x40000 by 0x800, + 0xD = 0x1E hold, bleed to 0xC000), then sub_0803F17C and sub_080421AC. The module delegates to the Object27 implementation since every modeled behaviour is identical. Unit-tested in test_aos_object28.",
+   "next_action": "Differentiate the two orbs once the preset-argument and + 0x1A/+ 0x18 gate consumers are identified.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object28.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object28.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object28"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.static_children",
    "area": "aos",
    "category": "environment",
@@ -29776,6 +29843,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object28",
+    "files": [
+     "tests/test_aos_object28.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_weapon",
     "files": [
      "tests/test_aos_weapon.c"
@@ -29861,12 +29935,18 @@
    }
   ],
   "summary": {
-   "passed": 185,
+   "passed": 186,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "d9af47ef",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object2E one-shot breakable prop",
+   "scope": "project"
+  },
   {
    "commit": "23526f49",
    "date": "2026-11-12",
@@ -30340,12 +30420,6 @@
    "date": "2026-11-10",
    "subject": "Port Arachne (id 0x17): ceiling crawler with five linked legs and web rain",
    "scope": "project"
-  },
-  {
-   "commit": "76be2416",
-   "date": "2026-11-10",
-   "subject": "Port Une (id 0x3D): the splitting ghost swarm",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -30406,9 +30480,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1980,
-    "routines_attached_to_features": 1980,
-    "unassigned_routines": 1593,
+    "routines_cited_by_features": 1985,
+    "routines_attached_to_features": 1985,
+    "unassigned_routines": 1588,
     "call_edges": 14228
    }
   },

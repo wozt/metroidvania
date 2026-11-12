@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 165 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 166 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1980 | 1593 |
+| Castlevania: Aria of Sorrow | 1985 | 1588 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2578,6 +2578,15 @@ Tests: [`tests/test_aos_object1b.c`](../tests/test_aos_object1b.c).
 Dependencies: `aos.objects.swinging_object`, `aos.objects.special_sprites`.  
 Known divergences: The + 0x13190 focus slot is approximated by the Object0D proximity window; the sub_080428F0 attack preset 0x0C10F4F8 and the + 0xB + 2 animation pick are not applied (the draw keeps the exported animation); the sub_0803C918 tile DMA collapses to the frame output with no tile write; the shared + 0x4C4 clock is a runtime global approximating the EWRAM word (its other native consumers are not ported); and there is no emulator comparison.  
 Next action: Apply the animation pick and port the sub_0803C918 tile path once a tile-DMA consumer exists.
+
+[~] **`aos.objects.spinning_orb_sibling` — Object28 Object27 orb sibling.** Object28Create (0x08057FA8) is instruction-identical to Object27Create except the sub_0803F2C8 preset argument (4 instead of 2) and the hurt callback wrapper sub_08058228; it loads the same chandelier triple, presets the same camera-derived + 0x3C byte and marks. Object28Update (0x080581B4) runs sub_08058094, the same four-state + 0xB machine as Object27 (target + 0x1A > 0x77 gate, + 0x48 ramp 0xC000 -> 0x40000 by 0x800, + 0xD = 0x1E hold, bleed to 0xC000), then sub_0803F17C and sub_080421AC. The module delegates to the Object27 implementation since every modeled behaviour is identical. Unit-tested in test_aos_object28.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_0804277C`, `aos:asm:asm/code/code_08050A3C.s:Object28Create`, `aos:asm:asm/code/code_08050A3C.s:Object28Update`, `aos:asm:asm/code/code_08050A3C.s:sub_08058094`, `aos:asm:asm/code/code_08050A3C.s:sub_080581DC`, `aos:asm:asm/code/code_08050A3C.s:sub_08058228`, `aos:c:src/code/code_080211F0.c:sub_08021654`, `aos:c:src/code/code_08039340.c:sub_0803E238`, `aos:c:src/code/code_08039340.c:sub_0803E654`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`.  
+Local implementation: [`src/runtime/aos/game/aos_object28.c`](../src/runtime/aos/game/aos_object28.c), [`src/runtime/aos/game/aos_object28.h`](../src/runtime/aos/game/aos_object28.h), [`src/runtime/aos/game/aos_object27.c`](../src/runtime/aos/game/aos_object27.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object28.c`](../tests/test_aos_object28.c).
+Dependencies: `aos.objects.spinning_attack_orb`, `aos.objects.special_sprites`.  
+Known divergences: The + 0x14 linked-entity slot and its + 0x1A gate field have no runtime equivalent (the player-near window stands in), the sub_0803E238 angular application is exposed as the angle accumulator with no positional consumer, the create-time sub_0803F2C8 preset argument (4 vs Object27's 2), the sub_08058228 hurt callback wrapper, the sub_0804277C attack preset, the sub_0803E654 palette variant and the camera-word + 0x3C derivation are not ported (identical approximations to Object27), and there is no emulator comparison.  
+Next action: Differentiate the two orbs once the preset-argument and + 0x1A/+ 0x18 gate consumers are identified.
 
 [~] **`aos.objects.static_children` — Object01 conditional static children (sub_08022088 slot).** Object01Create (0x08033C84) claims gEwramData + 0x1316C through sub_08022088 and, for param0 0 or 1 under the sUnk_080E1DA8 bound, spawns the record count of children at the u16 coordinate pairs minus the BG1 origin with tiles 0x081CBE14, palette 0x08209C64 and frames 0x0820F18C (exported as special_01, one still frame). Object01Update (0x08033C90) is inert once unk_53D_2 is set; the unclaimed path sub_08033C18 marks the children, sets unk_53D_3 and releases the slot through sub_080220B4 unconditionally. Unit-tested in aos_object01.
 

@@ -4419,6 +4419,47 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && (e->id == 10 || e->id == 11)) {
+            /* Object0ACreate / Object0BCreate (0x0805045C / 0x080504C0):
+             * event-gated enemy spawners. param0 indexes the 36-byte
+             * records of 0x080E9644 — record + 0 is the enemy's create
+             * (param0 IS the enemy id) and record + 4 its update, which
+             * the create installs on the entity; + 0x30/+ 0x32 are
+             * cleared so the enemy runs with param0 = param1 = 0 and
+             * + 0x34 takes record + 0xC (not modelled). Object 0x0A
+             * gates on the + 0x37E bit param1 (special), object 0x0B on
+             * the + 0x33C bitfield bit param1 (aria_events). A failed
+             * gate deletes the entity; a passed one turns it into the
+             * enemy — here a spawned ENEMY entity takes its place. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool gate = e->id == 10
+                    ? ((aria_pickup_state.special >> e->param1) & 1) != 0
+                    : aos_wall_event(aria_events, e->param1);
+                if (gate && e->param0 >= 0 && e->param0 < ENEMY_KINDS &&
+                    combat->kinds[e->param0] &&
+                    room->entity_count < MAX_ENTITIES) {
+                    AriaEntity *child = &room->entities[room->entity_count++];
+                    *child = (AriaEntity){.kind = ARIA_KIND_ENEMY,
+                                          .id = e->param0, .x = e->x,
+                                          .y = e->y, .persistent_index = -1,
+                                          .param0 = 0, .param1 = 0,
+                                          .spawner = -1};
+                    child->spawned = aos_enemy_create(
+                        &child->enemy, (uint8_t)e->param0, e->x, e->y, 0, 0,
+                        soma, layer, combat->kinds[e->param0],
+                        combat->stats[e->param0]);
+                    if (child->spawned)
+                        printf("Object%02X spawned enemy %d at %d,%d\n", e->id,
+                               e->param0, e->x, e->y);
+                    else
+                        room->entity_count--;
+                }
+                continue;   /* the object slot is consumed either way */
+            }
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 1) {
             /* Object01Create / Object01Update: claims the + 0x1316C
              * slot once per room and spawns its static children; an

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 143 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 144 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1889 | 1684 |
+| Castlevania: Aria of Sorrow | 1894 | 1679 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2425,6 +2425,15 @@ Tests: [`tests/test_aos_object02.c`](../tests/test_aos_object02.c), [`tests/test
 Dependencies: `aos.environment.breakable_walls`, `aos.environment.wooden_doors`.  
 Known divergences: The gDisplayRegisters winOut_L/H = 0x3F/0x2F window-out blend, the sub_08013F6C(0x1040) accent of state 20, the sub_080235C8 per-room bookkeeping and the entity + 0x5C/+ 0x65/+ 0x59 palette and art-row writes are not ported; the param0 == 7 sparkle (sub_0802D5EC/sub_08045CEC) is approximated by one drift effect; the draw keeps the exported special_objects animation 0 loop instead of the native + 0x1B anim (6, or 9 for param1 7).  
 Next action: Port the remaining special objects 1, 3-7 and 0x0A-0x37 create/update pairs and compare a scripted scene against an emulator.
+
+[~] **`aos.objects.enemy_spawners` — Object0A/Object0B event-gated enemy spawners (0x080E9644 records).** Object0ACreate (0x0805045C) deletes the entity when the + 0x37E bit param1 is clear, else indexes the 36-byte records of 0x080E9644 by param0 (= the enemy id: record + 0 the create, + 4 the update installed on entity + 0), stores record + 0xC at + 0x34, clears + 0x30/+ 0x32 and calls the create. Object0BCreate (0x080504C0) gates on sub_08012078(param1), the + 0x33C bitfield (= aria_events). The runtime spawns the ported enemy kind at the object position when the gate passes and consumes the object either way. Unit coverage is the runtime wiring; per-enemy behaviour is covered by the enemy tests.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:Object0ACreate`, `aos:asm:asm/code/code_08040A38.s:Object0AUpdate`, `aos:asm:asm/code/code_08040A38.s:Object0BCreate`, `aos:asm:asm/code/code_08040A38.s:Object0BUpdate`, `aos:c:src/code_08011DD0.c:sub_08012078`, `aos:c:src/code_08011DD0.c:sub_080120AC`.  
+Local implementation: [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Dependencies: `aos.objects.static_children`.  
+Known divergences: The record + 0xC u16 stored at entity + 0x34 and the record tail parameters are not modelled (enemy param0/param1 run as 0 like the cleared + 0x30/+ 0x32); the spawned enemy is appended as a new entity rather than reusing the object slot; unported enemy ids under the gate spawn nothing, matching an absent kind; Object0AUpdate/Object0BUpdate are bx lr natively because the record installs the enemy update on entity + 0.  
+Next action: Audit the + 0x34 record field against enemy creates that read it, then port the remaining object pairs.
 
 [~] **`aos.objects.special_sprites` — SPECIAL room object sprites (ids 13,16,19,20,21,23,24,25,27).** sub_0806E0D0(entity, gfx, palette, bank, frames) is decoded: most ObjectXXCreate functions pass hard-coded sprite resources while entity + 0x30/+ 0x32 carry the room record's param0/param1 and select behaviour through per-object state tables (Object14Update indexes 0x08526408 by param0). The nine resource triplets were extracted from the create functions and exported as Object/special_NN/anim_M sequences with metadata/object_frames.tsv (metroidvania-aos-object-frames-v1); empty native animations are skipped. The runtime loads the object index into special_objects[64] and draws each spawned SPECIAL entity. Source-derived and unit-tested, not emulator-compared.
 

@@ -83,10 +83,6 @@ aos:asm:asm/code/code_08040A38.s:Object06Create	Object06Create	environment	name	
 aos:asm:asm/code/code_08040A38.s:Object06Update	Object06Update	environment	name			asm_function		asm/code/code_08040A38.s	27542	0	14
 aos:asm:asm/code/code_08040A38.s:Object07Create	Object07Create	environment	name			asm_function		asm/code/code_08040A38.s	28760	0	4
 aos:asm:asm/code/code_08040A38.s:Object07Update	Object07Update	environment	name			asm_function		asm/code/code_08040A38.s	28827	0	1
-aos:asm:asm/code/code_08040A38.s:Object0ACreate	Object0ACreate	environment	name			asm_function		asm/code/code_08040A38.s	30492	0	1
-aos:asm:asm/code/code_08040A38.s:Object0AUpdate	Object0AUpdate	environment	name			asm_function		asm/code/code_08040A38.s	30541	0	0
-aos:asm:asm/code/code_08040A38.s:Object0BCreate	Object0BCreate	environment	name			asm_function		asm/code/code_08040A38.s	30546	0	2
-aos:asm:asm/code/code_08040A38.s:Object0BUpdate	Object0BUpdate	environment	name			asm_function		asm/code/code_08040A38.s	30586	0	0
 aos:asm:asm/code/code_08040A38.s:Object0CCreate	Object0CCreate	environment	name			asm_function		asm/code/code_08040A38.s	30839	0	1
 aos:asm:asm/code/code_08040A38.s:Object0CUpdate	Object0CUpdate	environment	name			asm_function		asm/code/code_08040A38.s	30684	0	3
 aos:asm:asm/code/code_08040A38.s:Object0DUpdate	Object0DUpdate	environment	name			asm_function		asm/code/code_08040A38.s	30939	0	4
@@ -1436,7 +1432,6 @@ aos:c:src/code_08011DD0.c:sub_08011E24	sub_08011E24	unclassified		technical	excl
 aos:c:src/code_08011DD0.c:sub_08011E88	sub_08011E88	unclassified		technical	exclusive_callees	c_function	0x08011E88	src/code_08011DD0.c	115	1	4
 aos:c:src/code_08011DD0.c:sub_08011F44	sub_08011F44	unclassified				c_function	0x08011F44	src/code_08011DD0.c	150	9	0
 aos:c:src/code_08011DD0.c:sub_08012014	sub_08012014	unclassified				c_function	0x08012014	src/code_08011DD0.c	199	2	0
-aos:c:src/code_08011DD0.c:sub_080120AC	sub_080120AC	unclassified				c_function	0x080120AC	src/code_08011DD0.c	279	1	2
 aos:c:src/code_08011DD0.c:sub_080120AC_inline_0	sub_080120AC_inline_0	unclassified				c_function		src/code_08011DD0.c	246	1	0
 aos:c:src/code_08011DD0.c:sub_080120AC_inline_1	sub_080120AC_inline_1	unclassified				c_function		src/code_08011DD0.c	258	1	0
 aos:c:src/code_08011DD0.c:sub_08012104	sub_08012104	unclassified				c_function	0x08012104	src/code_08011DD0.c	302	2	0

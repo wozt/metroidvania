@@ -1,3 +1,23 @@
+## Patch 1032 - Aria Object0A/Object0B enemy spawners ported
+
+- `src/runtime/aria_runtime.c` ports Object0ACreate/Object0BCreate
+  (0x0805045C / 0x080504C0) and their bx-lr updates: the event-gated
+  enemy spawner objects used by exported rooms (id 10 param0 in
+  {2, 26, 29, 42, 74, 77, 87}, id 11 in {10, 23, 30, 52, 56}).
+- param0 indexes the 36-byte records of 0x080E9644; the record's
+  function pair is the enemy's own create/update and param0 IS the
+  enemy id (record 29 -> EnemyGhostDancerCreate/Update = enemy 29,
+  already ported). Object 0x0A gates on the + 0x37E bit param1
+  (aria_pickup_state.special); object 0x0B on the + 0x33C bitfield
+  bit param1 (aria_events through aos_wall_event, the same
+  sub_08012078 port the walls use).
+- A passed gate spawns the ported enemy kind at the object position
+  with param0 = param1 = 0 (the native create clears + 0x30/+ 0x32);
+  a failed gate or an unported kind consumes the object either way,
+  matching EntityDelete / the slot takeover.
+- Documented divergences: the + 0x34 record field, the appended
+  entity vs the in-place slot takeover and the unported enemy ids.
+
 ## Patch 1031 - Aria Object01 conditional static children ported
 
 - `src/runtime/aos/game/aos_object01.c` ports Object01Create

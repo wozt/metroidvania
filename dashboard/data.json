@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T00:36:10+00:00",
+ "generated_at": "2026-11-12T00:41:05+00:00",
  "git": {
-  "commit": "f2995d74",
+  "commit": "df01bf2f",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 288,
+   "total": 289,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 57,
+    "partial": 58,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 76.7,
-   "with_passing_tests": 275,
+   "functional_or_better_percent": 76.5,
+   "with_passing_tests": 276,
    "with_passing_tests_percent": 95.5,
    "unknown_or_blocked": 1,
    "features": [
@@ -328,6 +328,7 @@
     "aos.menus.sleep",
     "aos.menus.text_window",
     "aos.objects.cutscene_director",
+    "aos.objects.enemy_spawners",
     "aos.objects.special_sprites",
     "aos.objects.static_children",
     "aos.player.soma_controller",
@@ -522,11 +523,11 @@
    "areas": [
     "aos"
    ],
-   "total": 143,
+   "total": 144,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 29,
+    "partial": 30,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -534,8 +535,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 79.7,
-   "with_passing_tests": 143,
+   "functional_or_better_percent": 79.2,
+   "with_passing_tests": 144,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -666,6 +667,7 @@
     "aos.menus.sleep",
     "aos.menus.text_window",
     "aos.objects.cutscene_director",
+    "aos.objects.enemy_spawners",
     "aos.objects.special_sprites",
     "aos.objects.static_children",
     "aos.player.soma_controller",
@@ -20992,6 +20994,64 @@
    }
   },
   {
+   "id": "aos.objects.enemy_spawners",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object0A/Object0B event-gated enemy spawners (0x080E9644 records)",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [
+    "aos.objects.static_children"
+   ],
+   "native_routines": [
+    "Object0ACreate",
+    "Object0AUpdate",
+    "Object0BCreate",
+    "Object0BUpdate",
+    "sub_08012078",
+    "sub_080120AC"
+   ],
+   "limitations": "The record + 0xC u16 stored at entity + 0x34 and the record tail parameters are not modelled (enemy param0/param1 run as 0 like the cleared + 0x30/+ 0x32); the spawned enemy is appended as a new entity rather than reusing the object slot; unported enemy ids under the gate spawn nothing, matching an absent kind; Object0AUpdate/Object0BUpdate are bx lr natively because the record installs the enemy update on entity + 0. Object0ACreate (0x0805045C) deletes the entity when the + 0x37E bit param1 is clear, else indexes the 36-byte records of 0x080E9644 by param0 (= the enemy id: record + 0 the create, + 4 the update installed on entity + 0), stores record + 0xC at + 0x34, clears + 0x30/+ 0x32 and calls the create. Object0BCreate (0x080504C0) gates on sub_08012078(param1), the + 0x33C bitfield (= aria_events). The runtime spawns the ported enemy kind at the object position when the gate passes and consumes the object either way. Unit coverage is the runtime wiring; per-enemy behaviour is covered by the enemy tests.",
+   "next_action": "Audit the + 0x34 record field against enemy creates that read it, then port the remaining object pairs.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.special_sprites",
    "area": "aos",
    "category": "environment",
@@ -28261,6 +28321,12 @@
  },
  "timeline": [
   {
+   "commit": "df01bf2f",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object01 conditional static children",
+   "scope": "project"
+  },
+  {
    "commit": "f2995d74",
    "date": "2026-11-12",
    "subject": "Port Aria Object02 cutscene director",
@@ -28733,12 +28799,6 @@
    "date": "2026-11-10",
    "subject": "Move MZM enemy modules into src/runtime/mzm/enemies/",
    "scope": "project"
-  },
-  {
-   "commit": "7b34fe01",
-   "date": "2026-11-10",
-   "subject": "Move shared MZM modules into src/runtime/mzm/core/",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -28799,9 +28859,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1889,
-    "routines_attached_to_features": 1889,
-    "unassigned_routines": 1684,
+    "routines_cited_by_features": 1894,
+    "routines_attached_to_features": 1894,
+    "unassigned_routines": 1679,
     "call_edges": 14228
    }
   },

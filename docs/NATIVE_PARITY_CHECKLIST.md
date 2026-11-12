@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 167 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 168 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1991 | 1582 |
+| Castlevania: Aria of Sorrow | 1996 | 1577 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2560,6 +2560,15 @@ Tests: [`tests/test_aos_object11.c`](../tests/test_aos_object11.c).
 Dependencies: `aos.objects.special_sprites`, `aos.objects.enemy_spawners`.  
 Known divergences: The + 0x124C slot deletion is modelled by clearing the room save flag rather than deleting a fixed entity slot; the type-0x1A helper entity is folded into the marker (no art, no sprite); the + 0x42C bit-1 hold approximates the B button through the runtime input word; no consumer of the helper + 0x14 counter is ported; and there is no emulator comparison.  
 Next action: Find the consumer of the helper + 0x14 hold counter and port the + 0x124C slot entity properly.
+
+[~] **`aos.objects.save_statue` — Object10 save point statue.** Object10Create (0x080510B0) picks the sprite triple through sub_0806E0D0 by the gEwramData + 0x4D0 word (2 -> 0x08268450/0x082097B0/0x08268648, 3 -> 0x08268458/0x082097B0/0x08268828, else -> 0x081604A0/0x082097B0/0x0820CEF8), scans the three 0x08526390 {limit, item} records for the first whose limit covers the + 0x124C entity's + 0x14 progress and whose item is unowned (fallback item 1) into + 0x18, registers it through sub_08044054 as a scripted pickup, clears + 0x59 bits 0-1, sets + 0x58 bit 0x20, stores 0x80/0x50 into + 0x42/+ 0x46 and installs sub_08050F1C, deleting on load failure. Object10Update (0x080511F0) runs four states: state 0 latches + 0xD = 0x80 and clears + 0x58 bits 0/5/7 on the + 0x42C bit-0x400 trigger; state 1 locks input through SetPlayerInput(1, 0), counts + 0xD down and on expiry performs the save sequence (SRAM slot load, sub_08043B18(+ 0x18) inventory increment, sub_080135C0 refresh, respawn copy, SRAM slot write); state 2 keeps the lock and stores the + 0x64/+ 0x65 mark bytes; state 3 is inert. Unit-tested in test_aos_object10.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08043B18`, `aos:asm:asm/code/code_08040A38.s:sub_08044054`, `aos:asm:asm/code/code_08040A38.s:sub_08044F24`, `aos:asm:asm/code/code_08040A38.s:sub_08044F50`, `aos:asm:asm/code/code_08040A38.s:sub_08044FA8`, `aos:asm:asm/code/code_08050A3C.s:Object10Create`, `aos:asm:asm/code/code_08050A3C.s:Object10Update`, `aos:asm:asm/code/code_08060B98.s:sub_0806E0D0`, `aos:c:src/code_080009A0.c:EntityDelete`, `aos:c:src/code_080009A0.c:SetPlayerInput`, `aos:c:src/code_08012744.c:SaveData_LoadSlotFromSram`, `aos:c:src/code_08012744.c:SaveData_SaveSlotToSram`, `aos:c:src/code_08012744.c:sub_080135C0`.  
+Local implementation: [`src/runtime/aos/game/aos_object10.c`](../src/runtime/aos/game/aos_object10.c), [`src/runtime/aos/game/aos_object10.h`](../src/runtime/aos/game/aos_object10.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c), [`src/runtime/aos/game/aos_pickup.c`](../src/runtime/aos/game/aos_pickup.c).  
+Tests: [`tests/test_aos_object10.c`](../tests/test_aos_object10.c).
+Dependencies: `aos.objects.special_sprites`, `aos.objects.save_point_remover`.  
+Known divergences: The + 0x4D0 statue-state word has no runtime field (param0 stands in for the _vP art pick and 0 is passed to create), the + 0x124C entity's + 0x14 progress word is passed as 0 so the first unowned covered record wins, the + 0x42/+ 0x46 scripted-pickup coordinates are passed as 0 (the aos_pickup_create_scripted_item registration itself stays on the pickup path), the sub_08044F24/sub_08044F50/sub_08044FA8 ownership probe is approximated by the portable inventory through aos_item_decode, the + 0x42C bit-0x400 trigger is approximated by Up held inside a small box, the SRAM slot byte at + 0x428 and the SaveData_LoadSlotFromSram/SaveData_SaveSlotToSram pair are reported through save_committed rather than performed (the live save stays on the Object1C save_room path), the sub_08043B18 inventory increment, the sub_080135C0 save-block refresh and the + 0x124C + 0x14 -> + 0x60 + 0x50 respawn copy are exposed as counters, the + 0x64/+ 0x65 save-mark bytes have no runtime fields, the sub_08050F1C callback and the sprite attach stay under special_sprites with the three art sets exported as special_16_v00/v02/v03, and there is no emulator comparison.  
+Next action: Identify the + 0x4D0 statue-state writer and the + 0x124C entity's + 0x14 progress field, then wire the real SRAM sequence once the save path is unified.
 
 [~] **`aos.objects.screen_space_oscillator` — Object2A screen-space horizontal oscillator.** Object2ACreate (0x08057438) copies the five-word 0x08118640 record to the stack, loads the 0x08526510[param1] sprite triple through sub_08057774 (tiles via sub_0803B800, palette slot sub_08068264(palette, bank), frames, draw callback sub_080577DC snapshotting + 0x24/+ 0x28 over + 0x40/+ 0x44), presets sub_0804277C(8) plus the param1-indexed stack word through sub_080428B4/sub_08042848, ORs + 0x72 with 6, runs sub_0803F2C8(record + 0xC, 0, 1), sets + 0x5C = 0x12, + 0xA = 0 and derives + 0x18/+ 0x10/+ 0x14/+ 0x1C/+ 0x24/+ 0x28 from the entity position, the bgInfo[1] scroll and param0 << 16 with + 0x20 = (+ 0x18 > + 0x1C). Object2AUpdate (0x08057744) registers the entity, runs sub_08057538 while + 0xA == 0, then sub_0803F17C and sub_080421AC. sub_08057538 is a four-state ping-pong in the scroll frame: states 0 and 2 integrate + 0x48 toward + 0x1C and + 0x18, ramping 0x800 a frame beyond 0xFFFFF and switching to a (px + 1) * 0x1000 distance-proportional creep inside it (mirrored negative for + 0x20 set), arrival zeroes + 0x48 and reloads the u8 + 0xD from the record + 0xE halfword, states 1 and 3 count + 0xD down as a signed byte and toggle + 0x20 on exit; the epilogue writes + 0x40/+ 0x44/+ 0x24/+ 0x28 = accumulator minus the current scroll so the sprite stays screen-locked, and a + 0x13190 slot match calls sub_0802138C. Art exported as special_42_v00-v03. Unit-tested in test_aos_object2a.
 

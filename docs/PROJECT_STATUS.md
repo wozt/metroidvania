@@ -1,3 +1,20 @@
+## Patch 1057 - Aria Object10 save point statue ported
+
+- `src/runtime/aos/game/aos_object10.c` ports Object10Create
+  (0x080510B0) and Object10Update (0x080511F0), the save point
+  statue dispatched through sUnk_084F0ED8[16]. Create picks one
+  of three sprite triples by the + 0x4D0 word (exported as
+  special_16_v00/v02/v03), scans the 0x08526390 grant records
+  against the portable inventory for + 0x18, and registers the
+  scripted pickup through the existing aos_pickup path.
+- Update runs the four-state save sequence: the + 0x42C
+  bit-0x400 trigger (Up inside a box) latches the 0x80
+  countdown, locks input, then reports the SRAM slot load,
+  inventory grant, stats refresh, respawn copy and slot write;
+  the live save stays on the Object1C save_room path.
+- Tests: `tests/test_aos_object10.c` covers the grant-record
+  scan, the countdown and the state outputs.
+
 ## Patch 1056 - Aria Object2A screen-space oscillator ported
 
 - `src/runtime/aos/game/aos_object2a.c` ports Object2ACreate

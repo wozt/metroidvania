@@ -25,6 +25,7 @@
 #include "aos/game/aos_object0f.h"
 #include "aos/game/aos_object0d.h"
 #include "aos/game/aos_object0e.h"
+#include "aos/game/aos_object10.h"
 #include "aos/game/aos_object11.h"
 #include "aos/game/aos_object12.h"
 #include "aos/game/aos_object13.h"
@@ -441,6 +442,7 @@ typedef struct {
     AosObject0f object0f;   /* object 0x0F: destructible prop */
     AosObject0d object0d;   /* object 0x0D: swinging object */
     AosObject0e object0e;   /* object 0x0E: breakable prop variants */
+    AosObject10 object10;   /* object 0x10: save point statue */
     AosObject11 object11;   /* object 0x11: save-point remover marker */
     AosObject12 object12;   /* object 0x12: param-driven animated sprite */
     AosObject13 object13;   /* object 0x13: swinging chandelier trigger */
@@ -612,6 +614,22 @@ static bool room_has_opening_controller(const AriaRoom *room) {
 
 static bool room_has_save_point(const AriaRoom *room) {
     return room && (room->room_flags & AOS_ROOM_FLAG_SAVE) != 0;
+}
+
+/* Object10Create's record scan asks whether the grant item is
+ * already in the inventory; the portable inventory mirrors the
+ * native category bases (32 items, then 59 weapons, 45 armor).
+ * update_entities has no save handle, so the room loop publishes
+ * the active save through this pointer. */
+static const AosSaveData *object10_save_ctx;
+static bool object10_item_owned(void *ctx, uint16_t item) {
+    const AosSaveData *save = ctx ? ctx : object10_save_ctx;
+    uint8_t category, index;
+    if (!save || !aos_item_decode(item, &category, &index)) return false;
+    unsigned base = category == AOS_PICKUP_ITEM ? 0
+        : category == AOS_PICKUP_WEAPON ? AOS_SAVE_WEAPONS
+        : AOS_SAVE_WEAPONS + 59;
+    return save->inventory[base + index] != 0;
 }
 
 /* Temporary host presentation around Object1C's native fixed room position.
@@ -4807,6 +4825,35 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             e->object0e.content_fx = 0;
             e->object0e.gore_fx = 0;
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 16) {
+            /* Object10Create / Object10Update (sUnk_084F0DF8[16] /
+             * sUnk_084F0ED8[16]): the save point statue. Create's
+             * sprite pick keys off the + 0x4D0 word — approximated
+             * by param0 for the _vP art — and its 0x08526390 grant
+             * scan runs against the portable inventory. The
+             * + 0x42C bit-0x400 trigger becomes Up held inside a
+             * small box; the SRAM slot sequence is reported while
+             * the live save stays on the Object1C path. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object10_create(&e->object10, 0,
+                                    (uint8_t)e->param0, 0, 0,
+                                    object10_item_owned,
+                                    NULL);
+                continue;
+            }
+            int psx = (int)(soma->x >> 16), psy = (int)(soma->y >> 16);
+            bool near = psx >= e->x - 16 && psx <= e->x + 16 &&
+                        psy >= e->y - 24 && psy <= e->y + 8;
+            uint8_t before = e->object10.state;
+            aos_object10_update(&e->object10,
+                                near && (input->held & AOS_KEY_UP) != 0);
+            if (before == 1 && e->object10.state == 2)
+                printf("Object10 %zu: save sequence committed (item 0x%X)\n",
+                       i, e->object10.item_id);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 17) {
@@ -9787,6 +9834,7 @@ int aria_runtime_main(int argc, char **argv) {
                 aos_enemy_set_no_target(none);
             }
             homing_room = &room;
+            object10_save_ctx = has_active_save ? &active_save : NULL;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
             if (have_quick_map)
                 for (size_t wi = 0; wi < room.entity_count; ++wi) {

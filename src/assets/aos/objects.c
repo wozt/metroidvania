@@ -762,6 +762,14 @@ static const EntitySpec special18_variants[] = {
     ENTITY("special_18_v03", 0x081CBEAC, 0x0820A100, 0, 0x08210C30),
 };
 
+static const EntitySpec special16_variants[] = {
+    /* Object10Create's + 0x4D0 word: 2 and 3 select the
+     * 0x08268450/0x08268458 sets, anything else 0x081604A0. */
+    ENTITY("special_16_v00", 0x081604A0, 0x082097B0, 0, 0x0820CEF8),
+    ENTITY("special_16_v02", 0x08268450, 0x082097B0, 0, 0x08268648),
+    ENTITY("special_16_v03", 0x08268458, 0x082097B0, 0, 0x08268828),
+};
+
 static const EntitySpec special42_variants[] = {
     ENTITY("special_42_v00", 0x081CBEDC, 0x0820A1C4, 6, 0x0821154C),
     ENTITY("special_42_v01", 0x081CBEE4, 0x0820A1C4, 6, 0x082115F8),
@@ -2106,6 +2114,11 @@ bool fusion_aos_export_objects(const FusionRom *rom,
          success && index < sizeof special18_variants / sizeof special18_variants[0];
          ++index)
         success = export_entity(rom, &library, &special18_variants[index],
+                                "Object", &object_rows, error, error_size);
+    for (size_t index = 0;
+         success && index < sizeof special16_variants / sizeof special16_variants[0];
+         ++index)
+        success = export_entity(rom, &library, &special16_variants[index],
                                 "Object", &object_rows, error, error_size);
     for (size_t index = 0;
          success && index < sizeof special42_variants / sizeof special42_variants[0];

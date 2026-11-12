@@ -21,6 +21,7 @@
 #include "aos/game/aos_object05.h"
 #include "aos/game/aos_object06.h"
 #include "aos/game/aos_object07.h"
+#include "aos/game/aos_object0c.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -419,6 +420,7 @@ typedef struct {
     AosObject05 object05;   /* object 0x05: proximity trigger */
     AosObject06 object06;   /* object 0x06: cinematic trigger */
     AosObject07 object07;   /* object 0x07: ambient motes */
+    AosObject0c object0c;   /* object 0x0C: room-region triggers */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4622,6 +4624,29 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             aos_object07_update(&e->object07, cam_x, cam_y,
                                 cam_x << 16, cam_y << 16, aos_random);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 12) {
+            /* Object0CCreate / Object0CUpdate (sUnk_084F0DF8[12] /
+             * sUnk_084F0ED8[12]): the room-region trigger. The player
+             * room position is Soma's fixed-point position minus the
+             * camera; the + 0x10 bit-30 gate is unmodelled and passed
+             * as set while Soma is active. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object0c_create(&e->object0c, e->param0);
+                continue;
+            }
+            if (soma) {
+                aos_object0c_update(&e->object0c,
+                                    (uint16_t)(soma->x >> 16),
+                                    (uint16_t)(soma->y >> 16),
+                                    true, false,
+                                    soma->x, soma->y, soma->state);
+                if (e->object0c.heavy_set)
+                    soma->flags |= AOS_FLAG_HEAVY;
+            }
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {

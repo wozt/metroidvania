@@ -73,8 +73,6 @@ aos:asm:asm/code/code_08039340.s:sub_08039820	sub_08039820	unclassified				asm_f
 aos:asm:asm/code/code_08039340.s:sub_08039A6C	sub_08039A6C	unclassified				asm_function	0x08039A6C	asm/code/code_08039340.s	925	0	0
 aos:asm:asm/code/code_08039340.s:sub_0803ACE0	sub_0803ACE0	unclassified				asm_function	0x0803ACE0	asm/code/code_08039340.s	3286	1	1
 aos:asm:asm/code/code_08039340.s:sub_0803B184	sub_0803B184	unclassified				asm_function	0x0803B184	asm/code/code_08039340.s	3885	3	5
-aos:asm:asm/code/code_08040A38.s:Object0CCreate	Object0CCreate	environment	name			asm_function		asm/code/code_08040A38.s	30839	0	1
-aos:asm:asm/code/code_08040A38.s:Object0CUpdate	Object0CUpdate	environment	name			asm_function		asm/code/code_08040A38.s	30684	0	3
 aos:asm:asm/code/code_08040A38.s:Object0DUpdate	Object0DUpdate	environment	name			asm_function		asm/code/code_08040A38.s	30939	0	4
 aos:asm:asm/code/code_08040A38.s:sub_08041474	sub_08041474	unclassified				asm_function	0x08041474	asm/code/code_08040A38.s	43	0	0
 aos:asm:asm/code/code_08040A38.s:sub_080415A8	sub_080415A8	unclassified				asm_function	0x080415A8	asm/code/code_08040A38.s	215	3	0
@@ -211,10 +209,6 @@ aos:asm:asm/code/code_08040A38.s:sub_0804DEA0	sub_0804DEA0	environment	referrers
 aos:asm:asm/code/code_08040A38.s:sub_0804F7A4	sub_0804F7A4	unclassified				asm_function	0x0804F7A4	asm/code/code_08040A38.s	28858	1	2
 aos:asm:asm/code/code_08040A38.s:sub_0804F84C	sub_0804F84C	unclassified				asm_function	0x0804F84C	asm/code/code_08040A38.s	28945	1	0
 aos:asm:asm/code/code_08040A38.s:sub_0804F85C	sub_0804F85C	unclassified				asm_function	0x0804F85C	asm/code/code_08040A38.s	28955	1	0
-aos:asm:asm/code/code_08040A38.s:sub_08050510	sub_08050510	unclassified				asm_function	0x08050510	asm/code/code_08040A38.s	30591	0	1
-aos:asm:asm/code/code_08040A38.s:sub_08050694	sub_08050694	unclassified				asm_function	0x08050694	asm/code/code_08040A38.s	30784	0	0
-aos:asm:asm/code/code_08040A38.s:sub_080506C0	sub_080506C0	unclassified				asm_function	0x080506C0	asm/code/code_08040A38.s	30809	0	0
-aos:asm:asm/code/code_08040A38.s:sub_080506EC	sub_080506EC	unclassified				asm_function	0x080506EC	asm/code/code_08040A38.s	30834	0	0
 aos:asm:asm/code/code_08040A38.s:sub_08050920	sub_08050920	environment	referrers			asm_function	0x08050920	asm/code/code_08040A38.s	31125	0	9
 aos:asm:asm/code/code_08050A3C.s:Object0ECreate	Object0ECreate	environment	name			asm_function		asm/code/code_08050A3C.s	239	0	7
 aos:asm:asm/code/code_08050A3C.s:Object0EUpdate	Object0EUpdate	environment	name			asm_function		asm/code/code_08050A3C.s	321	0	5
@@ -1259,9 +1253,7 @@ aos:c:src/code_08001194.c:DmaQueue_DirectCopy	DmaQueue_DirectCopy	unclassified		
 aos:c:src/code_08001194.c:DmaQueue_IndirectCopy	DmaQueue_IndirectCopy	unclassified				c_function	0x080016D0	src/code_08001194.c	408	13	0
 aos:c:src/code_08001194.c:DmaQueue_Process	DmaQueue_Process	unclassified				c_function	0x080015E4	src/code_08001194.c	344	1	0
 aos:c:src/code_08001194.c:GetAreaFromMapPosition	GetAreaFromMapPosition	rooms	name			c_function	0x08001894	src/code_08001194.c	547	12	0
-aos:c:src/code_08001194.c:GetEntityRoomXPositionInteger	GetEntityRoomXPositionInteger	unclassified				c_function	0x08002188	src/code_08001194.c	1447	82	0
 aos:c:src/code_08001194.c:GetEntityRoomXPositionWhole	GetEntityRoomXPositionWhole	enemies	referrers			c_function	0x080021C8	src/code_08001194.c	1469	2	0
-aos:c:src/code_08001194.c:GetEntityRoomYPositionInteger	GetEntityRoomYPositionInteger	unclassified				c_function	0x080021A8	src/code_08001194.c	1458	75	0
 aos:c:src/code_08001194.c:GetEntityRoomYPositionWhole	GetEntityRoomYPositionWhole	enemies	referrers			c_function	0x080021E4	src/code_08001194.c	1480	2	0
 aos:c:src/code_08001194.c:GetRoomFromMapPosition	GetRoomFromMapPosition	rooms	name			c_function	0x080018D0	src/code_08001194.c	562	9	0
 aos:c:src/code_08001194.c:GetRoomPointer	GetRoomPointer	rooms	name			c_function	0x08001980	src/code_08001194.c	609	4	0

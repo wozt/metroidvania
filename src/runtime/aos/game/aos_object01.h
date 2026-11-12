@@ -31,6 +31,12 @@ typedef struct {
  * (the native slot outlives the entities' delete marks). */
 void aos_object01_reset(void);
 
+/* The + 0x1316C slot is shared with Object0C (sub_08022088 /
+ * sub_080220B4): claim returns 1 when this call took it, release
+ * clears it unconditionally. */
+bool aos_object01_claim_slot(void);
+void aos_object01_release_slot(void);
+
 /* Object01Create. param0 outside 0..1 or a held slot claims nothing;
  * the first update then deletes the entity. */
 void aos_object01_create(AosObject01 *o, int16_t param0);

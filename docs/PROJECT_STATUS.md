@@ -1,3 +1,24 @@
+## Patch 1039 - Aria Object0C room-region triggers ported
+
+- `src/runtime/aos/game/aos_object0c.c` ports Object0CCreate
+  (0x080506F0) and Object0CUpdate (0x080505CC), the region trigger
+  dispatched through sUnk_084F0DF8[12] / sUnk_084F0ED8[12].
+- Create attempts the shared gEwramData + 0x1316C claim through
+  sub_08022088 (the slot Object01 uses; the claim API moved into
+  aos_object01) and sets + 0x59 bit 2 unconditionally like the
+  native code.
+- Update walks the three embedded 0x085261FC[param0] record lists
+  (terminator type 3) and fires the 0x08526208[type] callback on
+  the player room position: type 0 writes the record param to
+  + 0x48, type 1 sets AOS_FLAG_HEAVY on Soma, type 2 arms the
+  + 0x131D4 camera snapshot and the +/- 0x30000 pan through
+  sub_08021248.
+- Divergences documented: the + 0x10 bit-30 gate passes as set,
+  the snapshot block has no camera consumer yet, and + 0x59 bit 2
+  has no clear writer so the claim stays held.
+- Tests: `tests/test_aos_object0c.c` covers the claim, the three
+  callback types, the gates and the release path.
+
 ## Patch 1038 - Aria Object07 child art exported and drawn
 
 - `src/assets/aos/objects.c` exports the Object07 child sprite sets:

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T01:07:22+00:00",
+ "generated_at": "2026-11-12T01:15:56+00:00",
  "git": {
-  "commit": "774c3f5f",
+  "commit": "bd10b2a3",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 294,
+   "total": 295,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 63,
+    "partial": 64,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 75.2,
-   "with_passing_tests": 281,
+   "functional_or_better_percent": 74.9,
+   "with_passing_tests": 282,
    "with_passing_tests_percent": 95.6,
    "unknown_or_blocked": 1,
    "features": [
@@ -334,6 +334,7 @@
     "aos.objects.enemy_spawners",
     "aos.objects.escort_director",
     "aos.objects.proximity_trigger",
+    "aos.objects.region_trigger",
     "aos.objects.special_sprites",
     "aos.objects.static_children",
     "aos.player.soma_controller",
@@ -528,11 +529,11 @@
    "areas": [
     "aos"
    ],
-   "total": 149,
+   "total": 150,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 35,
+    "partial": 36,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -540,8 +541,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 76.5,
-   "with_passing_tests": 149,
+   "functional_or_better_percent": 76.0,
+   "with_passing_tests": 150,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -678,6 +679,7 @@
     "aos.objects.enemy_spawners",
     "aos.objects.escort_director",
     "aos.objects.proximity_trigger",
+    "aos.objects.region_trigger",
     "aos.objects.special_sprites",
     "aos.objects.static_children",
     "aos.player.soma_controller",
@@ -21382,6 +21384,83 @@
    }
   },
   {
+   "id": "aos.objects.region_trigger",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object0C room-region triggers",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object0c.c",
+    "src/runtime/aos/game/aos_object0c.h",
+    "src/runtime/aos/game/aos_object01.c",
+    "src/runtime/aos/game/aos_object01.h",
+    "src/runtime/aria_runtime.c"
+   ],
+   "tests": [
+    "tests/test_aos_object0c.c",
+    "tests/test_aos_object01.c"
+   ],
+   "dependencies": [
+    "aos.objects.static_children"
+   ],
+   "native_routines": [
+    "Object0CCreate",
+    "Object0CUpdate",
+    "sub_08050694",
+    "sub_080506C0",
+    "sub_08050510",
+    "sub_080506EC",
+    "sub_08021248",
+    "sub_08022088",
+    "sub_080220B4",
+    "GetEntityRoomXPositionInteger",
+    "GetEntityRoomYPositionInteger"
+   ],
+   "limitations": "The + 0x10 bit-30 callback gate is unmodelled and passed as set while Soma is active; the entity + 0x1E byte is approximated by Soma state; the gEwramData + 0x13260 bit 0x200 input is passed clear; the + 0x131D4/+ 0x131D6/+ 0x131D8/+ 0x131DC/+ 0x131E0/+ 0x131E4 camera snapshot and pan block is exposed on the object but no camera consumer reads it; the + 0x59 bit-2 clear that would release the claim has no writer so the slot stays held like the native held path; param0 outside 0-2 is clamped to list 0 instead of reading adjacent table data; and there is no emulator comparison. Object0CCreate (0x080506F0) claims the shared gEwramData + 0x1316C slot through sub_08022088 with descriptor 0x08118520 (result ignored) and sets + 0x59 bit 2. Object0CUpdate (0x080505CC) clears + 0x48, walks the 0x085261FC[param0] 0x10-byte record list terminated by type 3, and for each record whose rectangle contains the player room position (GetEntityRoom*PositionInteger truncated to u16) calls the 0x08526208[type] callback: type 0 writes the record param to + 0x48 when Soma + 0x10 bit 30 is set, type 1 sets Soma + 0x10 OR 0x4000000 (AOS_FLAG_HEAVY), type 2 (sub_08050510) gated by + 0x13260 bit 0x200 or the same bit arms the camera snapshot (+ 0x131D6 = 1, + 0x131D4 = 3, + 0x131D8/+ 0x131DC = Soma + 0x40/+ 0x44 + 0x80000), forces + 0x1E to 1 when nonzero and writes the +/- 0x30000 pan through sub_08021248 with + 0x48 = -+0x30000. When + 0x59 bit 2 is clear the update sets bit 3 and releases the slot through sub_080220B4. The three ROM lists (2+7+2 records) are embedded verbatim. Unit-tested in test_aos_object0c.",
+   "next_action": "Wire the snapshot/pan outputs into the camera path once the + 0x131D4 mode-3 consumer is ported, and trace what clears + 0x59 bit 2.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object0c.c",
+     "tests/test_aos_object01.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object0c.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object0c"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_object01.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object01"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.special_sprites",
    "area": "aos",
    "category": "environment",
@@ -28594,6 +28673,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object0c",
+    "files": [
+     "tests/test_aos_object0c.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_weapon",
     "files": [
      "tests/test_aos_weapon.c"
@@ -28679,12 +28765,18 @@
    }
   ],
   "summary": {
-   "passed": 169,
+   "passed": 170,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "bd10b2a3",
+   "date": "2026-11-12",
+   "subject": "Export and draw Aria Object07 child sprites",
+   "scope": "project"
+  },
   {
    "commit": "774c3f5f",
    "date": "2026-11-12",
@@ -29158,12 +29250,6 @@
    "date": "2026-11-10",
    "subject": "Port Disc Armor (Aria enemy 0x34) with its disc, shards and glow",
    "scope": "project"
-  },
-  {
-   "commit": "a0ac2367",
-   "date": "2026-11-10",
-   "subject": "Port Mandragora (Aria enemy 0x4F) with its body, tail and seed volley",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -29224,9 +29310,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1910,
-    "routines_attached_to_features": 1910,
-    "unassigned_routines": 1663,
+    "routines_cited_by_features": 1918,
+    "routines_attached_to_features": 1918,
+    "unassigned_routines": 1655,
     "call_edges": 14228
    }
   },

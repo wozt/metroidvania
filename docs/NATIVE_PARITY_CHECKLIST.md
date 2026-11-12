@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 162 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 163 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1968 | 1605 |
+| Castlevania: Aria of Sorrow | 1971 | 1602 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2425,6 +2425,15 @@ Tests: [`tests/test_aos_object07.c`](../tests/test_aos_object07.c).
 Dependencies: `aos.objects.escort_director`.  
 Known divergences: The child art is exported as special_07_v100 (0x081CBE5C/0x08209EE8/0x0820FE44) and special_07_v101 (the param0 == 2 alternate 0x081CBEB4/0x0820A100/0x08210DB0); the OBJ palette rows + 0x5C collapse to bank 0, and each child animates through animation 0 of the exported frames table rather than the native + 0x1C layer pick; the sub_080009E4 sine velocity split, the sub_0803C918 tile DMA behind the param0 == 1 cycler, the + 0xA094 factor bytes (approximated 0x40/1:1), sub_08013EEC and sub_0803C674 are reduced to flags; EntityCreateInRange slot allocation is replaced by fixed module arrays.  
 Next action: Audit the native child animation selection (+ 0x1C layer to sequence map) and port the sub_0803C918 tile DMA behind the param0 == 1 cycler.
+
+[~] **`aos.objects.animated_sprite` — Object2B plain animated sprite.** Object2BCreate (0x08058508) resolves tiles 0x081CBEDC through sub_0803B800, the palette through sub_08068264(0x0820A1C4, 1) with the sub_0803CC70 table pick at 0x08526618 and frames 0x0821154C through sub_0803B924 with drawFunc sub_0803B9D0 (exported as special_43), deletes on load failure, presets sub_0803F2C8(1, 0, 1), steps the animation once and sets + 0x5C = 0x12 with + 0xA = 0. Object2BUpdate (0x08058544) is a single sub_0803F17C animation step per frame. Unit-tested in test_aos_object2b.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object2BCreate`, `aos:asm:asm/code/code_08050A3C.s:Object2BUpdate`, `aos:asm:asm/code/code_08050A3C.s:sub_08058554`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803B9D0`, `aos:c:src/code/code_08039340.c:sub_0803CC70`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`.  
+Local implementation: [`src/runtime/aos/game/aos_object2b.c`](../src/runtime/aos/game/aos_object2b.c), [`src/runtime/aos/game/aos_object2b.h`](../src/runtime/aos/game/aos_object2b.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object2b.c`](../tests/test_aos_object2b.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The sub_0803B800 tile decompress, the sub_08068264 palette slot resolution, the sub_0803CC70 0x08526618 table pick, the sub_0803B924 frame attach and the sub_0803F2C8 preset are covered by the exported special_43 art; the sub_0803F17C step is counted rather than resolving frame indices against the exported sequences; the load-failure EntityDelete path is not modelled; and there is no emulator comparison.  
+Next action: Map the sub_0803F17C step onto the exported special_43 animation indices.
 
 [~] **`aos.objects.breakable_prop` — Object0E breakable prop variants.** Object0ECreate (0x08050C14) indexes the 15-record 0x085262BC config table by param0: byte 0 selects the 0x08526214 resource triple (tiles/palette/frames, exported as special_14_v00-v14 with v14 the palette-bank-1 variant of resource 13), byte 1 feeds sub_0806E0D0, byte 2 the animation, bytes 3-7 the debris parameters and + 8 the attack preset through sub_080428F0; it loads through sub_0806E0D0, sets + 0x5C = 0x14, installs the sub_08050BA8 frame callback and the sub_08050D98 hurt callback (x-compare direction into + 0x48), ORs + 0x72 and + 0x59 bit 1, calls sub_0806AF98 when the u16 @ 6 is clear and deletes on load failure. Object0EUpdate (0x08050CC0) runs the (-0x20, ?, 0x120, 0x130) sub_08068AD4 probe (a miss sets + 0x58 bit 0x20 and ends the update), clears + 0x58 bits 0 and 5 in state 0, then sub_08050A3C releases the config's content children and sub_08045F9C with the 0x08526370[param1] byte pair confirms the hit: PlaySong 0xA2, + 0x58 bit 0x20, + 0xD = 0x28, state 1. State 1 emits the sub_0806D5C0 gore burst every fourth frame while + 0xD exceeds 0x1E and sets + 0x59 bit 3 on the u8 wrap. Unit-tested in test_aos_object0e.
 

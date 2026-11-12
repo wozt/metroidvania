@@ -1,3 +1,22 @@
+## Patch 1052 - Aria Object2B plain animated sprite ported
+
+- `src/runtime/aos/game/aos_object2b.c` ports Object2BCreate
+  (0x08058508) and Object2BUpdate (0x08058544), the plain
+  animated sprite dispatched through sUnk_084F0ED8[43]; the
+  sprite attach stays under special_sprites and its art is
+  newly exported as special_43 (tiles 0x081CBEDC, palette
+  0x0820A1C4 bank 1, frames 0x0821154C).
+- Create reproduces the resource triple, the sub_0803CC70
+  0x08526618 table pick, the sub_0803F2C8(1, 0, 1) preset, the
+  create-time animation step and the + 0x5C = 0x12 mark.
+- Update is the single sub_0803F17C animation step per frame.
+- Runtime wiring: SPECIAL id 43 spawns on the camera window.
+- Divergences documented: the sub_0803F17C step is counted
+  rather than resolving frame indices, the load-failure delete
+  is unmodelled.
+- Tests: `tests/test_aos_object2b.c` covers the create step
+  and the per-frame increment.
+
 ## Patch 1051 - Aria Object27 spinning attack orb ported
 
 - `src/runtime/aos/game/aos_object27.c` ports Object27Create

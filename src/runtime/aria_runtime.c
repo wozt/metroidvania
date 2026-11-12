@@ -34,6 +34,7 @@
 #include "aos/game/aos_object16.h"
 #include "aos/game/aos_object24.h"
 #include "aos/game/aos_object27.h"
+#include "aos/game/aos_object2b.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -445,6 +446,7 @@ typedef struct {
     AosObject16 object16;   /* object 0x16: boss-intro zoom director */
     AosObject24 object24;   /* object 0x24: ambient flickering sprite */
     AosObject27 object27;   /* object 0x27: spinning attack orb */
+    AosObject2B object2b;   /* object 0x2B: plain animated sprite */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -5031,6 +5033,20 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             bool target_far = (uint16_t)(ssx - osx + 0x10) <= 0x70 &&
                               (uint16_t)(ssy - osy) <= 0x10;
             aos_object27_update(&e->object27, target_far);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 43) {
+            /* Object2BUpdate (sUnk_084F0ED8[43]; Object2BCreate's
+             * sprite attach stays under special_sprites, art
+             * exported as special_43): a plain animated sprite —
+             * one sub_0803F17C step per frame. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object2b_create(&e->object2b);
+                continue;
+            }
+            aos_object2b_update(&e->object2b);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {

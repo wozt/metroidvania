@@ -24,6 +24,7 @@
 #include "aos/game/aos_object0c.h"
 #include "aos/game/aos_object0f.h"
 #include "aos/game/aos_object0d.h"
+#include "aos/game/aos_object0e.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -425,6 +426,7 @@ typedef struct {
     AosObject0c object0c;   /* object 0x0C: room-region triggers */
     AosObject0f object0f;   /* object 0x0F: destructible prop */
     AosObject0d object0d;   /* object 0x0D: swinging object */
+    AosObject0e object0e;   /* object 0x0E: breakable prop variants */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4728,6 +4730,54 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 14) {
+            /* Object0ECreate / Object0EUpdate (sUnk_084F0DF8[14] /
+             * sUnk_084F0ED8[14]): the multi-variant breakable prop.
+             * The sub_08068AD4 probe and the sub_08045F9C hit test
+             * become the same window/overlap approximations Object0F
+             * uses; the sub_08050A3C content children and the
+             * sub_0806D5C0 gore burst are counted, not spawned. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object0e_create(&e->object0e, e->param0, e->param1,
+                                    &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            if (e->object0e.finished) continue;
+            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            bool near = (uint16_t)(ssx - osx + 0x20) <= 0x120 &&
+                        (uint16_t)(ssy - osy) <= 0x130;
+            int wx, wy, ww, wh;
+            bool hit = combat->weapon && combat->weapon_frames &&
+                       aos_weapon_hitbox(combat->weapon, soma,
+                                         combat->weapon_frames,
+                                         &wx, &wy, &ww, &wh) &&
+                       ww > 1 && wh > 1 &&
+                       !(wx + ww - 1 < e->x - 8 || e->x + 8 < wx ||
+                         wy + wh - 1 < e->y - 16 || e->y < wy);
+            aos_object0e_update(&e->object0e, near, hit,
+                                ((int32_t)e->x) << 16,
+                                ((int32_t)e->y) << 16);
+            if (e->object0e.song >= 0) {
+                sound = e->object0e.song;
+                printf("Object0E %zu: song 0x%X\n", i, e->object0e.song);
+            }
+            for (int fx = 0; fx < e->object0e.content_fx +
+                 e->object0e.gore_fx && room->effect_count < MAX_EFFECTS;
+                 fx++) {
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = true,
+                    .x = e->x, .y = e->y - 8};
+            }
+            e->object0e.content_fx = 0;
+            e->object0e.gore_fx = 0;
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {
             /* Object02Create / Object02Update (sUnk_084F0DF8[2] /
              * sUnk_084F0ED8[2]): the cutscene director. Screen pixels
@@ -6070,6 +6120,7 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (e->id == 2 && e->object02.deleted) continue;
         if (e->id == 4 && e->object04.deleted) continue;
         if (e->id == 15 && e->object0f.finished) continue;
+        if (e->id == 14 && e->object0e.finished) continue;
         if (e->id == 1) {
             /* Object01's children are the sprites: draw the exported
              * still at each record coordinate (room pixels). */
@@ -6140,6 +6191,9 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (e->id == 15) {
             variant_key = e->param0 >> 8;
             if (!variant_key) variant_key = 7;
+        } else if (e->id == 14 && variant_key > 14) {
+            /* Object0E's 15 config records map onto special_14_v00-v14. */
+            variant_key = 14;
         }
         for (int v = 0; v < 24; ++v)
             if (objects->special_variants[v].id == e->id &&

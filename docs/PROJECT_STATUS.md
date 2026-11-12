@@ -1,3 +1,32 @@
+## Patch 1042 - Aria Object0E breakable prop variants ported
+
+- `src/runtime/aos/game/aos_object0e.c` ports Object0ECreate
+  (0x08050C14) and Object0EUpdate (0x08050CC0), the multi-variant
+  breakable prop dispatched through sUnk_084F0DF8[14] /
+  sUnk_084F0ED8[14]; its fifteen resource sets were already
+  exported as special_14_v00-v14.
+- Create indexes the 15-record 0x085262BC config table by param0:
+  byte 0 selects the 0x08526214 resource triple, byte 1 the
+  palette hint, byte 2 the animation and bytes 3-7 the debris
+  parameters; the + 0x5C/+ 0x72/+ 0x59 marks, the sub_08050BA8
+  frame callback and the sub_08050D98 hurt callback are native
+  setup covered by the exported art.
+- Update reproduces the sub_08068AD4 probe miss (+ 0x58 bit 0x20),
+  the state-0 hit (sub_08050A3C content release counted as
+  `content_fx`, PlaySong 0xA2, + 0xD = 0x28, state 1) and the
+  state-1 sub_0806D5C0 gore cadence (every fourth frame above
+  0x1E, counted as `gore_fx`) ending on the u8 wrap.
+- Runtime wiring: SPECIAL id 14 spawns on the camera window, the
+  probe/hit reuse the Object0F approximations, the content and
+  gore counts emit sparkles and a finished prop is skipped at
+  draw; the draw picks special_14_vNN by param0 clamped to 14.
+- Divergences documented: content children and gore positions are
+  approximated by effect counts, the sub_08050BA8 palette swap
+  and the cfg + 8 attack preset are not ported.
+- Tests: `tests/test_aos_object0e.c` covers the config/variant
+  mapping, the probe miss, the hit sequence, the gore cadence and
+  the timer wrap.
+
 ## Patch 1041 - Aria Object0D swinging object ported
 
 - `src/runtime/aos/game/aos_object0d.c` ports Object0DCreate

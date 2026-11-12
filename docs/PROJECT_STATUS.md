@@ -1,3 +1,33 @@
+## Patch 1035 - Aria Object06 cinematic trigger ported
+
+- `src/runtime/aos/game/aos_object06.c` ports Object06Create
+  (0x0804EC3C) and Object06Update (0x0804ED30), the cinematic trigger
+  dispatched through sUnk_084F0DF8[6] / sUnk_084F0ED8[6].
+- Create near branch fires on EITHER the 0x38 x 0x22 probe around
+  (soma_x - 0x1C, soma_y) OR gEwramData + 0x37E bit 2: timer 0x30,
+  state 0xA, SetPlayerInput(1, 0). Far seals the three-block column
+  and picks 0x14/0x63/0 for param0 1/3.
+- Update keeps the + 0x58 off-screen bit (bit 0x40 = right half of
+  the screen picks the forced direction 0x20 vs 0x10) and runs:
+  state 0 particle idle (sub_08045CEC drift on odd + 0xD frames,
+  sub_08045B44 burst every frame, both jittered through
+  sub_0802D5EC) plus the probe trigger — song 0x111, fades and the
+  + 0x131D4..+ 0x131DC snapshot reduced to a `triggered` flag; state
+  1 forced walk with the + 0xD countdown into state 2; state 2 column
+  clear at timer 0, + 0x42C &= ~0x101 release at 0x30 and the
+  state-3 advance gated on the + 0x4CC bit 6 cinematic flag (passed
+  false — not modelled yet); state 3 unconditional force.
+- Runtime wiring: SPECIAL id 6 entities spawn on the camera window,
+  feed input->held, play song 0x111 and emit sparkle effects for the
+  particle requests.
+- Documented divergences: + 0x4CC cinematic flag, snapshot/fade
+  globals, particle kinds approximated by AOS_EFFECT_SPARKLE, fixed-
+  point anchor approximated by the room position.
+- Tests: `tests/test_aos_object06.c` covers both create gates, the
+  param0 entry states, the bit-0 early exit, particle cadence,
+  the soma + 0x10 bit 0x80 suppression, the trigger, the state-1
+  countdown and the cinematic-gated release.
+
 ## Patch 1034 - Aria Object05 proximity trigger ported
 
 - `src/runtime/aos/game/aos_object05.c` ports Object05Create

@@ -18,6 +18,7 @@
 #include "aos/game/aos_object02.h"
 #include "aos/game/aos_object04.h"
 #include "aos/game/aos_object05.h"
+#include "aos/game/aos_object06.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -413,6 +414,7 @@ typedef struct {
     AosObject01 object01;   /* object 0x01: conditional static children */
     AosObject04 object04;   /* object 0x04: directional cutscene director */
     AosObject05 object05;   /* object 0x05: proximity trigger */
+    AosObject06 object06;   /* object 0x06: cinematic trigger */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4531,6 +4533,45 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 sound = e->object05.song;
                 printf("Object05 %zu: song 0x%X\n", i, e->object05.song);
             }
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 6) {
+            /* Object06Create / Object06Update: the cinematic trigger —
+             * state-0 particle idle, the 0x111 song + snapshot on the
+             * probe, then the forced-walk release gated on the + 0x4CC
+             * bit 6 cinematic flag (not modelled: passed false). */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                int32_t sx = e->x - cam_x, sy = e->y - cam_y;
+                int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+                int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+                aos_object06_create(&e->object06, layer, e->param0,
+                                    e->param1, aria_pickup_state.special,
+                                    sx, sy, ssx, ssy, e->x, e->y);
+                continue;
+            }
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            aos_object06_update(&e->object06, layer, cam_x, cam_y,
+                                e->x, e->y, ssx, ssy,
+                                (uint16_t)soma->flags,
+                                aria_pickup_state.special, false, aos_random);
+            if (e->object06.force_zero || e->object06.forced) {
+                input->active = true;
+                input->held = e->object06.forced;
+            }
+            if (e->object06.song >= 0) {
+                sound = e->object06.song;
+                printf("Object06 %zu: song 0x%X\n", i, e->object06.song);
+            }
+            if ((e->object06.fx_drift || e->object06.fx_burst) &&
+                room->effect_count < MAX_EFFECTS)
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = true,
+                    .x = e->object06.fx_x << 16,
+                    .y = e->object06.fx_y << 16,
+                    .vy = -0x1000};
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {

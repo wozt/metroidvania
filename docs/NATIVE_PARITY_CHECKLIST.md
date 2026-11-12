@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 146 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 147 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1899 | 1674 |
+| Castlevania: Aria of Sorrow | 1901 | 1672 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2416,6 +2416,15 @@ Tests: [`tests/test_aos_door.c`](../tests/test_aos_door.c), [`tests/test_native_
 Known divergences: The cleanup state 0x63 (entered when + 0x59 bit 2 is clear; its setter is not traced) is not modelled. Door state now synchronizes gEwramData + 0x42C bits 0x101 for the pickup path and yellow-soul hold check; other readers and + 0xA074 bit 1 are not modelled; sounds 0x114 / 0x115 are reported, not played. Other door kinds are separate objects outside this entry.  
 Next action: Trace the setter of + 0x59 bit 2 to model the cleanup state 0x63.
 Evidence: in game: `aria area_00_room_016: walking right from (1200, 150) the door at x 1272 opens (frame 40), Soma walks through (frame 110) and arrives in room 0/28 (frame 150)`.
+
+[~] **`aos.objects.cinematic_trigger` — Object06 cinematic trigger.** Object06Create (0x0804EC3C) near branch fires on the 0x38 x 0x22 probe OR the + 0x37E bit 2, locking state 0xA with SetPlayerInput(1, 0); far seals the column and picks 0x14/0x63/0. Object06Update (0x0804ED30) keeps the + 0x58 off-screen bit (bit 0x40 = right half picks the forced direction), runs the state-0 particle idle and probe trigger (song 0x111, fades, snapshot), the state-1 forced walk with the + 0xD countdown, the state-2 column clear and + 0x42C release gated on the cinematic flag, and the state-3 unconditional force. Unit-tested in aos_object06.
+
+Native evidence: `aos:asm:asm/code/code_080211F0.s:sub_0802D5EC`, `aos:asm:asm/code/code_08040A38.s:Object06Create`, `aos:asm:asm/code/code_08040A38.s:Object06Update`, `aos:asm:asm/code/code_08040A38.s:sub_08045B44`, `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08040A38.s:sub_0804DF3C`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:c:src/code_080009A0.c:SetPlayerInput`, `aos:c:src/code_08001194.c:sub_08002200`, `aos:c:src/code_08001194.c:sub_08002248`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/game/aos_object06.c`](../src/runtime/aos/game/aos_object06.c), [`src/runtime/aos/game/aos_object06.h`](../src/runtime/aos/game/aos_object06.h), [`src/runtime/aos/core/aos_collision.c`](../src/runtime/aos/core/aos_collision.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object06.c`](../tests/test_aos_object06.c).
+Dependencies: `aos.objects.proximity_trigger`.  
+Known divergences: The + 0x4CC bit 6 cinematic flag is not modelled (state 2 forces input and advances to 3 only while it holds), the + 0x131D4..+ 0x131DC snapshot writes and sub_08021248 are reduced to a triggered flag, the sub_0803D18C/sub_0803CDF0 fades and the sub_0803D408/sub_0803D270/sub_0803CED4 idle bookkeeping are skipped, the + 0x12C70 fade counter is unread, particle kinds 0x10/5 and 5/7 are approximated by AOS_EFFECT_SPARKLE and the entity fixed-point position uses the room anchor.  
+Next action: Model the + 0x4CC cinematic flag and the + 0x131D4 snapshot consumers, then compare a scripted scene against an emulator.
 
 [~] **`aos.objects.cutscene_director` — Object02 cutscene director (solid block column, forced walk, release).** Object02Create (0x0804DFAC) one-shots param0 <= 1 objects whose + 0x37E event bit (param1 index) already fired, picks anim 6 (9 when param1 == 7) and facing from screen x > 0x78. A near spawn (the sub_08068AD4 0x38 x 0x22 probe around soma x - 0x1C) starts state 0xA locked with SetPlayerInput(1, 0) and the conditional + 0x48/+ 0x50 clear; an outside spawn seals three 16x16 blocks at the anchor y - 8/-0x18/-0x28 through sub_08002200 and picks state 0x14/0x63/0 for param0 1/3/else. Object02Update (0x0804E0F8) tracks the + 0x58 off-screen bit, runs the state-0 block cycle (cleared while the horizontal 0x28..0x4F window holds, re-sealed on the timer 1-2 edge, song 0x113 probes), the state-2/10 forced walk (0x20/0x10 by facing, + 0x42C hold bits), state 10 reseal-and-advance, state 11 release countdown to 0x14/0x63, state 20 event-bit wait and state 21 block clear. Unit-tested in aos_object02.
 

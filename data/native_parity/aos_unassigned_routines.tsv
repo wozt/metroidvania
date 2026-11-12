@@ -231,8 +231,6 @@ aos:asm:asm/code/code_08050A3C.s:Object34Create	Object34Create	environment	name	
 aos:asm:asm/code/code_08050A3C.s:Object34Update	Object34Update	environment	name			asm_function		asm/code/code_08050A3C.s	19113	0	1
 aos:asm:asm/code/code_08050A3C.s:Object35Create	Object35Create	environment	name			asm_function		asm/code/code_08050A3C.s	19183	0	7
 aos:asm:asm/code/code_08050A3C.s:Object35Update	Object35Update	environment	name			asm_function		asm/code/code_08050A3C.s	19675	0	2
-aos:asm:asm/code/code_08050A3C.s:Object36Create	Object36Create	environment	name			asm_function		asm/code/code_08050A3C.s	19839	0	1
-aos:asm:asm/code/code_08050A3C.s:Object36Update	Object36Update	environment	name			asm_function		asm/code/code_08050A3C.s	19798	0	1
 aos:asm:asm/code/code_08050A3C.s:Object37Create	Object37Create	environment	name			asm_function		asm/code/code_08050A3C.s	20163	0	6
 aos:asm:asm/code/code_08050A3C.s:Object37Update	Object37Update	environment	name			asm_function		asm/code/code_08050A3C.s	20765	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_08050F1C	sub_08050F1C	environment	referrers			asm_function	0x08050F1C	asm/code/code_08050A3C.s	628	0	5

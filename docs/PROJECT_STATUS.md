@@ -1,3 +1,21 @@
+## Patch 1061 - Aria Object36 metal gate BG scroller ported
+
+- `src/runtime/aos/game/aos_object36.c` ports Object36Create
+  (0x0805A6C8) / Object36Update (0x0805A678), dispatch index
+  54: the metal gate and button — a sprite-less BG-affine
+  scroller. Create reads the dumped 0x081186A4 table (nine
+  {s16 a, s16 b} records) through the + 0x30 param into
+  + 0x18/+ 0x1A/+ 0x1C and registers the gEwramData + 0x1316C
+  singleton slot via sub_08022088 (approximated as always
+  free).
+- Update reproduces the BgAffineSet parameter block on layer
+  0x1A ({u32 0x8000 x2, + 0x42, + 0x46, + 0x1C x2,
+  low16(+ 0x14)}) and the + 0x14 += + 0x1A advance; the block
+  has no runtime consumer yet, like Object16's zoom.
+- Tests: `tests/test_aos_object36.c` covers the record table,
+  the affine block layout, the pos/speed advance and the
+  busy-slot report.
+
 ## Patch 1060 - Aria Object23 and Object2F objects ported
 
 - `src/runtime/aos/game/aos_object23.c` ports Object23Create

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 171 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 172 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2006 | 1567 |
+| Castlevania: Aria of Sorrow | 2008 | 1565 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2515,6 +2515,15 @@ Tests: [`tests/test_aos_object03.c`](../tests/test_aos_object03.c).
 Dependencies: `aos.objects.cinematic_trigger`.  
 Known divergences: The + 0x13220 escort-busy word, the + 0x4CC bit 6 cinematic flag and the + 0x13114/+ 0x13118 partner entities are not modelled — the runtime passes cinematic false so state 0 takes the direct state-0 -> 2 path; the winOut blend and the sub_0804DF3C sprite attach are approximated by the exported art; states 4+ are native no-ops.  
 Next action: Model the + 0x13220/+ 0x13114/+ 0x13118 escort entities and the + 0x4CC cinematic flag, then compare a scripted escort scene against an emulator.
+
+[~] **`aos.objects.metal_gate` — Object36 metal gate and button BG scroller.** Object36Create (0x0805A6C8) sets + 0x72 bits 1-2 and + 0x58 bit 0x20, reads the + 0x30 s16 param as a 4-byte index into the dumped 0x081186A4 table (nine {s16 a, s16 b} records: + 0x18 = a / 2, + 0x1A = b, + 0x1C = 0x200 - a * 2) and calls sub_08022088(ent, 0x0811868C), which stores the entity in the gEwramData + 0x1316C singleton and the callback table at + 0x10. Object36Update (0x0805A678) queues a BgAffineSet block on layer 0x1A ({u32 0x8000, u32 0x8000, + 0x42, + 0x46, + 0x1C, + 0x1C, low16(+ 0x14)}) then advances the 32-bit + 0x14 by the s16 + 0x1A.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object36Create`, `aos:asm:asm/code/code_08050A3C.s:Object36Update`, `aos:asm:asm/libagbsyscall.s:BgAffineSet`, `aos:c:src/code/code_080211F0.c:sub_08022088`, `aos:c:src/code_080009A0.c:EntityDelete`.  
+Local implementation: [`src/runtime/aos/game/aos_object36.c`](../src/runtime/aos/game/aos_object36.c), [`src/runtime/aos/game/aos_object36.h`](../src/runtime/aos/game/aos_object36.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object36.c`](../tests/test_aos_object36.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The BgAffineSet block has no runtime consumer (like Object16's zoom), the + 0x1316C singleton slot and its five-function callback table at 0x0811868C are not modelled so nothing writes + 0x14/+ 0x1A after create, the + 0x42/+ 0x46 anchors keep their zero defaults, and the + 0x72/+ 0x58 marks are not modelled.  
+Next action: Port the + 0x1316C slot consumer and the 0x0811868C callback table (the button side) so + 0x14/+ 0x1A get driven, then wire the affine block to a BG layer.
 
 [~] **`aos.objects.one_shot_breakable` — Object2E one-shot breakable prop.** Object2ECreate (0x08058A70) resolves tiles 0x081CBECC, palette sub_08068264(0x0820A100, 5), frames 0x0821137C (exported as special_46), presets sub_0803F2C8(0, 0, 1), steps the animation, sets + 0x5C = 0x12 and marks + 0x58 bit 0x20. Object2EUpdate (0x08058AB8) runs sub_08058B1C while + 0xA == 0: the first probe hit latches + 0xB = 1, spawns three sub_080589A4 children at (-0x50000, 0), (0, -0x60000) and (0, 0x50000) and plays song 0x78. Unit-tested in test_aos_object2e.
 

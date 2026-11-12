@@ -42,6 +42,7 @@
 #include "aos/game/aos_object2d.h"
 #include "aos/game/aos_object2e.h"
 #include "aos/game/aos_object2f.h"
+#include "aos/game/aos_object36.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -458,6 +459,7 @@ typedef struct {
     AosObject2A object2a;   /* object 0x2A: screen-space oscillator */
     AosObject2B object2b;   /* object 0x2B: plain animated sprite */
     AosObject2F object2f;   /* object 0x2F: skull-eye flame jets */
+    AosObject36 object36;   /* object 0x36: metal gate BG scroller */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
     AosObject2D object2d;   /* object 0x2D: proximity attack sprite */
     AosObject2E object2e;   /* object 0x2E: one-shot breakable prop */
@@ -5291,6 +5293,26 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (e->object2f.deleted) continue;
             aos_object2f_update(&e->object2f,
                                 (input->held & AOS_KEY_R) != 0);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 54) {
+            /* Object36Create / Object36Update (sUnk_084F0DF8[54] /
+             * sUnk_084F0ED8[54]): the metal gate and button — a
+             * BG-affine scroller with no sprite. Create reads the
+             * 0x081186A4 record by the + 0x30 param and registers
+             * the + 0x1316C singleton slot (approximated as always
+             * free); update queues the BgAffineSet block and
+             * advances + 0x14 by + 0x1A. The block is consumed
+             * nowhere yet, like Object16's zoom. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object36_create(&e->object36, (int16_t)e->param0,
+                                    false);
+                continue;
+            }
+            uint16_t block[9];
+            aos_object36_update(&e->object36, block);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 40) {

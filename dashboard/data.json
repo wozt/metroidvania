@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T17:25:33+00:00",
+ "generated_at": "2026-11-12T17:42:01+00:00",
  "git": {
-  "commit": "a54c3a07",
+  "commit": "e149777a",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 316,
+   "total": 317,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 85,
+    "partial": 86,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 69.9,
-   "with_passing_tests": 303,
+   "functional_or_better_percent": 69.7,
+   "with_passing_tests": 304,
    "with_passing_tests_percent": 95.9,
    "unknown_or_blocked": 1,
    "features": [
@@ -340,6 +340,7 @@
     "aos.objects.escort_director",
     "aos.objects.flickering_sprite",
     "aos.objects.intro_zoom_director",
+    "aos.objects.metal_gate",
     "aos.objects.one_shot_breakable",
     "aos.objects.parametric_sprite",
     "aos.objects.patrol_mover",
@@ -550,11 +551,11 @@
    "areas": [
     "aos"
    ],
-   "total": 171,
+   "total": 172,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 57,
+    "partial": 58,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -562,8 +563,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 66.7,
-   "with_passing_tests": 171,
+   "functional_or_better_percent": 66.3,
+   "with_passing_tests": 172,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -706,6 +707,7 @@
     "aos.objects.escort_director",
     "aos.objects.flickering_sprite",
     "aos.objects.intro_zoom_director",
+    "aos.objects.metal_gate",
     "aos.objects.one_shot_breakable",
     "aos.objects.parametric_sprite",
     "aos.objects.patrol_mover",
@@ -21854,6 +21856,63 @@
    }
   },
   {
+   "id": "aos.objects.metal_gate",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object36 metal gate and button BG scroller",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object36.c",
+    "src/runtime/aos/game/aos_object36.h",
+    "src/runtime/aria_runtime.c"
+   ],
+   "tests": [
+    "tests/test_aos_object36.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object36Create",
+    "Object36Update",
+    "sub_08022088",
+    "BgAffineSet",
+    "EntityDelete"
+   ],
+   "limitations": "The BgAffineSet block has no runtime consumer (like Object16's zoom), the + 0x1316C singleton slot and its five-function callback table at 0x0811868C are not modelled so nothing writes + 0x14/+ 0x1A after create, the + 0x42/+ 0x46 anchors keep their zero defaults, and the + 0x72/+ 0x58 marks are not modelled. Object36Create (0x0805A6C8) sets + 0x72 bits 1-2 and + 0x58 bit 0x20, reads the + 0x30 s16 param as a 4-byte index into the dumped 0x081186A4 table (nine {s16 a, s16 b} records: + 0x18 = a / 2, + 0x1A = b, + 0x1C = 0x200 - a * 2) and calls sub_08022088(ent, 0x0811868C), which stores the entity in the gEwramData + 0x1316C singleton and the callback table at + 0x10. Object36Update (0x0805A678) queues a BgAffineSet block on layer 0x1A ({u32 0x8000, u32 0x8000, + 0x42, + 0x46, + 0x1C, + 0x1C, low16(+ 0x14)}) then advances the 32-bit + 0x14 by the s16 + 0x1A.",
+   "next_action": "Port the + 0x1316C slot consumer and the 0x0811868C callback table (the button side) so + 0x14/+ 0x1A get driven, then wire the affine block to a BG layer.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object36.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object36.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object36"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.one_shot_breakable",
    "area": "aos",
    "category": "environment",
@@ -30253,6 +30312,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object36",
+    "files": [
+     "tests/test_aos_object36.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_weapon",
     "files": [
      "tests/test_aos_weapon.c"
@@ -30338,12 +30404,18 @@
    }
   ],
   "summary": {
-   "passed": 191,
+   "passed": 192,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "e149777a",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object23 and Object2F objects",
+   "scope": "project"
+  },
   {
    "commit": "a54c3a07",
    "date": "2026-11-12",
@@ -30817,12 +30889,6 @@
    "date": "2026-11-10",
    "subject": "Port Quezlcoatl (Aria of Sorrow enemy id 0x1A)",
    "scope": "project"
-  },
-  {
-   "commit": "d074c44e",
-   "date": "2026-11-10",
-   "subject": "Port the Devil family (Aria of Sorrow enemy ids 0x30/0x48/0x66/0x68)",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -30883,9 +30949,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 2006,
-    "routines_attached_to_features": 2006,
-    "unassigned_routines": 1567,
+    "routines_cited_by_features": 2008,
+    "routines_attached_to_features": 2008,
+    "unassigned_routines": 1565,
     "call_edges": 14228
    }
   },

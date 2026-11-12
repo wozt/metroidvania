@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 169 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 171 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2000 | 1573 |
+| Castlevania: Aria of Sorrow | 2006 | 1567 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2435,6 +2435,15 @@ Dependencies: `aos.objects.special_sprites`.
 Known divergences: The sub_0803B800 tile decompress, the sub_08068264 palette slot resolution, the sub_0803CC70 0x08526618 table pick, the sub_0803B924 frame attach and the sub_0803F2C8 preset are covered by the exported special_43 art; the sub_0803F17C step is counted rather than resolving frame indices against the exported sequences; the load-failure EntityDelete path is not modelled; and there is no emulator comparison.  
 Next action: Map the sub_0803F17C step onto the exported special_43 animation indices.
 
+[~] **`aos.objects.arena_dpad_puzzle` — Object23 arena D-pad puzzle sprite.** Object23Create (0x0805780C) loads the sprite through sub_08057858 (tiles 0x081CBE94, palette slot sub_08068264(0x08209FD8, 3), frames 0x082107EC = special_35), deletes on load failure, presets sub_0803F2C8(1, 0, 1), steps once, sets + 0x5C = 0x14, + 0x5A = (+ 0x5A & ~0x06) or 0x02 and + 0xA = 0. Object23Update (0x080577FC) is a single sub_0803F17C step per frame.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object23Create`, `aos:asm:asm/code/code_08050A3C.s:Object23Update`, `aos:asm:asm/code/code_08050A3C.s:sub_08057858`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803B9D0`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`.  
+Local implementation: [`src/runtime/aos/game/aos_object23.c`](../src/runtime/aos/game/aos_object23.c), [`src/runtime/aos/game/aos_object23.h`](../src/runtime/aos/game/aos_object23.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object23.c`](../tests/test_aos_object23.c).
+Dependencies: `aos.objects.animated_sprite`, `aos.objects.special_sprites`.  
+Known divergences: Object23Update is only the sub_0803F17C animation step; any D-pad puzzle mechanism is not evidenced in the update routine and the + 0x5A mark merge and + 0x5C/+ 0xA fields are not modelled.  
+Next action: Check whether the arena D-pad puzzle mechanism lives in another routine (the update carries no state machine).
+
 [~] **`aos.objects.breakable_prop` — Object0E breakable prop variants.** Object0ECreate (0x08050C14) indexes the 15-record 0x085262BC config table by param0: byte 0 selects the 0x08526214 resource triple (tiles/palette/frames, exported as special_14_v00-v14 with v14 the palette-bank-1 variant of resource 13), byte 1 feeds sub_0806E0D0, byte 2 the animation, bytes 3-7 the debris parameters and + 8 the attack preset through sub_080428F0; it loads through sub_0806E0D0, sets + 0x5C = 0x14, installs the sub_08050BA8 frame callback and the sub_08050D98 hurt callback (x-compare direction into + 0x48), ORs + 0x72 and + 0x59 bit 1, calls sub_0806AF98 when the u16 @ 6 is clear and deletes on load failure. Object0EUpdate (0x08050CC0) runs the (-0x20, ?, 0x120, 0x130) sub_08068AD4 probe (a miss sets + 0x58 bit 0x20 and ends the update), clears + 0x58 bits 0 and 5 in state 0, then sub_08050A3C releases the config's content children and sub_08045F9C with the 0x08526370[param1] byte pair confirms the hit: PlaySong 0xA2, + 0x58 bit 0x20, + 0xD = 0x28, state 1. State 1 emits the sub_0806D5C0 gore burst every fourth frame while + 0xD exceeds 0x1E and sets + 0x59 bit 3 on the u8 wrap. Unit-tested in test_aos_object0e.
 
 Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_0804277C`, `aos:asm:asm/code/code_08040A38.s:sub_080428F0`, `aos:asm:asm/code/code_08040A38.s:sub_08045F9C`, `aos:asm:asm/code/code_08050A3C.s:Object0ECreate`, `aos:asm:asm/code/code_08050A3C.s:Object0EUpdate`, `aos:asm:asm/code/code_08050A3C.s:sub_08050A3C`, `aos:asm:asm/code/code_08050A3C.s:sub_08050BA8`, `aos:asm:asm/code/code_08050A3C.s:sub_08050D98`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:asm:asm/code/code_08060B98.s:sub_0806E0D0`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080D73B8.c:PlaySong`.  
@@ -2587,6 +2596,15 @@ Tests: [`tests/test_aos_object2a.c`](../tests/test_aos_object2a.c).
 Dependencies: `aos.objects.special_sprites`.  
 Known divergences: The bgInfo[1] scroll frame (gEwramData + 0xA094 xPos/yPos) is approximated by the logic camera so the screen-locking only tracks the main view, the + 0x13190 focus slot compare is approximated by a player-near window counting sub_0802138C calls, the sub_080421AC armed-slot read is approximated by a weapon hitbox overlap against a small box at the draw position, the sub_080428B4/sub_08042848 attack and hurt records (the 0x08118640 five-word stack copy indexed by param1 * 4) and the sub_0804277C(8) attack preset are exposed as the hitbox_word field but not attached to the combat system, the sub_080577DC draw-position swap and the sub_0803F2C8 preset argument are not applied to the exported animation, param1 outside 0-3 marks the object invalid where the native create would EntityDelete, and there is no emulator comparison.  
 Next action: Attach the 0x08118640 attack records to the combat system and identify the bgInfo[1] scroll consumer difference versus the logic camera once a room uses id 42.
+
+[~] **`aos.objects.skull_eye_flames` — Object2F skull-eye flame jets.** Object2FCreate (0x08058C1C) deletes the entity when the + 0x37E bitfield bit 2 is set, loads the sprite through sub_08058CF8 (tiles 0x081CBEEC, palette slot sub_08068264(0x0820A1C4, 9), frames 0x08211844 = special_47), presets sub_0803F2C8(6, 0, 1), rolls + 0x6F = rng % 6, sets + 0x5C = 0x1A, clears + 0x59 bit 1, sets + 0x58 bit 0x20 and + 0xA = 0; the + 0x30 s16 param indexes the 0x08118650 table (x {0x30, 0x78, 0xA8}, y {0x38, 0x48, 0x30}) into + 0x42/+ 0x46. Object2FUpdate (0x08058CD8) runs sub_08058D44 while + 0xA == 0 then sub_0803F17C: while + 0xB == 0 and the + 0x42C bit-0x1000 trigger is set, + 0xB latches and + 0x58 bit 0x20 clears.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object2FCreate`, `aos:asm:asm/code/code_08050A3C.s:Object2FUpdate`, `aos:asm:asm/code/code_08050A3C.s:sub_08058CF8`, `aos:asm:asm/code/code_08050A3C.s:sub_08058D44`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803B9D0`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:EntityDelete`.  
+Local implementation: [`src/runtime/aos/game/aos_object2f.c`](../src/runtime/aos/game/aos_object2f.c), [`src/runtime/aos/game/aos_object2f.h`](../src/runtime/aos/game/aos_object2f.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object2f.c`](../tests/test_aos_object2f.c).
+Dependencies: `aos.objects.animated_sprite`, `aos.objects.special_sprites`.  
+Known divergences: The + 0x42C bit-0x1000 trigger is approximated by R held (the keys<<4 mapping is inferred from the + 0x400-Up precedent), the + 0x58 bit-0x20 mark has no verified draw consumer, the + 0x6F rng % 6 roll and the + 0x5C/+ 0x59/+ 0xA marks are not modelled, and the 0x08118650 anchor table clamps out-of-range params to variant 0.  
+Next action: Verify the + 0x42C bit-0x1000 source (R held vs an event write) and the + 0x58 bit-0x20 draw consumer in game.
 
 [~] **`aos.objects.special_sprites` — SPECIAL room object sprites (ids 13,16,19,20,21,23,24,25,27).** sub_0806E0D0(entity, gfx, palette, bank, frames) is decoded: most ObjectXXCreate functions pass hard-coded sprite resources while entity + 0x30/+ 0x32 carry the room record's param0/param1 and select behaviour through per-object state tables (Object14Update indexes 0x08526408 by param0). The nine resource triplets were extracted from the create functions and exported as Object/special_NN/anim_M sequences with metadata/object_frames.tsv (metroidvania-aos-object-frames-v1); empty native animations are skipped. The runtime loads the object index into special_objects[64] and draws each spawned SPECIAL entity. Source-derived and unit-tested, not emulator-compared. Object1A and Object1E dispatch entries are verified bx lr no-ops in both directions; Object1DUpdate and Object23Update run only the shared sub_0803F17C animation step.
 

@@ -38,8 +38,10 @@
 #include "aos/game/aos_object27.h"
 #include "aos/game/aos_object2a.h"
 #include "aos/game/aos_object2b.h"
+#include "aos/game/aos_object23.h"
 #include "aos/game/aos_object2d.h"
 #include "aos/game/aos_object2e.h"
+#include "aos/game/aos_object2f.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -455,6 +457,8 @@ typedef struct {
     AosObject27 object27;   /* object 0x27: spinning attack orb */
     AosObject2A object2a;   /* object 0x2A: screen-space oscillator */
     AosObject2B object2b;   /* object 0x2B: plain animated sprite */
+    AosObject2F object2f;   /* object 0x2F: skull-eye flame jets */
+    AosObject23 object23;   /* object 0x23: plain animated sprite */
     AosObject2D object2d;   /* object 0x2D: proximity attack sprite */
     AosObject2E object2e;   /* object 0x2E: one-shot breakable prop */
     AosObject28 object28;   /* object 0x28: Object27 orb sibling */
@@ -5197,6 +5201,20 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             aos_object2b_update(&e->object2b);
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 35) {
+            /* Object23Update (sUnk_084F0ED8[35]; Object23Create's
+             * sprite attach stays under special_sprites, art
+             * exported as special_35): a plain animated sprite —
+             * one sub_0803F17C step per frame. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object23_create(&e->object23);
+                continue;
+            }
+            aos_object23_update(&e->object23);
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 45) {
             /* Object2DUpdate (sUnk_084F0ED8[45]; Object2DCreate's
              * sprite attach and child spawner sub_080589A4 stay
@@ -5251,6 +5269,28 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                         .kind = AOS_EFFECT_SPARK, .direct = false,
                         .x = e->x, .y = e->y};
             }
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 47) {
+            /* Object2FCreate / Object2FUpdate (sUnk_084F0DF8[47] /
+             * sUnk_084F0ED8[47]): the skull-eye flame jets. Create
+             * deletes on the + 0x37E bitfield bit 2
+             * (aria_pickup_state.special), picks the + 0x42/+ 0x46
+             * anchor from the 0x08118650 table by the + 0x30 param
+             * and arms the + 0x58 bit-0x20 mark. Update latches
+             * + 0xB and clears the mark on the + 0x42C bit-0x1000
+             * trigger — the keys<<4 word maps it to R held. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object2f_create(&e->object2f,
+                                    aria_pickup_state.special,
+                                    (int16_t)e->param0);
+                continue;
+            }
+            if (e->object2f.deleted) continue;
+            aos_object2f_update(&e->object2f,
+                                (input->held & AOS_KEY_R) != 0);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 40) {
@@ -6629,6 +6669,7 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (e->id == 15 && e->object0f.finished) continue;
         if (e->id == 14 && e->object0e.finished) continue;
         if (e->id == 19 && e->object13.deleted) continue;
+        if (e->id == 47 && e->object2f.deleted) continue;
         if (e->id == 36 && e->object24.hidden) continue;
         if (e->id == 1) {
             /* Object01's children are the sprites: draw the exported

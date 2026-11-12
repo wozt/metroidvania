@@ -1,3 +1,23 @@
+## Patch 1060 - Aria Object23 and Object2F objects ported
+
+- `src/runtime/aos/game/aos_object23.c` ports Object23Create
+  (0x0805780C) / Object23Update (0x080577FC), dispatch index
+  35: the arena D-pad puzzle sprite — tiles 0x081CBE94,
+  palette slot 3, frames 0x082107EC exported as special_35.
+  Update is a single sub_0803F17C animation step.
+- `src/runtime/aos/game/aos_object2f.c` ports Object2FCreate
+  (0x08058C1C) / Object2FUpdate (0x08058CD8) / sub_08058D44,
+  dispatch index 47: the skull-eye flame jets — tiles
+  0x081CBEEC, palette slot 9, frames 0x08211844 exported as
+  special_47. Create deletes on the + 0x37E bit-2 event and
+  picks the + 0x42/+ 0x46 anchor from the dumped 0x08118650
+  table by the + 0x30 param; update latches + 0xB and clears
+  the + 0x58 bit-0x20 mark on the + 0x42C bit-0x1000 trigger,
+  approximated by R held.
+- Tests: `tests/test_aos_object23.c` and
+  `tests/test_aos_object2f.c` cover the anim step, the
+  + 0x37E delete gate, the anchor table and the stop latch.
+
 ## Patch 1059 - Aria Object26 chandelier hub and orb children ported
 
 - `src/runtime/aos/game/aos_object26.c` ports Object26Create

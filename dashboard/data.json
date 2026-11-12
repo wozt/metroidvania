@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T17:07:24+00:00",
+ "generated_at": "2026-11-12T17:25:33+00:00",
  "git": {
-  "commit": "62924ac4",
+  "commit": "a54c3a07",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 314,
+   "total": 316,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 83,
+    "partial": 85,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 70.4,
-   "with_passing_tests": 301,
+   "functional_or_better_percent": 69.9,
+   "with_passing_tests": 303,
    "with_passing_tests_percent": 95.9,
    "unknown_or_blocked": 1,
    "features": [
@@ -329,6 +329,7 @@
     "aos.menus.text_window",
     "aos.objects.ambient_motes",
     "aos.objects.animated_sprite",
+    "aos.objects.arena_dpad_puzzle",
     "aos.objects.breakable_prop",
     "aos.objects.chandelier_hub",
     "aos.objects.cinematic_trigger",
@@ -348,6 +349,7 @@
     "aos.objects.save_point_remover",
     "aos.objects.save_statue",
     "aos.objects.screen_space_oscillator",
+    "aos.objects.skull_eye_flames",
     "aos.objects.special_sprites",
     "aos.objects.spin_synced",
     "aos.objects.spinning_attack_orb",
@@ -548,11 +550,11 @@
    "areas": [
     "aos"
    ],
-   "total": 169,
+   "total": 171,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 55,
+    "partial": 57,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -560,8 +562,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 67.5,
-   "with_passing_tests": 169,
+   "functional_or_better_percent": 66.7,
+   "with_passing_tests": 171,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -693,6 +695,7 @@
     "aos.menus.text_window",
     "aos.objects.ambient_motes",
     "aos.objects.animated_sprite",
+    "aos.objects.arena_dpad_puzzle",
     "aos.objects.breakable_prop",
     "aos.objects.chandelier_hub",
     "aos.objects.cinematic_trigger",
@@ -712,6 +715,7 @@
     "aos.objects.save_point_remover",
     "aos.objects.save_statue",
     "aos.objects.screen_space_oscillator",
+    "aos.objects.skull_eye_flames",
     "aos.objects.special_sprites",
     "aos.objects.spin_synced",
     "aos.objects.spinning_attack_orb",
@@ -21090,6 +21094,69 @@
    }
   },
   {
+   "id": "aos.objects.arena_dpad_puzzle",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object23 arena D-pad puzzle sprite",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object23.c",
+    "src/runtime/aos/game/aos_object23.h",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_object23.c"
+   ],
+   "dependencies": [
+    "aos.objects.animated_sprite",
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object23Create",
+    "Object23Update",
+    "sub_08057858",
+    "sub_0803B800",
+    "sub_08068264",
+    "sub_0803B924",
+    "sub_0803B9D0",
+    "sub_0803F2C8",
+    "sub_0803F17C"
+   ],
+   "limitations": "Object23Update is only the sub_0803F17C animation step; any D-pad puzzle mechanism is not evidenced in the update routine and the + 0x5A mark merge and + 0x5C/+ 0xA fields are not modelled. Object23Create (0x0805780C) loads the sprite through sub_08057858 (tiles 0x081CBE94, palette slot sub_08068264(0x08209FD8, 3), frames 0x082107EC = special_35), deletes on load failure, presets sub_0803F2C8(1, 0, 1), steps once, sets + 0x5C = 0x14, + 0x5A = (+ 0x5A & ~0x06) or 0x02 and + 0xA = 0. Object23Update (0x080577FC) is a single sub_0803F17C step per frame.",
+   "next_action": "Check whether the arena D-pad puzzle mechanism lives in another routine (the update carries no state machine).",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object23.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object23.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object23"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.breakable_prop",
    "area": "aos",
    "category": "environment",
@@ -22362,6 +22429,71 @@
       "registered": true,
       "ctest": [
        "aos_object2a"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
+   "id": "aos.objects.skull_eye_flames",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object2F skull-eye flame jets",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object2f.c",
+    "src/runtime/aos/game/aos_object2f.h",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_object2f.c"
+   ],
+   "dependencies": [
+    "aos.objects.animated_sprite",
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object2FCreate",
+    "Object2FUpdate",
+    "sub_08058CF8",
+    "sub_08058D44",
+    "sub_0803B800",
+    "sub_08068264",
+    "sub_0803B924",
+    "sub_0803B9D0",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "EntityDelete"
+   ],
+   "limitations": "The + 0x42C bit-0x1000 trigger is approximated by R held (the keys<<4 mapping is inferred from the + 0x400-Up precedent), the + 0x58 bit-0x20 mark has no verified draw consumer, the + 0x6F rng % 6 roll and the + 0x5C/+ 0x59/+ 0xA marks are not modelled, and the 0x08118650 anchor table clamps out-of-range params to variant 0. Object2FCreate (0x08058C1C) deletes the entity when the + 0x37E bitfield bit 2 is set, loads the sprite through sub_08058CF8 (tiles 0x081CBEEC, palette slot sub_08068264(0x0820A1C4, 9), frames 0x08211844 = special_47), presets sub_0803F2C8(6, 0, 1), rolls + 0x6F = rng % 6, sets + 0x5C = 0x1A, clears + 0x59 bit 1, sets + 0x58 bit 0x20 and + 0xA = 0; the + 0x30 s16 param indexes the 0x08118650 table (x {0x30, 0x78, 0xA8}, y {0x38, 0x48, 0x30}) into + 0x42/+ 0x46. Object2FUpdate (0x08058CD8) runs sub_08058D44 while + 0xA == 0 then sub_0803F17C: while + 0xB == 0 and the + 0x42C bit-0x1000 trigger is set, + 0xB latches and + 0x58 bit 0x20 clears.",
+   "next_action": "Verify the + 0x42C bit-0x1000 source (R held vs an event write) and the + 0x58 bit-0x20 draw consumer in game.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object2f.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object2f.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object2f"
       ],
       "outcome": "passed",
       "exists": true
@@ -30107,6 +30239,20 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object23",
+    "files": [
+     "tests/test_aos_object23.c"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "aos_object2f",
+    "files": [
+     "tests/test_aos_object2f.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_weapon",
     "files": [
      "tests/test_aos_weapon.c"
@@ -30192,12 +30338,18 @@
    }
   ],
   "summary": {
-   "passed": 189,
+   "passed": 191,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "a54c3a07",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object26 chandelier hub with linked orb children",
+   "scope": "project"
+  },
   {
    "commit": "62924ac4",
    "date": "2026-11-12",
@@ -30671,12 +30823,6 @@
    "date": "2026-11-10",
    "subject": "Port the Devil family (Aria of Sorrow enemy ids 0x30/0x48/0x66/0x68)",
    "scope": "project"
-  },
-  {
-   "commit": "c5c1490a",
-   "date": "2026-11-10",
-   "subject": "Port Triton (Aria of Sorrow enemy id 0x43)",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -30737,9 +30883,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 2000,
-    "routines_attached_to_features": 2000,
-    "unassigned_routines": 1573,
+    "routines_cited_by_features": 2006,
+    "routines_attached_to_features": 2006,
+    "unassigned_routines": 1567,
     "call_edges": 14228
    }
   },

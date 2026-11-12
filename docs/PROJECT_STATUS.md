@@ -1,3 +1,23 @@
+## Patch 1065 - Aria Object17 vertical pan director ported
+
+- `src/runtime/aos/game/aos_object17.c` ports Object17Update
+  (0x080532E8), dispatch index 23, paired with the
+  special_sprites-covered Object17Create (0x0805305C): the
+  +0xB floor band pick from the dumped 0x08118590 table
+  {0x80, 0x180, 0x280}, the +0x42/+0x46 placement through the
+  A094 room fields, the +0x59 bit-2 gate with the
+  sub_080220B4 slot clear, and the four-state machine —
+  probe/flag dwell, SetPlayerInput(1,0) locks, song 0x116,
+  the accelerating +0x44/+0x4C pan against table[+0xB], the
+  0x117 song, the sub_08011FC0 fade and the state-3 rest.
+- The nineteen type-0x49 children (one sub_0805366C anchor,
+  two sub_08052FDC twins, a 2x8 sub_0805360C grid) are counted
+  rather than spawned; the sprite art was already exported as
+  special_23.
+- Tests: `tests/test_aos_object17.c` covers the band pick,
+  the dwell gate, both pan directions, the ramp caps, the
+  arrival sequence and the slot-clear skip.
+
 ## Patch 1064 - Aria Object2C fountain ported
 
 - `src/runtime/aos/game/aos_object2c.c` ports Object2CCreate

@@ -47,6 +47,7 @@
 #include "aos/game/aos_object36.h"
 #include "aos/game/aos_object34.h"
 #include "aos/game/aos_object2c.h"
+#include "aos/game/aos_object17.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -466,6 +467,7 @@ typedef struct {
     AosObject36 object36;   /* object 0x36: metal gate BG scroller */
     AosObject34 object34;   /* object 0x34: waterfall splash */
     AosObject2C object2c;   /* object 0x2C: fountain droplets */
+    AosObject17 object17;   /* object 0x17: vertical pan director */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5067,6 +5069,46 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 room->effects[room->effect_count++] = (AosEffect){
                     .kind = AOS_EFFECT_SPARKLE, .direct = false,
                     .x = e->x, .y = e->y};
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 23) {
+            /* Object17Create / Object17Update (sUnk_084F0DF8[23] /
+             * sUnk_084F0ED8[23]): the vertical pan director. Create's
+             * sprite attach stays under special_sprites (special_23);
+             * the variant pick, position and nineteen counted
+             * children run in the module. The A094 room fields pass
+             * as 0 (runtime rooms carry no world offset), the
+             * sub_08021304 gate is approximated clear, the + 0x1C
+             * flags the held Up/Down approximation and the
+             * sub_08068AD4 probe a player-near window. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object17_create(&e->object17,
+                                    (int)(soma->y >> 16), 0, 0);
+                continue;
+            }
+            int fsx = (int)(soma->x >> 16) - 0x20;
+            int fsy = (int)(soma->y >> 16) - 0x20;
+            bool near = (uint16_t)(e->x - fsx) <= 0x40 &&
+                        (uint16_t)(e->y - fsy) <= 0x10;
+            uint16_t flags = 0;
+            if (input->held & AOS_KEY_UP) flags |= 0x80;
+            if (input->held & AOS_KEY_DOWN) flags |= 0x40;
+            aos_object17_update(&e->object17, false, near, flags,
+                                0, 0);
+            if (e->object17.locked)
+                input->held = 0;
+            if (e->object17.song >= 0) {
+                sound = e->object17.song;
+                printf("Object17 %zu: song 0x%X\n", i,
+                       e->object17.song);
+            }
+            if (e->object17.song_stop >= 0)
+                printf("Object17 %zu: song stop 0x%X\n", i,
+                       e->object17.song_stop);
+            if (e->object17.fade)
+                printf("Object17 %zu: fade (sub_08011FC0)\n", i);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 36) {

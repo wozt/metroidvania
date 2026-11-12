@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 164 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 165 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1976 | 1597 |
+| Castlevania: Aria of Sorrow | 1980 | 1593 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2497,6 +2497,15 @@ Tests: [`tests/test_aos_object03.c`](../tests/test_aos_object03.c).
 Dependencies: `aos.objects.cinematic_trigger`.  
 Known divergences: The + 0x13220 escort-busy word, the + 0x4CC bit 6 cinematic flag and the + 0x13114/+ 0x13118 partner entities are not modelled — the runtime passes cinematic false so state 0 takes the direct state-0 -> 2 path; the winOut blend and the sub_0804DF3C sprite attach are approximated by the exported art; states 4+ are native no-ops.  
 Next action: Model the + 0x13220/+ 0x13114/+ 0x13118 escort entities and the + 0x4CC cinematic flag, then compare a scripted escort scene against an emulator.
+
+[~] **`aos.objects.one_shot_breakable` — Object2E one-shot breakable prop.** Object2ECreate (0x08058A70) resolves tiles 0x081CBECC, palette sub_08068264(0x0820A100, 5), frames 0x0821137C (exported as special_46), presets sub_0803F2C8(0, 0, 1), steps the animation, sets + 0x5C = 0x12 and marks + 0x58 bit 0x20. Object2EUpdate (0x08058AB8) runs sub_08058B1C while + 0xA == 0: the first probe hit latches + 0xB = 1, spawns three sub_080589A4 children at (-0x50000, 0), (0, -0x60000) and (0, 0x50000) and plays song 0x78. Unit-tested in test_aos_object2e.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object2ECreate`, `aos:asm:asm/code/code_08050A3C.s:Object2EUpdate`, `aos:asm:asm/code/code_08050A3C.s:sub_080589A4`, `aos:asm:asm/code/code_08050A3C.s:sub_08058AD0`, `aos:asm:asm/code/code_08050A3C.s:sub_08058B1C`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:asm:asm/code/code_08060B98.s:sub_0806CFFC`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803B9D0`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:EntityCreateInRange`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/game/aos_object2e.c`](../src/runtime/aos/game/aos_object2e.c), [`src/runtime/aos/game/aos_object2e.h`](../src/runtime/aos/game/aos_object2e.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object2e.c`](../tests/test_aos_object2e.c).
+Dependencies: `aos.objects.special_sprites`, `aos.objects.destructible_prop`.  
+Known divergences: The sub_0806CFFC (x - 0x20, y - 0x20, 0x40, 0x70) rectangle probe collapses to the weapon hitbox overlap used by Object0F/0E, the three sub_080589A4 children (type 0x49 with tiles 0x081CBECC, frames 0x0821137C, callback sub_08058B84 and their fixed-point offsets) are counted rather than spawned, the sub_0803F2C8 preset and the + 0x58 bit-0x20 mark are not applied, the sub_0803F17C steps are counted, and there is no emulator comparison.  
+Next action: Port the sub_080589A4 children and their sub_08058B84 animation once a type-0x49 draw path exists.
 
 [~] **`aos.objects.parametric_sprite` — Object12 param-driven animated sprite.** Object12Create (0x0805140C) indexes the four 24-byte records at 0x085263A8 by param0 (gfx/palette/frames exported as special_18_v00-v03), loads through sub_0806E0D0, applies the record animation and + 0x5C/+ 0x59 marks and deletes on load failure. Object12Update (0x0805158C) skips everything on a bit-3 probe miss, runs the record callback — sub_0805133C's five-state sequence machine with random timers and hit re-arms for record 0, sub_080514D8's drift/palette stepper for records 2/3 — or the shared sub_0803F17C animation step. Unit-tested in test_aos_object12.
 

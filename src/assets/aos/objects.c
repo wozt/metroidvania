@@ -722,6 +722,9 @@ static const EntitySpec special_objects[] = {
      * 0x081CBEBC, palette slot sub_08068264(0x0820A100, 2), frames
      * 0x082111F4. */
     ENTITY("special_45", 0x081CBEBC, 0x0820A100, 2, 0x082111F4),
+    /* Object2E's sprite loader sub_08058AD0 (id 46 / 0x2E): same
+     * tiles/frames as the Object2D children, palette bank 5. */
+    ENTITY("special_46", 0x081CBECC, 0x0820A100, 5, 0x0821137C),
 };
 
 /* SPECIAL ids whose create resolves sprites through param0. Names carry

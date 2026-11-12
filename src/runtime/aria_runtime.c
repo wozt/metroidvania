@@ -36,6 +36,7 @@
 #include "aos/game/aos_object27.h"
 #include "aos/game/aos_object2b.h"
 #include "aos/game/aos_object2d.h"
+#include "aos/game/aos_object2e.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -449,6 +450,7 @@ typedef struct {
     AosObject27 object27;   /* object 0x27: spinning attack orb */
     AosObject2B object2b;   /* object 0x2B: plain animated sprite */
     AosObject2D object2d;   /* object 0x2D: proximity attack sprite */
+    AosObject2E object2e;   /* object 0x2E: one-shot breakable prop */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -5071,6 +5073,40 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 room->effects[room->effect_count++] = (AosEffect){
                     .kind = AOS_EFFECT_SPARK, .direct = false,
                     .x = e->x, .y = e->y};
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 46) {
+            /* Object2EUpdate (sUnk_084F0ED8[46]; Object2ECreate's
+             * sprite attach stays under special_sprites, art
+             * exported as special_46): the one-shot breakable —
+             * the sub_0806CFFC rectangle probe becomes the weapon
+             * hitbox overlap, the three sub_080589A4 children are
+             * counted and the song is reported. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object2e_create(&e->object2e);
+                continue;
+            }
+            int wx, wy, ww, wh;
+            bool hit = combat->weapon && combat->weapon_frames &&
+                       aos_weapon_hitbox(combat->weapon, soma,
+                                         combat->weapon_frames,
+                                         &wx, &wy, &ww, &wh) &&
+                       ww > 1 && wh > 1 &&
+                       !(wx + ww - 1 < (int32_t)e->x - 0x20 ||
+                         (int32_t)e->x + 0x20 < wx ||
+                         wy + wh - 1 < (int32_t)e->y - 0x20 ||
+                         (int32_t)e->y + 0x50 < wy);
+            aos_object2e_update(&e->object2e, hit);
+            if (e->object2e.song >= 0) {
+                sound = e->object2e.song;
+                printf("Object2E %zu: song 0x%X\n", i, e->object2e.song);
+                if (room->effect_count < MAX_EFFECTS)
+                    room->effects[room->effect_count++] = (AosEffect){
+                        .kind = AOS_EFFECT_SPARK, .direct = false,
+                        .x = e->x, .y = e->y};
+            }
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {

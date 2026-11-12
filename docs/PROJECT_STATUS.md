@@ -1,3 +1,23 @@
+## Patch 1054 - Aria Object2E one-shot breakable prop ported
+
+- `src/runtime/aos/game/aos_object2e.c` ports Object2ECreate
+  (0x08058A70) and Object2EUpdate (0x08058AB8), the one-shot
+  breakable prop dispatched through sUnk_084F0ED8[46]; the
+  sprite attach stays under special_sprites and its art is
+  newly exported as special_46 (tiles 0x081CBECC, palette
+  0x0820A100 bank 5, frames 0x0821137C).
+- Update reproduces sub_08058B1C's one-shot: the first
+  sub_0806CFFC probe hit over the (x - 0x20, y - 0x20, 0x40,
+  0x70) rectangle latches + 0xB, spawns three sub_080589A4
+  children at the fixed-point offsets and plays song 0x78.
+- Runtime wiring: SPECIAL id 46 spawns on the camera window,
+  the probe becomes the weapon hitbox overlap and the song
+  plus a spark effect are reported.
+- Divergences documented: the children are counted not
+  spawned, the preset and + 0x58 mark are unapplied.
+- Tests: `tests/test_aos_object2e.c` covers the miss/hit
+  sequence, the latch, the child count and the one-shot.
+
 ## Patch 1053 - Aria Object2D proximity attack sprite ported
 
 - `src/runtime/aos/game/aos_object2d.c` ports Object2DCreate

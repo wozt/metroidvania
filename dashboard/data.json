@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T14:46:26+00:00",
+ "generated_at": "2026-11-12T15:08:22+00:00",
  "git": {
-  "commit": "27c672c5",
+  "commit": "23526f49",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 309,
+   "total": 310,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 78,
+    "partial": 79,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 71.5,
-   "with_passing_tests": 296,
+   "functional_or_better_percent": 71.3,
+   "with_passing_tests": 297,
    "with_passing_tests_percent": 95.8,
    "unknown_or_blocked": 1,
    "features": [
@@ -338,6 +338,7 @@
     "aos.objects.escort_director",
     "aos.objects.flickering_sprite",
     "aos.objects.intro_zoom_director",
+    "aos.objects.one_shot_breakable",
     "aos.objects.parametric_sprite",
     "aos.objects.patrol_mover",
     "aos.objects.proximity_attack",
@@ -543,11 +544,11 @@
    "areas": [
     "aos"
    ],
-   "total": 164,
+   "total": 165,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 50,
+    "partial": 51,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -555,8 +556,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 69.5,
-   "with_passing_tests": 164,
+   "functional_or_better_percent": 69.1,
+   "with_passing_tests": 165,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -697,6 +698,7 @@
     "aos.objects.escort_director",
     "aos.objects.flickering_sprite",
     "aos.objects.intro_zoom_director",
+    "aos.objects.one_shot_breakable",
     "aos.objects.parametric_sprite",
     "aos.objects.patrol_mover",
     "aos.objects.proximity_attack",
@@ -21683,6 +21685,74 @@
    }
   },
   {
+   "id": "aos.objects.one_shot_breakable",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object2E one-shot breakable prop",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object2e.c",
+    "src/runtime/aos/game/aos_object2e.h",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_object2e.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites",
+    "aos.objects.destructible_prop"
+   ],
+   "native_routines": [
+    "Object2ECreate",
+    "Object2EUpdate",
+    "sub_08058B1C",
+    "sub_08058AD0",
+    "sub_080589A4",
+    "sub_0806CFFC",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0803B800",
+    "sub_0803B924",
+    "sub_0803B9D0",
+    "sub_08068264",
+    "EntityCreateInRange",
+    "PlaySong"
+   ],
+   "limitations": "The sub_0806CFFC (x - 0x20, y - 0x20, 0x40, 0x70) rectangle probe collapses to the weapon hitbox overlap used by Object0F/0E, the three sub_080589A4 children (type 0x49 with tiles 0x081CBECC, frames 0x0821137C, callback sub_08058B84 and their fixed-point offsets) are counted rather than spawned, the sub_0803F2C8 preset and the + 0x58 bit-0x20 mark are not applied, the sub_0803F17C steps are counted, and there is no emulator comparison. Object2ECreate (0x08058A70) resolves tiles 0x081CBECC, palette sub_08068264(0x0820A100, 5), frames 0x0821137C (exported as special_46), presets sub_0803F2C8(0, 0, 1), steps the animation, sets + 0x5C = 0x12 and marks + 0x58 bit 0x20. Object2EUpdate (0x08058AB8) runs sub_08058B1C while + 0xA == 0: the first probe hit latches + 0xB = 1, spawns three sub_080589A4 children at (-0x50000, 0), (0, -0x60000) and (0, 0x50000) and plays song 0x78. Unit-tested in test_aos_object2e.",
+   "next_action": "Port the sub_080589A4 children and their sub_08058B84 animation once a type-0x49 draw path exists.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object2e.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object2e.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object2e"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.parametric_sprite",
    "area": "aos",
    "category": "environment",
@@ -29699,6 +29769,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object2e",
+    "files": [
+     "tests/test_aos_object2e.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_weapon",
     "files": [
      "tests/test_aos_weapon.c"
@@ -29784,12 +29861,18 @@
    }
   ],
   "summary": {
-   "passed": 184,
+   "passed": 185,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "23526f49",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object2D proximity attack sprite",
+   "scope": "project"
+  },
   {
    "commit": "27c672c5",
    "date": "2026-11-12",
@@ -30263,12 +30346,6 @@
    "date": "2026-11-10",
    "subject": "Port Une (id 0x3D): the splitting ghost swarm",
    "scope": "project"
-  },
-  {
-   "commit": "7b5a34e5",
-   "date": "2026-11-10",
-   "subject": "Port Nightmare (id 66): drifting skull with ramped wisp attack",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -30329,9 +30406,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1976,
-    "routines_attached_to_features": 1976,
-    "unassigned_routines": 1597,
+    "routines_cited_by_features": 1980,
+    "routines_attached_to_features": 1980,
+    "unassigned_routines": 1593,
     "call_edges": 14228
    }
   },

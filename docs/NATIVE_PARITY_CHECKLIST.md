@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 153 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 154 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1928 | 1645 |
+| Castlevania: Aria of Sorrow | 1937 | 1636 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2507,9 +2507,18 @@ Dependencies: `aos.objects.static_children`.
 Known divergences: The + 0x10 bit-30 callback gate is unmodelled and passed as set while Soma is active; the entity + 0x1E byte is approximated by Soma state; the gEwramData + 0x13260 bit 0x200 input is passed clear; the + 0x131D4/+ 0x131D6/+ 0x131D8/+ 0x131DC/+ 0x131E0/+ 0x131E4 camera snapshot and pan block is exposed on the object but no camera consumer reads it; the + 0x59 bit-2 clear that would release the claim has no writer so the slot stays held like the native held path; param0 outside 0-2 is clamped to list 0 instead of reading adjacent table data; and there is no emulator comparison.  
 Next action: Wire the snapshot/pan outputs into the camera path once the + 0x131D4 mode-3 consumer is ported, and trace what clears + 0x59 bit 2.
 
-[~] **`aos.objects.special_sprites` — SPECIAL room object sprites (ids 13,16,19,20,21,23,24,25,27).** sub_0806E0D0(entity, gfx, palette, bank, frames) is decoded: most ObjectXXCreate functions pass hard-coded sprite resources while entity + 0x30/+ 0x32 carry the room record's param0/param1 and select behaviour through per-object state tables (Object14Update indexes 0x08526408 by param0). The nine resource triplets were extracted from the create functions and exported as Object/special_NN/anim_M sequences with metadata/object_frames.tsv (metroidvania-aos-object-frames-v1); empty native animations are skipped. The runtime loads the object index into special_objects[64] and draws each spawned SPECIAL entity. Source-derived and unit-tested, not emulator-compared.
+[~] **`aos.objects.save_point_remover` — Object11 save-point remover marker.** Object11Create (0x080512C4) EntityDeletes the entity in the gEwramData + 0x124C slot (the save-point entity Object10 uses), then EntityCreateInRange spawns an invisible type-0x1A helper in a 0x1A range whose callback sub_080512FC sets + 0x59 bit 4 and counts + 0x14 frames while the + 0x42C bit-1 hold lasts, capped at 0x34BBD; Object11Update (0x080512F8) is a native bx lr. Unit-tested in test_aos_object11.
 
-Native evidence: `aos:asm:asm/code/code_08040A38.s:Object0DCreate`, `aos:asm:asm/code/code_08050A3C.s:Object10Create`, `aos:asm:asm/code/code_08050A3C.s:Object13Create`, `aos:asm:asm/code/code_08050A3C.s:Object14Create`, `aos:asm:asm/code/code_08050A3C.s:Object14Update`, `aos:asm:asm/code/code_08050A3C.s:Object15Create`, `aos:asm:asm/code/code_08050A3C.s:Object17Create`, `aos:asm:asm/code/code_08050A3C.s:Object18Create`, `aos:asm:asm/code/code_08050A3C.s:Object19Create`, `aos:asm:asm/code/code_08050A3C.s:Object1BCreate`, `aos:asm:asm/code/code_08060B98.s:sub_0806E0D0`.  
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object11Create`, `aos:asm:asm/code/code_08050A3C.s:Object11Update`, `aos:asm:asm/code/code_08050A3C.s:sub_080512FC`, `aos:c:src/code_080009A0.c:EntityCreateInRange`, `aos:c:src/code_080009A0.c:EntityDelete`.  
+Local implementation: [`src/runtime/aos/game/aos_object11.c`](../src/runtime/aos/game/aos_object11.c), [`src/runtime/aos/game/aos_object11.h`](../src/runtime/aos/game/aos_object11.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object11.c`](../tests/test_aos_object11.c).
+Dependencies: `aos.objects.special_sprites`, `aos.objects.enemy_spawners`.  
+Known divergences: The + 0x124C slot deletion is modelled by clearing the room save flag rather than deleting a fixed entity slot; the type-0x1A helper entity is folded into the marker (no art, no sprite); the + 0x42C bit-1 hold approximates the B button through the runtime input word; no consumer of the helper + 0x14 counter is ported; and there is no emulator comparison.  
+Next action: Find the consumer of the helper + 0x14 hold counter and port the + 0x124C slot entity properly.
+
+[~] **`aos.objects.special_sprites` — SPECIAL room object sprites (ids 13,16,19,20,21,23,24,25,27).** sub_0806E0D0(entity, gfx, palette, bank, frames) is decoded: most ObjectXXCreate functions pass hard-coded sprite resources while entity + 0x30/+ 0x32 carry the room record's param0/param1 and select behaviour through per-object state tables (Object14Update indexes 0x08526408 by param0). The nine resource triplets were extracted from the create functions and exported as Object/special_NN/anim_M sequences with metadata/object_frames.tsv (metroidvania-aos-object-frames-v1); empty native animations are skipped. The runtime loads the object index into special_objects[64] and draws each spawned SPECIAL entity. Source-derived and unit-tested, not emulator-compared. Object1A and Object1E dispatch entries are verified bx lr no-ops in both directions; Object1DUpdate and Object23Update run only the shared sub_0803F17C animation step.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:Object0DCreate`, `aos:asm:asm/code/code_08050A3C.s:Object10Create`, `aos:asm:asm/code/code_08050A3C.s:Object13Create`, `aos:asm:asm/code/code_08050A3C.s:Object14Create`, `aos:asm:asm/code/code_08050A3C.s:Object14Update`, `aos:asm:asm/code/code_08050A3C.s:Object15Create`, `aos:asm:asm/code/code_08050A3C.s:Object17Create`, `aos:asm:asm/code/code_08050A3C.s:Object18Create`, `aos:asm:asm/code/code_08050A3C.s:Object19Create`, `aos:asm:asm/code/code_08050A3C.s:Object1ACreate`, `aos:asm:asm/code/code_08050A3C.s:Object1AUpdate`, `aos:asm:asm/code/code_08050A3C.s:Object1BCreate`, `aos:asm:asm/code/code_08050A3C.s:Object1DUpdate`, `aos:asm:asm/code/code_08050A3C.s:Object1ECreate`, `aos:asm:asm/code/code_08050A3C.s:Object1EUpdate`, `aos:asm:asm/code/code_08050A3C.s:Object23Update`, `aos:asm:asm/code/code_08060B98.s:sub_0806E0D0`.  
 Local implementation: [`src/assets/aos/objects.c`](../src/assets/aos/objects.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
 Tests: [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.environment.wooden_doors`, `aos.environment.breakable_walls`.  

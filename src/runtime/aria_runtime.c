@@ -25,6 +25,7 @@
 #include "aos/game/aos_object0f.h"
 #include "aos/game/aos_object0d.h"
 #include "aos/game/aos_object0e.h"
+#include "aos/game/aos_object11.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -427,6 +428,7 @@ typedef struct {
     AosObject0f object0f;   /* object 0x0F: destructible prop */
     AosObject0d object0d;   /* object 0x0D: swinging object */
     AosObject0e object0e;   /* object 0x0E: breakable prop variants */
+    AosObject11 object11;   /* object 0x11: save-point remover marker */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4776,6 +4778,25 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             e->object0e.content_fx = 0;
             e->object0e.gore_fx = 0;
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 17) {
+            /* Object11Create / Object11Update (sUnk_084F0DF8[17] /
+             * sUnk_084F0ED8[17]): the save-point remover. Create
+             * deletes the + 0x124C slot entity — the save point —
+             * and spawns the invisible type-0x1A helper whose
+             * sub_080512FC callback counts + 0x14 frames while the
+             * + 0x42C bit-1 (B) hold lasts, capped at 0x34BBD. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object11_create(&e->object11);
+                if (e->object11.removed_save)
+                    room->room_flags &= (uint16_t)~AOS_ROOM_FLAG_SAVE;
+                continue;
+            }
+            aos_object11_update(&e->object11,
+                                (input->held & AOS_KEY_B) != 0);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {

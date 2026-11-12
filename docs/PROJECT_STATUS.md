@@ -1,3 +1,24 @@
+## Patch 1043 - Aria Object11 save-point remover ported
+
+- `src/runtime/aos/game/aos_object11.c` ports Object11Create
+  (0x080512C4) and Object11Update (0x080512F8), the one-shot
+  marker dispatched through sUnk_084F0DF8[17] /
+  sUnk_084F0ED8[17].
+- Create deletes the entity in the gEwramData + 0x124C slot (the
+  save-point entity Object10 uses — modelled by clearing the
+  room AOS_ROOM_FLAG_SAVE) and spawns the invisible type-0x1A
+  helper whose sub_080512FC callback counts + 0x14 frames while
+  the + 0x42C bit-1 (B) hold lasts, capped at 0x34BBD.
+- Runtime wiring: SPECIAL id 17 spawns on the camera window,
+  clears the save flag once and feeds the B-held state each
+  update; the marker draws nothing natively.
+- Also folded into aos.objects.special_sprites: Object1A and
+  Object1E are verified bx lr no-ops in both directions, and
+  Object1DUpdate/Object23Update run only the shared sub_0803F17C
+  animation step.
+- Tests: `tests/test_aos_object11.c` covers the spawn flags,
+  the gated counter and the 0x34BBD cap.
+
 ## Patch 1042 - Aria Object0E breakable prop variants ported
 
 - `src/runtime/aos/game/aos_object0e.c` ports Object0ECreate

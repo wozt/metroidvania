@@ -1,3 +1,27 @@
+## Patch 1044 - Aria Object12 param-driven sprite ported
+
+- `src/runtime/aos/game/aos_object12.c` ports Object12Create
+  (0x0805140C) and Object12Update (0x0805158C), the param-driven
+  animated sprite dispatched through sUnk_084F0DF8[18] /
+  sUnk_084F0ED8[18]; its four resource records were already
+  exported as special_18_v00-v03.
+- Create indexes the 24-byte records at 0x085263A8 by param0 and
+  applies the record animation, + 0x5C/+ 0x59 marks and the
+  load-failure delete.
+- Update reproduces the bit-3 probe gate (a miss skips callback
+  and animation), record 0's sub_0805133C five-state sequence
+  machine (scripted sequences 0/1/2, random timers, + 0x6C bit-2
+  re-arms) and records 2/3's sub_080514D8 drift with the
+  sub_0805153C palette stepper approximated by palette_step.
+- Runtime wiring: SPECIAL id 18 spawns on the camera window, the
+  probe/hit reuse the window/overlap approximations and param1
+  feeds the + 0x32 == 1 gate.
+- Divergences documented: scripted sequences collapse to a seq
+  index, camera deltas and the palette cycle are approximated.
+- Tests: `tests/test_aos_object12.c` covers the record mapping,
+  the probe skip, the sequence state machine and the drift
+  stepper.
+
 ## Patch 1043 - Aria Object11 save-point remover ported
 
 - `src/runtime/aos/game/aos_object11.c` ports Object11Create

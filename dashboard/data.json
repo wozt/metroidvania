@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T02:54:09+00:00",
+ "generated_at": "2026-11-12T12:51:52+00:00",
  "git": {
-  "commit": "ca676274",
+  "commit": "80351911",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 299,
+   "total": 300,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 68,
+    "partial": 69,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 73.9,
-   "with_passing_tests": 286,
+   "functional_or_better_percent": 73.7,
+   "with_passing_tests": 287,
    "with_passing_tests_percent": 95.7,
    "unknown_or_blocked": 1,
    "features": [
@@ -335,6 +335,7 @@
     "aos.objects.directional_director",
     "aos.objects.enemy_spawners",
     "aos.objects.escort_director",
+    "aos.objects.parametric_sprite",
     "aos.objects.proximity_trigger",
     "aos.objects.region_trigger",
     "aos.objects.save_point_remover",
@@ -533,11 +534,11 @@
    "areas": [
     "aos"
    ],
-   "total": 154,
+   "total": 155,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 40,
+    "partial": 41,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -545,8 +546,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 74.0,
-   "with_passing_tests": 154,
+   "functional_or_better_percent": 73.5,
+   "with_passing_tests": 155,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -684,6 +685,7 @@
     "aos.objects.directional_director",
     "aos.objects.enemy_spawners",
     "aos.objects.escort_director",
+    "aos.objects.parametric_sprite",
     "aos.objects.proximity_trigger",
     "aos.objects.region_trigger",
     "aos.objects.save_point_remover",
@@ -21462,6 +21464,70 @@
    }
   },
   {
+   "id": "aos.objects.parametric_sprite",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object12 param-driven animated sprite",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object12.c",
+    "src/runtime/aos/game/aos_object12.h",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_object12.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object12Create",
+    "Object12Update",
+    "sub_0805133C",
+    "sub_080514D8",
+    "sub_0805153C",
+    "sub_0803F0E4",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0806E0D0",
+    "sub_08068AD4",
+    "RandomNumberGenerator"
+   ],
+   "limitations": "The bit-3 sub_08068AD4 probe is approximated by a player-near window, the + 0x6C bit-2 hit flag by the weapon hitbox overlap, the sub_0803F0E4 scripted sequences collapse to a seq index (the draw keeps animation 0), the sub_080514D8 camera-scroll deltas into + 0x40/+ 0x48 and the sub_0805153C + 0x5A palette cycle are approximated by palette_step, the create-time + 0x5A merge for flag bit 0 and the flag-bit-2 screen-position mirror add are not ported, and there is no emulator comparison. Object12Create (0x0805140C) indexes the four 24-byte records at 0x085263A8 by param0 (gfx/palette/frames exported as special_18_v00-v03), loads through sub_0806E0D0, applies the record animation and + 0x5C/+ 0x59 marks and deletes on load failure. Object12Update (0x0805158C) skips everything on a bit-3 probe miss, runs the record callback — sub_0805133C's five-state sequence machine with random timers and hit re-arms for record 0, sub_080514D8's drift/palette stepper for records 2/3 — or the shared sub_0803F17C animation step. Unit-tested in test_aos_object12.",
+   "next_action": "Map the sub_0803F0E4 sequences onto exported animation indices and port the sub_0805153C palette cycle.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object12.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object12.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object12"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.proximity_trigger",
    "area": "aos",
    "category": "environment",
@@ -28970,6 +29036,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object12",
+    "files": [
+     "tests/test_aos_object12.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_weapon",
     "files": [
      "tests/test_aos_weapon.c"
@@ -29055,12 +29128,18 @@
    }
   ],
   "summary": {
-   "passed": 174,
+   "passed": 175,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "80351911",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object11 save-point remover marker",
+   "scope": "project"
+  },
   {
    "commit": "ca676274",
    "date": "2026-11-12",
@@ -29534,12 +29613,6 @@
    "date": "2026-11-10",
    "subject": "Aria: port Student Witch (0x16) with witch bolt projectile",
    "scope": "project"
-  },
-  {
-   "commit": "20533a48",
-   "date": "2026-11-10",
-   "subject": "Port Ukoback (Aria enemy 0x4C) with peeked creature and lid children",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -29600,9 +29673,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1937,
-    "routines_attached_to_features": 1937,
-    "unassigned_routines": 1636,
+    "routines_cited_by_features": 1942,
+    "routines_attached_to_features": 1942,
+    "unassigned_routines": 1631,
     "call_edges": 14228
    }
   },

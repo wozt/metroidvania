@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 154 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 155 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1937 | 1636 |
+| Castlevania: Aria of Sorrow | 1942 | 1631 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2488,6 +2488,15 @@ Tests: [`tests/test_aos_object03.c`](../tests/test_aos_object03.c).
 Dependencies: `aos.objects.cinematic_trigger`.  
 Known divergences: The + 0x13220 escort-busy word, the + 0x4CC bit 6 cinematic flag and the + 0x13114/+ 0x13118 partner entities are not modelled — the runtime passes cinematic false so state 0 takes the direct state-0 -> 2 path; the winOut blend and the sub_0804DF3C sprite attach are approximated by the exported art; states 4+ are native no-ops.  
 Next action: Model the + 0x13220/+ 0x13114/+ 0x13118 escort entities and the + 0x4CC cinematic flag, then compare a scripted escort scene against an emulator.
+
+[~] **`aos.objects.parametric_sprite` — Object12 param-driven animated sprite.** Object12Create (0x0805140C) indexes the four 24-byte records at 0x085263A8 by param0 (gfx/palette/frames exported as special_18_v00-v03), loads through sub_0806E0D0, applies the record animation and + 0x5C/+ 0x59 marks and deletes on load failure. Object12Update (0x0805158C) skips everything on a bit-3 probe miss, runs the record callback — sub_0805133C's five-state sequence machine with random timers and hit re-arms for record 0, sub_080514D8's drift/palette stepper for records 2/3 — or the shared sub_0803F17C animation step. Unit-tested in test_aos_object12.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object12Create`, `aos:asm:asm/code/code_08050A3C.s:Object12Update`, `aos:asm:asm/code/code_08050A3C.s:sub_0805133C`, `aos:asm:asm/code/code_08050A3C.s:sub_080514D8`, `aos:asm:asm/code/code_08050A3C.s:sub_0805153C`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:asm:asm/code/code_08060B98.s:sub_0806E0D0`, `aos:c:src/code/code_08039340.c:sub_0803F0E4`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:RandomNumberGenerator`.  
+Local implementation: [`src/runtime/aos/game/aos_object12.c`](../src/runtime/aos/game/aos_object12.c), [`src/runtime/aos/game/aos_object12.h`](../src/runtime/aos/game/aos_object12.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object12.c`](../tests/test_aos_object12.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The bit-3 sub_08068AD4 probe is approximated by a player-near window, the + 0x6C bit-2 hit flag by the weapon hitbox overlap, the sub_0803F0E4 scripted sequences collapse to a seq index (the draw keeps animation 0), the sub_080514D8 camera-scroll deltas into + 0x40/+ 0x48 and the sub_0805153C + 0x5A palette cycle are approximated by palette_step, the create-time + 0x5A merge for flag bit 0 and the flag-bit-2 screen-position mirror add are not ported, and there is no emulator comparison.  
+Next action: Map the sub_0803F0E4 sequences onto exported animation indices and port the sub_0805153C palette cycle.
 
 [~] **`aos.objects.proximity_trigger` — Object05 proximity trigger.** Object05Create (0x0804F00C) runs the shared sub_0804DF3C init, writes + 0x65 = 0x7D and + 0x5A = (+ 0x5A & 0x87)  or  0x38, applies the winOut blend and arms + 0x14 = 0x30 when the 0x38 x 0x22 probe around (soma_x - 0x1C, soma_y) hits; params are unused and no blocks are sealed. Object05Update (0x0804F084) keeps the + 0x58 off-screen bit and the state-0 timer cycle: +2 saturating at 0x30 inside the (u16)(ex_sx - soma_sx + 0x28) <= 0x4F window, -2 clearing at <= 2 outside, with the 0x110 x 0xC0 probe at (-0x10, 0) playing song 0x113 on both edges. Unit-tested in aos_object05.
 

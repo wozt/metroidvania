@@ -26,6 +26,7 @@
 #include "aos/game/aos_object0d.h"
 #include "aos/game/aos_object0e.h"
 #include "aos/game/aos_object11.h"
+#include "aos/game/aos_object12.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -429,6 +430,7 @@ typedef struct {
     AosObject0d object0d;   /* object 0x0D: swinging object */
     AosObject0e object0e;   /* object 0x0E: breakable prop variants */
     AosObject11 object11;   /* object 0x11: save-point remover marker */
+    AosObject12 object12;   /* object 0x12: param-driven animated sprite */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4797,6 +4799,37 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             aos_object11_update(&e->object11,
                                 (input->held & AOS_KEY_B) != 0);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 18) {
+            /* Object12Create / Object12Update (sUnk_084F0DF8[18] /
+             * sUnk_084F0ED8[18]): the param-driven sprite. The
+             * bit-3 probe becomes a player-near window, the + 0x6C
+             * bit-2 re-arm the weapon hitbox overlap. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object12_create(&e->object12, e->param0, e->param1,
+                                    &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            bool near = (uint16_t)(ssx - osx + 0x80) <= 0x100 &&
+                        (uint16_t)(ssy - osy + 0x40) <= 0xF0;
+            int wx, wy, ww, wh;
+            bool hit = combat->weapon && combat->weapon_frames &&
+                       aos_weapon_hitbox(combat->weapon, soma,
+                                         combat->weapon_frames,
+                                         &wx, &wy, &ww, &wh) &&
+                       ww > 1 && wh > 1 &&
+                       !(wx + ww - 1 < e->x - 8 || e->x + 8 < wx ||
+                         wy + wh - 1 < e->y - 16 || e->y < wy);
+            aos_object12_update(&e->object12, near, hit,
+                                e->param1 == 1, aos_random);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {

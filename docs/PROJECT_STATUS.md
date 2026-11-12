@@ -1,3 +1,25 @@
+## Patch 1050 - Aria Object24 flickering ambient sprite ported
+
+- `src/runtime/aos/game/aos_object24.c` ports Object24Create
+  (0x080578A4) and Object24Update (0x0805790C), the flickering
+  ambient sprite dispatched through sUnk_084F0DF8/ED8[36]; the
+  sprite attach stays under special_sprites and its art is newly
+  exported as special_36 (tiles 0x0825920C, palette 0x08209FD8
+  bank 7, frames 0x0825CED0).
+- Create reproduces the RNG draws (+ 0x6F = rng & 0xF,
+  + 0x6E = rng % 3), the sub_0803F2C8 preset, the + 0x5C = 0x13
+  mark and the + 0x5A flag merge.
+- Update reproduces the (rng & 0xFF) <= 0xDF animation-step gate
+  (~88% of frames), the + 0xD increment and the + 0x58 bit-0x20
+  mark on the OLD + 0xD parity — a per-frame flicker.
+- Runtime wiring: SPECIAL id 36 spawns on the camera window and
+  the draw skips the sprite while the parity mark is set.
+- Divergences documented: the + 0x6E/+ 0x6F draws have no draw
+  consumer, the sub_0803F17C step is counted rather than
+  resolving frames, and the + 0x5A merge is unmodelled.
+- Tests: `tests/test_aos_object24.c` covers the create RNG
+  fields, the 0xDF animation gate and the parity flicker.
+
 ## Patch 1049 - Aria Object16 boss-intro zoom director ported
 
 - `src/runtime/aos/game/aos_object16.c` ports Object16Update

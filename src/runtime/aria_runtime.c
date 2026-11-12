@@ -32,6 +32,7 @@
 #include "aos/game/aos_object1b.h"
 #include "aos/game/aos_object15.h"
 #include "aos/game/aos_object16.h"
+#include "aos/game/aos_object24.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -441,6 +442,7 @@ typedef struct {
     AosObject1b object1b;   /* object 0x1B: spin-synced object */
     AosObject15 object15;   /* object 0x15: story cutscene director */
     AosObject16 object16;   /* object 0x16: boss-intro zoom director */
+    AosObject24 object24;   /* object 0x24: ambient flickering sprite */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4991,6 +4993,22 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     .x = e->x, .y = e->y};
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 36) {
+            /* Object24Update (sUnk_084F0ED8[36]; Object24Create's
+             * sprite attach stays under special_sprites and its art
+             * is exported as special_36): the flickering ambient
+             * sprite — RNG-gated animation step plus the + 0x58
+             * bit-0x20 parity mark the draw reads as hidden. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object24_create(&e->object24, aos_random(),
+                                    aos_random());
+                continue;
+            }
+            aos_object24_update(&e->object24, aos_random());
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {
             /* Object02Create / Object02Update (sUnk_084F0DF8[2] /
              * sUnk_084F0ED8[2]): the cutscene director. Screen pixels
@@ -6335,6 +6353,7 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (e->id == 15 && e->object0f.finished) continue;
         if (e->id == 14 && e->object0e.finished) continue;
         if (e->id == 19 && e->object13.deleted) continue;
+        if (e->id == 36 && e->object24.hidden) continue;
         if (e->id == 1) {
             /* Object01's children are the sprites: draw the exported
              * still at each record coordinate (room pixels). */

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T13:58:16+00:00",
+ "generated_at": "2026-11-12T14:12:08+00:00",
  "git": {
-  "commit": "afd6dd81",
+  "commit": "d0fdf8d9",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 305,
+   "total": 306,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 74,
+    "partial": 75,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 72.5,
-   "with_passing_tests": 292,
-   "with_passing_tests_percent": 95.7,
+   "functional_or_better_percent": 72.2,
+   "with_passing_tests": 293,
+   "with_passing_tests_percent": 95.8,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -335,6 +335,7 @@
     "aos.objects.directional_director",
     "aos.objects.enemy_spawners",
     "aos.objects.escort_director",
+    "aos.objects.flickering_sprite",
     "aos.objects.intro_zoom_director",
     "aos.objects.parametric_sprite",
     "aos.objects.patrol_mover",
@@ -539,11 +540,11 @@
    "areas": [
     "aos"
    ],
-   "total": 160,
+   "total": 161,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 46,
+    "partial": 47,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -551,8 +552,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 71.2,
-   "with_passing_tests": 160,
+   "functional_or_better_percent": 70.8,
+   "with_passing_tests": 161,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -690,6 +691,7 @@
     "aos.objects.directional_director",
     "aos.objects.enemy_spawners",
     "aos.objects.escort_director",
+    "aos.objects.flickering_sprite",
     "aos.objects.intro_zoom_director",
     "aos.objects.parametric_sprite",
     "aos.objects.patrol_mover",
@@ -21474,6 +21476,69 @@
    }
   },
   {
+   "id": "aos.objects.flickering_sprite",
+   "area": "aos",
+   "category": "cutscenes",
+   "title": "Object24 flickering ambient sprite",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object24.c",
+    "src/runtime/aos/game/aos_object24.h",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_object24.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object24Create",
+    "Object24Update",
+    "sub_08057958",
+    "sub_0803B800",
+    "sub_0803B924",
+    "sub_0803B9D0",
+    "sub_08068264",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "RandomNumberGenerator"
+   ],
+   "limitations": "The sub_0803B800 tile decompress, the sub_08068264 palette slot resolution, the sub_0803B924 frame attach and the sub_0803F2C8 preset are covered by the exported special_36 art; the + 0x6E variant and + 0x6F phase RNG draws have no draw consumer (the draw keeps animation 0); the sub_0803F17C animation step is counted rather than resolving frame indices; the + 0x5A flag merge is not modelled; and there is no emulator comparison. Object24Create (0x080578A4) resolves tiles 0x0825920C through sub_0803B800, the palette through sub_08068264(0x08209FD8, 7) and frames 0x0825CED0 through sub_0803B924 with drawFunc sub_0803B9D0 (exported as special_36), deletes on load failure, presets sub_0803F2C8(2, 0, 1), draws + 0x6F = rng & 0xF and + 0x6E = rng % 3, steps the animation once and sets + 0x5C = 0x13 with + 0x5A = (+ 0x5A & ~0x19) OR 2. Object24Update (0x0805790C) steps the animation through sub_0803F17C only when (rng & 0xFF) <= 0xDF (~88% of frames), increments + 0xD and sets + 0x58 bit 0x20 on the OLD + 0xD parity — a per-frame flicker the draw reads as hidden. Unit-tested in test_aos_object24.",
+   "next_action": "Map the + 0x6E variant and + 0x6F phase onto animation/frame selection once the special_36 sequences are inspected.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object24.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object24.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object24"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.intro_zoom_director",
    "area": "aos",
    "category": "cutscenes",
@@ -29404,6 +29469,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object24",
+    "files": [
+     "tests/test_aos_object24.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_weapon",
     "files": [
      "tests/test_aos_weapon.c"
@@ -29489,12 +29561,18 @@
    }
   ],
   "summary": {
-   "passed": 180,
+   "passed": 181,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "d0fdf8d9",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object16 boss-intro zoom director",
+   "scope": "project"
+  },
   {
    "commit": "afd6dd81",
    "date": "2026-11-12",
@@ -29968,12 +30046,6 @@
    "date": "2026-11-10",
    "subject": "Port the Aria Kyoma Demon enemy (id 39)",
    "scope": "project"
-  },
-  {
-   "commit": "da1476a2",
-   "date": "2026-11-10",
-   "subject": "Port the Aria Slime enemy (id 68)",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -30034,9 +30106,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1960,
-    "routines_attached_to_features": 1960,
-    "unassigned_routines": 1613,
+    "routines_cited_by_features": 1963,
+    "routines_attached_to_features": 1963,
+    "unassigned_routines": 1610,
     "call_edges": 14228
    }
   },

@@ -710,6 +710,10 @@ static const EntitySpec special_objects[] = {
     ENTITY("special_24", 0x0825EAF4, 0x082663E4, 0, 0x08266C00),
     ENTITY("special_25", 0x0825EAFC, 0x08266408, 0, 0x08266C50),
     ENTITY("special_27", 0x081CBE84, 0x08209FD8, 1, 0x08210318),
+    /* Object24Create (id 36 / 0x24): tiles through sub_0803B800,
+     * palette slot sub_08068264(0x08209FD8, 7), frames 0x0825CED0,
+     * drawFunc sub_0803B9D0. */
+    ENTITY("special_36", 0x0825920C, 0x08209FD8, 7, 0x0825CED0),
 };
 
 /* SPECIAL ids whose create resolves sprites through param0. Names carry

@@ -30,6 +30,7 @@
 #include "aos/game/aos_object13.h"
 #include "aos/game/aos_object19.h"
 #include "aos/game/aos_object1b.h"
+#include "aos/game/aos_object15.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -437,6 +438,7 @@ typedef struct {
     AosObject13 object13;   /* object 0x13: swinging chandelier trigger */
     AosObject19 object19;   /* object 0x19: rectangular patrol mover */
     AosObject1b object1b;   /* object 0x1B: spin-synced object */
+    AosObject15 object15;   /* object 0x15: story cutscene director */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4910,6 +4912,41 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 sound = e->object1b.song;
                 printf("Object1B %zu: song 0x%X\n", i, e->object1b.song);
             }
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 21) {
+            /* Object15Update (sUnk_084F0ED8[21]; Object15Create's
+             * sprite attach and type-0x1B child stay under
+             * special_sprites): the story cutscene director. The
+             * probes become player-near windows, the + 0x42C input
+             * lock the forced-input outputs, the fades and the
+             * dialogue record are reported, not played. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                /* + 0x348 bit 0x8000000 has no runtime equivalent;
+                 * the create-time event test stays clear. */
+                aos_object15_create(&e->object15, e->param0, false);
+                continue;
+            }
+            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            bool near1 = (uint16_t)(ssx - osx + 0x10) <= 0x60 &&
+                         (uint16_t)(ssy - osy + 0x7F) <= 0x20;
+            bool near2 = (uint16_t)(ssx - osx + 0x10) <= 0x70 &&
+                         (uint16_t)(ssy - osy) <= 0x10;
+            /* The + 0x1C bit 0x40 player flag and the + 0x1339A
+             * direction word have no direct runtime fields; the
+             * approximations keep the machine reachable. */
+            aos_object15_update(&e->object15, near1, near2, true,
+                                true, 0, soma->x < ((int32_t)e->x) << 16);
+            if (e->object15.forced == 0)
+                input->held = 0;
+            else if (e->object15.forced == 1)
+                input->held = e->object15.dir_word;
+            (void)e->object15.fade;   /* sub_0803D18C/sub_0803CDF0 */
+            (void)e->object15.dialogue;
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {

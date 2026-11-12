@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T13:30:39+00:00",
+ "generated_at": "2026-11-12T13:38:00+00:00",
  "git": {
-  "commit": "a5ae2f12",
+  "commit": "5bf81d44",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 303,
+   "total": 304,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 72,
+    "partial": 73,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 72.9,
-   "with_passing_tests": 290,
+   "functional_or_better_percent": 72.7,
+   "with_passing_tests": 291,
    "with_passing_tests_percent": 95.7,
    "unknown_or_blocked": 1,
    "features": [
@@ -343,6 +343,7 @@
     "aos.objects.special_sprites",
     "aos.objects.spin_synced",
     "aos.objects.static_children",
+    "aos.objects.story_cutscene_director",
     "aos.objects.swing_event_trigger",
     "aos.objects.swinging_object",
     "aos.player.soma_controller",
@@ -537,11 +538,11 @@
    "areas": [
     "aos"
    ],
-   "total": 158,
+   "total": 159,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 44,
+    "partial": 45,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -549,8 +550,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 72.2,
-   "with_passing_tests": 158,
+   "functional_or_better_percent": 71.7,
+   "with_passing_tests": 159,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -696,6 +697,7 @@
     "aos.objects.special_sprites",
     "aos.objects.spin_synced",
     "aos.objects.static_children",
+    "aos.objects.story_cutscene_director",
     "aos.objects.swing_event_trigger",
     "aos.objects.swinging_object",
     "aos.player.soma_controller",
@@ -21990,6 +21992,70 @@
    }
   },
   {
+   "id": "aos.objects.story_cutscene_director",
+   "area": "aos",
+   "category": "cutscenes",
+   "title": "Object15 story cutscene director",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object15.c",
+    "src/runtime/aos/game/aos_object15.h",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_object15.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object15Create",
+    "Object15Update",
+    "sub_080528E0",
+    "sub_08068AD4",
+    "sub_08021304",
+    "sub_0800C5A8",
+    "sub_0803D18C",
+    "sub_0803CDF0",
+    "sub_08011F44",
+    "sub_08011AD0",
+    "SetPlayerInput"
+   ],
+   "limitations": "The two sub_08068AD4 probes collapse to player-near windows, the player + 0x1C bit 0x40 flag and the + 0x1339A direction word have no direct runtime fields (passed as constants), the sub_08021304 gate is passed clear, the + 0x348 bit-0x8000000 create-time event test has no runtime equivalent (always state 1), the sub_0803D18C/sub_0803CDF0 fade pair and the param0-selected sub_08011F44 dialogue records (0x0852320C / 0x08517B70) are reported but not played, the sub_08011AD0 camera call and sub_0800C5A8 side effects are not ported, the type-0x1B child spawned through sub_080528E0 stays under special_sprites, the state-4 x compare uses entity positions rather than the + 0x13110 focus slot, and there is no emulator comparison. Object15Create (0x0805296C) loads the special_21 art (0x081CBEE4/0x0820A1C4/0x082115F8), presets + 0x18 = 0x6000 and + 0x1C = 0x200000, links a type-0x1B child through sub_080528E0 and picks state 4 with the + 0x42C bit-0 lock when the gEwramData + 0x348 word already carries bit 0x8000000, else state 1. Object15Update (0x08052A34) runs five states: state 1 enters state 2 on the (0x10, 0x60, 0x7F, 0x20) probe, the flag40 and a clear sub_08021304 gate, locking input and running sub_0800C5A8(0); state 2 forces SetPlayerInput(1, 0) while + 0x1C exceeds 0x90000 else (1, the direction word), advances + 0x18 by 0x40, fires the fade pair at + 0x1C == 0x100000 and counts + 0x1C down by 0x4000 to state 3; state 3 forces the direction word, shows the param0-selected dialogue record, clears the + 0x42C bit 1 and fades with an external state advance; state 4 forces the x-compare direction (0x20/0x10) and returns to state 2 on its probe. Unit-tested in test_aos_object15.",
+   "next_action": "Port the fade, dialogue and camera calls once the scene-event system models + 0x1339A, + 0x13110 and the + 0x348 flag.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object15.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object15.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object15"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.swing_event_trigger",
    "area": "aos",
    "category": "environment",
@@ -29247,6 +29313,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object15",
+    "files": [
+     "tests/test_aos_object15.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_weapon",
     "files": [
      "tests/test_aos_weapon.c"
@@ -29332,12 +29405,18 @@
    }
   ],
   "summary": {
-   "passed": 178,
+   "passed": 179,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "5bf81d44",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object1B spin-synced object",
+   "scope": "project"
+  },
   {
    "commit": "a5ae2f12",
    "date": "2026-11-12",
@@ -29811,12 +29890,6 @@
    "date": "2026-11-10",
    "subject": "Port Werewolf (id 50)",
    "scope": "project"
-  },
-  {
-   "commit": "b740ea81",
-   "date": "2026-11-10",
-   "subject": "Port Werejaguar and Weretiger (ids 75/84) — shared were-family AI",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -29877,9 +29950,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1948,
-    "routines_attached_to_features": 1948,
-    "unassigned_routines": 1625,
+    "routines_cited_by_features": 1953,
+    "routines_attached_to_features": 1953,
+    "unassigned_routines": 1620,
     "call_edges": 14228
    }
   },

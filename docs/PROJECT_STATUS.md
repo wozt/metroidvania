@@ -1,3 +1,31 @@
+## Patch 1048 - Aria Object15 story cutscene director ported
+
+- `src/runtime/aos/game/aos_object15.c` ports Object15Update
+  (0x08052A34), the five-state story cutscene director dispatched
+  through sUnk_084F0ED8[21]; Object15Create's sprite attach and
+  type-0x1B child stay under special_sprites.
+- Create side reproduced: the + 0x18 = 0x6000 and
+  + 0x1C = 0x200000 presets, the + 0x348 bit-0x8000000 create
+  gate picking state 4 and the + 0x42C bit-0 lock.
+- Update reproduces state 1's triple gate (probe, player flag
+  0x40, sub_08021304 clear), state 2's input lock then direction
+  word, the + 0x18 += 0x40 advance, the + 0x1C == 0x100000 fade
+  pair and the 0x4000 countdown to state 3, state 3's dialogue
+  record selection (0x0852320C / 0x08517B70) and input release,
+  and state 4's x-compare forced direction with the return probe.
+- Runtime wiring: SPECIAL id 21 spawns on the camera window, the
+  probes become player-near windows, the forced input drives
+  input->held and the fade/dialogue outputs are reported only.
+- Divergences documented: the + 0x1C bit-0x40 flag, the
+  + 0x1339A direction word and the + 0x348 event bit have no
+  runtime fields, the fade and dialogue calls are not played,
+  and the state-4 compare uses entity positions rather than the
+  + 0x13110 focus slot.
+- Tests: `tests/test_aos_object15.c` covers the create presets
+  and event gate, the state-1 triple gate, the state-2 input
+  modes, angle/counter advance, the single fade frame, the
+  state-3 dialogue records and the state-4 direction/probe.
+
 ## Patch 1047 - Aria Object1B spin-synced object ported
 
 - `src/runtime/aos/game/aos_object1b.c` ports Object1BUpdate

@@ -14,6 +14,7 @@
 #include "aos/core/aos_mp2k.h"
 #include "aos/core/aos_room_music.h"
 #include "aos/game/aos_door.h"
+#include "aos/game/aos_object02.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -405,6 +406,7 @@ typedef struct {
     int spawner;            /* entity index of a zombie's spawner, or -1 */
     AosDoor door;
     AosWall wall;           /* objects 0x08 and 0x09 */
+    AosObject02 object02;   /* object 0x02: the cutscene director */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4414,6 +4416,49 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {
+            /* Object02Create / Object02Update (sUnk_084F0DF8[2] /
+             * sUnk_084F0ED8[2]): the cutscene director. Screen pixels
+             * are room pixels minus the camera, the same approximation
+             * the door uses for + 0x42/+ 0x46. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                int32_t sx = e->x - cam_x, sy = e->y - cam_y;
+                int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+                int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+                bool near = (uint16_t)(sx - (ssx - 0x1C)) <= 0x38 &&
+                            (uint16_t)(sy - ssy) <= 0x22;
+                aos_object02_create(&e->object02, e->param0, e->param1,
+                                    aria_pickup_state.special, near, sx, ssx,
+                                    soma->vx);
+                continue;
+            }
+            if (e->object02.deleted) continue;
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            aos_object02_update(&e->object02, layer, cam_x, cam_y, e->x, e->y,
+                                ssx, ssy, aria_pickup_state.special, aos_random);
+            if (e->object02.force_zero || e->object02.forced) {
+                input->active = true;
+                input->held = e->object02.forced;
+            }
+            if (e->object02.zero_soma_vx) {
+                soma->vx = 0;
+                soma->friction = 0;    /* + 0x48 and + 0x50 */
+            }
+            if (e->object02.song >= 0) {
+                sound = e->object02.song;
+                printf("Object02 %zu: song 0x%X\n", i, e->object02.song);
+            }
+            if (e->object02.sparkle && room->effect_count < MAX_EFFECTS)
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = true,
+                    .x = e->object02.sparkle_x << 16,
+                    .y = e->object02.sparkle_y << 16,
+                    .vy = -0x1000};
+            continue;
+        }
         if (!door) continue;
         if (!e->spawned) {
             if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
@@ -5710,6 +5755,7 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         const AriaEntity *e = &room->entities[i];
         if (!e->spawned || e->kind != ARIA_KIND_SPECIAL || e->id < 0 || e->id >= 64)
             continue;
+        if (e->id == 2 && e->object02.deleted) continue;
         const __typeof__(objects->special_objects[0]) *art = NULL;
         /* Object0FCreate (id 15) selects the OBJ palette row param0 >> 8,
          * defaulting to 7; its variant suffix carries that row. Other
@@ -8487,8 +8533,13 @@ int aria_runtime_main(int argc, char **argv) {
             bool door_held = false;
             for (size_t k = 0; k < room.entity_count && !door_held; ++k)
                 door_held = room.entities[k].kind == ARIA_KIND_SPECIAL &&
-                            room.entities[k].id == ARIA_OBJECT_WOODEN_DOOR &&
-                            room.entities[k].spawned && room.entities[k].door.holding;
+                            room.entities[k].spawned &&
+                            ((room.entities[k].kind == ARIA_KIND_SPECIAL &&
+                              room.entities[k].id == ARIA_OBJECT_WOODEN_DOOR &&
+                              room.entities[k].door.holding) ||
+                             (room.entities[k].kind == ARIA_KIND_SPECIAL &&
+                              room.entities[k].id == 2 &&
+                              room.entities[k].object02.holding));
             /* _0801CCE2, the tail of sub_0801B0D8 before +0x22 advances: the
              * Sherman Ring (accessory 0x2A) grants one experience every
              * eighth tick while LEFT or RIGHT is held, on the ground, not

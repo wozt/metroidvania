@@ -73,8 +73,6 @@ aos:asm:asm/code/code_08039340.s:sub_08039820	sub_08039820	unclassified				asm_f
 aos:asm:asm/code/code_08039340.s:sub_08039A6C	sub_08039A6C	unclassified				asm_function	0x08039A6C	asm/code/code_08039340.s	925	0	0
 aos:asm:asm/code/code_08039340.s:sub_0803ACE0	sub_0803ACE0	unclassified				asm_function	0x0803ACE0	asm/code/code_08039340.s	3286	1	1
 aos:asm:asm/code/code_08039340.s:sub_0803B184	sub_0803B184	unclassified				asm_function	0x0803B184	asm/code/code_08039340.s	3885	3	5
-aos:asm:asm/code/code_08040A38.s:Object02Create	Object02Create	environment	name			asm_function		asm/code/code_08040A38.s	25877	0	6
-aos:asm:asm/code/code_08040A38.s:Object02Update	Object02Update	environment	name			asm_function		asm/code/code_08040A38.s	26042	0	9
 aos:asm:asm/code/code_08040A38.s:Object03Create	Object03Create	environment	name			asm_function		asm/code/code_08040A38.s	26471	0	2
 aos:asm:asm/code/code_08040A38.s:Object03Update	Object03Update	environment	name			asm_function		asm/code/code_08040A38.s	26541	0	4
 aos:asm:asm/code/code_08040A38.s:Object04Create	Object04Create	environment	name			asm_function		asm/code/code_08040A38.s	26837	0	5
@@ -1298,8 +1296,6 @@ aos:c:src/code_08001194.c:sub_08002028	sub_08002028	unclassified				c_function	0
 aos:c:src/code_08001194.c:sub_080020D8	sub_080020D8	unclassified				c_function	0x080020D8	src/code_08001194.c	1392	4	3
 aos:c:src/code_08001194.c:sub_0800210C	sub_0800210C	unclassified				c_function	0x0800210C	src/code_08001194.c	1405	3	3
 aos:c:src/code_08001194.c:sub_08002140	sub_08002140	unclassified				c_function	0x08002140	src/code_08001194.c	1418	0	2
-aos:c:src/code_08001194.c:sub_08002200	sub_08002200	unclassified				c_function	0x08002200	src/code_08001194.c	1485	14	0
-aos:c:src/code_08001194.c:sub_08002248	sub_08002248	unclassified				c_function	0x08002248	src/code_08001194.c	1495	9	0
 aos:c:src/code_08001194.c:sub_08002278	sub_08002278	unclassified				c_function	0x08002278	src/code_08001194.c	1508	2	0
 aos:c:src/code_08001194.c:sub_080022A8	sub_080022A8	unclassified				c_function	0x080022A8	src/code_08001194.c	1521	2	0
 aos:c:src/code_08001194.c:sub_080022E8	sub_080022E8	unclassified				c_function	0x080022E8	src/code_08001194.c	1550	2	0

@@ -1,3 +1,37 @@
+## Patch 1030 - Aria Object02 cutscene director ported
+
+- `src/runtime/aos/game/aos_object02.c` ports Object02Create
+  (0x0804DFAC) and Object02Update (0x0804E0F8), the sUnk_084F0DF8[2] /
+  sUnk_084F0ED8[2] pair: the special object that seals a room with a
+  column of three solid blocks, walks Soma with forced input through a
+  scripted scene and releases him when it ends.
+- Create one-shots param0 <= 1 objects whose + 0x37E event bit
+  (param1 index) already fired, picks anim 6 (9 for param1 == 7) and
+  the walk facing from screen x > 0x78. A near spawn (the
+  sub_08068AD4 0x38 x 0x22 probe around soma x - 0x1C) starts state
+  0xA locked with SetPlayerInput(1, 0) and clears Soma's + 0x48/+ 0x50
+  when he walks away from the screen centre; an outside spawn seals
+  the blocks through aos_collision_set_block (sub_08002200) at the
+  anchor y - 8/-0x18/-0x28 and picks state 0x14/0x63/0 for param0 1/3.
+- Update runs the state-0 block cycle (cleared while the horizontal
+  0x28..0x4F window holds, re-sealed on the timer 1-2 edge, song 0x113
+  probes), the state-2/10 forced walk (0x20/0x10 by facing, + 0x42C
+  hold bits feeding the Sherman Ring door_held gate), state 10
+  reseal-and-advance, state 11 release countdown, state 20 event-bit
+  wait and state 21 block clear.
+- Runtime wiring: SPECIAL id 2 entities spawn on the usual camera
+  window, feed input->held, zero soma->vx/friction, play song 0x113,
+  emit the param0-7 sparkle as AOS_EFFECT_SPARKLE and skip drawing
+  once deleted.
+- Documented divergences: the winOut window blend, the state-20
+  sub_08013F6C accent, sub_080235C8 bookkeeping, the + 0x5C/+ 0x65/+ 0x59
+  palette writes, the approximated sparkle and the exported
+  animation-0 draw loop.
+- Tests: `tests/test_aos_object02.c` covers the one-shot delete,
+  create branches, the near/far block cycle and release edge, the
+  forced walk, the reseal advance, the release countdown, the event
+  wait and the off-screen flag.
+
 ## Patch 1029 - Red soul 27 (Man-Eater) ported
 
 - `src/runtime/aos/red_souls/aos_soul_red_man_eater.c` ports

@@ -312,7 +312,7 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aos/re
                src/runtime/aos/game/aos_bestiary.c
                src/runtime/aos/menus/aos_button_config.c
                src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c src/runtime/aos/game/aos_room.c
-               src/runtime/aos/game/aos_door.c src/runtime/aos/core/aos_wall.c src/runtime/aos/weapons/aos_weapon.c ${AOS_ENEMY_SOURCES} src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/core/aos_effect.c
+               src/runtime/aos/game/aos_door.c src/runtime/aos/game/aos_object02.c src/runtime/aos/core/aos_wall.c src/runtime/aos/weapons/aos_weapon.c ${AOS_ENEMY_SOURCES} src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/core/aos_effect.c
                src/runtime/gba_input.c src/runtime/aos/core/aos_input.c src/runtime/aos/game/aos_save.c
                src/runtime/aos/game/aos_game_mode.c src/runtime/aos/game/aos_game_lifecycle.c src/runtime/aos/intro/aos_game_over.c src/runtime/aos/menus/aos_main_menu.c
                src/runtime/aos/intro/aos_intro_cutscene.c src/runtime/aos/intro/aos_intro_entities.c
@@ -1485,6 +1485,13 @@ if(BUILD_TESTING)
     target_include_directories(fusion_aos_door_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_door_tests)
     add_test(NAME aos_door COMMAND fusion_aos_door_tests)
+
+    add_executable(fusion_aos_object02_tests tests/test_aos_object02.c
+                   src/runtime/aos/game/aos_object02.c src/runtime/aos/core/aos_collision.c)
+    target_include_directories(fusion_aos_object02_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_aos_object02_tests PRIVATE m)
+    fusion_enable_warnings(fusion_aos_object02_tests)
+    add_test(NAME aos_object02 COMMAND fusion_aos_object02_tests)
 
     add_executable(fusion_aos_weapon_tests tests/test_aos_weapon.c src/runtime/aos/weapons/aos_weapon.c src/runtime/aos/core/aos_effect.c
                    src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c

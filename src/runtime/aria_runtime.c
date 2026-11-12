@@ -22,6 +22,7 @@
 #include "aos/game/aos_object06.h"
 #include "aos/game/aos_object07.h"
 #include "aos/game/aos_object0c.h"
+#include "aos/game/aos_object0f.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -421,6 +422,7 @@ typedef struct {
     AosObject06 object06;   /* object 0x06: cinematic trigger */
     AosObject07 object07;   /* object 0x07: ambient motes */
     AosObject0c object0c;   /* object 0x0C: room-region triggers */
+    AosObject0f object0f;   /* object 0x0F: destructible prop */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4649,6 +4651,46 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 15) {
+            /* Object0FCreate / Object0FUpdate (sUnk_084F0DF8[15] /
+             * sUnk_084F0ED8[15]): the destructible prop. The
+             * sub_08068AD4 probe becomes the player-near window, the
+             * sub_08045F9C attack-box match the weapon hitbox overlap
+             * with the entity box (documented approximation). */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object0f_create(&e->object0f, e->param0);
+                continue;
+            }
+            if (e->object0f.finished) continue;
+            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            bool near = (uint16_t)(ssx - osx + 0x10) <= 0x130 &&
+                        (uint16_t)(ssy - osy + 0x20) <= 0xC0;
+            int wx, wy, ww, wh;
+            bool hit = combat->weapon && combat->weapon_frames &&
+                       aos_weapon_hitbox(combat->weapon, soma,
+                                         combat->weapon_frames,
+                                         &wx, &wy, &ww, &wh) &&
+                       ww > 1 && wh > 1 &&
+                       !(wx + ww - 1 < e->x - 8 || e->x + 8 < wx ||
+                         wy + wh - 1 < e->y - 16 || e->y < wy);
+            aos_object0f_update(&e->object0f, near, hit,
+                                ((int32_t)e->x) << 16, ((int32_t)e->y) << 16,
+                                aos_random);
+            if (e->object0f.song >= 0) {
+                sound = e->object0f.song;
+                printf("Object0F %zu: song 0x%X\n", i, e->object0f.song);
+            }
+            if (e->object0f.particle && room->effect_count < MAX_EFFECTS)
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = true,
+                    .x = e->object0f.particle_x,
+                    .y = e->object0f.particle_y};
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {
             /* Object02Create / Object02Update (sUnk_084F0DF8[2] /
              * sUnk_084F0ED8[2]): the cutscene director. Screen pixels
@@ -5990,6 +6032,7 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
             continue;
         if (e->id == 2 && e->object02.deleted) continue;
         if (e->id == 4 && e->object04.deleted) continue;
+        if (e->id == 15 && e->object0f.finished) continue;
         if (e->id == 1) {
             /* Object01's children are the sprites: draw the exported
              * still at each record coordinate (room pixels). */

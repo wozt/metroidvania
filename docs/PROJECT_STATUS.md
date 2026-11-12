@@ -1,3 +1,26 @@
+## Patch 1040 - Aria Object0F destructible prop ported
+
+- `src/runtime/aos/game/aos_object0f.c` ports Object0FCreate
+  (0x08050DB4) and Object0FUpdate (0x08050E3C), the destructible
+  prop dispatched through sUnk_084F0DF8[15] / sUnk_084F0ED8[15].
+- Create splits param0 into the OBJ palette row (high byte,
+  default 7 — the same key the special_15_v* draw lookup already
+  used) and the kept low byte; the resource attach, animation 0xE,
+  attack-box preset and frame callback are native setup covered by
+  the exported art.
+- Update reproduces the sub_08068AD4 probe miss (+ 0x58 bit 0x20),
+  the state-0 hit (song 0xA2, + 0xD = 0x28, state 1), the state-1
+  late drift particles (every fourth frame above 0x1E,
+  sub_0802D5EC(0x80000) jitter, + 0x5A palette bits) and the u8
+  timer wrap that sets the + 0x59 bit-3 done mark.
+- Runtime wiring: SPECIAL id 15 spawns on the camera window, the
+  probe becomes a player-near window, the hit is a weapon hitbox
+  overlap with the entity box, particles emit as sparkles and a
+  finished prop is skipped at draw.
+- Tests: `tests/test_aos_object0f.c` covers the param0 split, the
+  probe miss, the hit sequence, the particle cadence/jitter and
+  the timer wrap.
+
 ## Patch 1039 - Aria Object0C room-region triggers ported
 
 - `src/runtime/aos/game/aos_object0c.c` ports Object0CCreate

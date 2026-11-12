@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 150 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 151 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1918 | 1655 |
+| Castlevania: Aria of Sorrow | 1922 | 1651 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2443,6 +2443,15 @@ Tests: [`tests/test_aos_object02.c`](../tests/test_aos_object02.c), [`tests/test
 Dependencies: `aos.environment.breakable_walls`, `aos.environment.wooden_doors`.  
 Known divergences: The gDisplayRegisters winOut_L/H = 0x3F/0x2F window-out blend, the sub_08013F6C(0x1040) accent of state 20, the sub_080235C8 per-room bookkeeping and the entity + 0x5C/+ 0x65/+ 0x59 palette and art-row writes are not ported; the param0 == 7 sparkle (sub_0802D5EC/sub_08045CEC) is approximated by one drift effect; the draw keeps the exported special_objects animation 0 loop instead of the native + 0x1B anim (6, or 9 for param1 7).  
 Next action: Port the remaining special objects 1, 3-7 and 0x0A-0x37 create/update pairs and compare a scripted scene against an emulator.
+
+[~] **`aos.objects.destructible_prop` — Object0F destructible prop.** Object0FCreate (0x08050DB4) splits param0 into the OBJ palette row (high byte, default 7) and the kept low byte, attaches tiles through sub_0803AFB8(0x081C15F4) and sub_0803B924 with palette 0x0820ED60, sets + 0x5C = 0x14, + 0x58 &= 0xBF, animation 0xE and + 0x72 bit 1, presets the attack box and installs the sub_08050F08 frame callback. Object0FUpdate (0x08050E3C) sets + 0x58 bit 0x20 and ends on a failed sub_08068AD4 probe; state 0 clears + 0x58 bits 0 and 5 and on a sub_08045F9C hit plays song 0xA2, sets bit 0x20, + 0xD = 0x28 and enters state 1; state 1 emits a sub_08045CEC drift every fourth frame while + 0xD exceeds 0x1E, jittered by sub_0802D5EC(0x80000) with the + 0x5A palette bits, counts the u8 timer down and sets + 0x59 bit 3 on the 0xFF wrap. Unit-tested in test_aos_object0f.
+
+Native evidence: `aos:asm:asm/code/code_080211F0.s:sub_0802D5EC`, `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_08045CEC`, `aos:asm:asm/code/code_08040A38.s:sub_08045F9C`, `aos:asm:asm/code/code_08050A3C.s:Object0FCreate`, `aos:asm:asm/code/code_08050A3C.s:Object0FUpdate`, `aos:asm:asm/code/code_08050A3C.s:sub_08050F08`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/game/aos_object0f.c`](../src/runtime/aos/game/aos_object0f.c), [`src/runtime/aos/game/aos_object0f.h`](../src/runtime/aos/game/aos_object0f.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object0f.c`](../tests/test_aos_object0f.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The sub_08068AD4 probe is approximated by a player-near window, the sub_08045F9C attack-box match (sub_080421AC over the player + 0x70 slots, the sub_08043C10/sub_08043F70 case dispatch on param1) collapses to a weapon hitbox overlap with a 16x16 entity box, the sub_0803AFB8/0x081C15F4 resource attach and the 0x080CF8FA attack-box preset are covered by the exported special_15_v* art, the + 0x5A draw byte stays 0 so particle palettes read 0, and there is no emulator comparison.  
+Next action: Port the sub_080421AC attack-slot matcher and the sub_08045F9C case dispatch for a faithful hit resolution.
 
 [~] **`aos.objects.directional_director` — Object04 directional cutscene director.** Object04Create (0x0804E770) one-shots param0 <= 1 objects on the + 0x37E bit param1, then takes the near branch only when Soma stands on the approach side (+ 0x1A set: soma_x >= ex - 0x18, clear: soma_x <= ex + 0x18): state 0xA, timer 0x30, SetPlayerInput(1, 0) and the conditional + 0x48/+ 0x50 clear; far seals the three-block column and picks 0x14/0x63/0. Object04Update (0x0804E8C4) keeps the + 0x58 off-screen bit and the identical state-0 block cycle, forces + 0x1A ? RIGHT : LEFT in state 2 and the opposite in state 10 (which reseals on the directional probe), runs the state-11 release countdown without + 0x42C hold bits, the state-20 event wait and the state-21 block clear. Unit-tested in aos_object04.
 

@@ -29,6 +29,7 @@
 #include "aos/game/aos_object12.h"
 #include "aos/game/aos_object13.h"
 #include "aos/game/aos_object19.h"
+#include "aos/game/aos_object1b.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -435,6 +436,7 @@ typedef struct {
     AosObject12 object12;   /* object 0x12: param-driven animated sprite */
     AosObject13 object13;   /* object 0x13: swinging chandelier trigger */
     AosObject19 object19;   /* object 0x19: rectangular patrol mover */
+    AosObject1b object1b;   /* object 0x1B: spin-synced object */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4058,6 +4060,9 @@ static void clear_skills(AriaSouls *souls) {
 /* gEwramData + 0x344: the event bits (a breakable wall's break), stored
  * in the save (schema v10). */
 static uint32_t aria_events[AOS_WALL_EVENT_WORDS];
+/* gEwramData + 0x4C4: the shared spin clock Object1B state-1 objects
+ * ramp by 0x1000 a frame up to 0x13FFF. */
+static int32_t aria_spin_clock;
 /* The durable words touched by the common pickup collection tail. */
 static AosPickupCollectionState aria_pickup_state;
 
@@ -4881,6 +4886,30 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             aos_object19_update(&e->object19, near);
             e->x = (int)(e->object19.fx >> 16);
             e->y = (int)(e->object19.fy >> 16);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 27) {
+            /* Object1BUpdate (sUnk_084F0ED8[27]; Object1BCreate's
+             * sprite attach is the special_sprites coverage): the
+             * spin-synced object. The + 0x13190 focus reuses the
+             * Object0D proximity approximation; the sub_0803C918
+             * tile push collapses to the frame output. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object1b_create(&e->object1b);
+                continue;
+            }
+            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            bool focused = (uint16_t)(ssx - osx + 0x80) <= 0x100 &&
+                           (uint16_t)(ssy - osy + 0x40) <= 0x80;
+            aos_object1b_update(&e->object1b, focused, &aria_spin_clock);
+            if (e->object1b.song >= 0) {
+                sound = e->object1b.song;
+                printf("Object1B %zu: song 0x%X\n", i, e->object1b.song);
+            }
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {

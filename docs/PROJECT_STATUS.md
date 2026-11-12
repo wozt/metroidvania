@@ -1,3 +1,24 @@
+## Patch 1047 - Aria Object1B spin-synced object ported
+
+- `src/runtime/aos/game/aos_object1b.c` ports Object1BUpdate
+  (0x08053FC8), the rotation-synced object dispatched through
+  sUnk_084F0ED8[27]; Object1BCreate's sprite attach stays under
+  special_sprites.
+- Update reproduces the sub_08021278 registration, the + 0x13190
+  focus toggle (+ 0xB, preset 0x0C10F4F8, animation + 0xB + 2,
+  song 0x133, state 1), the shared + 0x4C4 clock ramp (0x1000 a
+  frame to 0x13FFF), the + 0x14 angle accumulation and the
+  (angle >> 0x13) mod-3 frame push through the 0x081185C8 table.
+- Runtime wiring: SPECIAL id 27 spawns on the camera window, the
+  focus reuses the Object0D proximity approximation and the
+  clock is a runtime global (aria_spin_clock).
+- Divergences documented: the attack preset and animation pick
+  are not applied, the sub_0803C918 tile DMA collapses to the
+  frame output.
+- Tests: `tests/test_aos_object1b.c` covers the focus toggle,
+  the deferred clock ramp, the shared-clock accumulation, the
+  ramp cap and the frame table.
+
 ## Patch 1046 - Aria Object19 patrol mover ported
 
 - `src/runtime/aos/game/aos_object19.c` ports Object19Update

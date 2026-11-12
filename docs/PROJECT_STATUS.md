@@ -1,3 +1,34 @@
+## Patch 1028 - Blue souls 2 (Giant Bat) and 7 (Final Guard) ported
+
+- `src/runtime/aos/blue_souls/aos_soul_blue_giant_bat.c` ports
+  `SkillGiantBatUse` (routine 0x0802EB85), a toggled 30 MP/s soul
+  with no sprite: the upkeep `sub_0802DE5C` and the source `+0x10`
+  mask `0x010001A0` both delete outright. The first update clamps
+  Soma's velocities to +-0x40000, zeroes `+0x50`/`+0x54`, clears
+  `+0x10` bits 0x21 and `+0xB`, plays song 0x8F and arms `+0xD =
+  0x10`; while `+0xD` counts down one `sub_08045B44` sparkle spawns
+  a frame orbiting Soma (`sin * 4` offsets, `-0x10` px up, spawned
+  velocities `sin * 2`). Every update forces `+0xA = 8`,
+  `+0x13260 |= 0x100` and `+0x131B8 |= 3` (aux_bits).
+- `src/runtime/aos/blue_souls/aos_soul_blue_final_guard.c` ports
+  `SkillFinalGuardUse` (routine 0x0802FC5D), a held 60 MP/s soul:
+  while `(+0x10 & 0x001001A2) == 0x00100000` (grounded, no
+  airborne/attacking/stop-at-wall/body-special) the guard trails
+  Soma's pixel position with y + 4 and his facing; any miss deletes.
+  The cast requires the source `+0xA == 0`, forces it to 0xA (the
+  ported "guardian's pose" state), requests sequence 0x35, clears
+  `+0x10` bits 0x400/0x1000000 and plays song 0x1A7; from state 2
+  on it sets `+0x13260 |= 0x4000` and `+0x131B8 |= 0x820`.
+- `src/assets/aos/objects.c` exports `skill_final_guard` (tiles
+  0x081DF960, palette 0x0820B5E0, frames 0x082371F0); Giant Bat
+  needs no art. `tests/test_aos_soul_blue_giant_bat.c` and
+  `tests/test_aos_soul_blue_final_guard.c` cover the dampening,
+  the sparkle cadence and orbit, the mask deletes and the trail.
+- All 25 blue-soul records now have a ported routine; the
+  `aos_catalog.tsv` soul rows for Giant Bat and Final Guard flip to
+  ported. Remaining unassigned soul-side routines: SkillManEaterUse
+  (red soul 27) and non-soul helpers.
+
 ## Patch 1027 - Blue soul 23 (Alastor) ported — all blue souls done
 
 - `src/runtime/aos/blue_souls/aos_soul_blue_alastor.c` ports

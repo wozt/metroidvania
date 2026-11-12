@@ -443,6 +443,9 @@ static const EntitySpec entities[] = {
     /* SkillAlastorUse's parked guardian (blue soul 23): its own
      * record, drawn through the sub_0803E058 angle/scale affine. */
     ENTITY("skill_alastor", 0x081E3980, 0x0820B700, 0, 0x08237AFC),
+    /* SkillFinalGuardUse's trailing guard (blue soul 7): its own
+     * record, drawn at the source's pixel position with y + 4. */
+    ENTITY("skill_final_guard", 0x081DF960, 0x0820B5E0, 0, 0x082371F0),
     /* Resource 11 of 0x080E13BC: Killer Fish's appearance sequence 1 and
      * looping swim/fall sequence 0. */
     ENTITY("skill_killer_fish", 0x081D18F0, 0x0820B1F0, 0, 0x082321E4),

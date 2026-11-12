@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T20:58:38+00:00",
+ "generated_at": "2026-11-12T21:01:14+00:00",
  "git": {
-  "commit": "3f128487",
+  "commit": "cda0bbed",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 323,
+   "total": 324,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 90,
+    "partial": 91,
     "functional": 223,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 223,
-   "functional_or_better_percent": 69.0,
-   "with_passing_tests": 310,
+   "functional_or_better_percent": 68.8,
+   "with_passing_tests": 311,
    "with_passing_tests_percent": 96.0,
    "unknown_or_blocked": 1,
    "features": [
@@ -355,6 +355,7 @@
     "aos.objects.save_warp_walls",
     "aos.objects.screen_space_oscillator",
     "aos.objects.skull_eye_flames",
+    "aos.objects.sparkle_emitter",
     "aos.objects.special_sprites",
     "aos.objects.spin_synced",
     "aos.objects.spinning_attack_orb",
@@ -557,11 +558,11 @@
    "areas": [
     "aos"
    ],
-   "total": 178,
+   "total": 179,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 62,
+    "partial": 63,
     "functional": 116,
     "faithful": 0,
     "validated": 0,
@@ -569,8 +570,8 @@
     "unknown": 0
    },
    "functional_or_better": 116,
-   "functional_or_better_percent": 65.2,
-   "with_passing_tests": 178,
+   "functional_or_better_percent": 64.8,
+   "with_passing_tests": 179,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -728,6 +729,7 @@
     "aos.objects.save_warp_walls",
     "aos.objects.screen_space_oscillator",
     "aos.objects.skull_eye_flames",
+    "aos.objects.sparkle_emitter",
     "aos.objects.special_sprites",
     "aos.objects.spin_synced",
     "aos.objects.spinning_attack_orb",
@@ -22818,6 +22820,71 @@
    }
   },
   {
+   "id": "aos.objects.sparkle_emitter",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object30 ambient sparkle emitter",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object30.c",
+    "src/runtime/aos/game/aos_object30.h",
+    "src/runtime/aria_runtime.c"
+   ],
+   "tests": [
+    "tests/test_aos_object30.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object30Create",
+    "Object30Update",
+    "sub_08059034",
+    "sub_08058D7C",
+    "sub_08058EDC",
+    "sub_08058FE8",
+    "sub_0806D3CC",
+    "sub_0806D128",
+    "sub_0803E058",
+    "sub_0803E654",
+    "sub_0803E6BC",
+    "sub_0803F2C8",
+    "sub_0803F17C"
+   ],
+   "limitations": "The sub_08058D7C type-0x49 child is approximated by a single sparkle effect at a random screen x over the camera (its RNG % 0xF0 spawn column, RNG % 3 variant, 0xA0000/0x80000/0xC0000 fall speeds and (RNG & 0x3FF) - 0x200 + 0x54 drift are not modelled), the sub_08058EDC child update — sub_0806D3CC integration, the A094[1] scroll-delta parallax correction scaled 1/4, 1/8 or 3/8 by variant and the sub_0806D128(3) hit delete — is not ported, the sub_0803E058 render call and the sub_0803E654 palette-variant check stay under special_sprites, and there is no emulator comparison. Object30Create (0x08058F88) runs the sub_08058FE8 sprite attach — the identical 0x081CBEEC / sub_08068264(0x0820A1C4, 9) / 0x08211844 triple as Object2F, exported as special_47 and mapped for id 48 — then sub_0803F2C8(0,0,1), sub_0803F17C, + 0x5C = 0x19, + 0xA = 0 and + 0x58 bit 0x20. Object30Update (0x08058FD0) delegates to sub_08059034 while + 0xA == 0: + 0xB waits at 0 for gEwramData + 0x42C bit 0x1000, latches to 1 and exits; armed, it decrements + 0xD and when the OLD u8 is 0 or 1 reloads (RNG & 0x7F) + 0x20 and fires sub_08058D7C. Unit-tested in test_aos_object30.",
+   "next_action": "Port the sub_08058EDC sparkle child as a real entity once the type-0x49 particle path exists, including the A094[1] parallax scroll correction.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object30.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object30.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object30"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.special_sprites",
    "area": "aos",
    "category": "environment",
@@ -30725,6 +30792,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object30",
+    "files": [
+     "tests/test_aos_object30.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_object1a",
     "files": [
      "tests/test_aos_object1a.c"
@@ -30817,12 +30891,18 @@
    }
   ],
   "summary": {
-   "passed": 197,
+   "passed": 198,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "cda0bbed",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object18 breakable scatter director",
+   "scope": "project"
+  },
   {
    "commit": "3f128487",
    "date": "2026-11-12",
@@ -31296,12 +31376,6 @@
    "date": "2026-11-11",
    "subject": "Port Aria of Sorrow Death (id 0x6B)",
    "scope": "project"
-  },
-  {
-   "commit": "622e0d59",
-   "date": "2026-11-11",
-   "subject": "Port Aria of Sorrow Stolas (id 97)",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -31362,9 +31436,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 2023,
-    "routines_attached_to_features": 2023,
-    "unassigned_routines": 1550,
+    "routines_cited_by_features": 2029,
+    "routines_attached_to_features": 2029,
+    "unassigned_routines": 1544,
     "call_edges": 14228
    }
   },

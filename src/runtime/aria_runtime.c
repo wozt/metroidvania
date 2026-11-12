@@ -49,6 +49,7 @@
 #include "aos/game/aos_object2c.h"
 #include "aos/game/aos_object17.h"
 #include "aos/game/aos_object18.h"
+#include "aos/game/aos_object30.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -470,6 +471,7 @@ typedef struct {
     AosObject2C object2c;   /* object 0x2C: fountain droplets */
     AosObject17 object17;   /* object 0x17: vertical pan director */
     AosObject18 object18;   /* object 0x18: breakable scatter */
+    AosObject30 object30;   /* object 0x30: sparkle emitter */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5171,6 +5173,35 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 48) {
+            /* Object30Create / Object30Update (sUnk_084F0DF8[48] /
+             * sUnk_084F0ED8[48]): the ambient sparkle emitter.
+             * The sub_08058FE8 sprite attach is the shared
+             * Object2F art (special_47); the + 0xB latch reads
+             * the gEwramData + 0x42C word through the pickup
+             * collection state and each sub_08058D7C child is
+             * approximated by a sparkle effect at a random
+             * screen x over the camera. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object30_create(&e->object30, &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            aos_object30_update(&e->object30,
+                                aria_pickup_state.global_flags,
+                                aos_random);
+            if (e->object30.spawn_fx &&
+                room->effect_count < MAX_EFFECTS) {
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = false,
+                    .x = cam_x + (int)(aos_random() % 0xF0),
+                    .y = cam_y};
+            }
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 36) {
             /* Object24Update (sUnk_084F0ED8[36]; Object24Create's
              * sprite attach stays under special_sprites and its art
@@ -6963,6 +6994,10 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
              * slot 2 — exported as special_38. */
             if (e->id == 38 || e->id == 39 || e->id == 40)
                 art = &objects->special_objects[38];
+            else if (e->id == 48)
+                /* Object30's sub_08058FE8 loads the identical
+                 * triple as Object2F — special_47. */
+                art = &objects->special_objects[47];
             else
                 art = &objects->special_objects[e->id];
         }

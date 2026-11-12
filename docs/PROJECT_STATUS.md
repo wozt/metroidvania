@@ -1,3 +1,16 @@
+## Patch 1067 - Aria Object30 sparkle emitter ported
+
+- `src/runtime/aos/game/aos_object30.c` ports Object30Create
+  (0x08058F88) and Object30Update (0x08058FD0), dispatch
+  index 48: the + 0xB latch on gEwramData + 0x42C bit
+  0x1000, the + 0xD countdown reload of (RNG & 0x7F) + 0x20
+  and the sub_08058D7C sparkle child cadence.
+- The child's art is the identical Object2F triple already
+  exported as special_47; the runtime maps id 48 to it.
+  Each spawn becomes a sparkle effect at a random screen x.
+- Tests: `tests/test_aos_object30.c` covers the flag gate,
+  the latch, the reload range and the non-0/1 + 0xB exit.
+
 ## Patch 1066 - Aria Object18 breakable scatter director ported
 
 - `src/runtime/aos/game/aos_object18.c` ports Object18Update

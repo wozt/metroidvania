@@ -17,6 +17,7 @@
 #include "aos/game/aos_object01.h"
 #include "aos/game/aos_object02.h"
 #include "aos/game/aos_object04.h"
+#include "aos/game/aos_object05.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -411,6 +412,7 @@ typedef struct {
     AosObject02 object02;   /* object 0x02: the cutscene director */
     AosObject01 object01;   /* object 0x01: conditional static children */
     AosObject04 object04;   /* object 0x04: directional cutscene director */
+    AosObject05 object05;   /* object 0x05: proximity trigger */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4506,6 +4508,28 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (e->object04.song >= 0) {
                 sound = e->object04.song;
                 printf("Object04 %zu: song 0x%X\n", i, e->object04.song);
+            }
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 5) {
+            /* Object05Create / Object05Update: passive proximity
+             * trigger — no blocks, no forced input, params unused. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                int32_t sx = e->x - cam_x, sy = e->y - cam_y;
+                int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+                int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+                aos_object05_create(&e->object05, sx, sy, ssx, ssy);
+                continue;
+            }
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            aos_object05_update(&e->object05, e->x - cam_x, e->y - cam_y,
+                                ssx, ssy);
+            if (e->object05.song >= 0) {
+                sound = e->object05.song;
+                printf("Object05 %zu: song 0x%X\n", i, e->object05.song);
             }
             continue;
         }

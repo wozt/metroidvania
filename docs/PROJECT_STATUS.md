@@ -1,3 +1,28 @@
+## Patch 1034 - Aria Object05 proximity trigger ported
+
+- `src/runtime/aos/game/aos_object05.c` ports Object05Create
+  (0x0804F00C) and Object05Update (0x0804F084), the passive proximity
+  trigger dispatched through sUnk_084F0DF8[5] / sUnk_084F0ED8[5].
+- Create runs the shared sub_0804DF3C init (sprite attach, + 0x1A
+  facing, gUnk_03002CB0 bit 15), overwrites + 0x65 = 0x7D and
+  + 0x5A = (+ 0x5A & 0x87) | 0x38, applies the winOut blend and arms
+  + 0x14 = 0x30 when the 0x38 x 0x22 probe around
+  (soma_x - 0x1C, soma_y) hits. Params are unused; no state write,
+  no block sealing, no SetPlayerInput.
+- Update keeps the + 0x58 off-screen bit and the state-0 timer cycle:
+  +2 saturating at 0x30 inside the (u16)(ex_sx - soma_sx + 0x28)
+  <= 0x4F window, -2 clearing at <= 2 outside; the 0x110 x 0xC0 probe
+  at (-0x10, 0) plays song 0x113 on the timer-0 entering edge and the
+  0x30 leaving edge.
+- Runtime wiring: SPECIAL id 5 entities spawn on the camera window and
+  feed the song output; they never delete and need no input or
+  collision writes.
+- Documented divergences: winOut blend, sprite attach approximated by
+  the exported special_objects art, + 0x5A base byte assumed 0.
+- Tests: `tests/test_aos_object05.c` covers both create branches, the
+  window timer cycle, both song edges, the 0x30 saturation and the
+  off-screen flag.
+
 ## Patch 1033 - Aria Object04 directional cutscene director ported
 
 - `src/runtime/aos/game/aos_object04.c` ports Object04Create

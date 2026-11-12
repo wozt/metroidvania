@@ -75,8 +75,6 @@ aos:asm:asm/code/code_08039340.s:sub_0803ACE0	sub_0803ACE0	unclassified				asm_f
 aos:asm:asm/code/code_08039340.s:sub_0803B184	sub_0803B184	unclassified				asm_function	0x0803B184	asm/code/code_08039340.s	3885	3	5
 aos:asm:asm/code/code_08040A38.s:Object03Create	Object03Create	environment	name			asm_function		asm/code/code_08040A38.s	26471	0	2
 aos:asm:asm/code/code_08040A38.s:Object03Update	Object03Update	environment	name			asm_function		asm/code/code_08040A38.s	26541	0	4
-aos:asm:asm/code/code_08040A38.s:Object05Create	Object05Create	environment	name			asm_function		asm/code/code_08040A38.s	27895	0	2
-aos:asm:asm/code/code_08040A38.s:Object05Update	Object05Update	environment	name			asm_function		asm/code/code_08040A38.s	27954	0	2
 aos:asm:asm/code/code_08040A38.s:Object06Create	Object06Create	environment	name			asm_function		asm/code/code_08040A38.s	27421	0	4
 aos:asm:asm/code/code_08040A38.s:Object06Update	Object06Update	environment	name			asm_function		asm/code/code_08040A38.s	27542	0	14
 aos:asm:asm/code/code_08040A38.s:Object07Create	Object07Create	environment	name			asm_function		asm/code/code_08040A38.s	28760	0	4

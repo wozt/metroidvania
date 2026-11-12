@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 145 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 146 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1897 | 1676 |
+| Castlevania: Aria of Sorrow | 1899 | 1674 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2443,6 +2443,15 @@ Tests: [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.objects.static_children`.  
 Known divergences: The record + 0xC u16 stored at entity + 0x34 and the record tail parameters are not modelled (enemy param0/param1 run as 0 like the cleared + 0x30/+ 0x32); the spawned enemy is appended as a new entity rather than reusing the object slot; unported enemy ids under the gate spawn nothing, matching an absent kind; Object0AUpdate/Object0BUpdate are bx lr natively because the record installs the enemy update on entity + 0.  
 Next action: Audit the + 0x34 record field against enemy creates that read it, then port the remaining object pairs.
+
+[~] **`aos.objects.proximity_trigger` — Object05 proximity trigger.** Object05Create (0x0804F00C) runs the shared sub_0804DF3C init, writes + 0x65 = 0x7D and + 0x5A = (+ 0x5A & 0x87)  or  0x38, applies the winOut blend and arms + 0x14 = 0x30 when the 0x38 x 0x22 probe around (soma_x - 0x1C, soma_y) hits; params are unused and no blocks are sealed. Object05Update (0x0804F084) keeps the + 0x58 off-screen bit and the state-0 timer cycle: +2 saturating at 0x30 inside the (u16)(ex_sx - soma_sx + 0x28) <= 0x4F window, -2 clearing at <= 2 outside, with the 0x110 x 0xC0 probe at (-0x10, 0) playing song 0x113 on both edges. Unit-tested in aos_object05.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:Object05Create`, `aos:asm:asm/code/code_08040A38.s:Object05Update`, `aos:asm:asm/code/code_08040A38.s:sub_0804DF3C`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:c:src/code/code_08039340.c:sub_0803AFB8`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/game/aos_object05.c`](../src/runtime/aos/game/aos_object05.c), [`src/runtime/aos/game/aos_object05.h`](../src/runtime/aos/game/aos_object05.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object05.c`](../tests/test_aos_object05.c).
+Dependencies: `aos.objects.cutscene_director`.  
+Known divergences: The gDisplayRegisters winOut blend, the sub_0804DF3C sprite attach (tiles 0x081C15F4, palette 0x0820ED60, drawFunc sub_0804DEA0) and the + 0x5C/+ 0x65/+ 0x58 bookkeeping are approximated by the exported special_objects art; the + 0x5A write assumes the shared init leaves the byte 0.  
+Next action: Port the remaining object pairs (03 escort, 06-07, 0x0C-0x37) and compare a scripted scene against an emulator.
 
 [~] **`aos.objects.special_sprites` — SPECIAL room object sprites (ids 13,16,19,20,21,23,24,25,27).** sub_0806E0D0(entity, gfx, palette, bank, frames) is decoded: most ObjectXXCreate functions pass hard-coded sprite resources while entity + 0x30/+ 0x32 carry the room record's param0/param1 and select behaviour through per-object state tables (Object14Update indexes 0x08526408 by param0). The nine resource triplets were extracted from the create functions and exported as Object/special_NN/anim_M sequences with metadata/object_frames.tsv (metroidvania-aos-object-frames-v1); empty native animations are skipped. The runtime loads the object index into special_objects[64] and draws each spawned SPECIAL entity. Source-derived and unit-tested, not emulator-compared.
 

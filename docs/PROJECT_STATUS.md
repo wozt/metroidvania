@@ -1,3 +1,28 @@
+## Patch 1059 - Aria Object26 chandelier hub and orb children ported
+
+- `src/runtime/aos/game/aos_object26.c` ports Object26Create
+  (0x08057E04) and Object26Update (0x08057EE0), dispatch index
+  38. Create loads the chandelier triple through sub_08057F00
+  (exported as special_38: tiles 0x081CBE7C, palette slot
+  sub_08068264(0x08209FD8, 2), frames 0x08210264), initialises
+  the + 0x18 = 0x1E / + 0x1A = 0x5A probe counters and spawns
+  the two linked orb children.
+- The children are real SPECIAL entities: an Object28 orb at
+  (+ 0x42 - 0x15, + 0x46 + 0x44) and an Object27 orb at
+  (+ 0x42 + 0x12, + 0x46 + 0x2C), linked through the new
+  `link_parent` field. Their state-0 gate now reads the parent
+  counter as a signed s16 > 0x77 and consumes it (strh 0) on
+  arming, reproducing the native charge-and-release cycle —
+  Object28 fires first from + 0x1A, Object27 later from + 0x18.
+- The parent's sub_08057F4C probe is a 0x8C x 0xC8 box centred
+  on the entity; a hit increments both counters.
+- Draw fix: ids 38/39/40 now resolve special_objects[38]
+  (palette slot 2) — they previously fell through to
+  special_objects[25], which is Object19's unrelated art.
+- Tests: `tests/test_aos_object26.c` covers the counter
+  initialisation, the hit/miss probe semantics, the two gate
+  thresholds and the u16 wrap.
+
 ## Patch 1058 - Aria soul catalog synchronized with the aspects registry
 
 - `data/dashboard/aos_catalog.tsv` implementation column was

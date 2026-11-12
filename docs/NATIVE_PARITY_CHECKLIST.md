@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 168 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 169 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1996 | 1577 |
+| Castlevania: Aria of Sorrow | 2000 | 1573 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2443,6 +2443,15 @@ Tests: [`tests/test_aos_object0e.c`](../tests/test_aos_object0e.c).
 Dependencies: `aos.objects.special_sprites`, `aos.objects.destructible_prop`.  
 Known divergences: The sub_08068AD4 probe and the sub_08045F9C hit test are approximated by the same player-near window and weapon hitbox overlap Object0F uses; the sub_08050A3C content children (type 0x49 entities sharing the prop resource set) are counted as sparkle effects rather than spawned; the sub_0806D5C0 gore burst positions are likewise approximated; the sub_08050BA8 frame callback's screen-y bookkeeping and palette swap under the gEwramData & 2 flag, the cfg record's + 8 attack preset and its u16 @ 6 sub_0806AF98 branch, the sub_0806E0D0 palette hint and the EntityDelete load-failure path beyond the variant bound are not ported; and there is no emulator comparison.  
 Next action: Port the sub_08050A3C content-child entities and the sub_0806D5C0 gore positions.
+
+[~] **`aos.objects.chandelier_hub` — Object26 chandelier hub and orb spawner.** Object26Create (0x08057E04) loads the chandelier triple through sub_08057F00 (tiles 0x081CBE7C, palette sub_08068264(0x08209FD8, 2), frames 0x08210264 = special_38), sets + 0x72 bits 2 and 1 set, sub_0803F2C8(3,0,1), + 0x5C = 0x12, + 0x59 bit 1 and + 0x58 bit 0x20, writes + 0x1A = 0x5A, + 0x18 = 0x1E, + 0xA = 0 and spawns two linked children: an Object28 orb at (+ 0x42 - 0x15, + 0x46 + 0x44) and an Object27 orb at (+ 0x42 + 0x12, + 0x46 + 0x2C), each with the parent pointer at + 0x14. Object26Update (0x08057EE0) runs the sub_08057F4C probe while + 0xA == 0 then the sub_0803F17C animation step; the probe tests the 0x8C x 0xC8 box at (+ 0x42 - 0x46, + 0x46 - 0x64) and on a hit increments the + 0x18 and + 0x1A u16 counters (either way + 0x58 bit 0x20 is set). Each orb's state 0 reads its parent's counter as a signed s16 > 0x77 and consumes it (strh 0) on arming, so the orbs charge and release cyclically — Object28 fires first from + 0x1A = 0x5A after ~0x1E hits, Object27 from + 0x18 = 0x1E after ~0x59.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object26Create`, `aos:asm:asm/code/code_08050A3C.s:Object26Update`, `aos:asm:asm/code/code_08050A3C.s:Object27Create`, `aos:asm:asm/code/code_08050A3C.s:Object27Update`, `aos:asm:asm/code/code_08050A3C.s:Object28Create`, `aos:asm:asm/code/code_08050A3C.s:Object28Update`, `aos:asm:asm/code/code_08050A3C.s:sub_08057F00`, `aos:asm:asm/code/code_08050A3C.s:sub_08057F4C`, `aos:asm:asm/code/code_08060B98.s:sub_0806CFFC`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:EntityCreateInRange`.  
+Local implementation: [`src/runtime/aos/game/aos_object26.c`](../src/runtime/aos/game/aos_object26.c), [`src/runtime/aos/game/aos_object26.h`](../src/runtime/aos/game/aos_object26.h), [`src/runtime/aos/game/aos_object27.c`](../src/runtime/aos/game/aos_object27.c), [`src/runtime/aos/game/aos_object28.c`](../src/runtime/aos/game/aos_object28.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object26.c`](../tests/test_aos_object26.c), [`tests/test_aos_object27.c`](../tests/test_aos_object27.c), [`tests/test_aos_object28.c`](../tests/test_aos_object28.c).
+Dependencies: `aos.objects.spinning_attack_orb`, `aos.objects.spinning_orb_sibling`, `aos.objects.special_sprites`, `aos.objects.swing_event_trigger`.  
+Known divergences: The sub_0806CFFC probe is approximated as a pixel-space player-in-box test (its exact target set is unverified), the + 0xB probe gate and the + 0x72/+ 0x5C/+ 0x59 marks are not modelled, EntityCreateInRange becomes a camera-window spawn of two real SPECIAL entities, and the children' attack presets and hurt callbacks stay under their own annotations.  
+Next action: Verify sub_0806CFFC's probe target set and observe the two-orb charge/release cycle in game.
 
 [~] **`aos.objects.cinematic_trigger` — Object06 cinematic trigger.** Object06Create (0x0804EC3C) near branch fires on the 0x38 x 0x22 probe OR the + 0x37E bit 2, locking state 0xA with SetPlayerInput(1, 0); far seals the column and picks 0x14/0x63/0. Object06Update (0x0804ED30) keeps the + 0x58 off-screen bit (bit 0x40 = right half picks the forced direction), runs the state-0 particle idle and probe trigger (song 0x111, fades, snapshot), the state-1 forced walk with the + 0xD countdown, the state-2 column clear and + 0x42C release gated on the cinematic flag, and the state-3 unconditional force. Unit-tested in aos_object06.
 

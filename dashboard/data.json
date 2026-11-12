@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T16:51:37+00:00",
+ "generated_at": "2026-11-12T17:07:24+00:00",
  "git": {
-  "commit": "47d5c321",
+  "commit": "62924ac4",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 313,
+   "total": 314,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 82,
+    "partial": 83,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 70.6,
-   "with_passing_tests": 300,
-   "with_passing_tests_percent": 95.8,
+   "functional_or_better_percent": 70.4,
+   "with_passing_tests": 301,
+   "with_passing_tests_percent": 95.9,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -330,6 +330,7 @@
     "aos.objects.ambient_motes",
     "aos.objects.animated_sprite",
     "aos.objects.breakable_prop",
+    "aos.objects.chandelier_hub",
     "aos.objects.cinematic_trigger",
     "aos.objects.cutscene_director",
     "aos.objects.destructible_prop",
@@ -547,11 +548,11 @@
    "areas": [
     "aos"
    ],
-   "total": 168,
+   "total": 169,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 54,
+    "partial": 55,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -559,8 +560,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 67.9,
-   "with_passing_tests": 168,
+   "functional_or_better_percent": 67.5,
+   "with_passing_tests": 169,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -693,6 +694,7 @@
     "aos.objects.ambient_motes",
     "aos.objects.animated_sprite",
     "aos.objects.breakable_prop",
+    "aos.objects.chandelier_hub",
     "aos.objects.cinematic_trigger",
     "aos.objects.cutscene_director",
     "aos.objects.destructible_prop",
@@ -21156,6 +21158,100 @@
    }
   },
   {
+   "id": "aos.objects.chandelier_hub",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object26 chandelier hub and orb spawner",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object26.c",
+    "src/runtime/aos/game/aos_object26.h",
+    "src/runtime/aos/game/aos_object27.c",
+    "src/runtime/aos/game/aos_object28.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_object26.c",
+    "tests/test_aos_object27.c",
+    "tests/test_aos_object28.c"
+   ],
+   "dependencies": [
+    "aos.objects.spinning_attack_orb",
+    "aos.objects.spinning_orb_sibling",
+    "aos.objects.special_sprites",
+    "aos.objects.swing_event_trigger"
+   ],
+   "native_routines": [
+    "Object26Create",
+    "Object26Update",
+    "sub_08057F00",
+    "sub_08057F4C",
+    "sub_0806CFFC",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "Object27Create",
+    "Object27Update",
+    "Object28Create",
+    "Object28Update",
+    "EntityCreateInRange"
+   ],
+   "limitations": "The sub_0806CFFC probe is approximated as a pixel-space player-in-box test (its exact target set is unverified), the + 0xB probe gate and the + 0x72/+ 0x5C/+ 0x59 marks are not modelled, EntityCreateInRange becomes a camera-window spawn of two real SPECIAL entities, and the children' attack presets and hurt callbacks stay under their own annotations. Object26Create (0x08057E04) loads the chandelier triple through sub_08057F00 (tiles 0x081CBE7C, palette sub_08068264(0x08209FD8, 2), frames 0x08210264 = special_38), sets + 0x72 bits 2 and 1 set, sub_0803F2C8(3,0,1), + 0x5C = 0x12, + 0x59 bit 1 and + 0x58 bit 0x20, writes + 0x1A = 0x5A, + 0x18 = 0x1E, + 0xA = 0 and spawns two linked children: an Object28 orb at (+ 0x42 - 0x15, + 0x46 + 0x44) and an Object27 orb at (+ 0x42 + 0x12, + 0x46 + 0x2C), each with the parent pointer at + 0x14. Object26Update (0x08057EE0) runs the sub_08057F4C probe while + 0xA == 0 then the sub_0803F17C animation step; the probe tests the 0x8C x 0xC8 box at (+ 0x42 - 0x46, + 0x46 - 0x64) and on a hit increments the + 0x18 and + 0x1A u16 counters (either way + 0x58 bit 0x20 is set). Each orb's state 0 reads its parent's counter as a signed s16 > 0x77 and consumes it (strh 0) on arming, so the orbs charge and release cyclically — Object28 fires first from + 0x1A = 0x5A after ~0x1E hits, Object27 from + 0x18 = 0x1E after ~0x59.",
+   "next_action": "Verify sub_0806CFFC's probe target set and observe the two-orb charge/release cycle in game.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object26.c",
+     "tests/test_aos_object27.c",
+     "tests/test_aos_object28.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object26.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object26"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_object27.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object27"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_object28.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object28"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.cinematic_trigger",
    "area": "aos",
    "category": "environment",
@@ -30004,6 +30100,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object26",
+    "files": [
+     "tests/test_aos_object26.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_weapon",
     "files": [
      "tests/test_aos_weapon.c"
@@ -30089,12 +30192,18 @@
    }
   ],
   "summary": {
-   "passed": 188,
+   "passed": 189,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "62924ac4",
+   "date": "2026-11-12",
+   "subject": "Sync Aria soul catalog with ported evidence",
+   "scope": "project"
+  },
   {
    "commit": "47d5c321",
    "date": "2026-11-12",
@@ -30568,12 +30677,6 @@
    "date": "2026-11-10",
    "subject": "Port Triton (Aria of Sorrow enemy id 0x43)",
    "scope": "project"
-  },
-  {
-   "commit": "a84b545e",
-   "date": "2026-11-10",
-   "subject": "Port Succubus (Aria of Sorrow enemy id 0x5F)",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -30634,9 +30737,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1996,
-    "routines_attached_to_features": 1996,
-    "unassigned_routines": 1577,
+    "routines_cited_by_features": 2000,
+    "routines_attached_to_features": 2000,
+    "unassigned_routines": 1573,
     "call_edges": 14228
    }
   },

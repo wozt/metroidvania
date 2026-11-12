@@ -704,6 +704,10 @@ static const EntitySpec special_objects[] = {
     ENTITY("special_13", 0x081CBE74, 0x08209F54, 0, 0x0821017C),
     ENTITY("special_16", 0x08268450, 0x082097B0, 0, 0x08268648),
     ENTITY("special_19", 0x081CBE7C, 0x08209FD8, 0, 0x08210264),
+    /* Object26Create's sub_08057F00 and the Object27/Object28 orb
+     * creates load the same tiles/frames as special_19 but palette
+     * slot sub_08068264(0x08209FD8, 2), not bank 0. */
+    ENTITY("special_38", 0x081CBE7C, 0x08209FD8, 2, 0x08210264),
     ENTITY("special_20", 0x081CBEA4, 0x0820A0DC, 0, 0x08210B60),
     ENTITY("special_21", 0x081CBEE4, 0x0820A1C4, 8, 0x082115F8),
     ENTITY("special_23", 0x081CBE9C, 0x08209FD8, 4, 0x08210A90),

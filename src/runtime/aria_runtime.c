@@ -34,6 +34,7 @@
 #include "aos/game/aos_object15.h"
 #include "aos/game/aos_object16.h"
 #include "aos/game/aos_object24.h"
+#include "aos/game/aos_object26.h"
 #include "aos/game/aos_object27.h"
 #include "aos/game/aos_object2a.h"
 #include "aos/game/aos_object2b.h"
@@ -457,9 +458,11 @@ typedef struct {
     AosObject2D object2d;   /* object 0x2D: proximity attack sprite */
     AosObject2E object2e;   /* object 0x2E: one-shot breakable prop */
     AosObject28 object28;   /* object 0x28: Object27 orb sibling */
+    AosObject26 object26;   /* object 0x26: chandelier hub counters */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
+    int link_parent;        /* Object26 child: parent entity index + 1, 0 = none */
 } AriaEntity;
 
 typedef struct {
@@ -5068,6 +5071,43 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             aos_object24_update(&e->object24, aos_random());
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 38) {
+            /* Object26Update (sUnk_084F0ED8[38]; Object26Create's
+             * sprite attach stays under special_sprites, the two
+             * orb children are spawned as real SPECIAL entities):
+             * the chandelier hub. Its sub_08057F4C probe tests the
+             * 0x8C x 0xC8 box at (x - 0x46, y - 0x64) — a 140x200
+             * box centred on the entity — against Soma and feeds
+             * the + 0x18/+ 0x1A counters the linked orbs consume. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object26_create(&e->object26);
+                /* Object26Create's two EntityCreateInRange(0x1B,
+                 * 0x48) children: the Object28 orb upper-left and
+                 * the Object27 orb lower-right, each linked to this
+                 * entity through + 0x14. */
+                if (room->entity_count + 2 <= MAX_ENTITIES) {
+                    int parent_index = (int)(e - room->entities);
+                    AriaEntity *orb_a = &room->entities[room->entity_count++];
+                    *orb_a = (AriaEntity){.kind = ARIA_KIND_SPECIAL, .id = 40,
+                        .x = e->x - 0x15, .y = e->y + 0x44, .spawned = true,
+                        .link_parent = parent_index + 1};
+                    aos_object28_create(&orb_a->object28, 0);
+                    AriaEntity *orb_b = &room->entities[room->entity_count++];
+                    *orb_b = (AriaEntity){.kind = ARIA_KIND_SPECIAL, .id = 39,
+                        .x = e->x + 0x12, .y = e->y + 0x2C, .spawned = true,
+                        .link_parent = parent_index + 1};
+                    aos_object27_create(&orb_b->object27, 0);
+                }
+                continue;
+            }
+            int32_t px = (int32_t)(soma->x >> 16), py = (int32_t)(soma->y >> 16);
+            bool inside = px >= e->x - 0x46 && px < e->x - 0x46 + 0x8C &&
+                          py >= e->y - 0x64 && py < e->y - 0x64 + 0xC8;
+            aos_object26_update(&e->object26, inside);
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 39) {
             /* Object27Update (sUnk_084F0ED8[39]; Object27Create's
              * sprite attach, attack preset and camera-derived + 0x3C
@@ -5082,12 +5122,26 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 aos_object27_create(&e->object27, (uint8_t)e->param1);
                 continue;
             }
-            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
-            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
-            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
-            bool target_far = (uint16_t)(ssx - osx + 0x10) <= 0x70 &&
-                              (uint16_t)(ssy - osy) <= 0x10;
+            uint16_t *gate = NULL;
+            bool target_far;
+            if (e->link_parent) {
+                /* An Object26 child: the + 0x14 link reads the
+                 * parent's + 0x18 as a signed s16 > 0x77 and the
+                 * orb consumes it (strh 0) on arming. */
+                AriaEntity *parent = &room->entities[e->link_parent - 1];
+                gate = &parent->object26.counter_a;
+                target_far = (int16_t)*gate > 0x77;
+            } else {
+                int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+                int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+                int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+                target_far = (uint16_t)(ssx - osx + 0x10) <= 0x70 &&
+                             (uint16_t)(ssy - osy) <= 0x10;
+            }
+            uint8_t phase_before = e->object27.phase;
             aos_object27_update(&e->object27, target_far);
+            if (gate && phase_before == 0 && e->object27.phase != 0)
+                *gate = 0;
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 42) {
@@ -5210,12 +5264,25 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 aos_object28_create(&e->object28, (uint8_t)e->param1);
                 continue;
             }
-            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
-            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
-            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
-            bool target_far = (uint16_t)(ssx - osx + 0x10) <= 0x70 &&
-                              (uint16_t)(ssy - osy) <= 0x10;
+            uint16_t *gate = NULL;
+            bool target_far;
+            if (e->link_parent) {
+                /* Object26's Object28 child gates on the parent's
+                 * + 0x1A s16 > 0x77, consumed on arming. */
+                AriaEntity *parent = &room->entities[e->link_parent - 1];
+                gate = &parent->object26.counter_b;
+                target_far = (int16_t)*gate > 0x77;
+            } else {
+                int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+                int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+                int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+                target_far = (uint16_t)(ssx - osx + 0x10) <= 0x70 &&
+                             (uint16_t)(ssy - osy) <= 0x10;
+            }
+            uint8_t phase_before = e->object28.phase;
             aos_object28_update(&e->object28, target_far);
+            if (gate && phase_before == 0 && e->object28.phase != 0)
+                *gate = 0;
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {
@@ -6649,11 +6716,11 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                 break;
             }
         if (!art) {
-            /* Object27/Object28 share the chandelier art: their
-             * creates load the same tiles/palette-frames triple
-             * as special_19. */
-            if (e->id == 39 || e->id == 40)
-                art = &objects->special_objects[25];
+            /* Object26 and its Object27/Object28 orb children share
+             * the chandelier tiles/frames of special_19 but palette
+             * slot 2 — exported as special_38. */
+            if (e->id == 38 || e->id == 39 || e->id == 40)
+                art = &objects->special_objects[38];
             else
                 art = &objects->special_objects[e->id];
         }

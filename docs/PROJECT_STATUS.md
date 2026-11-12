@@ -1,3 +1,25 @@
+## Patch 1058 - Aria soul catalog synchronized with the aspects registry
+
+- `data/dashboard/aos_catalog.tsv` implementation column was
+  stale: it still listed souls as missing/partial after their
+  use routines were ported. It now matches the per-monster
+  evidence in `aos_monster_aspects.tsv` and the native drop
+  table `assets/extracted/aria/metadata/enemies.tsv`:
+  red souls 55/55 ported, blue 22 ported + 2 partial
+  (Flying Armor, Black Panther: guardian ported, no drop
+  source), yellow 33 ported + 2 partial (Undine, Skula: flag
+  mechanism ported, no drop source or documented consumer),
+  ability 1 ported (index 4, the Kicker Skeleton dive kick)
+  + 5 partial (move unlocks implemented, no acquisition path).
+- `aos_monster_aspects.tsv` basilisk row corrected: native
+  enemies.tsv drops yellow soul 15 (soul_type 2, soul_index
+  15), not the shared red:15 the row claimed; soul_ref and
+  the Soul note now describe AOS_YELLOW_BASILISK_ROUTINE
+  (0x08032155, DEF/4 and -ATK/2) ported in
+  aos_yellow_soul_update.
+- Dashboard coverage now reports red 100%, blue 91%,
+  yellow 94%, ability 16%.
+
 ## Patch 1057 - Aria Object10 save point statue ported
 
 - `src/runtime/aos/game/aos_object10.c` ports Object10Create

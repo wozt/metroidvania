@@ -263,109 +263,109 @@ red_soul	05	11	Siren	ported
 red_soul	05	12	Tiny Devil	ported
 red_soul	05	13	Durga	ported
 red_soul	05	14	Rock Armor	ported
-red_soul	05	15	Student Witch	missing
-red_soul	05	16	Arachne	missing
+red_soul	05	15	Student Witch	ported
+red_soul	05	16	Arachne	ported
 red_soul	05	17	Fleaman	ported
-red_soul	05	18	Evil Butcher	missing
+red_soul	05	18	Evil Butcher	ported
 red_soul	05	19	Waiter Skeleton	ported
-red_soul	05	20	Altair	missing
-red_soul	05	21	Mudman	missing
-red_soul	05	22	Cockatrice	missing
-red_soul	05	23	Werewolf	missing
+red_soul	05	20	Altair	ported
+red_soul	05	21	Mudman	ported
+red_soul	05	22	Cockatrice	ported
+red_soul	05	23	Werewolf	ported
 red_soul	05	24	Harpy	ported
-red_soul	05	25	Une	missing
+red_soul	05	25	Une	ported
 red_soul	05	26	Needles	ported
 red_soul	05	27	Man-Eater	ported
-red_soul	05	28	Ukoback	missing
+red_soul	05	28	Ukoback	ported
 red_soul	05	29	Fish Head	ported
-red_soul	05	30	Disc Armor	missing
-red_soul	05	31	Nightmare	missing
-red_soul	05	32	Slime	missing
-red_soul	05	33	Dryad	missing
+red_soul	05	30	Disc Armor	ported
+red_soul	05	31	Nightmare	ported
+red_soul	05	32	Slime	ported
+red_soul	05	33	Dryad	ported
 red_soul	05	34	Ripper	ported
-red_soul	05	35	Werejaguar	missing
-red_soul	05	36	Weretiger	missing
-red_soul	05	37	Biphron	missing
-red_soul	05	38	Mandragora	missing
+red_soul	05	35	Werejaguar	ported
+red_soul	05	36	Weretiger	ported
+red_soul	05	37	Biphron	ported
+red_soul	05	38	Mandragora	ported
 red_soul	05	39	Beam Skeleton	ported
 red_soul	05	40	Skull Millione	ported
-red_soul	05	41	Giant Skeleton	missing
+red_soul	05	41	Giant Skeleton	ported
 red_soul	05	42	Gladiator	ported
-red_soul	05	43	Demon Lord	missing
-red_soul	05	44	Flame Demon	missing
-red_soul	05	45	Lightning Doll	partial
+red_soul	05	43	Demon Lord	ported
+red_soul	05	44	Flame Demon	ported
+red_soul	05	45	Lightning Doll	ported
 red_soul	05	46	Valkyrie	ported
-red_soul	05	47	Bomber Armor	missing
-red_soul	05	48	Red Minotaur	missing
-red_soul	05	49	Legion	missing
-red_soul	05	50	Balore	missing
-red_soul	05	51	Killer Doll	partial
-red_soul	05	52	Nemesis	partial
-red_soul	05	53	Killer Mantle	missing
-red_soul	05	54	Kyoma Demon	missing
-red_soul	05	55	Chronomage	missing
-blue_soul	06	1	Flying Armor	missing
+red_soul	05	47	Bomber Armor	ported
+red_soul	05	48	Red Minotaur	ported
+red_soul	05	49	Legion	ported
+red_soul	05	50	Balore	ported
+red_soul	05	51	Killer Doll	ported
+red_soul	05	52	Nemesis	ported
+red_soul	05	53	Killer Mantle	ported
+red_soul	05	54	Kyoma Demon	ported
+red_soul	05	55	Chronomage	ported
+blue_soul	06	1	Flying Armor	partial
 blue_soul	06	2	Giant Bat	ported
-blue_soul	06	3	Black Panther	missing
-blue_soul	06	4	Buer	partial
-blue_soul	06	5	Witch	missing
-blue_soul	06	6	Giant Ghost	partial
+blue_soul	06	3	Black Panther	partial
+blue_soul	06	4	Buer	ported
+blue_soul	06	5	Witch	ported
+blue_soul	06	6	Giant Ghost	ported
 blue_soul	06	7	Final Guard	ported
-blue_soul	06	8	Great Armor	missing
-blue_soul	06	9	Catoblepas	partial
-blue_soul	06	10	Bone Pillar	partial
-blue_soul	06	11	Cagnazzo	partial
-blue_soul	06	12	Big Golem	missing
-blue_soul	06	13	Shadow Knight	missing
-blue_soul	06	14	Creaking Skull	missing
-blue_soul	06	15	Medusa Head	partial
-blue_soul	06	16	Persephone	missing
-blue_soul	06	17	Alura Une	missing
-blue_soul	06	18	Devil	missing
-blue_soul	06	19	Manticore	missing
-blue_soul	06	20	Curly	partial
-blue_soul	06	21	Sky Fish	missing
-blue_soul	06	22	Imp	partial
-blue_soul	06	23	Alastor	missing
-blue_soul	06	24	Death	missing
-yellow_soul	07	1	Undine	missing
-yellow_soul	07	2	Skula	missing
-yellow_soul	07	3	Zombie Officer	partial
-yellow_soul	07	4	Iron Golem	missing
-yellow_soul	07	5	Dead Warrior	partial
-yellow_soul	07	6	Peeping Eye	partial
-yellow_soul	07	7	Succubus	missing
-yellow_soul	07	8	Flesh Golem	missing
-yellow_soul	07	9	Tsuchinoko	missing
-yellow_soul	07	10	Giant Worm	missing
-yellow_soul	07	11	Wooden Golem	missing
-yellow_soul	07	12	Zombie	partial
-yellow_soul	07	13	Lubicant	partial
-yellow_soul	07	14	Headhunter	missing
-yellow_soul	07	15	Basilisk	missing
-yellow_soul	07	16	Erinys	partial
-yellow_soul	07	17	Mimic	partial
-yellow_soul	07	18	Arc Demon	missing
-yellow_soul	07	19	Poison Worm	missing
-yellow_soul	07	20	Ectoplasm	missing
-yellow_soul	07	21	Gargoyle	partial
-yellow_soul	07	22	Skeleton Knight	partial
-yellow_soul	07	23	Minotaur	missing
-yellow_soul	07	24	Golem	missing
-yellow_soul	07	25	Triton	missing
-yellow_soul	07	26	White Dragon	partial
-yellow_soul	07	27	Quezlcoatl	missing
-yellow_soul	07	28	Gorgon	partial
-yellow_soul	07	29	Dead Crusader	partial
-yellow_soul	07	30	Red Crow	partial
-yellow_soul	07	31	Lilith	missing
-yellow_soul	07	32	Bael	missing
-yellow_soul	07	33	Stolas	missing
-yellow_soul	07	34	Ghost Dancer	partial
-yellow_soul	07	35	Gremlin	partial
-ability_soul	08	0	Grave Keeper	missing
-ability_soul	08	1	Skeleton Blaze	missing
-ability_soul	08	2	Malphas	missing
-ability_soul	08	3	Kicker Skeleton	missing
-ability_soul	08	4	Hippogryph	missing
-ability_soul	08	5	Galamoth	missing
+blue_soul	06	8	Great Armor	ported
+blue_soul	06	9	Catoblepas	ported
+blue_soul	06	10	Bone Pillar	ported
+blue_soul	06	11	Cagnazzo	ported
+blue_soul	06	12	Big Golem	ported
+blue_soul	06	13	Shadow Knight	ported
+blue_soul	06	14	Creaking Skull	ported
+blue_soul	06	15	Medusa Head	ported
+blue_soul	06	16	Persephone	ported
+blue_soul	06	17	Alura Une	ported
+blue_soul	06	18	Devil	ported
+blue_soul	06	19	Manticore	ported
+blue_soul	06	20	Curly	ported
+blue_soul	06	21	Sky Fish	ported
+blue_soul	06	22	Imp	ported
+blue_soul	06	23	Alastor	ported
+blue_soul	06	24	Death	ported
+yellow_soul	07	1	Undine	partial
+yellow_soul	07	2	Skula	partial
+yellow_soul	07	3	Zombie Officer	ported
+yellow_soul	07	4	Iron Golem	ported
+yellow_soul	07	5	Dead Warrior	ported
+yellow_soul	07	6	Peeping Eye	ported
+yellow_soul	07	7	Succubus	ported
+yellow_soul	07	8	Flesh Golem	ported
+yellow_soul	07	9	Tsuchinoko	ported
+yellow_soul	07	10	Giant Worm	ported
+yellow_soul	07	11	Wooden Golem	ported
+yellow_soul	07	12	Zombie	ported
+yellow_soul	07	13	Lubicant	ported
+yellow_soul	07	14	Headhunter	ported
+yellow_soul	07	15	Basilisk	ported
+yellow_soul	07	16	Erinys	ported
+yellow_soul	07	17	Mimic	ported
+yellow_soul	07	18	Arc Demon	ported
+yellow_soul	07	19	Poison Worm	ported
+yellow_soul	07	20	Ectoplasm	ported
+yellow_soul	07	21	Gargoyle	ported
+yellow_soul	07	22	Skeleton Knight	ported
+yellow_soul	07	23	Minotaur	ported
+yellow_soul	07	24	Golem	ported
+yellow_soul	07	25	Triton	ported
+yellow_soul	07	26	White Dragon	ported
+yellow_soul	07	27	Quezlcoatl	ported
+yellow_soul	07	28	Gorgon	ported
+yellow_soul	07	29	Dead Crusader	ported
+yellow_soul	07	30	Red Crow	ported
+yellow_soul	07	31	Lilith	ported
+yellow_soul	07	32	Bael	ported
+yellow_soul	07	33	Stolas	ported
+yellow_soul	07	34	Ghost Dancer	ported
+yellow_soul	07	35	Gremlin	ported
+ability_soul	08	0	Grave Keeper	partial
+ability_soul	08	1	Skeleton Blaze	partial
+ability_soul	08	2	Malphas	partial
+ability_soul	08	3	Kicker Skeleton	partial
+ability_soul	08	4	Hippogryph	ported
+ability_soul	08	5	Galamoth	partial

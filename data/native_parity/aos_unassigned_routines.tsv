@@ -209,8 +209,6 @@ aos:asm:asm/code/code_08040A38.s:sub_0804F84C	sub_0804F84C	unclassified				asm_f
 aos:asm:asm/code/code_08040A38.s:sub_0804F85C	sub_0804F85C	unclassified				asm_function	0x0804F85C	asm/code/code_08040A38.s	28955	1	0
 aos:asm:asm/code/code_08040A38.s:sub_08050920	sub_08050920	environment	referrers			asm_function	0x08050920	asm/code/code_08040A38.s	31125	0	9
 aos:asm:asm/code/code_08050A3C.s:Object10Update	Object10Update	environment	name			asm_function		asm/code/code_08050A3C.s	968	0	5
-aos:asm:asm/code/code_08050A3C.s:Object16Create	Object16Create	environment	name			asm_function		asm/code/code_08050A3C.s	4728	0	3
-aos:asm:asm/code/code_08050A3C.s:Object16Update	Object16Update	environment	name			asm_function		asm/code/code_08050A3C.s	4425	0	15
 aos:asm:asm/code/code_08050A3C.s:Object17Update	Object17Update	environment	name			asm_function		asm/code/code_08050A3C.s	5156	0	10
 aos:asm:asm/code/code_08050A3C.s:Object18Update	Object18Update	environment	name			asm_function		asm/code/code_08050A3C.s	5994	0	10
 aos:asm:asm/code/code_08050A3C.s:Object1DCreate	Object1DCreate	environment	name			asm_function		asm/code/code_08050A3C.s	9364	0	6
@@ -274,8 +272,6 @@ aos:asm:asm/code/code_08050A3C.s:sub_080527E4	sub_080527E4	unclassified				asm_f
 aos:asm:asm/code/code_08050A3C.s:sub_08052834	sub_08052834	unclassified				asm_function	0x08052834	asm/code/code_08050A3C.s	3825	0	3
 aos:asm:asm/code/code_08050A3C.s:sub_08052868	sub_08052868	unclassified				asm_function	0x08052868	asm/code/code_08050A3C.s	3852	0	0
 aos:asm:asm/code/code_08050A3C.s:sub_0805286C	sub_0805286C	unclassified				asm_function	0x0805286C	asm/code/code_08050A3C.s	3857	0	0
-aos:asm:asm/code/code_08050A3C.s:sub_08052C20	sub_08052C20	environment	referrers			asm_function	0x08052C20	asm/code/code_08050A3C.s	4324	0	5
-aos:asm:asm/code/code_08050A3C.s:sub_08052FDC	sub_08052FDC	environment	referrers			asm_function	0x08052FDC	asm/code/code_08050A3C.s	4782	0	2
 aos:asm:asm/code/code_08050A3C.s:sub_08053540	sub_08053540	unclassified				asm_function	0x08053540	asm/code/code_08050A3C.s	5461	0	0
 aos:asm:asm/code/code_08050A3C.s:sub_080535a0	sub_080535a0	unclassified				asm_function	0x080535A0	asm/code/code_08050A3C.s	5514	0	0
 aos:asm:asm/code/code_08050A3C.s:sub_08053604	sub_08053604	unclassified				asm_function	0x08053604	asm/code/code_08050A3C.s	5571	0	0
@@ -889,7 +885,6 @@ aos:asm:asm/code/code_080E032C.s:sub_080E032C	sub_080E032C	unclassified				asm_f
 aos:asm:asm/code/code_080E032C.s:sub_080E0330	sub_080E0330	unclassified				asm_function	0x080E0330	asm/code/code_080E032C.s	10	0	1
 aos:asm:asm/crt0.s:_intr_main	_intr_main	unclassified				asm_function		asm/crt0.s	24	0	0
 aos:asm:asm/crt0.s:_start	_start	unclassified				asm_function		asm/crt0.s	5	2	1
-aos:asm:asm/libagbsyscall.s:BgAffineSet	BgAffineSet	technical	name			asm_function		asm/libagbsyscall.s	10	11	0
 aos:asm:asm/libagbsyscall.s:CpuSet	CpuSet	technical	name			asm_function		asm/libagbsyscall.s	15	0	0
 aos:asm:asm/libagbsyscall.s:Div	Div	technical	name			asm_function		asm/libagbsyscall.s	20	32	0
 aos:asm:asm/libagbsyscall.s:IntrWait	IntrWait	technical	name			asm_function		asm/libagbsyscall.s	32	1	0
@@ -1005,7 +1000,6 @@ aos:c:src/code/code_080211F0.c:sub_0802346C	sub_0802346C	unclassified				c_funct
 aos:c:src/code/code_080211F0.c:sub_080234B0	sub_080234B0	unclassified				c_function	0x080234B0	src/code/code_080211F0.c	2028	0	0
 aos:c:src/code/code_080211F0.c:sub_08023508	sub_08023508	unclassified				c_function	0x08023508	src/code/code_080211F0.c	2044	0	1
 aos:c:src/code/code_080211F0.c:sub_08023530_inline_0	sub_08023530_inline_0	unclassified				c_function		src/code/code_080211F0.c	2062	1	0
-aos:c:src/code/code_080211F0.c:sub_080235C8	sub_080235C8	unclassified		technical	exclusive_callees	c_function	0x080235C8	src/code/code_080211F0.c	2114	10	7
 aos:c:src/code/code_080211F0.c:sub_08023724	sub_08023724	abilities	referrers			c_function	0x08023724	src/code/code_080211F0.c	2198	0	4
 aos:c:src/code/code_080211F0.c:sub_08023724_inline_0	sub_08023724_inline_0	abilities	referrers			c_function		src/code/code_080211F0.c	2178	1	0
 aos:c:src/code/code_080211F0.c:sub_0802383C	sub_0802383C	abilities	referrers			c_function	0x0802383C	src/code/code_080211F0.c	2254	3	6
@@ -1073,7 +1067,6 @@ aos:c:src/code/code_08039340.c:sub_0803CB94	sub_0803CB94	unclassified				c_funct
 aos:c:src/code/code_08039340.c:sub_0803CBB0	sub_0803CBB0	unclassified				c_function	0x0803CBB0	src/code/code_08039340.c	2185	0	0
 aos:c:src/code/code_08039340.c:sub_0803CC20	sub_0803CC20	unclassified				c_function	0x0803CC20	src/code/code_08039340.c	2204	0	1
 aos:c:src/code/code_08039340.c:sub_0803CC3C	sub_0803CC3C	unclassified				c_function	0x0803CC3C	src/code/code_08039340.c	2213	1	0
-aos:c:src/code/code_08039340.c:sub_0803CC70	sub_0803CC70	unclassified				c_function	0x0803CC70	src/code/code_08039340.c	2226	6	0
 aos:c:src/code/code_08039340.c:sub_0803CCBC	sub_0803CCBC	unclassified				c_function	0x0803CCBC	src/code/code_08039340.c	2240	4	0
 aos:c:src/code/code_08039340.c:sub_0803CD08	sub_0803CD08	unclassified				c_function	0x0803CD08	src/code/code_08039340.c	2253	0	0
 aos:c:src/code/code_08039340.c:sub_0803CD74	sub_0803CD74	unclassified				c_function	0x0803CD74	src/code/code_08039340.c	2277	0	0

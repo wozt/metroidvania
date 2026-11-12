@@ -1,3 +1,30 @@
+## Patch 1049 - Aria Object16 boss-intro zoom director ported
+
+- `src/runtime/aos/game/aos_object16.c` ports Object16Update
+  (0x08052CE4) plus the Object16Create (0x08052F6C) presets,
+  the five-state boss-intro director dispatched through
+  sUnk_084F0ED8[22]; the sprite attach, sub_0803CC70 record
+  pick and particle children stay under special_sprites.
+- Update reproduces the + 0x42C bit-0 arm, the x-compare
+  forced direction, the state-2 song 0x157, the state-3 sine
+  zoom (+ 0x14 << 6 through sub_080009E4, + 0xF rounding,
+  >> 4, 0x1000 minus), the + 0x24 += 2 scroll stepping with
+  + 0x20 accumulation, song 0x1AE and the white fade pair at
+  counter 0x40, the state-4 dialogue record and the + 0xD
+  parity particle spawn.
+- Runtime wiring: SPECIAL id 22 spawns on the camera window,
+  the player-near window stands in for the + 0x42C bit-0 arm,
+  the forced input drives input->held and the zoom output is
+  exposed on the object.
+- Divergences documented: the + 0x42C flags, the + 0x13110
+  focus compare, the BgAffineSet consumer, the dialogue and
+  camera calls and the RNG particle children are approximated
+  or reported only.
+- Tests: `tests/test_aos_object16.c` covers the create
+  presets, the state-0 arm, the state-1 direction/probe, the
+  state-2 song, the state-3 zoom/scroll/song/fade sequence,
+  the state-4 dialogue and the particle parity.
+
 ## Patch 1048 - Aria Object15 story cutscene director ported
 
 - `src/runtime/aos/game/aos_object15.c` ports Object15Update

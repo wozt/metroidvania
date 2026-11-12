@@ -31,6 +31,7 @@
 #include "aos/game/aos_object19.h"
 #include "aos/game/aos_object1b.h"
 #include "aos/game/aos_object15.h"
+#include "aos/game/aos_object16.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -439,6 +440,7 @@ typedef struct {
     AosObject19 object19;   /* object 0x19: rectangular patrol mover */
     AosObject1b object1b;   /* object 0x1B: spin-synced object */
     AosObject15 object15;   /* object 0x15: story cutscene director */
+    AosObject16 object16;   /* object 0x16: boss-intro zoom director */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4947,6 +4949,46 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 input->held = e->object15.dir_word;
             (void)e->object15.fade;   /* sub_0803D18C/sub_0803CDF0 */
             (void)e->object15.dialogue;
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 22) {
+            /* Object16Update (sUnk_084F0ED8[22]; Object16Create's
+             * sprite attach and sub_0803CC70 record pick stay
+             * under special_sprites): the boss-intro zoom
+             * director. The + 0x42C flags, the probe and the x
+             * compare are approximated; the BgAffineSet zoom is
+             * reported on the object, songs/fades/dialogue are
+             * outputs only. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object16_create(&e->object16, e->param0);
+                continue;
+            }
+            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            bool near = (uint16_t)(ssx - osx + 0x10) <= 0x70 &&
+                        (uint16_t)(ssy - osy) <= 0x10;
+            /* + 0x42C bit 0 has no runtime field: the player-near
+             * window stands in for the external event that arms
+             * the cutscene. */
+            bool flag0 = near;
+            aos_object16_update(&e->object16, flag0, near,
+                                soma->x < ((int32_t)e->x) << 16,
+                                aos_sine);
+            if (e->object16.forced == 0)
+                input->held = 0;
+            else if (e->object16.forced == 1)
+                input->held = e->object16.walk_dir;
+            if (e->object16.song >= 0) {
+                sound = e->object16.song;
+                printf("Object16 %zu: song 0x%X\n", i, e->object16.song);
+            }
+            if (e->object16.particles && room->effect_count < MAX_EFFECTS)
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = false,
+                    .x = e->x, .y = e->y};
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {

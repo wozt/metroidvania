@@ -14,6 +14,7 @@
 #include "aos/core/aos_mp2k.h"
 #include "aos/core/aos_room_music.h"
 #include "aos/game/aos_door.h"
+#include "aos/game/aos_object01.h"
 #include "aos/game/aos_object02.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -407,6 +408,7 @@ typedef struct {
     AosDoor door;
     AosWall wall;           /* objects 0x08 and 0x09 */
     AosObject02 object02;   /* object 0x02: the cutscene director */
+    AosObject01 object01;   /* object 0x01: conditional static children */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -894,6 +896,7 @@ static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **backg
            target.number, ax, ay);
     free_room(room);
     *room = target;
+    aos_object01_reset();   /* the + 0x1316C claim is per-room here */
     SDL_DestroyTexture(*background);
     *background = texture;
     return 1;
@@ -4416,6 +4419,20 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 1) {
+            /* Object01Create / Object01Update: claims the + 0x1316C
+             * slot once per room and spawns its static children; an
+             * unclaimed object deletes itself on the first update. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object01_create(&e->object01, (int16_t)e->param0);
+                continue;
+            }
+            if (e->object01.deleted) continue;
+            aos_object01_update(&e->object01);
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {
             /* Object02Create / Object02Update (sUnk_084F0DF8[2] /
              * sUnk_084F0ED8[2]): the cutscene director. Screen pixels
@@ -5756,6 +5773,25 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (!e->spawned || e->kind != ARIA_KIND_SPECIAL || e->id < 0 || e->id >= 64)
             continue;
         if (e->id == 2 && e->object02.deleted) continue;
+        if (e->id == 1) {
+            /* Object01's children are the sprites: draw the exported
+             * still at each record coordinate (room pixels). */
+            if (!e->spawned || !e->object01.claimed) continue;
+            const __typeof__(objects->special_objects[0]) *child_art =
+                &objects->special_objects[1];
+            if (!child_art->loaded || !child_art->defs[0].count ||
+                !child_art->frames[0][0].texture) continue;
+            const AriaFrame *frame = &child_art->frames[0][0];
+            for (int c = 0; c < e->object01.child_count; ++c) {
+                SDL_FRect rect = {(float)(e->object01.child_x[c] +
+                                          frame->offset_x - cam_x),
+                                  (float)(e->object01.child_y[c] +
+                                          frame->offset_y - cam_y),
+                                  frame->w, frame->h};
+                SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+            }
+            continue;
+        }
         const __typeof__(objects->special_objects[0]) *art = NULL;
         /* Object0FCreate (id 15) selects the OBJ palette row param0 >> 8,
          * defaulting to 7; its variant suffix carries that row. Other
@@ -6164,6 +6200,7 @@ static bool debug_teleport(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture *
     *soma = fresh;
     free_room(room);
     *room = target;
+    aos_object01_reset();
     SDL_DestroyTexture(*background);
     *background = texture;
     printf("Debug teleport: room %d/%d at %d,%d\n", area, number, x, y);
@@ -7634,6 +7671,7 @@ int aria_runtime_main(int argc, char **argv) {
     aos_stats_init(&progress);
     aos_button_config_default(&progress.buttons);
     memset(aria_events, 0, sizeof aria_events);
+    aos_object01_reset();   /* the + 0x1316C claim is per-room here */
     memset(&aria_pickup_state, 0, sizeof aria_pickup_state);
     if (has_active_save) {
         progress.experience = active_save.experience;

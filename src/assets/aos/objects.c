@@ -697,6 +697,10 @@ static const EntitySpec entities[] = {
  * 0x085263A8), 15 uses the shared flame frames 0x0820ED60, 17 is a
  * spawner and 7/10 dispatch indirectly; they are decoded separately. */
 static const EntitySpec special_objects[] = {
+    /* Object01Create (id 1): up to three static children sharing the
+     * tiles 0x081CBE14, palette 0x08209C64 and frames 0x0820F18C; each
+     * child draws through sub_0803B9D0 with + 0x540 = 0x11. */
+    ENTITY("special_01", 0x081CBE14, 0x08209C64, 0, 0x0820F18C),
     ENTITY("special_13", 0x081CBE74, 0x08209F54, 0, 0x0821017C),
     ENTITY("special_16", 0x08268450, 0x082097B0, 0, 0x08268648),
     ENTITY("special_19", 0x081CBE7C, 0x08209FD8, 0, 0x08210264),

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 142 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 143 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1884 | 1689 |
+| Castlevania: Aria of Sorrow | 1889 | 1684 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2434,6 +2434,15 @@ Tests: [`tests/test_native_golden.c`](../tests/test_native_golden.c).
 Dependencies: `aos.environment.wooden_doors`, `aos.environment.breakable_walls`.  
 Known divergences: The create table sUnk_084F0DF8 was dumped from the ROM: entity id = table index and the decompiler's ObjectNN suffix is the hex id, so earlier decimal-labelled exports were remapped to the true ids. Ids 7, 10, 14, 15, 17 and 18 are not yet exported: 14 and 18 index param0-driven resource tables (0x085262BC records -> 0x08526214 triples; 0x085263A8 8-byte records), 15 uses the shared flame frames 0x0820ED60 with a param0-selected palette row, 17 is a spawner that deletes itself and creates via EntityCreateInRange, and 7/10 dispatch indirectly. Per-object animation and behaviour selection is not audited: the runtime draws animation 0 looping for every SPECIAL entity, and ids whose create exports raw still frames as separate animations show the first frame. param0 (entity + 0x30) selects the native state table, not the sprite. Object20 (id 26) is never room-placed: it is spawned by event controllers for cutscene actors.  
 Next action: Tables decoded from the ROM: id 14 param0 (signed, entity + 0x30) indexes 12-byte records at 0x085262BC (used values 0-14); record byte0 selects a {gfx,palette,frames} triple at 0x08526214 + group*12 (groups 0-13 valid), byte1 is the palette-bank argument. Id 18 param0 (values 0-3) indexes 24-byte records at 0x085263A8 with gfx@0, palette@4, frames@8, bank@0xC. Id 15 param0 is mostly 0 with palette-row variants 0x600/0x900 (high byte -> flame palette row, default 7) over shared frames 0x0820ED60. Ids 14 (15 param0 records -> 14 sprite groups + bank twin) and 18 (4 records) are exported as Object/special_NN_vP variants and drawn through a param0-matched special_variants lookup. Id 15 exports three flame variants (special_15_v6/v7/v9): sub_0803AFB8 resolves tile sheet 0x081C15F4 to 16-bank palette 0x0826F8A4 (state-3 alternative 0x082718A8 unselected for Soma) and sub_0803B924 draws shared frames 0x0820ED60 at OBJ palette row (param0>>8) ?: 7; the runtime normalizes the key the same way and animation 0 is the shared flame look. Ids 7 and 10 are logic objects, not sprites: Object07Create (id 7) dispatches param0 through a 5-case jump table (dominant param0=1 only clears +0x10; cases 0/2 spawn children via sub_0804F374 indexed by param1 through 0x085255AC) and Object0ACreate (id 10) is an entity spawner dispatching param0&0xFF through 36-byte records at 0x080E9644, deleting itself when the +0x37E bit is clear. Audit animation/state selection (id 15 brain sub_08050F08, sub_0803F2C8 argument, id 7/10 behaviours) and compare a room's object layer against an emulator.
+
+[~] **`aos.objects.static_children` — Object01 conditional static children (sub_08022088 slot).** Object01Create (0x08033C84) claims gEwramData + 0x1316C through sub_08022088 and, for param0 0 or 1 under the sUnk_080E1DA8 bound, spawns the record count of children at the u16 coordinate pairs minus the BG1 origin with tiles 0x081CBE14, palette 0x08209C64 and frames 0x0820F18C (exported as special_01, one still frame). Object01Update (0x08033C90) is inert once unk_53D_2 is set; the unclaimed path sub_08033C18 marks the children, sets unk_53D_3 and releases the slot through sub_080220B4 unconditionally. Unit-tested in aos_object01.
+
+Native evidence: `aos:c:src/code/code_080211F0.c:sub_08022088`, `aos:c:src/code/code_080211F0.c:sub_080220B4`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803B9D0`, `aos:c:src/code_080009A0.c:EntityCreateInRange`, `aos:c:src/code_08032E4C.c:Object01Create`, `aos:c:src/code_08032E4C.c:Object01Update`, `aos:c:src/code_08032E4C.c:sub_08033254`, `aos:c:src/code_08032E4C.c:sub_08033C18`.  
+Local implementation: [`src/runtime/aos/game/aos_object01.c`](../src/runtime/aos/game/aos_object01.c), [`src/runtime/aos/game/aos_object01.h`](../src/runtime/aos/game/aos_object01.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object01.c`](../tests/test_aos_object01.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Dependencies: `aos.objects.cutscene_director`, `aos.objects.special_sprites`.  
+Known divergences: The child entities (type 0x49, drawFunc sub_0803B9D0, + 0x540 = 0x11, + 0x549 = 0) fold into up to three static draws of the exported special_01 still; the + 0x1316C slot is scoped per room instead of session-wide; child positions keep the table coordinates as room pixels rather than screen-minus-BG1 storage; the sUnk_080E1DB4 callback row (sub_080337EC/sub_080338B4/sub_08033984/sub_08033AC0/sub_080220F4) is not invoked.  
+Next action: Port the remaining special object create/update pairs and compare a room with Object01 records against an emulator.
 
 ### Rooms, areas and maps
 

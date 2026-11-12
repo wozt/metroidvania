@@ -1041,7 +1041,6 @@ aos:c:src/code/code_080211F0.c:sub_08021EB4	sub_08021EB4	unclassified				c_funct
 aos:c:src/code/code_080211F0.c:sub_08021F18	sub_08021F18	unclassified				c_function	0x08021F18	src/code/code_080211F0.c	837	1	0
 aos:c:src/code/code_080211F0.c:sub_08021F44	sub_08021F44	unclassified				c_function	0x08021F44	src/code/code_080211F0.c	858	0	0
 aos:c:src/code/code_080211F0.c:sub_08022060	sub_08022060	unclassified				c_function	0x08022060	src/code/code_080211F0.c	950	2	0
-aos:c:src/code/code_080211F0.c:sub_080220B4	sub_080220B4	unclassified				c_function	0x080220B4	src/code/code_080211F0.c	981	7	0
 aos:c:src/code/code_080211F0.c:sub_080220CC	sub_080220CC	unclassified				c_function	0x080220CC	src/code/code_080211F0.c	991	2	0
 aos:c:src/code/code_080211F0.c:sub_080220F0	sub_080220F0	unclassified				c_function	0x080220F0	src/code/code_080211F0.c	1005	0	0
 aos:c:src/code/code_080211F0.c:sub_080220F4	sub_080220F4	unclassified				c_function	0x080220F4	src/code/code_080211F0.c	1015	0	0
@@ -1495,15 +1494,12 @@ aos:c:src/code_08032444.c:sub_08032CE0	sub_08032CE0	menus	referrers			c_function
 aos:c:src/code_08032444.c:sub_08032D18	sub_08032D18	menus	referrers			c_function	0x08032D18	src/code_08032444.c	964	1	1
 aos:c:src/code_08032444.c:sub_08032D58	sub_08032D58	unclassified		inventory	exclusive_callees	c_function	0x08032D58	src/code_08032444.c	992	2	1
 aos:c:src/code_08032444.c:sub_08032DF0	sub_08032DF0	unclassified				c_function	0x08032DF0	src/code_08032444.c	1048	3	2
-aos:c:src/code_08032E4C.c:Object01Create	Object01Create	environment	name			c_function	0x08033C84	src/code_08032E4C.c	1175	0	1
-aos:c:src/code_08032E4C.c:Object01Update	Object01Update	environment	name			c_function	0x08033C90	src/code_08032E4C.c	1185	0	1
 aos:c:src/code_08032E4C.c:sub_08032E4C	sub_08032E4C	unclassified		technical	exclusive_callees	c_function	0x08032E4C	src/code_08032E4C.c	37	0	4
 aos:c:src/code_08032E4C.c:sub_08032EFC	sub_08032EFC	unclassified		technical	exclusive_callees	c_function	0x08032EFC	src/code_08032E4C.c	228	2	2
 aos:c:src/code_08032E4C.c:sub_08032FC8	sub_08032FC8	unclassified		technical	exclusive_callees	c_function	0x08032FC8	src/code_08032E4C.c	289	0	5
 aos:c:src/code_08032E4C.c:sub_080330F4	sub_080330F4	unclassified		technical	exclusive_callees	c_function	0x080330F4	src/code_08032E4C.c	350	0	4
 aos:c:src/code_08032E4C.c:sub_0803319C	sub_0803319C	unclassified		technical	exclusive_callees	c_function	0x0803319C	src/code_08032E4C.c	406	5	2
 aos:c:src/code_08032E4C.c:sub_080331D8	sub_080331D8	unclassified		technical	exclusive_callees	c_function	0x080331D8	src/code_08032E4C.c	426	1	2
-aos:c:src/code_08032E4C.c:sub_08033254	sub_08033254	environment	referrers			c_function	0x08033254	src/code_08032E4C.c	509	1	6
 aos:c:src/code_08032E4C.c:sub_08033370	sub_08033370	environment	referrers			c_function	0x08033370	src/code_08032E4C.c	668	0	11
 aos:c:src/code_08032E4C.c:sub_08033370_inline_0	sub_08033370_inline_0	environment	referrers			c_function		src/code_08032E4C.c	552	1	0
 aos:c:src/code_08032E4C.c:sub_08033370_inline_1	sub_08033370_inline_1	environment	referrers			c_function		src/code_08032E4C.c	587	1	0
@@ -1517,7 +1513,6 @@ aos:c:src/code_08032E4C.c:sub_08033984_inline_0	sub_08033984_inline_0	unclassifi
 aos:c:src/code_08032E4C.c:sub_08033AC0	sub_08033AC0	unclassified				c_function	0x08033AC0	src/code_08032E4C.c	1127	0	1
 aos:c:src/code_08032E4C.c:sub_08033AC0_inline_0	sub_08033AC0_inline_0	unclassified				c_function		src/code_08032E4C.c	1051	1	0
 aos:c:src/code_08032E4C.c:sub_08033BFC	sub_08033BFC	unclassified				c_function	0x08033BFC	src/code_08032E4C.c	1137	0	1
-aos:c:src/code_08032E4C.c:sub_08033C18	sub_08033C18	unclassified				c_function	0x08033C18	src/code_08032E4C.c	1150	2	1
 aos:c:src/code_08033CAC.c:sub_08033CAC_inline_0	sub_08033CAC_inline_0	unclassified				c_function		src/code_08033CAC.c	31	3	0
 aos:c:src/code_08033CAC.c:sub_08033EA0	sub_08033EA0	unclassified		technical	exclusive_callees	c_function	0x08033EA0	src/code_08033CAC.c	212	1	4
 aos:c:src/code_08033CAC.c:sub_08033F58	sub_08033F58	unclassified		technical	exclusive_callees	c_function	0x08033F58	src/code_08033CAC.c	236	0	2

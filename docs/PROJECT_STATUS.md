@@ -1,3 +1,30 @@
+## Patch 1031 - Aria Object01 conditional static children ported
+
+- `src/runtime/aos/game/aos_object01.c` ports Object01Create
+  (0x08033C84 -> sub_08033254) and Object01Update (0x08033C90 ->
+  sub_08033C18): the conditional multi-part static decoration whose
+  children are type-0x49 entities drawn by sub_0803B9D0.
+- The create claims the gEwramData + 0x1316C slot through
+  sub_08022088 (first come) and, for param0 0 or 1 under the
+  sUnk_080E1DA8 bound, spawns the record count of children at the u16
+  coordinate pairs minus the BG1 origin with tiles 0x081CBE14,
+  palette 0x08209C64 and frames 0x0820F18C (exported as special_01,
+  one still frame, anchor -15).
+- The unclaimed path (param0 outside 0..1 or a busy slot) self-deletes
+  on the first update through unk_53D_3 and releases the slot via
+  sub_080220B4 unconditionally — the native quirk where a failed
+  object's update can release another's claim is kept.
+- Runtime wiring: SPECIAL id 1 entities spawn on the camera window,
+  draw_special_objects renders the exported still at each child
+  coordinate, and the claim resets on room transitions and teleports
+  (the port scopes + 0x1316C per room).
+- Documented divergences: child entities fold into static draws, the
+  + 0x540 = 0x11 animation field is not modelled, positions keep the
+  table coordinates as room pixels, and the sUnk_080E1DB4 callback row
+  is not invoked.
+- Tests: `tests/test_aos_object01.c` covers both record layouts, the
+  slot claim/release quirk and the rejected param0 range.
+
 ## Patch 1030 - Aria Object02 cutscene director ported
 
 - `src/runtime/aos/game/aos_object02.c` ports Object02Create

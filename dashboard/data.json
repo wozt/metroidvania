@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T21:01:14+00:00",
+ "generated_at": "2026-11-12T21:06:28+00:00",
  "git": {
-  "commit": "cda0bbed",
+  "commit": "646b04b6",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 324,
+   "total": 325,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 91,
+    "partial": 92,
     "functional": 223,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 223,
-   "functional_or_better_percent": 68.8,
-   "with_passing_tests": 311,
+   "functional_or_better_percent": 68.6,
+   "with_passing_tests": 312,
    "with_passing_tests_percent": 96.0,
    "unknown_or_blocked": 1,
    "features": [
@@ -335,6 +335,7 @@
     "aos.objects.chandelier_hub",
     "aos.objects.cinematic_trigger",
     "aos.objects.cutscene_director",
+    "aos.objects.cyclic_lift",
     "aos.objects.destructible_prop",
     "aos.objects.directional_director",
     "aos.objects.enemy_spawners",
@@ -558,11 +559,11 @@
    "areas": [
     "aos"
    ],
-   "total": 179,
+   "total": 180,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 63,
+    "partial": 64,
     "functional": 116,
     "faithful": 0,
     "validated": 0,
@@ -570,8 +571,8 @@
     "unknown": 0
    },
    "functional_or_better": 116,
-   "functional_or_better_percent": 64.8,
-   "with_passing_tests": 179,
+   "functional_or_better_percent": 64.4,
+   "with_passing_tests": 180,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -709,6 +710,7 @@
     "aos.objects.chandelier_hub",
     "aos.objects.cinematic_trigger",
     "aos.objects.cutscene_director",
+    "aos.objects.cyclic_lift",
     "aos.objects.destructible_prop",
     "aos.objects.directional_director",
     "aos.objects.enemy_spawners",
@@ -21543,6 +21545,71 @@
    }
   },
   {
+   "id": "aos.objects.cyclic_lift",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object21 cyclic lift director",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object21.c",
+    "src/runtime/aos/game/aos_object21.h",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_object21.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object21Create",
+    "Object21Update",
+    "sub_080567AC",
+    "sub_08056618",
+    "sub_0806D460",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_080421AC",
+    "sub_0804277C",
+    "sub_08042848",
+    "sub_080567F8",
+    "sub_08021654"
+   ],
+   "limitations": "The A094 room fields (+ 6 / + 0xA) pass as 0, the + 0x3C camera byte is fed from param1 like Object27, the + 0x6D collision flag passes 0, the + 0x44 position writes back to e->y as room pixels, the sub_0804277C/sub_080567F8 hurt preset and the 0x143C29E2 collision preset stay under special_sprites, the per-frame sub_080421AC slot read and sub_0803F17C step are counted, and there is no emulator comparison. Object21Create (0x08056550) runs the sub_080567AC sprite attach (tiles 0x081CBE94, palette sub_08068264(0x08209FD8, 1), frames 0x082107EC — the same tiles/frames as special_35 but bank 1, exported as special_33), installs the sub_080567F8 callback through sub_0804277C(8, ...) and the 0x143C29E2 box through sub_08042848, sets + 0x72 = (+ 0x72 OR 4) AND 0xFD, sub_0803F2C8(0,0,1), + 0x5C = 0x12, + 0xA = 0, + 0x42 = 0x40 - A094[6], + 0x46 = 0x18 - A094[0xA] and + 0x54 = 0x2800. Object21Update (0x08056784) runs sub_08056618 while + 0xA == 0: the + 0xB machine cycles 0-4 — states 0/1 integrate sub_0806D460 physics (+ 0x4C += + 0x54 clamped +/- 0x70000, + 0x44 += + 0x4C) against the 0x7F - A094[0xA] bound, state 0 anims (3,0,1) and plays song 0x7F with + 0x4C = -0x14000, state 1 zeroes + 0x4C, state 2 waits + 0xD > 0x3B, state 3 pins + 0x4C = -0x10000 and drifts + 0x44 up to the 0x18 - A094[0xA] bound, state 4 waits and resets. Unit-tested in test_aos_object21.",
+   "next_action": "Feed the real A094 room offsets and the + 0x6D collision flag once the room/collision plumbing exposes them, and port the sub_080567F8 hurt callback.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object21.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object21.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object21"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.destructible_prop",
    "area": "aos",
    "category": "environment",
@@ -30799,6 +30866,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object21",
+    "files": [
+     "tests/test_aos_object21.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_object1a",
     "files": [
      "tests/test_aos_object1a.c"
@@ -30891,12 +30965,18 @@
    }
   ],
   "summary": {
-   "passed": 198,
+   "passed": 199,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "646b04b6",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object30 sparkle emitter",
+   "scope": "project"
+  },
   {
    "commit": "cda0bbed",
    "date": "2026-11-12",
@@ -31370,12 +31450,6 @@
    "date": "2026-11-11",
    "subject": "Port Manticore (Aria id 54): approach/attack machines, six-child volley, wings and shot",
    "scope": "project"
-  },
-  {
-   "commit": "c362e610",
-   "date": "2026-11-11",
-   "subject": "Port Aria of Sorrow Death (id 0x6B)",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -31436,9 +31510,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 2029,
-    "routines_attached_to_features": 2029,
-    "unassigned_routines": 1544,
+    "routines_cited_by_features": 2034,
+    "routines_attached_to_features": 2034,
+    "unassigned_routines": 1539,
     "call_edges": 14228
    }
   },

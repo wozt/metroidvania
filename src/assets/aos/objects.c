@@ -726,6 +726,9 @@ static const EntitySpec special_objects[] = {
      * 0x081CBEBC, palette slot sub_08068264(0x0820A100, 2), frames
      * 0x082111F4. */
     ENTITY("special_45", 0x081CBEBC, 0x0820A100, 2, 0x082111F4),
+    /* Object21's sprite loader sub_080567AC (id 33 / 0x21): same
+     * tiles/frames as special_35 but palette bank 1, not 3. */
+    ENTITY("special_33", 0x081CBE94, 0x08209FD8, 1, 0x082107EC),
     /* Object23Create's sub_08057858 loader (id 35 / 0x23): tiles
      * 0x081CBE94, palette slot sub_08068264(0x08209FD8, 3), frames
      * 0x082107EC, drawFunc sub_0803B9D0. */

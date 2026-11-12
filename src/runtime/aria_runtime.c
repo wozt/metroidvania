@@ -50,6 +50,7 @@
 #include "aos/game/aos_object17.h"
 #include "aos/game/aos_object18.h"
 #include "aos/game/aos_object30.h"
+#include "aos/game/aos_object21.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -472,6 +473,7 @@ typedef struct {
     AosObject17 object17;   /* object 0x17: vertical pan director */
     AosObject18 object18;   /* object 0x18: breakable scatter */
     AosObject30 object30;   /* object 0x30: sparkle emitter */
+    AosObject21 object21;   /* object 0x21: cyclic lift */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5200,6 +5202,33 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     .x = cam_x + (int)(aos_random() % 0xF0),
                     .y = cam_y};
             }
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 33) {
+            /* Object21Create / Object21Update (sUnk_084F0DF8[33] /
+             * sUnk_084F0ED8[33]): the cyclic lift. Create's sprite
+             * attach exports as special_33 (same tiles/frames as
+             * special_35, palette bank 1). The A094 room fields
+             * pass as 0, the + 0x3C camera byte as param1, the
+             * + 0x6D collision flag as 0 and the sub_0806D460
+             * physics runs inside the module; the + 0x44 y
+             * position writes back to e->y. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object21_create(&e->object21, 0, 0, e->param1,
+                                    &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            aos_object21_update(&e->object21, 0, 0);
+            if (e->object21.song >= 0) {
+                sound = e->object21.song;
+                printf("Object21 %zu: song 0x%X\n", i,
+                       e->object21.song);
+            }
+            e->y = (int)(e->object21.pos_y >> 16);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 36) {

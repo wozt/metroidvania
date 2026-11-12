@@ -1,3 +1,19 @@
+## Patch 1068 - Aria Object21 cyclic lift director ported
+
+- `src/runtime/aos/game/aos_object21.c` ports Object21Create
+  (0x08056550) and Object21Update (0x08056784), dispatch
+  index 33: the sub_080567AC sprite attach exported as the
+  new special_33 (same tiles/frames as special_35, palette
+  bank 1), the + 0xB five-state cycle — sub_0806D460
+  physics, the 0x7F/0x18 - A094[0xA] bounds, song 0x7F,
+  the -0x14000/-0x10000 drifts and the + 0xD timeouts.
+- The + 0x44 y position writes back to e->y; A094 fields,
+  the + 0x3C camera byte and the + 0x6D flag are
+  approximated (0 / param1 / 0).
+- Tests: `tests/test_aos_object21.c` covers the physics
+  step, the clamp, both bound transitions, the timeouts
+  and the anim gates.
+
 ## Patch 1067 - Aria Object30 sparkle emitter ported
 
 - `src/runtime/aos/game/aos_object30.c` ports Object30Create

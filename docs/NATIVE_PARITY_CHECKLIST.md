@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 179 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 180 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2029 | 1544 |
+| Castlevania: Aria of Sorrow | 2034 | 1539 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2488,6 +2488,15 @@ Tests: [`tests/test_aos_object02.c`](../tests/test_aos_object02.c), [`tests/test
 Dependencies: `aos.environment.breakable_walls`, `aos.environment.wooden_doors`.  
 Known divergences: The gDisplayRegisters winOut_L/H = 0x3F/0x2F window-out blend, the sub_08013F6C(0x1040) accent of state 20, the sub_080235C8 per-room bookkeeping and the entity + 0x5C/+ 0x65/+ 0x59 palette and art-row writes are not ported; the param0 == 7 sparkle (sub_0802D5EC/sub_08045CEC) is approximated by one drift effect; the draw keeps the exported special_objects animation 0 loop instead of the native + 0x1B anim (6, or 9 for param1 7).  
 Next action: Port the remaining special objects 1, 3-7 and 0x0A-0x37 create/update pairs and compare a scripted scene against an emulator.
+
+[~] **`aos.objects.cyclic_lift` — Object21 cyclic lift director.** Object21Create (0x08056550) runs the sub_080567AC sprite attach (tiles 0x081CBE94, palette sub_08068264(0x08209FD8, 1), frames 0x082107EC — the same tiles/frames as special_35 but bank 1, exported as special_33), installs the sub_080567F8 callback through sub_0804277C(8, ...) and the 0x143C29E2 box through sub_08042848, sets + 0x72 = (+ 0x72 OR 4) AND 0xFD, sub_0803F2C8(0,0,1), + 0x5C = 0x12, + 0xA = 0, + 0x42 = 0x40 - A094[6], + 0x46 = 0x18 - A094[0xA] and + 0x54 = 0x2800. Object21Update (0x08056784) runs sub_08056618 while + 0xA == 0: the + 0xB machine cycles 0-4 — states 0/1 integrate sub_0806D460 physics (+ 0x4C += + 0x54 clamped +/- 0x70000, + 0x44 += + 0x4C) against the 0x7F - A094[0xA] bound, state 0 anims (3,0,1) and plays song 0x7F with + 0x4C = -0x14000, state 1 zeroes + 0x4C, state 2 waits + 0xD > 0x3B, state 3 pins + 0x4C = -0x10000 and drifts + 0x44 up to the 0x18 - A094[0xA] bound, state 4 waits and resets. Unit-tested in test_aos_object21.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_0804277C`, `aos:asm:asm/code/code_08040A38.s:sub_08042848`, `aos:asm:asm/code/code_08050A3C.s:Object21Create`, `aos:asm:asm/code/code_08050A3C.s:Object21Update`, `aos:asm:asm/code/code_08050A3C.s:sub_08056618`, `aos:asm:asm/code/code_08050A3C.s:sub_080567AC`, `aos:asm:asm/code/code_08050A3C.s:sub_080567F8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D460`, `aos:c:src/code/code_080211F0.c:sub_08021654`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`.  
+Local implementation: [`src/runtime/aos/game/aos_object21.c`](../src/runtime/aos/game/aos_object21.c), [`src/runtime/aos/game/aos_object21.h`](../src/runtime/aos/game/aos_object21.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object21.c`](../tests/test_aos_object21.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The A094 room fields (+ 6 / + 0xA) pass as 0, the + 0x3C camera byte is fed from param1 like Object27, the + 0x6D collision flag passes 0, the + 0x44 position writes back to e->y as room pixels, the sub_0804277C/sub_080567F8 hurt preset and the 0x143C29E2 collision preset stay under special_sprites, the per-frame sub_080421AC slot read and sub_0803F17C step are counted, and there is no emulator comparison.  
+Next action: Feed the real A094 room offsets and the + 0x6D collision flag once the room/collision plumbing exposes them, and port the sub_080567F8 hurt callback.
 
 [~] **`aos.objects.destructible_prop` — Object0F destructible prop.** Object0FCreate (0x08050DB4) splits param0 into the OBJ palette row (high byte, default 7) and the kept low byte, attaches tiles through sub_0803AFB8(0x081C15F4) and sub_0803B924 with palette 0x0820ED60, sets + 0x5C = 0x14, + 0x58 &= 0xBF, animation 0xE and + 0x72 bit 1, presets the attack box and installs the sub_08050F08 frame callback. Object0FUpdate (0x08050E3C) sets + 0x58 bit 0x20 and ends on a failed sub_08068AD4 probe; state 0 clears + 0x58 bits 0 and 5 and on a sub_08045F9C hit plays song 0xA2, sets bit 0x20, + 0xD = 0x28 and enters state 1; state 1 emits a sub_08045CEC drift every fourth frame while + 0xD exceeds 0x1E, jittered by sub_0802D5EC(0x80000) with the + 0x5A palette bits, counts the u8 timer down and sets + 0x59 bit 3 on the 0xFF wrap. Unit-tested in test_aos_object0f.
 

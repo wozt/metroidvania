@@ -1,3 +1,21 @@
+## Patch 1066 - Aria Object18 breakable scatter director ported
+
+- `src/runtime/aos/game/aos_object18.c` ports Object18Update
+  (0x08053968), dispatch index 24, paired with the
+  special_sprites-covered Object18Create (0x080538DC): the
+  sub_08068AD4 self probe, the sub_080421AC & 0x1E attack
+  gate, the param0 armed path to state 2, the eight
+  sub_08043F70 money scatter or the sub_08043C10 big heart,
+  the sub_0805379C orbit ring, song 0xA2, the state-1 gore
+  bursts, the state-2 type-0x1B children and the shared
+  countdown to + 0x59 bit 3.
+- The scatter becomes real room pickups through
+  `aos_pickup_create_money` / `aos_pickup_create_heart`; the
+  ring, gore and type-0x1B children are counted, not spawned.
+- Tests: `tests/test_aos_object18.c` covers the probe mark,
+  the attack gate, both scatter paths, the armed path, the
+  gore cadence and the child countdown.
+
 ## Patch 1065 - Aria Object17 vertical pan director ported
 
 - `src/runtime/aos/game/aos_object17.c` ports Object17Update

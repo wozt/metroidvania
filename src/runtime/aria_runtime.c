@@ -48,6 +48,7 @@
 #include "aos/game/aos_object34.h"
 #include "aos/game/aos_object2c.h"
 #include "aos/game/aos_object17.h"
+#include "aos/game/aos_object18.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -468,6 +469,7 @@ typedef struct {
     AosObject34 object34;   /* object 0x34: waterfall splash */
     AosObject2C object2c;   /* object 0x2C: fountain droplets */
     AosObject17 object17;   /* object 0x17: vertical pan director */
+    AosObject18 object18;   /* object 0x18: breakable scatter */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5109,6 +5111,64 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                        e->object17.song_stop);
             if (e->object17.fade)
                 printf("Object17 %zu: fade (sub_08011FC0)\n", i);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 24) {
+            /* Object18Create / Object18Update (sUnk_084F0DF8[24] /
+             * sUnk_084F0ED8[24]): the breakable scatter director.
+             * Create's sprite attach stays under special_sprites
+             * (special_24). The sub_08068AD4 probe is the entity's
+             * own screen position inside the (-0x20, -0x20, 0x130,
+             * 0xE0) rect, the sub_080421AC low16 & 0x1E gate the
+             * weapon hitbox overlap, the gEwramData + 0x13266 byte
+             * passes 0 (no runtime room flag), the eight
+             * sub_08043F70 scatter and the sub_08043C10 heart
+             * become real room pickups, and the sub_0805379C
+             * ring, the sub_0806D5C0 gore and the type-0x1B
+             * sub_080C24AD/0x080C2559 children are counted. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object18_create(&e->object18, e->param0);
+                continue;
+            }
+            if (e->object18.finished) continue;
+            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+            bool near = (uint16_t)(osx + 0x20) <= 0x130 &&
+                        (uint16_t)(osy + 0x20) <= 0xE0;
+            int wx, wy, ww, wh;
+            bool attack = combat->weapon && combat->weapon_frames &&
+                          aos_weapon_hitbox(combat->weapon, soma,
+                                            combat->weapon_frames,
+                                            &wx, &wy, &ww, &wh) &&
+                          ww > 1 && wh > 1 &&
+                          !(wx + ww - 1 < e->x - 8 || e->x + 8 < wx ||
+                            wy + wh - 1 < e->y - 16 || e->y < wy);
+            aos_object18_update(&e->object18, near, attack, false,
+                                e->x, e->y, aos_random);
+            if (e->object18.song >= 0) {
+                sound = e->object18.song;
+                printf("Object18 %zu: song 0x%X\n", i,
+                       e->object18.song);
+            }
+            for (int d = 0; d < e->object18.drop_count &&
+                 room->pickup_count < MAX_PICKUPS; ++d) {
+                const AosObject18Drop *drop = &e->object18.drops[d];
+                room->pickups[room->pickup_count++] =
+                    aos_pickup_create_money(combat->money, drop->variant,
+                                            drop->drop_x, drop->drop_y);
+            }
+            if (e->object18.heart && room->pickup_count < MAX_PICKUPS)
+                room->pickups[room->pickup_count++] =
+                    aos_pickup_create_heart(true, false, e->x, e->y - 8);
+            int fx = e->object18.ring_fx + e->object18.gore_fx +
+                     e->object18.child_fx;
+            for (int f = 0; f < fx && room->effect_count < MAX_EFFECTS;
+                 ++f) {
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = true,
+                    .x = e->x, .y = e->y - 8};
+            }
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 36) {

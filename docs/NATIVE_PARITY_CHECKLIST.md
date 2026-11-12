@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 177 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 178 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2019 | 1554 |
+| Castlevania: Aria of Sorrow | 2023 | 1550 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2452,6 +2452,15 @@ Tests: [`tests/test_aos_object0e.c`](../tests/test_aos_object0e.c).
 Dependencies: `aos.objects.special_sprites`, `aos.objects.destructible_prop`.  
 Known divergences: The sub_08068AD4 probe and the sub_08045F9C hit test are approximated by the same player-near window and weapon hitbox overlap Object0F uses; the sub_08050A3C content children (type 0x49 entities sharing the prop resource set) are counted as sparkle effects rather than spawned; the sub_0806D5C0 gore burst positions are likewise approximated; the sub_08050BA8 frame callback's screen-y bookkeeping and palette swap under the gEwramData & 2 flag, the cfg record's + 8 attack preset and its u16 @ 6 sub_0806AF98 branch, the sub_0806E0D0 palette hint and the EntityDelete load-failure path beyond the variant bound are not ported; and there is no emulator comparison.  
 Next action: Port the sub_08050A3C content-child entities and the sub_0806D5C0 gore positions.
+
+[~] **`aos.objects.breakable_scatter` — Object18 breakable scatter director.** Object18Create (0x080538DC) loads the 0x0825EAF4/0x082663E4/0x08266C00 triple (special_24), sets + 0x5C = 0x14, sub_0803F2C8(0,0,1), sub_0803F17C, the sub_08053B80 hurt callback through sub_0804277C, + 0x72 bit 1, the 0x1820E8F0 preset through sub_080428F0, sub_0806AF98 and + 0x59 bit 1. Object18Update (0x08053968) probes self on screen, gates state 0 on sub_080421AC & 0x1E: param0 (+ 0x30) nonzero arms state 2 with + 0xD = 0x20; otherwise the + 0x13266 flag picks eight sub_08043F70 money pickups of variants i / 2 jittered by sub_0802D5EC(0x20) x and RNG & 0xF below y - 8, or one sub_08043C10 big heart — then the sub_0805379C four-child orbit ring, PlaySong 0xA2, + 0x58 bit 0x20, + 0xD = 0x28 and state 1. State 1 emits a sub_0806D5C0 gore burst every fourth frame while + 0xD > 0x1E; state 2 emits a type-0x1B child every fourth frame; the shared u8 countdown's 0xFF wrap sets + 0x59 bit 3. Unit-tested in test_aos_object18.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_0804277C`, `aos:asm:asm/code/code_08040A38.s:sub_080428F0`, `aos:asm:asm/code/code_08040A38.s:sub_08043C10`, `aos:asm:asm/code/code_08040A38.s:sub_08043F70`, `aos:asm:asm/code/code_08050A3C.s:Object18Update`, `aos:asm:asm/code/code_08050A3C.s:sub_0805379C`, `aos:asm:asm/code/code_08050A3C.s:sub_08053B80`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:asm:asm/code/code_08060B98.s:sub_0806C48C`, `aos:asm:asm/code/code_08060B98.s:sub_0806C528`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`.  
+Local implementation: [`src/runtime/aos/game/aos_object18.c`](../src/runtime/aos/game/aos_object18.c), [`src/runtime/aos/game/aos_object18.h`](../src/runtime/aos/game/aos_object18.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object18.c`](../tests/test_aos_object18.c).
+Dependencies: `aos.objects.special_sprites`, `aos.items.money_pickups`.  
+Known divergences: The sub_08068AD4 probe collapses to the entity screen position inside the (-0x20, -0x20, 0x130, 0xE0) rect, the sub_080421AC low16 & 0x1E attack gate is approximated by the weapon hitbox overlap, the gEwramData + 0x13266 byte passes 0 (no runtime room flag), the four sub_0805379C orbit children are counted rather than spawned through the sub_0806C48C/sub_0806C528 frame-origin reads, the sub_0806D5C0 gore burst is counted, the type-0x1B child (EntityCreateInRange 0x1B/0x48, table 0x080EA0AC = sub_080C24AD init / sub_080C2559 update / +0x34 = 0x50) is counted, the sub_08043F70 scatter stops at eight without the native alloc-failure break, the sub_08053B80 hurt callback, the sub_080428F0 preset and the sub_0806AF98 create tail stay under special_sprites, and there is no emulator comparison.  
+Next action: Port the sub_0805379C orbit children and the type-0x1B sub_080C24AD/sub_080C2559 entity once the type-0x49 and 0x1B paths exist, then wire the + 0x13266 room flag.
 
 [~] **`aos.objects.chandelier_hub` — Object26 chandelier hub and orb spawner.** Object26Create (0x08057E04) loads the chandelier triple through sub_08057F00 (tiles 0x081CBE7C, palette sub_08068264(0x08209FD8, 2), frames 0x08210264 = special_38), sets + 0x72 bits 2 and 1 set, sub_0803F2C8(3,0,1), + 0x5C = 0x12, + 0x59 bit 1 and + 0x58 bit 0x20, writes + 0x1A = 0x5A, + 0x18 = 0x1E, + 0xA = 0 and spawns two linked children: an Object28 orb at (+ 0x42 - 0x15, + 0x46 + 0x44) and an Object27 orb at (+ 0x42 + 0x12, + 0x46 + 0x2C), each with the parent pointer at + 0x14. Object26Update (0x08057EE0) runs the sub_08057F4C probe while + 0xA == 0 then the sub_0803F17C animation step; the probe tests the 0x8C x 0xC8 box at (+ 0x42 - 0x46, + 0x46 - 0x64) and on a hit increments the + 0x18 and + 0x1A u16 counters (either way + 0x58 bit 0x20 is set). Each orb's state 0 reads its parent's counter as a signed s16 > 0x77 and consumes it (strh 0) on arming, so the orbs charge and release cyclically — Object28 fires first from + 0x1A = 0x5A after ~0x1E hits, Object27 from + 0x18 = 0x1E after ~0x59.
 

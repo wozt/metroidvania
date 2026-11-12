@@ -1,3 +1,20 @@
+## Patch 1064 - Aria Object2C fountain ported
+
+- `src/runtime/aos/game/aos_object2c.c` ports Object2CCreate
+  (0x080585B0) / Object2CUpdate (0x08058664), dispatch index
+  44: the fountain. The parent update is a bare frame
+  natively; create loops four EntityCreateInRange(0x49, 0xCF,
+  sub_0805866C) droplet children, each configured per index
+  with the + 0x46 y offset {0x1E, 0x3E, 0x56, 0x66}, the
+  + 0x48 x step {0x4000, 0x3000, 0x2000, 0x1000} and + 0x65 =
+  index.
+- The child sprite triple of sub_080586E0 (tiles 0x081CBED4,
+  palette slot sub_08068264(0x0820A1C4, 0), frames 0x08211464)
+  is exported as special_44; the four children are counted
+  rather than spawned, like Object34's particles.
+- Tests: `tests/test_aos_object2c.c` covers the per-index
+  create constants and the bare-frame update.
+
 ## Patch 1063 - Aria Object34 waterfall splash ported
 
 - `src/runtime/aos/game/aos_object34.c` ports Object34Create

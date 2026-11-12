@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 175 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 176 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2013 | 1560 |
+| Castlevania: Aria of Sorrow | 2018 | 1555 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2515,6 +2515,15 @@ Tests: [`tests/test_aos_object03.c`](../tests/test_aos_object03.c).
 Dependencies: `aos.objects.cinematic_trigger`.  
 Known divergences: The + 0x13220 escort-busy word, the + 0x4CC bit 6 cinematic flag and the + 0x13114/+ 0x13118 partner entities are not modelled — the runtime passes cinematic false so state 0 takes the direct state-0 -> 2 path; the winOut blend and the sub_0804DF3C sprite attach are approximated by the exported art; states 4+ are native no-ops.  
 Next action: Model the + 0x13220/+ 0x13114/+ 0x13118 escort entities and the + 0x4CC cinematic flag, then compare a scripted escort scene against an emulator.
+
+[~] **`aos.objects.fountain` — Object2C fountain droplet spawner.** Object2CCreate (0x080585B0) loops four EntityCreateInRange(0x49, 0xCF, sub_0805866C) children: each copies the parent's + 0x36 byte to + 0x36, takes drawFunc sub_0803B9D0, loads the sub_080586E0 sprite triple (tiles 0x081CBED4, palette slot sub_08068264(0x0820A1C4, 0), frames 0x08211464), rolls + 0x40 = RandomNumberGenerator & 0xFFFFFF, and is configured per index — + 0x37 = 0, + 0x46 y offset {0x1E, 0x3E, 0x56, 0x66}, + 0x48 {0x4000, 0x3000, 0x2000, 0x1000}, + 0x65 = index — before sub_0805869C marks + 0x72 bits 1-2, + 0x5C = 0x1D, clears + 0x59 bit 0x20 and deletes on sprite-load failure. Object2CUpdate (0x08058664) is a bare frame.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object2CCreate`, `aos:asm:asm/code/code_08050A3C.s:Object2CUpdate`, `aos:asm:asm/code/code_08050A3C.s:sub_0805866C`, `aos:asm:asm/code/code_08050A3C.s:sub_0805869C`, `aos:asm:asm/code/code_08050A3C.s:sub_080586E0`, `aos:asm:asm/code/code_08060B98.s:sub_0806D128`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3C0`, `aos:c:src/code_080009A0.c:EntityCreateInRange`, `aos:c:src/code_080009A0.c:EntityDelete`, `aos:c:src/code_080009A0.c:RandomNumberGenerator`.  
+Local implementation: [`src/runtime/aos/game/aos_object2c.c`](../src/runtime/aos/game/aos_object2c.c), [`src/runtime/aos/game/aos_object2c.h`](../src/runtime/aos/game/aos_object2c.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object2c.c`](../tests/test_aos_object2c.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The four type-0x49 droplet children are counted rather than spawned (their sub_0805866C drift, sub_0806D128 bounds probe on table 0x08118D08 record 6 = {64, 64}, the -60 hop write and RNG + 0x40 roll are not modelled), the parent draws the special_44 frame as a stand-in for the absent children, and the + 0x36 byte copy, + 0x37/+ 0x59/+ 0x5C/+ 0x72 marks are not modelled.  
+Next action: Spawn the four droplets through the pickup/particle entity path once type-0x49 children have a runtime equivalent, then drop the parent stand-in sprite.
 
 [~] **`aos.objects.metal_gate` — Object36 metal gate and button BG scroller.** Object36Create (0x0805A6C8) sets + 0x72 bits 1-2 and + 0x58 bit 0x20, reads the + 0x30 s16 param as a 4-byte index into the dumped 0x081186A4 table (nine {s16 a, s16 b} records: + 0x18 = a / 2, + 0x1A = b, + 0x1C = 0x200 - a * 2) and calls sub_08022088(ent, 0x0811868C), which stores the entity in the gEwramData + 0x1316C singleton and the callback table at + 0x10. Object36Update (0x0805A678) queues a BgAffineSet block on layer 0x1A ({u32 0x8000, u32 0x8000, + 0x42, + 0x46, + 0x1C, + 0x1C, low16(+ 0x14)}) then advances the 32-bit + 0x14 by the s16 + 0x1A.
 

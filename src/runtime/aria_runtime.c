@@ -46,6 +46,7 @@
 #include "aos/game/aos_object2f.h"
 #include "aos/game/aos_object36.h"
 #include "aos/game/aos_object34.h"
+#include "aos/game/aos_object2c.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -464,6 +465,7 @@ typedef struct {
     AosObject2F object2f;   /* object 0x2F: skull-eye flame jets */
     AosObject36 object36;   /* object 0x36: metal gate BG scroller */
     AosObject34 object34;   /* object 0x34: waterfall splash */
+    AosObject2C object2c;   /* object 0x2C: fountain droplets */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5344,6 +5346,22 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             aos_object34_update(&e->object34, (int32_t)cam_x << 16,
                                 (int32_t)cam_y << 16);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 44) {
+            /* Object2CCreate / Object2CUpdate (sUnk_084F0DF8[44] /
+             * sUnk_084F0ED8[44]): the fountain — the parent update
+             * is a bare frame; create spawns four type-0x49 droplet
+             * children (sub_0805866C) on the special_44 sprite
+             * triple. The children are counted, not spawned, like
+             * Object34's particles. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object2c_create(&e->object2c);
+                continue;
+            }
+            aos_object2c_update(&e->object2c);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 26) {

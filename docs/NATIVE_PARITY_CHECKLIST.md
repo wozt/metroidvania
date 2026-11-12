@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 174 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 175 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2008 | 1565 |
+| Castlevania: Aria of Sorrow | 2013 | 1560 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2686,6 +2686,15 @@ Tests: [`tests/test_aos_object0d.c`](../tests/test_aos_object0d.c).
 Dependencies: `aos.objects.special_sprites`.  
 Known divergences: The + 0x13190 focus pointer and the sub_080421AC attack-slot match are approximated by a proximity window and the weapon hitbox overlap; the sub_08021278 + 0x131B4 registration has no runtime consumer so enemies cannot target the object; the sub_0803E058 affine rotation draw is approximated by the static special_13 animation; the palette variant pick and the 0x122006F0 preset collapse into the exported art; and there is no emulator comparison.  
 Next action: Wire the + 0x131B4 registry into enemy targeting and port the sub_0803E058 rotation draw.
+
+[~] **`aos.objects.waterfall_splash` — Object34 waterfall splash.** Object34Create (0x08059CE0) loads the sprite through sub_0805A120 (tiles 0x081CBF14, palette slot sub_08068264(0x0820A350, 2), frames 0x08211DC4 = special_52, drawFunc sub_0803B9D0), sets + 0x72 bits 1-2, + 0x65 = 3, + 0x5C = 0x12 and + 0x18 = 0x4000, copies the + 0x32 u16 param to + 0x1C, picks phase + 0xB and velocity + 0x1A from the + 0x30 s16 param (== 0 gives phase 0 and + 0x100, else phase 1 and -256), keeps world copies at + 0x10/+ 0x14 and screen copies at + 0x24/+ 0x28 and + 0x40/+ 0x44 in bgInfo[1] space, clears + 0x59 bits 0-1 and spawns three sub_08059E4C children (type 0x49, update sub_08059FB4, layers 2/1/0). Object34Update (0x08059D7C) runs sub_08059D98 while + 0xA == 0 with no animation step or attack read: it refreshes the screen copies from world minus the current scroll, then ping-pongs + 0x18 — state 0 decrements + 0x1A by + 0x1C floored at -256 and adds it until the 16.16 product exceeds 0x3FFF0000 (phase 1), state 1 increments + 0x1A by + 0x1C ceiled at 256 until the product exceeds 0x40000000 (phase 0) — and writes + 0x40/+ 0x44 = world - scroll.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object34Create`, `aos:asm:asm/code/code_08050A3C.s:Object34Update`, `aos:asm:asm/code/code_08050A3C.s:sub_08059D98`, `aos:asm:asm/code/code_08050A3C.s:sub_08059E4C`, `aos:asm:asm/code/code_08050A3C.s:sub_0805A120`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code_080009A0.c:EntityDelete`.  
+Local implementation: [`src/runtime/aos/game/aos_object34.c`](../src/runtime/aos/game/aos_object34.c), [`src/runtime/aos/game/aos_object34.h`](../src/runtime/aos/game/aos_object34.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object34.c`](../tests/test_aos_object34.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The bgInfo[1] scroll frame is approximated by the logic camera, the three sub_08059E4C type-0x49 particle children are counted rather than spawned (their RNG variant marks, attack preset on layer 2 and + 0x59/+ 0x58 marks are not modelled), the + 0x18 oscillation value has no draw consumer in the port, and the + 0x72/+ 0x5C/+ 0x65 marks are not modelled.  
+Next action: Spawn the three particle children through the entity-create path once a type-0x49 update exists, then give + 0x18 a draw consumer if the native drawFunc reads it.
 
 ### Rooms, areas and maps
 

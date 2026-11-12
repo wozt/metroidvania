@@ -1,3 +1,19 @@
+## Patch 1063 - Aria Object34 waterfall splash ported
+
+- `src/runtime/aos/game/aos_object34.c` ports Object34Create
+  (0x08059CE0) / Object34Update (0x08059D7C) / sub_08059D98,
+  dispatch index 52: the waterfall splash keeps world copies
+  at + 0x10/+ 0x14 and screen copies in bgInfo[1] space,
+  picks phase + 0xB and velocity + 0x1A from the + 0x30 s16
+  param, accelerates + 0x1A by the + 0x32 u16 param and
+  ping-pongs the + 0x18 offset between the 0x3FFF0000 and
+  0x40000000 16.16 bounds. The sprite loader sub_0805A120
+  (tiles 0x081CBF14, palette slot sub_08068264(0x0820A350,
+  2), frames 0x08211DC4) is exported as special_52.
+- The three sub_08059E4C type-0x49 particle children are
+  counted rather than spawned, and the bgInfo[1] scroll is
+  approximated by the logic camera.
+
 ## Patch 1062 - Aria inert object slots Object1A and Object1E ported
 
 - `src/runtime/aos/game/aos_object1a.c` and

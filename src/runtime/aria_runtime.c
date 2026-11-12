@@ -45,6 +45,7 @@
 #include "aos/game/aos_object2e.h"
 #include "aos/game/aos_object2f.h"
 #include "aos/game/aos_object36.h"
+#include "aos/game/aos_object34.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -462,6 +463,7 @@ typedef struct {
     AosObject2B object2b;   /* object 0x2B: plain animated sprite */
     AosObject2F object2f;   /* object 0x2F: skull-eye flame jets */
     AosObject36 object36;   /* object 0x36: metal gate BG scroller */
+    AosObject34 object34;   /* object 0x34: waterfall splash */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5317,6 +5319,31 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             uint16_t block[9];
             aos_object36_update(&e->object36, block);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 52) {
+            /* Object34Create / Object34Update (sUnk_084F0DF8[52] /
+             * sUnk_084F0ED8[52]; sub_08059D98): the waterfall
+             * splash — a screen-space sprite whose + 0x18 offset
+             * ping-pongs between the 0x3FFF0000 and 0x40000000
+             * bounds with + 0x1A velocity accelerated by the +
+             * 0x32 param. The bgInfo[1] scroll frame is
+             * approximated by the logic camera; the three
+             * sub_08059E4C particle children are counted, not
+             * spawned. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object34_create(&e->object34, (int16_t)e->param0,
+                                    (uint16_t)e->param1,
+                                    (int32_t)cam_x << 16,
+                                    (int32_t)cam_y << 16,
+                                    (int32_t)e->x << 16,
+                                    (int32_t)e->y << 16);
+                continue;
+            }
+            aos_object34_update(&e->object34, (int32_t)cam_x << 16,
+                                (int32_t)cam_y << 16);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 26) {

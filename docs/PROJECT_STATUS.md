@@ -1,3 +1,31 @@
+## Patch 1033 - Aria Object04 directional cutscene director ported
+
+- `src/runtime/aos/game/aos_object04.c` ports Object04Create
+  (0x0804E770) and Object04Update (0x0804E8C4), the directional sibling
+  of Object02 dispatched through sUnk_084F0DF8[4] / sUnk_084F0ED8[4].
+- Create keeps the param0 <= 1 one-shot on the + 0x37E bit param1 and
+  the shared sub_0804DF3C init, but the near probe is one-sided:
+  + 0x1A set wants soma_x >= ex - 0x18, clear wants soma_x <= ex +
+  0x18. Near locks the scene (state 0xA, SetPlayerInput(1, 0), the
+  conditional + 0x48/+ 0x50 clear); far seals the same three-block
+  column and picks 0x14/0x63/0 for param0 1/3.
+- Update keeps the + 0x58 off-screen bit and the identical state-0
+  block cycle (clear in the 0x28..0x4F window, re-seal on the timer
+  1-2 edge, song 0x113 probes), forces + 0x1A ? RIGHT : LEFT in state
+  2 and the opposite in state 10 with the directional reseal probe,
+  runs the state-11 release countdown without + 0x42C hold bits, the
+  state-20 event wait and the state-21 block clear.
+- Runtime wiring mirrors Object02: SPECIAL id 4 entities spawn on the
+  camera window, feed input->held, zero soma->vx/friction, play song
+  0x113 and skip drawing once deleted.
+- Documented divergences: the winOut blend, sub_080235C8 bookkeeping,
+  the sub_08013F6C accent and its + 0x42C bit 0x40000000 gate, the
+  palette writes and the no-op native states.
+- Tests: `tests/test_aos_object04.c` covers the one-shot delete, both
+  directional probe sides, the entry states, the vx clear direction,
+  the block cycle, the inverted case-2/10 forces, the release
+  countdown and the event wait.
+
 ## Patch 1032 - Aria Object0A/Object0B enemy spawners ported
 
 - `src/runtime/aria_runtime.c` ports Object0ACreate/Object0BCreate

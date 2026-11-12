@@ -75,8 +75,6 @@ aos:asm:asm/code/code_08039340.s:sub_0803ACE0	sub_0803ACE0	unclassified				asm_f
 aos:asm:asm/code/code_08039340.s:sub_0803B184	sub_0803B184	unclassified				asm_function	0x0803B184	asm/code/code_08039340.s	3885	3	5
 aos:asm:asm/code/code_08040A38.s:Object03Create	Object03Create	environment	name			asm_function		asm/code/code_08040A38.s	26471	0	2
 aos:asm:asm/code/code_08040A38.s:Object03Update	Object03Update	environment	name			asm_function		asm/code/code_08040A38.s	26541	0	4
-aos:asm:asm/code/code_08040A38.s:Object04Create	Object04Create	environment	name			asm_function		asm/code/code_08040A38.s	26837	0	5
-aos:asm:asm/code/code_08040A38.s:Object04Update	Object04Update	environment	name			asm_function		asm/code/code_08040A38.s	27008	0	6
 aos:asm:asm/code/code_08040A38.s:Object05Create	Object05Create	environment	name			asm_function		asm/code/code_08040A38.s	27895	0	2
 aos:asm:asm/code/code_08040A38.s:Object05Update	Object05Update	environment	name			asm_function		asm/code/code_08040A38.s	27954	0	2
 aos:asm:asm/code/code_08040A38.s:Object06Create	Object06Create	environment	name			asm_function		asm/code/code_08040A38.s	27421	0	4
@@ -218,7 +216,6 @@ aos:asm:asm/code/code_08040A38.s:sub_0804D794	sub_0804D794	unclassified				asm_f
 aos:asm:asm/code/code_08040A38.s:sub_0804DD84	sub_0804DD84	unclassified				asm_function	0x0804DD84	asm/code/code_08040A38.s	25600	0	3
 aos:asm:asm/code/code_08040A38.s:sub_0804DE60	sub_0804DE60	unclassified		technical	exclusive_callees	asm_function	0x0804DE60	asm/code/code_08040A38.s	25708	0	1
 aos:asm:asm/code/code_08040A38.s:sub_0804DEA0	sub_0804DEA0	environment	referrers			asm_function	0x0804DEA0	asm/code/code_08040A38.s	25742	0	1
-aos:asm:asm/code/code_08040A38.s:sub_0804DF3C	sub_0804DF3C	environment	referrers			asm_function	0x0804DF3C	asm/code/code_08040A38.s	25822	5	2
 aos:asm:asm/code/code_08040A38.s:sub_0804F160	sub_0804F160	environment	referrers			asm_function	0x0804F160	asm/code/code_08040A38.s	28065	0	7
 aos:asm:asm/code/code_08040A38.s:sub_0804F374	sub_0804F374	environment	referrers			asm_function	0x0804F374	asm/code/code_08040A38.s	28324	1	2
 aos:asm:asm/code/code_08040A38.s:sub_0804F504	sub_0804F504	environment	referrers			asm_function	0x0804F504	asm/code/code_08040A38.s	28520	0	3

@@ -16,6 +16,7 @@
 #include "aos/game/aos_door.h"
 #include "aos/game/aos_object01.h"
 #include "aos/game/aos_object02.h"
+#include "aos/game/aos_object04.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -409,6 +410,7 @@ typedef struct {
     AosWall wall;           /* objects 0x08 and 0x09 */
     AosObject02 object02;   /* object 0x02: the cutscene director */
     AosObject01 object01;   /* object 0x01: conditional static children */
+    AosObject04 object04;   /* object 0x04: directional cutscene director */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -4474,6 +4476,39 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             aos_object01_update(&e->object01);
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 4) {
+            /* Object04Create / Object04Update: the directional sibling
+             * of Object02 — same block column and forced walk, but the
+             * approach probe is one-sided and cases 2/10 push opposite
+             * ways with no + 0x42C hold. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+                aos_object04_create(&e->object04, e->param0, e->param1,
+                                    aria_pickup_state.special, e->x - cam_x,
+                                    ssx, soma->vx);
+                continue;
+            }
+            if (e->object04.deleted) continue;
+            int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
+            aos_object04_update(&e->object04, layer, cam_x, cam_y, e->x, e->y,
+                                ssx, ssy, aria_pickup_state.special, aos_random);
+            if (e->object04.force_zero || e->object04.forced) {
+                input->active = true;
+                input->held = e->object04.forced;
+            }
+            if (e->object04.zero_soma_vx) {
+                soma->vx = 0;
+                soma->friction = 0;
+            }
+            if (e->object04.song >= 0) {
+                sound = e->object04.song;
+                printf("Object04 %zu: song 0x%X\n", i, e->object04.song);
+            }
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {
             /* Object02Create / Object02Update (sUnk_084F0DF8[2] /
              * sUnk_084F0ED8[2]): the cutscene director. Screen pixels
@@ -5814,6 +5849,7 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (!e->spawned || e->kind != ARIA_KIND_SPECIAL || e->id < 0 || e->id >= 64)
             continue;
         if (e->id == 2 && e->object02.deleted) continue;
+        if (e->id == 4 && e->object04.deleted) continue;
         if (e->id == 1) {
             /* Object01's children are the sprites: draw the exported
              * still at each record coordinate (room pixels). */

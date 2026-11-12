@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 144 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 145 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1894 | 1679 |
+| Castlevania: Aria of Sorrow | 1897 | 1676 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2425,6 +2425,15 @@ Tests: [`tests/test_aos_object02.c`](../tests/test_aos_object02.c), [`tests/test
 Dependencies: `aos.environment.breakable_walls`, `aos.environment.wooden_doors`.  
 Known divergences: The gDisplayRegisters winOut_L/H = 0x3F/0x2F window-out blend, the sub_08013F6C(0x1040) accent of state 20, the sub_080235C8 per-room bookkeeping and the entity + 0x5C/+ 0x65/+ 0x59 palette and art-row writes are not ported; the param0 == 7 sparkle (sub_0802D5EC/sub_08045CEC) is approximated by one drift effect; the draw keeps the exported special_objects animation 0 loop instead of the native + 0x1B anim (6, or 9 for param1 7).  
 Next action: Port the remaining special objects 1, 3-7 and 0x0A-0x37 create/update pairs and compare a scripted scene against an emulator.
+
+[~] **`aos.objects.directional_director` — Object04 directional cutscene director.** Object04Create (0x0804E770) one-shots param0 <= 1 objects on the + 0x37E bit param1, then takes the near branch only when Soma stands on the approach side (+ 0x1A set: soma_x >= ex - 0x18, clear: soma_x <= ex + 0x18): state 0xA, timer 0x30, SetPlayerInput(1, 0) and the conditional + 0x48/+ 0x50 clear; far seals the three-block column and picks 0x14/0x63/0. Object04Update (0x0804E8C4) keeps the + 0x58 off-screen bit and the identical state-0 block cycle, forces + 0x1A ? RIGHT : LEFT in state 2 and the opposite in state 10 (which reseals on the directional probe), runs the state-11 release countdown without + 0x42C hold bits, the state-20 event wait and the state-21 block clear. Unit-tested in aos_object04.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:Object04Create`, `aos:asm:asm/code/code_08040A38.s:Object04Update`, `aos:asm:asm/code/code_08040A38.s:sub_0804DF3C`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:c:src/code_080009A0.c:EntityDelete`, `aos:c:src/code_080009A0.c:SetPlayerInput`, `aos:c:src/code_08001194.c:sub_08002200`, `aos:c:src/code_08001194.c:sub_08002248`, `aos:c:src/code_08013960.c:sub_08013F6C`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/game/aos_object04.c`](../src/runtime/aos/game/aos_object04.c), [`src/runtime/aos/game/aos_object04.h`](../src/runtime/aos/game/aos_object04.h), [`src/runtime/aos/core/aos_collision.c`](../src/runtime/aos/core/aos_collision.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object04.c`](../tests/test_aos_object04.c), [`tests/test_native_golden.c`](../tests/test_native_golden.c).
+Dependencies: `aos.objects.cutscene_director`.  
+Known divergences: The gDisplayRegisters winOut blend, sub_080235C8 bookkeeping, the sub_08013F6C(0x1040) state-20 accent (including its + 0x42C bit 0x40000000 gate) and the + 0x5C/+ 0x65/+ 0x59 palette writes are not ported; states 1, 3-9, 12-19 are native no-ops covered by the default branch.  
+Next action: Port the remaining object pairs (03 escort, 05-07, 0x0C-0x37) and compare a scripted scene against an emulator.
 
 [~] **`aos.objects.enemy_spawners` — Object0A/Object0B event-gated enemy spawners (0x080E9644 records).** Object0ACreate (0x0805045C) deletes the entity when the + 0x37E bit param1 is clear, else indexes the 36-byte records of 0x080E9644 by param0 (= the enemy id: record + 0 the create, + 4 the update installed on entity + 0), stores record + 0xC at + 0x34, clears + 0x30/+ 0x32 and calls the create. Object0BCreate (0x080504C0) gates on sub_08012078(param1), the + 0x33C bitfield (= aria_events). The runtime spawns the ported enemy kind at the object position when the gate passes and consumes the object either way. Unit coverage is the runtime wiring; per-enemy behaviour is covered by the enemy tests.
 

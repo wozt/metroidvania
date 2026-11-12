@@ -30,7 +30,9 @@
 #include "aos/game/aos_object12.h"
 #include "aos/game/aos_object13.h"
 #include "aos/game/aos_object19.h"
+#include "aos/game/aos_object1a.h"
 #include "aos/game/aos_object1b.h"
+#include "aos/game/aos_object1e.h"
 #include "aos/game/aos_object15.h"
 #include "aos/game/aos_object16.h"
 #include "aos/game/aos_object24.h"
@@ -460,6 +462,8 @@ typedef struct {
     AosObject2B object2b;   /* object 0x2B: plain animated sprite */
     AosObject2F object2f;   /* object 0x2F: skull-eye flame jets */
     AosObject36 object36;   /* object 0x36: metal gate BG scroller */
+    AosObject1A object1a;   /* object 0x1A: inert placeholder */
+    AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
     AosObject2D object2d;   /* object 0x2D: proximity attack sprite */
     AosObject2E object2e;   /* object 0x2E: one-shot breakable prop */
@@ -5313,6 +5317,34 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             uint16_t block[9];
             aos_object36_update(&e->object36, block);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 26) {
+            /* Object1ACreate / Object1AUpdate (sUnk_084F0DF8[26] /
+             * sUnk_084F0ED8[26]): the patrolling-skull slot — both
+             * native routines are a bare bx lr, an inert
+             * placeholder. Called for dispatch parity only. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object1a_create(&e->object1a);
+                continue;
+            }
+            aos_object1a_update(&e->object1a);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 30) {
+            /* Object1ECreate / Object1EUpdate (sUnk_084F0DF8[30] /
+             * sUnk_084F0ED8[30]): the save/warp room-walls slot —
+             * both native routines are a bare bx lr, an inert
+             * placeholder. Called for dispatch parity only. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object1e_create(&e->object1e);
+                continue;
+            }
+            aos_object1e_update(&e->object1e);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 40) {

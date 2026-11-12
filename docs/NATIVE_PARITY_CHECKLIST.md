@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 172 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 174 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -2552,6 +2552,15 @@ Dependencies: `aos.objects.special_sprites`.
 Known divergences: The sub_0803E058 affine rotation draw is approximated by the static special_25 animation and the + 0x14/+ 0x16 angle accumulator has no visual consumer; the sub_080421AC attack-slot read feeding the draw call is not ported; the entity + 0x16 angle rate initial value is unverified (passed as 0); the + 0x40/+ 0x44 fixed-point position is written back to the integer e->x/e->y each update, an approximation of the native draw-position chain; and there is no emulator comparison.  
 Next action: Port the affine rotation draw and trace the + 0x16 angle rate and sub_080421AC consumer.
 
+[+] **`aos.objects.patrolling_skull` — Object1A patrolling skull inert slot.** Both native routines are a bare bx lr in the shipped ROM (Object1ACreate 0x080540A0, Object1AUpdate 0x080540A4): the patrolling-skull slot is an inert placeholder with no state, resources or behaviour to reproduce. The module exists for 1:1 dispatch traceability only.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object1ACreate`, `aos:asm:asm/code/code_08050A3C.s:Object1AUpdate`.  
+Local implementation: [`src/runtime/aos/game/aos_object1a.c`](../src/runtime/aos/game/aos_object1a.c), [`src/runtime/aos/game/aos_object1a.h`](../src/runtime/aos/game/aos_object1a.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object1a.c`](../tests/test_aos_object1a.c).
+Dependencies: `aos.objects.special_sprites`.  
+Next action: None — the slot is dead code natively; revisit only if a room spawn proves otherwise.
+Evidence: in game: `dead code: no exported room spawns SPECIAL id 26; both native routines are bare bx lr (0x080540A0/0x080540A4)`.
+
 [~] **`aos.objects.proximity_attack` — Object2D proximity-armed attack sprite.** Object2DCreate (0x080588EC) resolves tiles 0x081CBEBC, palette sub_08068264(0x0820A100, 2), frames 0x082111F4 (exported as special_45), presets sub_0803F2C8(2, 0, 0), sets + 0x6F = 0, + 0x6E = 6, + 0x5C = 0x12 and + 0xB = 0xA. Object2DUpdate (0x08058938) runs sub_0805872C while + 0xA == 0 then sub_0803F17C: dormant state 0xA swaps the preset by the + 0x6D flags byte (0 -> 1, 1 -> 2, 3/4 -> 0, all gated on + 0x59 bit 0) and enters active 0xC inside the abs(dx) <= 0x4FFFFF, abs(dy) <= 0x5FFFFF window around the + 0x13110 entity; active state 0xC swaps presets (1 -> 3, 2 -> 4, 3/4 -> 0), returns to 0xA outside the window and runs sub_0806D128(ent, 3) inside it. Unit-tested in test_aos_object2d.
 
 Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object2DCreate`, `aos:asm:asm/code/code_08050A3C.s:Object2DUpdate`, `aos:asm:asm/code/code_08050A3C.s:sub_0805872C`, `aos:asm:asm/code/code_08050A3C.s:sub_08058958`, `aos:asm:asm/code/code_08050A3C.s:sub_080589A4`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:asm:asm/code/code_08060B98.s:sub_0806D128`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803B9D0`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:EntityCreateInRange`.  
@@ -2596,6 +2605,15 @@ Tests: [`tests/test_aos_object10.c`](../tests/test_aos_object10.c).
 Dependencies: `aos.objects.special_sprites`, `aos.objects.save_point_remover`.  
 Known divergences: The + 0x4D0 statue-state word has no runtime field (param0 stands in for the _vP art pick and 0 is passed to create), the + 0x124C entity's + 0x14 progress word is passed as 0 so the first unowned covered record wins, the + 0x42/+ 0x46 scripted-pickup coordinates are passed as 0 (the aos_pickup_create_scripted_item registration itself stays on the pickup path), the sub_08044F24/sub_08044F50/sub_08044FA8 ownership probe is approximated by the portable inventory through aos_item_decode, the + 0x42C bit-0x400 trigger is approximated by Up held inside a small box, the SRAM slot byte at + 0x428 and the SaveData_LoadSlotFromSram/SaveData_SaveSlotToSram pair are reported through save_committed rather than performed (the live save stays on the Object1C save_room path), the sub_08043B18 inventory increment, the sub_080135C0 save-block refresh and the + 0x124C + 0x14 -> + 0x60 + 0x50 respawn copy are exposed as counters, the + 0x64/+ 0x65 save-mark bytes have no runtime fields, the sub_08050F1C callback and the sprite attach stay under special_sprites with the three art sets exported as special_16_v00/v02/v03, and there is no emulator comparison.  
 Next action: Identify the + 0x4D0 statue-state writer and the + 0x124C entity's + 0x14 progress field, then wire the real SRAM sequence once the save path is unified.
+
+[+] **`aos.objects.save_warp_walls` — Object1E save/warp room walls inert slot.** Both native routines are a bare bx lr in the shipped ROM (Object1ECreate 0x08055734, Object1EUpdate 0x08055738): the save/warp room-walls slot is an inert placeholder with no state, resources or behaviour to reproduce. The module exists for 1:1 dispatch traceability only.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object1ECreate`, `aos:asm:asm/code/code_08050A3C.s:Object1EUpdate`.  
+Local implementation: [`src/runtime/aos/game/aos_object1e.c`](../src/runtime/aos/game/aos_object1e.c), [`src/runtime/aos/game/aos_object1e.h`](../src/runtime/aos/game/aos_object1e.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object1a.c`](../tests/test_aos_object1a.c).
+Dependencies: `aos.objects.special_sprites`.  
+Next action: None — the slot is dead code natively; revisit only if a room spawn proves otherwise.
+Evidence: in game: `dead code: no exported room spawns SPECIAL id 30; both native routines are bare bx lr (0x08055734/0x08055738)`.
 
 [~] **`aos.objects.screen_space_oscillator` — Object2A screen-space horizontal oscillator.** Object2ACreate (0x08057438) copies the five-word 0x08118640 record to the stack, loads the 0x08526510[param1] sprite triple through sub_08057774 (tiles via sub_0803B800, palette slot sub_08068264(palette, bank), frames, draw callback sub_080577DC snapshotting + 0x24/+ 0x28 over + 0x40/+ 0x44), presets sub_0804277C(8) plus the param1-indexed stack word through sub_080428B4/sub_08042848, ORs + 0x72 with 6, runs sub_0803F2C8(record + 0xC, 0, 1), sets + 0x5C = 0x12, + 0xA = 0 and derives + 0x18/+ 0x10/+ 0x14/+ 0x1C/+ 0x24/+ 0x28 from the entity position, the bgInfo[1] scroll and param0 << 16 with + 0x20 = (+ 0x18 > + 0x1C). Object2AUpdate (0x08057744) registers the entity, runs sub_08057538 while + 0xA == 0, then sub_0803F17C and sub_080421AC. sub_08057538 is a four-state ping-pong in the scroll frame: states 0 and 2 integrate + 0x48 toward + 0x1C and + 0x18, ramping 0x800 a frame beyond 0xFFFFF and switching to a (px + 1) * 0x1000 distance-proportional creep inside it (mirrored negative for + 0x20 set), arrival zeroes + 0x48 and reloads the u8 + 0xD from the record + 0xE halfword, states 1 and 3 count + 0xD down as a signed byte and toggle + 0x20 on exit; the epilogue writes + 0x40/+ 0x44/+ 0x24/+ 0x28 = accumulator minus the current scroll so the sprite stays screen-locked, and a + 0x13190 slot match calls sub_0802138C. Art exported as special_42_v00-v03. Unit-tested in test_aos_object2a.
 

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T17:42:01+00:00",
+ "generated_at": "2026-11-12T17:54:35+00:00",
  "git": {
-  "commit": "e149777a",
+  "commit": "9c266cde",
   "branch": "main",
   "dirty": true
  },
@@ -92,20 +92,20 @@
     "assets",
     "platform"
    ],
-   "total": 317,
+   "total": 319,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 86,
-    "functional": 221,
+    "functional": 223,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 221,
-   "functional_or_better_percent": 69.7,
-   "with_passing_tests": 304,
+   "functional_or_better": 223,
+   "functional_or_better_percent": 69.9,
+   "with_passing_tests": 306,
    "with_passing_tests_percent": 95.9,
    "unknown_or_blocked": 1,
    "features": [
@@ -344,11 +344,13 @@
     "aos.objects.one_shot_breakable",
     "aos.objects.parametric_sprite",
     "aos.objects.patrol_mover",
+    "aos.objects.patrolling_skull",
     "aos.objects.proximity_attack",
     "aos.objects.proximity_trigger",
     "aos.objects.region_trigger",
     "aos.objects.save_point_remover",
     "aos.objects.save_statue",
+    "aos.objects.save_warp_walls",
     "aos.objects.screen_space_oscillator",
     "aos.objects.skull_eye_flames",
     "aos.objects.special_sprites",
@@ -551,20 +553,20 @@
    "areas": [
     "aos"
    ],
-   "total": 172,
+   "total": 174,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 58,
-    "functional": 114,
+    "functional": 116,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 114,
-   "functional_or_better_percent": 66.3,
-   "with_passing_tests": 172,
+   "functional_or_better": 116,
+   "functional_or_better_percent": 66.7,
+   "with_passing_tests": 174,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -711,11 +713,13 @@
     "aos.objects.one_shot_breakable",
     "aos.objects.parametric_sprite",
     "aos.objects.patrol_mover",
+    "aos.objects.patrolling_skull",
     "aos.objects.proximity_attack",
     "aos.objects.proximity_trigger",
     "aos.objects.region_trigger",
     "aos.objects.save_point_remover",
     "aos.objects.save_statue",
+    "aos.objects.save_warp_walls",
     "aos.objects.screen_space_oscillator",
     "aos.objects.skull_eye_flames",
     "aos.objects.special_sprites",
@@ -22102,6 +22106,62 @@
    }
   },
   {
+   "id": "aos.objects.patrolling_skull",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object1A patrolling skull inert slot",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object1a.c",
+    "src/runtime/aos/game/aos_object1a.h",
+    "src/runtime/aria_runtime.c"
+   ],
+   "tests": [
+    "tests/test_aos_object1a.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object1ACreate",
+    "Object1AUpdate"
+   ],
+   "limitations": "Both native routines are a bare bx lr in the shipped ROM (Object1ACreate 0x080540A0, Object1AUpdate 0x080540A4): the patrolling-skull slot is an inert placeholder with no state, resources or behaviour to reproduce. The module exists for 1:1 dispatch traceability only.",
+   "next_action": "None — the slot is dead code natively; revisit only if a room spawn proves otherwise.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object1a.c"
+    ],
+    "in_game_check": [
+     "dead code: no exported room spawns SPECIAL id 26; both native routines are bare bx lr (0x080540A0/0x080540A4)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object1a.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object1a"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.proximity_attack",
    "area": "aos",
    "category": "environment",
@@ -22420,6 +22480,62 @@
       "registered": true,
       "ctest": [
        "aos_object10"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
+   "id": "aos.objects.save_warp_walls",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object1E save/warp room walls inert slot",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object1e.c",
+    "src/runtime/aos/game/aos_object1e.h",
+    "src/runtime/aria_runtime.c"
+   ],
+   "tests": [
+    "tests/test_aos_object1a.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object1ECreate",
+    "Object1EUpdate"
+   ],
+   "limitations": "Both native routines are a bare bx lr in the shipped ROM (Object1ECreate 0x08055734, Object1EUpdate 0x08055738): the save/warp room-walls slot is an inert placeholder with no state, resources or behaviour to reproduce. The module exists for 1:1 dispatch traceability only.",
+   "next_action": "None — the slot is dead code natively; revisit only if a room spawn proves otherwise.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object1a.c"
+    ],
+    "in_game_check": [
+     "dead code: no exported room spawns SPECIAL id 30; both native routines are bare bx lr (0x08055734/0x08055738)"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object1a.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object1a"
       ],
       "outcome": "passed",
       "exists": true
@@ -30319,6 +30435,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object1a",
+    "files": [
+     "tests/test_aos_object1a.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_weapon",
     "files": [
      "tests/test_aos_weapon.c"
@@ -30404,12 +30527,18 @@
    }
   ],
   "summary": {
-   "passed": 192,
+   "passed": 193,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "9c266cde",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object36 metal gate BG scroller",
+   "scope": "project"
+  },
   {
    "commit": "e149777a",
    "date": "2026-11-12",
@@ -30882,12 +31011,6 @@
    "commit": "1a004a0e",
    "date": "2026-11-10",
    "subject": "Port Alastor (Aria of Sorrow enemy id 0x5A)",
-   "scope": "project"
-  },
-  {
-   "commit": "c83c86a9",
-   "date": "2026-11-10",
-   "subject": "Port Quezlcoatl (Aria of Sorrow enemy id 0x1A)",
    "scope": "project"
   }
  ],

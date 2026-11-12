@@ -1,3 +1,21 @@
+## Patch 1062 - Aria inert object slots Object1A and Object1E ported
+
+- `src/runtime/aos/game/aos_object1a.c` and
+  `src/runtime/aos/game/aos_object1e.c` cover dispatch indices
+  26 and 30: in the shipped ROM both Object1ACreate/
+  Object1AUpdate (0x080540A0/0x080540A4) and
+  Object1ECreate/Object1EUpdate (0x08055734/0x08055738) are
+  bare `bx lr` stubs — inert placeholders with no state,
+  resources or behaviour. The modules keep 1:1 dispatch
+  traceability; annotations mark both slots functional.
+- The remaining unported slots were re-audited: Object1D
+  (id 29) is the save-point statue visual with a real
+  param-indexed create, Object2C (id 44) spawns fountain
+  particles, Object14 (id 20) dispatches three ~300-line
+  state machines through the 0x08526408 table, and
+  Object1F (id 31) carries a real update despite its
+  "Unused" catalog name.
+
 ## Patch 1061 - Aria Object36 metal gate BG scroller ported
 
 - `src/runtime/aos/game/aos_object36.c` ports Object36Create

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 163 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 164 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 1971 | 1602 |
+| Castlevania: Aria of Sorrow | 1976 | 1597 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2515,6 +2515,15 @@ Tests: [`tests/test_aos_object19.c`](../tests/test_aos_object19.c).
 Dependencies: `aos.objects.special_sprites`.  
 Known divergences: The sub_0803E058 affine rotation draw is approximated by the static special_25 animation and the + 0x14/+ 0x16 angle accumulator has no visual consumer; the sub_080421AC attack-slot read feeding the draw call is not ported; the entity + 0x16 angle rate initial value is unverified (passed as 0); the + 0x40/+ 0x44 fixed-point position is written back to the integer e->x/e->y each update, an approximation of the native draw-position chain; and there is no emulator comparison.  
 Next action: Port the affine rotation draw and trace the + 0x16 angle rate and sub_080421AC consumer.
+
+[~] **`aos.objects.proximity_attack` — Object2D proximity-armed attack sprite.** Object2DCreate (0x080588EC) resolves tiles 0x081CBEBC, palette sub_08068264(0x0820A100, 2), frames 0x082111F4 (exported as special_45), presets sub_0803F2C8(2, 0, 0), sets + 0x6F = 0, + 0x6E = 6, + 0x5C = 0x12 and + 0xB = 0xA. Object2DUpdate (0x08058938) runs sub_0805872C while + 0xA == 0 then sub_0803F17C: dormant state 0xA swaps the preset by the + 0x6D flags byte (0 -> 1, 1 -> 2, 3/4 -> 0, all gated on + 0x59 bit 0) and enters active 0xC inside the abs(dx) <= 0x4FFFFF, abs(dy) <= 0x5FFFFF window around the + 0x13110 entity; active state 0xC swaps presets (1 -> 3, 2 -> 4, 3/4 -> 0), returns to 0xA outside the window and runs sub_0806D128(ent, 3) inside it. Unit-tested in test_aos_object2d.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object2DCreate`, `aos:asm:asm/code/code_08050A3C.s:Object2DUpdate`, `aos:asm:asm/code/code_08050A3C.s:sub_0805872C`, `aos:asm:asm/code/code_08050A3C.s:sub_08058958`, `aos:asm:asm/code/code_08050A3C.s:sub_080589A4`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:asm:asm/code/code_08060B98.s:sub_0806D128`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803B9D0`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:EntityCreateInRange`.  
+Local implementation: [`src/runtime/aos/game/aos_object2d.c`](../src/runtime/aos/game/aos_object2d.c), [`src/runtime/aos/game/aos_object2d.h`](../src/runtime/aos/game/aos_object2d.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object2d.c`](../tests/test_aos_object2d.c).
+Dependencies: `aos.objects.special_sprites`, `aos.objects.flickering_sprite`.  
+Known divergences: The + 0x13110 entity is approximated by Soma, the + 0x6D flags byte and the + 0x59 preset-gate bits have no runtime writers (kept at 0 so the dormant presets never fire), the sub_0803F2C8 preset argument is exposed but not applied to a real preset table, the sub_0806D128 attack step is counted and emitted as a spark effect rather than running the native attack, the sub_080589A4 type-0x49 child spawner (tiles 0x081CBECC, frames 0x0821137C, callback sub_08058B84) is not ported, the fixed-point window constants assume the same 16.16 position format as the other objects, and there is no emulator comparison.  
+Next action: Trace what writes + 0x6D and + 0x59, then port the sub_0806D128 attack and the sub_080589A4 children.
 
 [~] **`aos.objects.proximity_trigger` — Object05 proximity trigger.** Object05Create (0x0804F00C) runs the shared sub_0804DF3C init, writes + 0x65 = 0x7D and + 0x5A = (+ 0x5A & 0x87)  or  0x38, applies the winOut blend and arms + 0x14 = 0x30 when the 0x38 x 0x22 probe around (soma_x - 0x1C, soma_y) hits; params are unused and no blocks are sealed. Object05Update (0x0804F084) keeps the + 0x58 off-screen bit and the state-0 timer cycle: +2 saturating at 0x30 inside the (u16)(ex_sx - soma_sx + 0x28) <= 0x4F window, -2 clearing at <= 2 outside, with the 0x110 x 0xC0 probe at (-0x10, 0) playing song 0x113 on both edges. Unit-tested in aos_object05.
 

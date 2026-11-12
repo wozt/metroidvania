@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-12T14:40:24+00:00",
+ "generated_at": "2026-11-12T14:46:26+00:00",
  "git": {
-  "commit": "e8421b7c",
+  "commit": "27c672c5",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 308,
+   "total": 309,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 77,
+    "partial": 78,
     "functional": 221,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 221,
-   "functional_or_better_percent": 71.8,
-   "with_passing_tests": 295,
+   "functional_or_better_percent": 71.5,
+   "with_passing_tests": 296,
    "with_passing_tests_percent": 95.8,
    "unknown_or_blocked": 1,
    "features": [
@@ -340,6 +340,7 @@
     "aos.objects.intro_zoom_director",
     "aos.objects.parametric_sprite",
     "aos.objects.patrol_mover",
+    "aos.objects.proximity_attack",
     "aos.objects.proximity_trigger",
     "aos.objects.region_trigger",
     "aos.objects.save_point_remover",
@@ -542,11 +543,11 @@
    "areas": [
     "aos"
    ],
-   "total": 163,
+   "total": 164,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 49,
+    "partial": 50,
     "functional": 114,
     "faithful": 0,
     "validated": 0,
@@ -554,8 +555,8 @@
     "unknown": 0
    },
    "functional_or_better": 114,
-   "functional_or_better_percent": 69.9,
-   "with_passing_tests": 163,
+   "functional_or_better_percent": 69.5,
+   "with_passing_tests": 164,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -698,6 +699,7 @@
     "aos.objects.intro_zoom_director",
     "aos.objects.parametric_sprite",
     "aos.objects.patrol_mover",
+    "aos.objects.proximity_attack",
     "aos.objects.proximity_trigger",
     "aos.objects.region_trigger",
     "aos.objects.save_point_remover",
@@ -21802,6 +21804,73 @@
    }
   },
   {
+   "id": "aos.objects.proximity_attack",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object2D proximity-armed attack sprite",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object2d.c",
+    "src/runtime/aos/game/aos_object2d.h",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_object2d.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites",
+    "aos.objects.flickering_sprite"
+   ],
+   "native_routines": [
+    "Object2DCreate",
+    "Object2DUpdate",
+    "sub_0805872C",
+    "sub_08058958",
+    "sub_080589A4",
+    "sub_0806D128",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0803B800",
+    "sub_0803B924",
+    "sub_0803B9D0",
+    "sub_08068264",
+    "EntityCreateInRange"
+   ],
+   "limitations": "The + 0x13110 entity is approximated by Soma, the + 0x6D flags byte and the + 0x59 preset-gate bits have no runtime writers (kept at 0 so the dormant presets never fire), the sub_0803F2C8 preset argument is exposed but not applied to a real preset table, the sub_0806D128 attack step is counted and emitted as a spark effect rather than running the native attack, the sub_080589A4 type-0x49 child spawner (tiles 0x081CBECC, frames 0x0821137C, callback sub_08058B84) is not ported, the fixed-point window constants assume the same 16.16 position format as the other objects, and there is no emulator comparison. Object2DCreate (0x080588EC) resolves tiles 0x081CBEBC, palette sub_08068264(0x0820A100, 2), frames 0x082111F4 (exported as special_45), presets sub_0803F2C8(2, 0, 0), sets + 0x6F = 0, + 0x6E = 6, + 0x5C = 0x12 and + 0xB = 0xA. Object2DUpdate (0x08058938) runs sub_0805872C while + 0xA == 0 then sub_0803F17C: dormant state 0xA swaps the preset by the + 0x6D flags byte (0 -> 1, 1 -> 2, 3/4 -> 0, all gated on + 0x59 bit 0) and enters active 0xC inside the abs(dx) <= 0x4FFFFF, abs(dy) <= 0x5FFFFF window around the + 0x13110 entity; active state 0xC swaps presets (1 -> 3, 2 -> 4, 3/4 -> 0), returns to 0xA outside the window and runs sub_0806D128(ent, 3) inside it. Unit-tested in test_aos_object2d.",
+   "next_action": "Trace what writes + 0x6D and + 0x59, then port the sub_0806D128 attack and the sub_080589A4 children.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object2d.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object2d.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object2d"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-12"
+   }
+  },
+  {
    "id": "aos.objects.proximity_trigger",
    "area": "aos",
    "category": "environment",
@@ -29623,6 +29692,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object2d",
+    "files": [
+     "tests/test_aos_object2d.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_weapon",
     "files": [
      "tests/test_aos_weapon.c"
@@ -29708,12 +29784,18 @@
    }
   ],
   "summary": {
-   "passed": 183,
+   "passed": 184,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "27c672c5",
+   "date": "2026-11-12",
+   "subject": "Port Aria Object2B plain animated sprite",
+   "scope": "project"
+  },
   {
    "commit": "e8421b7c",
    "date": "2026-11-12",
@@ -30187,12 +30269,6 @@
    "date": "2026-11-10",
    "subject": "Port Nightmare (id 66): drifting skull with ramped wisp attack",
    "scope": "project"
-  },
-  {
-   "commit": "ea51a07e",
-   "date": "2026-11-10",
-   "subject": "Port Bael (id 94): spin attacker with translucent companion",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -30253,9 +30329,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 1971,
-    "routines_attached_to_features": 1971,
-    "unassigned_routines": 1602,
+    "routines_cited_by_features": 1976,
+    "routines_attached_to_features": 1976,
+    "unassigned_routines": 1597,
     "call_edges": 14228
    }
   },

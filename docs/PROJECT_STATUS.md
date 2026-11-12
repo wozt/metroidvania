@@ -1,3 +1,29 @@
+## Patch 1053 - Aria Object2D proximity attack sprite ported
+
+- `src/runtime/aos/game/aos_object2d.c` ports Object2DCreate
+  (0x080588EC) and Object2DUpdate (0x08058938), the
+  proximity-armed attack sprite dispatched through
+  sUnk_084F0ED8[45]; the sprite attach, preset table and child
+  spawner stay under special_sprites and its art is newly
+  exported as special_45 (tiles 0x081CBEBC, palette 0x0820A100
+  bank 2, frames 0x082111F4).
+- Update reproduces sub_0805872C's dormant/active machine:
+  state 0xA swaps the sub_0803F2C8 preset by the + 0x6D flags
+  byte gated on + 0x59 bit 0 and enters 0xC inside the
+  |dx| <= 0x4FFFFF, |dy| <= 0x5FFFFF window around the
+  + 0x13110 entity; state 0xC swaps presets, returns to 0xA
+  outside and runs the sub_0806D128 attack step inside.
+- Runtime wiring: SPECIAL id 45 spawns on the camera window,
+  the fixed-point delta to Soma feeds the window and the
+  attack step emits a spark effect.
+- Divergences documented: the + 0x6D/+ 0x59 bytes have no
+  runtime writers, the preset argument is exposed unapplied,
+  the sub_0806D128 attack and the sub_080589A4 children are
+  approximated.
+- Tests: `tests/test_aos_object2d.c` covers the dormant
+  presets, the window entry/exit, the active presets and the
+  attack counter.
+
 ## Patch 1052 - Aria Object2B plain animated sprite ported
 
 - `src/runtime/aos/game/aos_object2b.c` ports Object2BCreate

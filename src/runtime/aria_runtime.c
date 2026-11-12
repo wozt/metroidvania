@@ -35,6 +35,7 @@
 #include "aos/game/aos_object24.h"
 #include "aos/game/aos_object27.h"
 #include "aos/game/aos_object2b.h"
+#include "aos/game/aos_object2d.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -447,6 +448,7 @@ typedef struct {
     AosObject24 object24;   /* object 0x24: ambient flickering sprite */
     AosObject27 object27;   /* object 0x27: spinning attack orb */
     AosObject2B object2b;   /* object 0x2B: plain animated sprite */
+    AosObject2D object2d;   /* object 0x2D: proximity attack sprite */
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
@@ -5047,6 +5049,28 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 continue;
             }
             aos_object2b_update(&e->object2b);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 45) {
+            /* Object2DUpdate (sUnk_084F0ED8[45]; Object2DCreate's
+             * sprite attach and child spawner sub_080589A4 stay
+             * under special_sprites, art exported as special_45):
+             * the proximity-armed attack sprite. The + 0x13110
+             * entity is Soma; the + 0x6D/+ 0x59 bytes and the
+             * sub_0806D128 attack step are approximated. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                aos_object2d_create(&e->object2d);
+                continue;
+            }
+            int32_t dx = soma->x - ((int32_t)e->x << 16);
+            int32_t dy = soma->y - ((int32_t)e->y << 16);
+            aos_object2d_update(&e->object2d, dx, dy);
+            if (e->object2d.attack && room->effect_count < MAX_EFFECTS)
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARK, .direct = false,
+                    .x = e->x, .y = e->y};
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 2) {

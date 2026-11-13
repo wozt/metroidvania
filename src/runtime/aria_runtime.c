@@ -51,6 +51,7 @@
 #include "aos/game/aos_object18.h"
 #include "aos/game/aos_object30.h"
 #include "aos/game/aos_object21.h"
+#include "aos/game/aos_object25.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -474,6 +475,7 @@ typedef struct {
     AosObject18 object18;   /* object 0x18: breakable scatter */
     AosObject30 object30;   /* object 0x30: sparkle emitter */
     AosObject21 object21;   /* object 0x21: cyclic lift */
+    AosObject25 object25;   /* object 0x25: soul carrier spawner */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5245,6 +5247,97 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 continue;
             }
             aos_object24_update(&e->object24, aos_random());
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 37) {
+            /* Object25Create / Object25Update (sUnk_084F0DF8[37] /
+             * sUnk_084F0ED8[37]): the Arena soul carrier — a
+             * param1 == 1 invisible spawner or a floating mover
+             * that drifts right and falls until a param0 bound,
+             * then dissolves. State-1 children spawn as real
+             * SPECIAL entities like Object26's orbs, linked
+             * through link_parent; the child's + 0x59 bit-3 done
+             * mark decrements the parent's + 0x18 once. The
+             * + 0x4CC gate passes 0 (unmodelled global), the
+             * + 0x37E bit 0x20 is aria_pickup_state.special bit
+             * 5, the A094 room origin passes 0, the + 0x59
+             * bit-0 engine mark approximates an on-screen window
+             * and sub_0806AF98's tile depenetration is skipped.
+             * The hurt callback takes the weapon hitbox against
+             * a nominal box with Soma's ATK as the damage. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object25_create(&e->object25, (int16_t)e->param0,
+                                    (int16_t)e->param1,
+                                    (int32_t)e->x << 16,
+                                    (int32_t)e->y << 16,
+                                    0, aria_pickup_state.special,
+                                    &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            if (e->object25.deleted) continue;
+            int32_t osx = e->x - cam_x, osy = e->y - cam_y;
+            bool active = osx >= -0x20 && osx <= 0x120 &&
+                          osy >= -0x20 && osy <= 0xE0;
+            if (e->object25.state == 0 && e->object25.hp > 0 &&
+                combat->weapon && combat->weapon_frames) {
+                int wx, wy, ww, wh;
+                if (aos_weapon_hitbox(combat->weapon, soma,
+                                      combat->weapon_frames,
+                                      &wx, &wy, &ww, &wh) &&
+                    ww > 1 && wh > 1 &&
+                    !(wx + ww - 1 < e->x - 8 || e->x + 8 < wx ||
+                      wy + wh - 1 < e->y - 24 || e->y + 8 < wy))
+                    aos_object25_hurt(&e->object25, combat->player->atk);
+            }
+            aos_object25_update(&e->object25, active, layer, 0, 0,
+                                aos_random);
+            e->x = (int)(e->object25.pos_x >> 16);
+            e->y = (int)(e->object25.pos_y >> 16);
+            if (e->object25.spawn_pending &&
+                room->entity_count < MAX_ENTITIES) {
+                AriaEntity *child = &room->entities[room->entity_count];
+                *child = (AriaEntity){.kind = ARIA_KIND_SPECIAL,
+                    .id = 37,
+                    .x = (int)(e->object25.spawn_x >> 16),
+                    .y = (int)(e->object25.spawn_y >> 16),
+                    .spawned = true,
+                    .link_parent = (int)(e - room->entities) + 1};
+                bool cdeleted;
+                aos_object25_create(&child->object25,
+                                    e->object25.spawn_param0, 0,
+                                    e->object25.spawn_x,
+                                    e->object25.spawn_y, 0,
+                                    aria_pickup_state.special,
+                                    &cdeleted);
+                if (!cdeleted) {
+                    room->entity_count++;
+                    child->object25.linked = true;
+                    child->object25.field36 = e->object25.field36;
+                }
+            }
+            if (e->object25.damage >= 0 &&
+                room->damage_popup_count < MAX_DAMAGE_POPUPS)
+                room->damage_popups[room->damage_popup_count++] =
+                    aos_damage_popup_create(e->object25.pos_x,
+                                            e->object25.pos_y,
+                                            (int16_t)e->object25.damage,
+                                            0);
+            for (int f = 0; f < e->object25.particle_fx &&
+                 room->effect_count < MAX_EFFECTS; ++f)
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = false,
+                    .x = e->x, .y = e->y};
+            if (e->object25.finished && e->link_parent) {
+                AriaEntity *parent = &room->entities[e->link_parent - 1];
+                if (parent->kind == ARIA_KIND_SPECIAL &&
+                    parent->id == 37 && parent->object25.children)
+                    parent->object25.children--;
+                e->link_parent = 0;
+            }
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 38) {

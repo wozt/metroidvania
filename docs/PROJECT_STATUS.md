@@ -1,3 +1,34 @@
+## Patch 1069 - Aria Object25 soul carrier spawner ported
+
+- `src/runtime/aos/game/aos_object25.c` ports Object25Create
+  (0x08057AA0) and Object25Update (0x080579A4), dispatch
+  index 37: the + 0x4CC/+ 0x37E create gate, the param1 == 1
+  invisible spawner node, the special_37 sprite triple
+  (tiles 0x081CC07C, palette 0x0820AC4C bank 0, frames
+  0x08225A08), the + 0x34 = 0xC8 health, the state-1 spawn
+  gate (0x78-seeded + 0xD, 50 percent roll, + 0x18 <= 9 cap)
+  on the four 0x085265F8/0x08526608 position tables, and the
+  state-0 + 0xB machine — active wait, the 0x4000 drift and
+  0x80000 fall with the param0 physics gate and world bounds,
+  and the substate-10 particle dissolve with the sub_0806D518
+  phase table.
+- State-1 children spawn as real SPECIAL entities linked
+  through `link_parent` like Object26's orbs; a child's
+  + 0x59 bit-3 finish decrements the parent's + 0x18 once.
+  The sub_08057D38 hurt callback takes the weapon hitbox
+  with Soma's ATK, reports the sub_08042B8C damage popup
+  and dissolves at zero health.
+- Approximations: the + 0x4CC gate passes 0, the + 0x59
+  bit-0 active mark is an on-screen window, the
+  sub_080698A8 tile probes collapse to a floor-depth
+  landing, damage scaling is the raw attack power and the
+  animation tables reduce to their ids.
+- Tests: `tests/test_aos_object25.c` covers the create
+  gate, both create variants, the active wait, the drift
+  and fall, the param0 physics gate and bounds, the
+  substate-10 countdown, hurt invulnerability and death,
+  and the spawner gate, tables, cap and room origin.
+
 ## Patch 1068 - Aria Object21 cyclic lift director ported
 
 - `src/runtime/aos/game/aos_object21.c` ports Object21Create

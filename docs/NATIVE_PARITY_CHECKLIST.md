@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 180 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 181 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2034 | 1539 |
+| Castlevania: Aria of Sorrow | 2039 | 1534 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2659,6 +2659,15 @@ Tests: [`tests/test_aos_object2f.c`](../tests/test_aos_object2f.c).
 Dependencies: `aos.objects.animated_sprite`, `aos.objects.special_sprites`.  
 Known divergences: The + 0x42C bit-0x1000 trigger is approximated by R held (the keys<<4 mapping is inferred from the + 0x400-Up precedent), the + 0x58 bit-0x20 mark has no verified draw consumer, the + 0x6F rng % 6 roll and the + 0x5C/+ 0x59/+ 0xA marks are not modelled, and the 0x08118650 anchor table clamps out-of-range params to variant 0.  
 Next action: Verify the + 0x42C bit-0x1000 source (R held vs an event write) and the + 0x58 bit-0x20 draw consumer in game.
+
+[~] **`aos.objects.soul_carrier` — Object25 soul carrier spawner.** Object25Create (0x08057AA0) deletes when (gEwramData + 0x4CC & 3) == 0 with the + 0x37E bit 0x20 set; param1 == 1 takes the invisible spawner path (+ 0xA = 1, + 0xD = 0x78, + 0x58 bit 0x20, no sprite), other variants load the special_37 triple (tiles 0x081CC07C, palette 0x0820AC4C bank 0, frames 0x08225A08) with + 0x34 = 0xC8 health and param1 == 2 entering substate 1 with its own velocities. Object25Update state 1 counts + 0xD and each wrap past 0x77 rolls a 50 percent gate plus the + 0x18 <= 9 child cap for one type-0x1B child on the 0x085265F8/0x08526608 position tables indexed by + 0x30; children spawn as real SPECIAL entities linked through link_parent like Object26 orbs and their finish decrements the parent count. State 0 runs the + 0xB machine: substate 0 waits the active mark, substate 1 drifts + 0x40 by + 0x4000 and falls at + 0x80000 with the param0 physics gate and world bound (0x040FFFFF for variants 0-1, 0x00FFFFFF for 2-3), substate 10 emits the sub_0806D5C0 particle bursts, runs the sub_0806D518 phase table into + 0x58 bit 5 and finishes on the countdown wrap. The sub_08057D38 hurt callback arms the + 0x2D blink, reports the sub_08042B8C damage number and dissolves through table 0x08526580 at zero health. Unit-tested in test_aos_object25.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_08042B8C`, `aos:asm:asm/code/code_08050A3C.s:Object25Create`, `aos:asm:asm/code/code_08050A3C.s:Object25Update`, `aos:asm:asm/code/code_08050A3C.s:sub_08057BAC`, `aos:asm:asm/code/code_08050A3C.s:sub_08057D38`, `aos:asm:asm/code/code_08050A3C.s:sub_08057DB8`, `aos:asm:asm/code/code_08060B98.s:sub_080698A8`, `aos:asm:asm/code/code_08060B98.s:sub_0806AE54`, `aos:asm:asm/code/code_08060B98.s:sub_0806AF98`, `aos:asm:asm/code/code_08060B98.s:sub_0806B7D8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D288`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3C0`, `aos:asm:asm/code/code_08060B98.s:sub_0806D460`, `aos:asm:asm/code/code_08060B98.s:sub_0806D518`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:c:src/code/code_080211F0.c:sub_08021530`, `aos:c:src/code/code_08039340.c:sub_0803F0E4`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code_080009A0.c:EntityCreateInRange`, `aos:c:src/code_080009A0.c:RandomNumberGenerator`.  
+Local implementation: [`src/runtime/aos/game/aos_object25.c`](../src/runtime/aos/game/aos_object25.c), [`src/runtime/aos/game/aos_object25.h`](../src/runtime/aos/game/aos_object25.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object25.c`](../tests/test_aos_object25.c).
+Dependencies: `aos.objects.special_sprites`, `aos.objects.chandelier_hub`.  
+Known divergences: The + 0x4CC gate passes 0 (the global bitfield is unmodelled), the + 0x59 bit-0 engine-active mark approximates an on-screen window, sub_0806AF98 tile depenetration and the sub_080698A8 horizontal/wall probes are approximated by a floor-depth landing, sub_0806B7D8 damage scaling collapses to the raw attack power, the + 0x36 damage-table byte and the + 0x2C flash nibble stay 0, the sub_0803F0E4 sequence tables reduce to their ids, the sub_080421AC read has no output and the param1 == 1 spawner keeps no sprite state.  
+Next action: Port the sub_0806B7D8 damage scaling and the sub_0803F0E4 sequence playback once the attack-record and animation consumers exist, and compare an Arena room against an emulator.
 
 [~] **`aos.objects.sparkle_emitter` — Object30 ambient sparkle emitter.** Object30Create (0x08058F88) runs the sub_08058FE8 sprite attach — the identical 0x081CBEEC / sub_08068264(0x0820A1C4, 9) / 0x08211844 triple as Object2F, exported as special_47 and mapped for id 48 — then sub_0803F2C8(0,0,1), sub_0803F17C, + 0x5C = 0x19, + 0xA = 0 and + 0x58 bit 0x20. Object30Update (0x08058FD0) delegates to sub_08059034 while + 0xA == 0: + 0xB waits at 0 for gEwramData + 0x42C bit 0x1000, latches to 1 and exits; armed, it decrements + 0xD and when the OLD u8 is 0 or 1 reloads (RNG & 0x7F) + 0x20 and fires sub_08058D7C. Unit-tested in test_aos_object30.
 

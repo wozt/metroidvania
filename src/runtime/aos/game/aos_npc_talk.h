@@ -253,3 +253,56 @@ typedef struct {
 uint32_t aos_npc_talk_66094(AosNpcGuard *g, uint32_t flags,
                             uint8_t picked_text, bool text_done,
                             int32_t player_x);
+
+/* sub_08066024: Object20 spawn gate — when flag 0x20 is set and
+ * sub_0805B754(e, 0) keeps the entity, the follower variant runs
+ * (sub_0803F2C8(e,0,0,1), sub_0803F17C, +0x58 &= ~0x41,
+ * +0x5C = player +0x5C + 1, +0x18 = 1, return 1); otherwise the
+ * entity is marked +0x59 |= 8 and returns 0. */
+typedef struct {
+    uint8_t flags58;    /* +0x58 */
+    uint8_t flags59;    /* +0x59 */
+    uint8_t field18;    /* +0x18 */
+    uint8_t anim5c;     /* +0x5C */
+    /* outputs */
+    bool kept;          /* sub_0805B754 nonzero */
+    bool variant;       /* sub_0803F2C8 ran */
+    bool anim_step;     /* sub_0803F17C ran */
+    bool facing_cleared;/* +0x58 &= ~0x41 */
+    uint32_t ret;
+} AosNpcSpawnGate;
+
+uint32_t aos_npc_talk_66024(AosNpcSpawnGate *g, bool flag20,
+                            bool keep, uint8_t player_5c);
+
+/* The gEwramData+0x138F4 guard-sequence cursor driven by
+ * sub_080665B4: +0x138F4 mode, +0x138F6 counter, +0x138F8 table
+ * index, +0x138FA fallback value. sub_08066648 initializes it,
+ * sub_0806666C resets it (counter 0xFF), sub_0806668C selects the
+ * mode from flags 0x2E/0x26 and sets text 0x36, and sub_080665B4
+ * ticks it: while the counter is <= 1 it picks a word through the
+ * 0x085269DC record table (counter 0 picks rec[3 + rng % rec[2]]
+ * — or rec fallback for modes 4/6 — counter 1 picks rec[1]),
+ * transforms it through sub_08041434 and stores it at
+ * gEwramData+0x40C, then increments the counter and returns 1;
+ * afterwards it returns 0. */
+typedef struct {
+    uint16_t mode;      /* +0x138F4 */
+    uint16_t counter;   /* +0x138F6 */
+    uint16_t index;     /* +0x138F8 */
+    uint16_t fallback;  /* +0x138FA */
+} AosGuardSeq;
+
+/* Record layout at each table entry (words): [1] alternate pick,
+ * [2] modulo count, [3..] pick array. */
+typedef uint16_t (*AosGuardXform)(uint16_t v);
+
+void aos_guard_seq_init(AosGuardSeq *g, uint16_t mode,
+                        uint16_t index, uint16_t fallback);
+void aos_guard_seq_reset(AosGuardSeq *g);
+uint8_t aos_guard_seq_pick(AosGuardSeq *g, bool flag2e,
+                           bool flag26, uint8_t *text_id);
+uint32_t aos_guard_seq_tick(AosGuardSeq *g,
+                            const uint16_t *const *table,
+                            uint32_t rng, AosGuardXform xform,
+                            uint16_t *out);

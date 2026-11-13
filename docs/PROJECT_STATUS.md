@@ -1,3 +1,19 @@
+## Patch 1100 - Aria guard spawn gate and sequence cursor
+
+- `aos_npc_talk_66024` ports the Object20 spawn gate: flag 0x20 +
+  sub_0805B754 keep runs the follower variant (sub_0803F2C8,
+  sub_0803F17C, +0x58 &= ~0x41, +0x5C = player +0x5C + 1,
+  +0x18 = 1, return 1); otherwise +0x59 |= 8.
+- The gEwramData+0x138F4 guard-sequence cursor is ported:
+  sub_08066648 init, sub_0806666C reset (counter 0xFF),
+  sub_0806668C mode pick from flags 0x2E/0x26 with text 0x36,
+  and sub_080665B4 tick — while the counter is <= 1 it picks a
+  word through the 0x085269DC record table (modes 4/6 index the
+  array with the +0x138FA fallback, counter 1 picks rec[1]),
+  transforms it via sub_08041434 into +0x40C and returns 1.
+- Unit-tested; five routines added to the
+  aos.events.opening_scene annotation.
+
 ## Patch 1099 - Aria guard NPC sequence sub_08066094
 
 - `aos_npc_talk_66094` ports the four-state guard sequence:

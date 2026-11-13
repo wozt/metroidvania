@@ -391,3 +391,74 @@ uint32_t aos_npc_talk_66094(AosNpcGuard *g, uint32_t flags,
     }
     return g->ret;
 }
+
+uint32_t aos_npc_talk_66024(AosNpcSpawnGate *g, bool flag20,
+                            bool keep, uint8_t player_5c) {
+    g->kept = g->variant = g->anim_step = g->facing_cleared = false;
+    g->ret = 0;
+    if (!(flag20 && keep)) {
+        g->flags59 |= 8;            /* +0x59 |= 8 */
+        return g->ret;
+    }
+    g->kept = true;
+    g->variant = true;              /* sub_0803F2C8(e,0,0,1) */
+    g->anim_step = true;            /* sub_0803F17C(e) */
+    g->flags58 &= ~0x41u;           /* +0x58 &= ~0x41 */
+    g->facing_cleared = true;
+    g->anim5c = (uint8_t)(player_5c + 1);   /* +0x5C = player + 1 */
+    g->field18 = 1;
+    g->ret = 1;
+    return g->ret;
+}
+
+void aos_guard_seq_init(AosGuardSeq *g, uint16_t mode,
+                        uint16_t index, uint16_t fallback) {
+    /* sub_08066648 */
+    g->mode = mode;
+    g->counter = 0;
+    g->index = index;
+    g->fallback = fallback;
+}
+
+void aos_guard_seq_reset(AosGuardSeq *g) {
+    /* sub_0806666C */
+    g->mode = 0;
+    g->counter = 0xFF;
+    g->index = 0;
+    g->fallback = 0;
+}
+
+uint8_t aos_guard_seq_pick(AosGuardSeq *g, bool flag2e,
+                           bool flag26, uint8_t *text_id) {
+    /* sub_0806668C: entity +0x14 = 0x36, mode/index/fallback reset,
+     * index = flag2e ? (flag26 ? 3 : 2) : 1. */
+    *text_id = 0x36;
+    g->mode = 0x36;
+    g->counter = 0;
+    g->fallback = 0;
+    g->index = (uint16_t)(flag2e ? (flag26 ? 3 : 2) : 1);
+    return *text_id;
+}
+
+uint32_t aos_guard_seq_tick(AosGuardSeq *g,
+                            const uint16_t *const *table,
+                            uint32_t rng, AosGuardXform xform,
+                            uint16_t *out) {
+    /* sub_080665B4 */
+    if (g->counter > 1) return 0;
+    const uint16_t *rec = table[g->index];
+    uint16_t v;
+    if (g->counter == 0) {
+        /* modes 4/6 index the pick array with the +0x138FA
+         * fallback; other modes use rng % rec[2]. */
+        uint16_t pick = (g->index == 4 || g->index == 6)
+            ? g->fallback
+            : (uint16_t)(rng % rec[2]);
+        v = rec[3 + pick];
+    } else {
+        v = rec[1];
+    }
+    *out = xform(v);                 /* sub_08041434 -> +0x40C */
+    g->counter = (uint16_t)(g->counter + 1);
+    return 1;
+}

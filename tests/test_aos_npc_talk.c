@@ -7,6 +7,9 @@ static int step_calls;
 static void step_count(void *c) { (void)c; step_calls++; }
 static bool spawn_ok(void) { return true; }
 
+static uint16_t null_xform(uint16_t v) { return v; }
+#define NULL_XFORM null_xform
+
 int main(void) {
     AosNpcTalk t;
 
@@ -257,6 +260,54 @@ int main(void) {
     assert(gd2.song_1b5);
     aos_npc_talk_66094(&gd2, 7, 0, true, 0);
     assert(gd2.cleared_18 && gd2.field18 == 0);
+
+    /* sub_08066024 spawn gate. */
+    AosNpcSpawnGate sg;
+    memset(&sg, 0, sizeof sg);
+    uint32_t gr = aos_npc_talk_66024(&sg, false, true, 0);
+    assert((sg.flags59 & 8) && gr == 0);
+    memset(&sg, 0, sizeof sg);
+    gr = aos_npc_talk_66024(&sg, true, false, 0);
+    assert((sg.flags59 & 8) && gr == 0 && !sg.variant);
+    memset(&sg, 0, sizeof sg); sg.flags58 = 0x41; sg.anim5c = 7;
+    gr = aos_npc_talk_66024(&sg, true, true, 9);
+    assert(gr == 1 && sg.variant && sg.anim_step &&
+           (sg.flags58 & 0x41) == 0 && sg.anim5c == 10 &&
+           sg.field18 == 1);
+
+    /* Guard sequence cursor: init/reset/pick/tick. */
+    AosGuardSeq gs;
+    aos_guard_seq_init(&gs, 0x10, 2, 0x55);
+    assert(gs.mode == 0x10 && gs.counter == 0 &&
+           gs.index == 2 && gs.fallback == 0x55);
+    aos_guard_seq_reset(&gs);
+    assert(gs.mode == 0 && gs.counter == 0xFF);
+    uint8_t txt = 0;
+    aos_guard_seq_pick(&gs, true, true, &txt);
+    assert(txt == 0x36 && gs.mode == 0x36 && gs.index == 3);
+    aos_guard_seq_pick(&gs, false, true, &txt);
+    assert(gs.index == 1);
+    aos_guard_seq_pick(&gs, true, false, &txt);
+    assert(gs.index == 2);
+    /* tick: counter 0 picks rec[3 + rng % rec[2]], counter 1 rec[1]. */
+    static const uint16_t recA[] = {0, 0x77, 4, 10, 20, 30, 40};
+    static const uint16_t recB[] = {0, 0x88, 2, 5, 6};
+    static const uint16_t *tbl[] = {recA, recB, recA, recB, recA, recB, recA, recB};
+    aos_guard_seq_init(&gs, 0, 0, 0);
+    uint16_t out = 0;
+    uint32_t tr = aos_guard_seq_tick(&gs, tbl, 7, NULL_XFORM, &out);
+    assert(tr == 1 && gs.counter == 1);
+    /* rng 7 % 4 = 3 -> rec[3+3] = 40 -> xform passthrough */
+    assert(out == 40);
+    tr = aos_guard_seq_tick(&gs, tbl, 0, NULL_XFORM, &out);
+    assert(tr == 1 && gs.counter == 2 && out == 0x77);
+    tr = aos_guard_seq_tick(&gs, tbl, 0, NULL_XFORM, &out);
+    assert(tr == 0);    /* counter > 1: idle */
+    /* index 4/6 index the pick array with the +0x138FA
+     * fallback (rec[3 + fallback]). */
+    aos_guard_seq_init(&gs, 0, 6, 1);
+    tr = aos_guard_seq_tick(&gs, tbl, 0, NULL_XFORM, &out);
+    assert(tr == 1 && out == 20);    /* recA[3 + 1] */
 
     puts("aos_npc_talk: ok");
     return 0;

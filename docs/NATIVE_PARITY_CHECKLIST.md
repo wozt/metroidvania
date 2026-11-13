@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 186 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 187 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2072 | 1501 |
+| Castlevania: Aria of Sorrow | 2078 | 1495 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2695,6 +2695,15 @@ Tests: [`tests/test_aos_object22.c`](../tests/test_aos_object22.c).
 Dependencies: `aos.objects.special_sprites`.  
 Known divergences: The gEwramData + 0x13190 linked-entity check is an input approximated as false in the runtime, the sub_0806A224 state-5 physics collapses to the shared gravity model without its collision probes, the sub_08056F50 projectiles and the sub_08056D6C carrier child become sparkle effects (their entities, + 0x18 parent link, + 0x36 tag, hurt box and sub_08056E74 follow-update are not modelled), the volley hit mask reads 0, sub_08021278 becomes a deactivate output, the + 0x3C camera byte and A094 room fields pass approximations, and there is no emulator comparison.  
 Next action: Port the sub_0806A224 collision physics and the sub_08056F50/sub_08056D6C children as real entities once the projectile and parent-link paths exist, and compare an elevator room against an emulator.
+
+[~] **`aos.objects.sequence_actor` — Object35 sequence actor / room event.** Object35Create (0x0805A18C) loads the sub_0805A618 sprite (tiles 0x081CBF1C, palette sub_08068264(0x0820A3B4, 0), frames 0x08211FB0 — exported as special_53), deletes on load failure; with param0 == 0 it installs the sub_0804277C(8) hurt slot and the 0x0C10E8F8 box, sets + 0x5C = 0x12, + 0x65 = 2 and fires the inert sub_0805A50C type-0x49 child (+ 0x20 parent link), otherwise + 0x65 = 1 and + 0xB = 0xA directly; the param0 == 0 path also pre-reads the + 0x344 bit — set means + 0x44 += 0x60000 and + 0xB = 2. Object35Update (0x0805A590) runs sub_08021278(1) only for param0 == 0 then sub_0805A30C while + 0xA == 0: state 0 counts + 0x18 to 8 while linked then -> 1 with the bit set and PlaySong 0x133; state 1 integrates + 0x44 += + 0x4C at 0x10000 for six frames -> 2; states 2-9 are empty; state 10 waits on the bit -> 11 with + 0x4C = 0x8000, PlaySong 0x113 and the flash bit; state 11 integrates, rains a particle every eighth frame and after 0x60 counts -> 12 which clears the flash. Unit-tested in test_aos_object35.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_0804277C`, `aos:asm:asm/code/code_08040A38.s:sub_08042848`, `aos:asm:asm/code/code_08040A38.s:sub_080428B4`, `aos:asm:asm/code/code_08050A3C.s:Object35Create`, `aos:asm:asm/code/code_08050A3C.s:Object35Update`, `aos:asm:asm/code/code_08050A3C.s:sub_0805A30C`, `aos:asm:asm/code/code_08050A3C.s:sub_0805A50C`, `aos:asm:asm/code/code_08050A3C.s:sub_0805A5BC`, `aos:asm:asm/code/code_08050A3C.s:sub_0805A618`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3CC`, `aos:asm:asm/code/code_08060B98.s:sub_0806D9CC`, `aos:c:src/code/code_080211F0.c:sub_08021278`, `aos:c:src/code/code_08039340.c:sub_0803AFB8`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803B9D0`, `aos:c:src/code/code_08039340.c:sub_0803E654`, `aos:c:src/code_080009A0.c:EntityCreateInRange`, `aos:c:src/code_080009A0.c:RandomNumberGenerator`, `aos:c:src/code_08001194.c:sub_08002200`, `aos:c:src/code_08001194.c:sub_08002248`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/game/aos_object35.c`](../src/runtime/aos/game/aos_object35.c), [`src/runtime/aos/game/aos_object35.h`](../src/runtime/aos/game/aos_object35.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object35.c`](../tests/test_aos_object35.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The sub_0806D9CC state-11 particles collapse to counted sparkle effects with their RNG velocity pairs unmodelled, the sub_08002200/sub_08002248 display-list placements and the gUnk_03002CB0 bit-15 flash window become outputs, the gEwramData + 0x344 bitfield read (word param1 >> 5, bit param1 & 0x1F) and the + 0x13190 linked-entity check are inputs, the two param0 variants share one module, states 2-9 wait on external + 0xB writes, the collision box and hurt slot stay under special_sprites and there is no emulator comparison.  
+Next action: Port the sub_0806D9CC particles and sub_08002248 placements as real runtime effects once those paths exist, and wire the + 0x344 bitfield and + 0x13190 link to room state.
 
 [~] **`aos.objects.skull_eye_flames` — Object2F skull-eye flame jets.** Object2FCreate (0x08058C1C) deletes the entity when the + 0x37E bitfield bit 2 is set, loads the sprite through sub_08058CF8 (tiles 0x081CBEEC, palette slot sub_08068264(0x0820A1C4, 9), frames 0x08211844 = special_47), presets sub_0803F2C8(6, 0, 1), rolls + 0x6F = rng % 6, sets + 0x5C = 0x1A, clears + 0x59 bit 1, sets + 0x58 bit 0x20 and + 0xA = 0; the + 0x30 s16 param indexes the 0x08118650 table (x {0x30, 0x78, 0xA8}, y {0x38, 0x48, 0x30}) into + 0x42/+ 0x46. Object2FUpdate (0x08058CD8) runs sub_08058D44 while + 0xA == 0 then sub_0803F17C: while + 0xB == 0 and the + 0x42C bit-0x1000 trigger is set, + 0xB latches and + 0x58 bit 0x20 clears.
 

@@ -57,6 +57,7 @@
 #include "aos/game/aos_object22.h"
 #include "aos/game/aos_object29.h"
 #include "aos/game/aos_object32.h"
+#include "aos/game/aos_object35.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -486,6 +487,7 @@ typedef struct {
     AosObject22 object22;   /* object 0x22: scripted elevator */
     AosObject29 object29;   /* object 0x29: ping-pong platform */
     AosObject32 object32;   /* object 0x32: cinematic director */
+    AosObject35 object35;   /* object 0x35: sequence actor */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5371,6 +5373,33 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     .kind = AOS_EFFECT_SPARKLE, .direct = false,
                     .x = e->x, .y = e->y};
             if (e->object32.deactivate) e->spawned = false;
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 53) {
+            /* Object35Create / Object35Update (sUnk_084F1004[53] /
+             * sUnk_084F1184[53]): the sequence actor. The sprite
+             * triple exports as special_53; the + 0x344 global
+             * bitfield and + 0x13190 link are approximated and the
+             * sub_0806D9CC particles become counted effects. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object35_create(&e->object35, (int16_t)e->param0,
+                                    (int16_t)e->param1, e->x << 16,
+                                    e->y << 16, false, false, true,
+                                    &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            aos_object35_update(&e->object35, false, false);
+            if (e->object35.song >= 0)
+                aos_audio_play_song((uint16_t)e->object35.song);
+            for (unsigned c = 0; c < e->object35.particle_count &&
+                 room->effect_count < MAX_EFFECTS; ++c)
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = false,
+                    .x = e->x, .y = e->y};
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 33) {

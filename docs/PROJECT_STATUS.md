@@ -1,3 +1,23 @@
+## Patch 1075 - Aria Object35 sequence actor ported
+
+- `src/runtime/aos/game/aos_object35.c` ports Object35Create
+  (0x0805A18C), Object35Update (0x0805A590), sub_0805A30C,
+  sub_0805A50C, sub_0805A5BC and sub_0805A618, dispatch index
+  53: the sequence actor / room event with actor (param0 == 0)
+  and effect (param0 != 0) variants.
+- The + 0xB machine waits on the + 0x13190 linked entity for
+  eight frames (song 0x133), drops the actor 1 px/frame for
+  six frames, idles through externally driven states 2-9, then
+  rains sub_0806D9CC particles every eighth frame under the
+  gUnk_03002CB0 bit-15 flash window (song 0x113) before
+  clearing it in state 12.
+- The sprite triple (tiles 0x081CBF1C, palette 0x0820A3B4,
+  frames 0x08211FB0) exports as special_53; the + 0x344
+  bitfield, the + 0x13190 link and the sub_08002248 display
+  placements are approximated by runtime inputs/outputs.
+- Registered as aos.objects.sequence_actor; unit-tested in
+  test_aos_object35.
+
 ## Patch 1074 - Aria Object32 cinematic director ported
 
 - `src/runtime/aos/game/aos_object32.c` ports Object32Create

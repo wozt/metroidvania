@@ -1,0 +1,21 @@
+scene	trigger	sequence	dialogue	audio	notes
+boss_intro_zoom	partial	partial	n/a	partial	Object16 zoom director; starts on boss-room event/proximity. Ported and dispatched; probes and camera words approximated, no emulator comparison.
+buy_menu	partial	partial	partial	partial	sub_08061d10 shop buy/menu sequence in aos_shop.c; starts on shop NPC proximity + text window. Injected globals; the Object20 dispatcher consumer of the 0x10/0x20 codes is not wired.
+chandelier_event	partial	partial	n/a	partial	Object13 swing event; starts when swing amplitude crosses threshold. Ported; the eleven chain-link children are counted, not spawned.
+cinematic_trigger	partial	partial	n/a	partial	Object06 cinematic trigger; starts on proximity/probe gate. Probe approximated by a player-near window.
+cutscene_director	partial	partial	partial	partial	Object02 solid-block column cutscene; starts on room placement. Forced-walk and release approximated.
+death_gameover	partial	partial	partial	partial	Soma death sequence + game-over screen; starts on HP depletion. Death fade ported; the unk_42C 0x200000 reload branch is decoded but unported.
+directional_director	partial	partial	partial	partial	Object04 directional cutscene; starts on direction flags. Direction words approximated.
+escort_director	partial	partial	partial	partial	Object03 escort cutscene; starts on escort setup. Escort target model approximated.
+fade_director	partial	partial	n/a	partial	Object37 proximity fade director; starts inside a player proximity window with radius hysteresis.
+npc_dialogue	partial	partial	partial	partial	Generic Object20 NPC talk callbacks in aos_npc_talk.c; starts on Object20 talk states + text window. Per-NPC script records not modelled.
+opening_gate	partial	partial	n/a	partial	Object1F opening sequence gate; starts on room flags + proximity. Think machine and four child updates ported; the ten child entities are counted, not instantiated.
+opening_story	partial	partial	partial	partial	Object20 Winged Skeleton first-room story; starts on the area_00 room_000 flag. Soul grant and event persistence wired, dialogue approximated.
+proximity_trigger	partial	partial	n/a	partial	Object05 proximity trigger; starts on a player probe. Probe approximated.
+save_room_ambience	partial	partial	n/a	partial	Save-room ambience; starts on save room entry. Object1C orbiter/sparkle children ported in aos_save_room_fx.c; child entities not instantiated.
+sell_sequence	partial	partial	partial	partial	sub_08061abc give/sell sequence in aos_shop.c; starts on shop NPC proximity + text window. Give/sell UI and transactions modeled as requests.
+sequence_actor	partial	partial	n/a	partial	Object35 sequence actor; starts on room event + flash gate. 13-state machine ported (special_53); particle children counted.
+stationary_cinematic	partial	partial	partial	partial	Object32 stationary cinematic director; starts on room trigger + player proximity. 5 states, songs and child burst ported; children counted.
+story_director	partial	partial	partial	partial	Object15 story cutscene director; starts on room event + gEwramData+0x348 bit. Dialogue records reported, not played.
+title_intro	partial	partial	partial	ported	Scrolling intro; starts on the boot mode chain. Native backgrounds, actors and music 21 wired in src/runtime/aos/intro.
+vertical_pan_director	partial	partial	partial	partial	Object17 vertical pan director; starts on a room band + input. The 19+ child entities are counted.

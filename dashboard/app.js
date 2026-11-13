@@ -206,7 +206,8 @@
       ["Consumables", "consumables"], ["Weapons", "weapons"],
       ["Equipment", "equipment"],
       ["Red souls", "red_souls"], ["Blue souls", "blue_souls"],
-      ["Yellow souls", "yellow_souls"], ["Ability souls", "ability_souls"]
+      ["Yellow souls", "yellow_souls"], ["Ability souls", "ability_souls"],
+      ["Scenes", "scenes"]
     ];
     const categories = sections.filter(([, key]) => catalog.coverage[key]);
     return `<section class="catalog-preview catalog-${esc(game)}">
@@ -344,7 +345,8 @@
           ["Items", g.coverage.items, "aos"], ["Red souls", g.coverage.red_souls, "aos"],
           ["Blue souls", g.coverage.blue_souls, "aos"],
           ["Yellow souls", g.coverage.yellow_souls, "aos"],
-          ["Ability souls", g.coverage.ability_souls, "aos"]
+          ["Ability souls", g.coverage.ability_souls, "aos"],
+          ["Scenes", g.coverage.scenes, "aos"]
         ])}
         ${aspectOverview(g)}
         ${bestiaryTable(g.monsters, "Monsters", g.coverage.monsters, aspectNames, "Soul reference")}
@@ -363,6 +365,9 @@
         ${bestiaryTable(g.souls.blue, "Blue souls (guardian)", g.coverage.blue_souls, null, null)}
         ${bestiaryTable(g.souls.yellow, "Yellow souls (passive)", g.coverage.yellow_souls, null, null)}
         ${bestiaryTable(g.souls.ability, "Ability souls (movement)", g.coverage.ability_souls, null, null)}
+        ${g.scenes ? `<p class="muted">${esc(g.scenes_note)}</p>
+        ${bestiaryTable(g.scenes, "Cutscenes & scenes", g.coverage.scenes,
+          ["trigger", "sequence", "dialogue", "audio"], null)}` : ""}
       </section>`;
   }
 

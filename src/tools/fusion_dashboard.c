@@ -1413,17 +1413,22 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
                                             "notes"};
     static const char *const equip_cols[] = {"equipment", "stats", "behavior", "icon",
                                              "notes"};
+    static const char *const scene_cols[] = {"scene", "trigger", "sequence", "dialogue",
+                                             "audio", "notes"};
     FusionJson weapon_asp = fusion_json_object(), item_asp = fusion_json_object(),
-               equip_asp = fusion_json_object();
+               equip_asp = fusion_json_object(), scene_asp = fusion_json_object();
     if (!load_aspect_table("data/native_parity/aos_weapon_aspects.tsv", weapon_cols,
                            COUNT(weapon_cols), &weapon_asp) ||
         !load_aspect_table("data/native_parity/aos_item_aspects.tsv", item_cols,
                            COUNT(item_cols), &item_asp) ||
         !load_aspect_table("data/native_parity/aos_equipment_aspects.tsv", equip_cols,
-                           COUNT(equip_cols), &equip_asp)) {
+                           COUNT(equip_cols), &equip_asp) ||
+        !load_aspect_table("data/native_parity/aos_scene_aspects.tsv", scene_cols,
+                           COUNT(scene_cols), &scene_asp)) {
         fusion_json_free(&weapon_asp);
         fusion_json_free(&item_asp);
         fusion_json_free(&equip_asp);
+        fusion_json_free(&scene_asp);
         fusion_json_free(&aspects);
         fusion_json_free(&monsters);
         fusion_json_free(&items);
@@ -1434,6 +1439,7 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
         fusion_json_free(&weapon_asp);
         fusion_json_free(&item_asp);
         fusion_json_free(&equip_asp);
+        fusion_json_free(&scene_asp);
         fusion_json_free(&aspects);
         fusion_json_free(&monsters);
         fusion_json_free(&items);
@@ -1445,6 +1451,7 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
         fusion_json_free(&weapon_asp);
         fusion_json_free(&item_asp);
         fusion_json_free(&equip_asp);
+        fusion_json_free(&scene_asp);
         fusion_json_free(&aspects);
         return fail("cannot read src/runtime/aos/core/aos_enemy.h");
     }
@@ -1508,6 +1515,7 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
         fusion_json_free(&weapon_asp);
         fusion_json_free(&item_asp);
         fusion_json_free(&equip_asp);
+        fusion_json_free(&scene_asp);
         fusion_json_free(&aspects);
         fusion_json_free(&monsters);
         fusion_json_free(&items);
@@ -1620,10 +1628,48 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
         }
         put(&aos_souls, soul_keys[group], rows);
     }
+    /* Cutscene/scene registry: data/native_parity/aos_scene_aspects.tsv.
+     * Rows get a humanized name and a status derived from the worst
+     * aspect (all ported/n/a -> functional, any missing only ->
+     * not_started, otherwise partial). */
+    FusionJson aos_scenes = fusion_json_array();
+    for (size_t index = 0; index < scene_asp.count; ++index) {
+        const FusionJson *entry = &scene_asp.items[index];
+        const char *key = text_of(entry, "scene");
+        FusionJson row = fusion_json_object();
+        put_string(&row, "id", key);
+        char name[96];
+        snprintf(name, sizeof name, "%s", key);
+        for (char *p = name; *p; ++p) {
+            if (*p == '_') *p = ' ';
+            else if (p == name) *p = (char)toupper((unsigned char)*p);
+        }
+        put_string(&row, "name", name);
+        put_string(&row, "kind", "scene");
+        int missing = 0, partial = 0, done = 0;
+        static const char *const scene_aspects[] = {"trigger", "sequence",
+                                                    "dialogue", "audio"};
+        for (size_t a = 0; a < COUNT(scene_aspects); ++a) {
+            const char *value = text_of(entry, scene_aspects[a]);
+            if (!strcmp(value, "missing")) missing++;
+            else if (!strcmp(value, "partial")) partial++;
+            else if (!strcmp(value, "ported")) done++;
+        }
+        put_string(&row, "status",
+                   !missing && !partial ? "functional"
+                                        : missing == 4 ? "not_started" : "partial");
+        put_string(&row, "note", text_of(entry, "notes"));
+        put(&row, "aspects", copy_of(entry));
+        put(&row, "evidence",
+            evidence(fusion_json_array(), fusion_json_array(), false, false));
+        push(&aos_scenes, row);
+    }
+    FusionJson coverage_scenes = catalog_coverage(&aos_scenes);
     free_aos_catalog(&catalog);
     fusion_json_free(&weapon_asp);
     fusion_json_free(&item_asp);
     fusion_json_free(&equip_asp);
+    fusion_json_free(&scene_asp);
     fusion_json_free(&aspects);
     /* Tanks are Clipdata (BgClipCheckTouchingTransitionOrTank), not sprites. */
     static const char *const tanks[][2] = {{"tank_energy", "Energy Tank"},
@@ -1653,6 +1699,7 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
     put(&aos_coverage, "consumables", coverage_consumables);
     put(&aos_coverage, "weapons", coverage_weapons);
     put(&aos_coverage, "equipment", coverage_equipment);
+    put(&aos_coverage, "scenes", coverage_scenes);
     put(&aos_coverage, "red_souls",
         catalog_coverage(fusion_json_member(&aos_souls, "red")));
     put(&aos_coverage, "blue_souls",
@@ -1681,7 +1728,13 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
                "means implemented from the native routines, unit-tested and seen in a local run; "
                "not emulator-compared. A monster is complete when every aspect is ported or n/a.");
     put(&aos, "items", aos_items);
+    put(&aos, "scenes", aos_scenes);
     put(&aos, "souls", aos_souls);
+    put_string(&aos, "scenes_note",
+               "Cutscenes, scripted sequences and NPC/shop dialogue triggers, one row "
+               "per named scene from data/native_parity/aos_scene_aspects.tsv. Status "
+               "is derived from the worst aspect; most scenes are ported but "
+               "approximated and not yet compared against an emulator.");
     put_string(&aos, "items_note",
                "All 137 normal-mode money, consumable, weapon, armor and accessory records are "
                "listed individually; Hard Mode and All Souls placements reuse these native "

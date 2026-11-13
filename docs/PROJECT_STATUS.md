@@ -1,3 +1,24 @@
+## Patch 1087 - Aria scene/cutscene aspect registry and dashboard table
+
+- `data/native_parity/aos_scene_aspects.tsv` lists the 20
+  named Aria cutscenes, scripted sequences and NPC/shop
+  dialogue triggers in the same per-aspect format as the
+  monster registry (trigger/sequence/dialogue/audio columns,
+  honest partial/missing statuses). Rows cover the intro,
+  the opening story and gate, boss-intro zoom, every ObjectNN
+  cutscene director, the save-room ambience, both shop
+  sequences, death/game-over and the generic NPC dialogue
+  path.
+- `fusion_dashboard` loads the table through the generic
+  keyed-aspect loader, emits an `aos.scenes` catalog with a
+  status derived from the worst aspect, and exposes a Scenes
+  coverage card; `dashboard/app.js` renders a "Cutscenes &
+  scenes" table with the four aspect columns in Monsters &
+  items and in the catalog snapshots.
+- `tests/test_inventory_writer.c` excludes the new registry
+  from the tracked-inventory diff, matching the other aspect
+  TSVs.
+
 ## Patch 1086 - Aria Object20 shop sequences ported (own module)
 
 - `src/runtime/aos/game/aos_shop.c` ports the two Object20 shop

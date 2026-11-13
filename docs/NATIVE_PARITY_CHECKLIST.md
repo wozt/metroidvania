@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 181 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 182 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2039 | 1534 |
+| Castlevania: Aria of Sorrow | 2044 | 1529 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2542,6 +2542,15 @@ Tests: [`tests/test_aos_object2c.c`](../tests/test_aos_object2c.c).
 Dependencies: `aos.objects.special_sprites`.  
 Known divergences: The four type-0x49 droplet children are counted rather than spawned (their sub_0805866C drift, sub_0806D128 bounds probe on table 0x08118D08 record 6 = {64, 64}, the -60 hop write and RNG + 0x40 roll are not modelled), the parent draws the special_44 frame as a stand-in for the absent children, and the + 0x36 byte copy, + 0x37/+ 0x59/+ 0x5C/+ 0x72 marks are not modelled.  
 Next action: Spawn the four droplets through the pickup/particle entity path once type-0x49 children have a runtime equivalent, then drop the parent stand-in sprite.
+
+[~] **`aos.objects.launch_spinner` — Object31 delayed-launch spinning projectile.** Object31Create (0x08059090) deletes when the + 0x37E bit-2 event fires or the sprite load fails; it loads the special_47 triple shared with Object2F/Object30 (tiles 0x081CBEEC, palette sub_08068264(0x0820A1C4, 9), frames 0x08211844), indexes the four ROM tables at 0x0811865C/64/6C/74 by the + 0x30 param for the screen-pixel init, anim select and 60/120/240/360-frame wait, rolls + 0x6F = RNG % 6 and takes the sub_0803E654 palette path for params 0 and 2. Object31Update (0x080593A8) runs the 12-case + 0xB machine: state 0 waits the + 0x42C bit-0x1000 trigger, state 1 counts + 0x14 down into the state-10 launch (params 0/2, with the sub_0805940C fx child) or the state-2 drift, state 2/11 advance on the off-screen probe, state 3 frees the palette slot and deletes for params 0/2 or parks at 4, state 10 wind-down feeds state 11 spin accumulation clamped at 0x60. Unit-tested in test_aos_object31.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object31Create`, `aos:asm:asm/code/code_08050A3C.s:Object31Update`, `aos:asm:asm/code/code_08050A3C.s:sub_080591EC`, `aos:asm:asm/code/code_08050A3C.s:sub_080593C0`, `aos:asm:asm/code/code_08050A3C.s:sub_0805940C`, `aos:asm:asm/code/code_08060B98.s:sub_0806D128`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3C0`, `aos:asm:asm/code/code_08060B98.s:sub_0806D430`, `aos:asm:asm/code/code_08060B98.s:sub_0806D460`, `aos:c:src/code/code_08039340.c:sub_0803E058`, `aos:c:src/code/code_08039340.c:sub_0803E654`, `aos:c:src/code/code_08039340.c:sub_0803E6BC`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:EntityCreateInRange`, `aos:c:src/code_080009A0.c:RandomNumberGenerator`.  
+Local implementation: [`src/runtime/aos/game/aos_object31.c`](../src/runtime/aos/game/aos_object31.c), [`src/runtime/aos/game/aos_object31.h`](../src/runtime/aos/game/aos_object31.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object31.c`](../tests/test_aos_object31.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The sub_0803E654 palette-slot allocator collapses to an always-available variant index (the gUnk_030019D8 + 0x2E/+ 0x30/+ 0x34 slot search and the sub_0803E6BC free are not modelled), sub_0803E058 becomes an angle accumulator fed by the spin state instead of the real affine matrix, the sub_0806D128(3) probe is approximated by the dumped (48,48) rect check on the entity screen pixels, sub_0806D430/sub_0806D460 use the shared Object21 gravity model without wall collision, the type-0x49 child of sub_0805940C is a sparkle effect, and there is no emulator comparison.  
+Next action: Port the sub_0803E058 affine rotation and the sub_0803E654 palette allocator once the render transform and palette-slot state exist, and spawn the type-0x49 child as a real entity.
 
 [~] **`aos.objects.metal_gate` — Object36 metal gate and button BG scroller.** Object36Create (0x0805A6C8) sets + 0x72 bits 1-2 and + 0x58 bit 0x20, reads the + 0x30 s16 param as a 4-byte index into the dumped 0x081186A4 table (nine {s16 a, s16 b} records: + 0x18 = a / 2, + 0x1A = b, + 0x1C = 0x200 - a * 2) and calls sub_08022088(ent, 0x0811868C), which stores the entity in the gEwramData + 0x1316C singleton and the callback table at + 0x10. Object36Update (0x0805A678) queues a BgAffineSet block on layer 0x1A ({u32 0x8000, u32 0x8000, + 0x42, + 0x46, + 0x1C, + 0x1C, low16(+ 0x14)}) then advances the 32-bit + 0x14 by the s16 + 0x1A.
 

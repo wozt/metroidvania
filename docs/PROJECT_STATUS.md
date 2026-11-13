@@ -1,3 +1,30 @@
+## Patch 1070 - Aria Object31 delayed-launch spinner ported
+
+- `src/runtime/aos/game/aos_object31.c` ports Object31Create
+  (0x08059090) and Object31Update (0x080593A8), dispatch
+  index 49: the + 0x37E bit-2 create gate, the special_47
+  sprite triple shared with Object2F/Object30 (tiles
+  0x081CBEEC, palette 0x0820A1C4 bank 9, frames 0x08211844),
+  the four param-indexed ROM tables at 0x0811865C/64/6C/74
+  (screen-pixel init, anim select, 60/120/240/360-frame
+  wait), the RNG % 6 spawn roll and the params-0/2 palette
+  path.
+- The 12-case + 0xB machine waits the + 0x42C bit-0x1000
+  trigger, counts the wait down into the state-10 launch
+  (spin rate 4, + 0x50 = 0x40000, + 0x54 = 0x200, 0x3C wind-down,
+  type-0x49 fx child approximated by a sparkle) or the
+  state-2 drift for params 1/3, advances on the dumped
+  sub_0806D128(3) on-screen probe, frees the palette slot
+  and deletes at state 3 for params 0/2 or parks at 4, and
+  accumulates the + 0x1C/+ 0x18 spin clamped at 0x60 in
+  state 11.
+- Approximations: the sub_0803E654 palette allocator is an
+  always-available variant, sub_0803E058 is an angle
+  accumulator, the probe is the (48,48) rect check and
+  physics reuses the Object21 gravity model. Registered in
+  annotations.tsv as aos.objects.launch_spinner; unit-tested
+  in test_aos_object31.
+
 ## Patch 1069 - Aria Object25 soul carrier spawner ported
 
 - `src/runtime/aos/game/aos_object25.c` ports Object25Create

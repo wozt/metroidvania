@@ -52,6 +52,7 @@
 #include "aos/game/aos_object30.h"
 #include "aos/game/aos_object21.h"
 #include "aos/game/aos_object25.h"
+#include "aos/game/aos_object31.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -476,6 +477,7 @@ typedef struct {
     AosObject30 object30;   /* object 0x30: sparkle emitter */
     AosObject21 object21;   /* object 0x21: cyclic lift */
     AosObject25 object25;   /* object 0x25: soul carrier spawner */
+    AosObject31 object31;   /* object 0x31: delayed-launch spinner */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5206,6 +5208,41 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 49) {
+            /* Object31Create / Object31Update (sUnk_084F0DF8[49] /
+             * sUnk_084F0ED8[49]): the delayed-launch spinning
+             * projectile. The sprite triple is the shared
+             * special_47 bank; the + 0x37E bit-2 gate reads
+             * aria_pickup_state.special, the + 0x42C bit-0x1000
+             * trigger reads global_flags, the + 0x30 param is
+             * param0, the sub_0806D128(3) probe gets the entity
+             * screen pixels and the palette allocator is
+             * approximated as always available. Each launch
+             * spawns the type-0x49 fx child as a sparkle. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object31_create(&e->object31, (int16_t)e->param0,
+                                    aria_pickup_state.special,
+                                    (int)(aos_random() % 6), true,
+                                    &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            int16_t sx = (int16_t)(e->x - cam_x);
+            int16_t sy = (int16_t)(e->y - cam_y);
+            if (!aos_object31_update(&e->object31, sx, sy,
+                                     aria_pickup_state.global_flags))
+                continue;
+            if (e->object31.child_spawn &&
+                room->effect_count < MAX_EFFECTS) {
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = false,
+                    .x = e->x, .y = e->y};
+            }
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 33) {
             /* Object21Create / Object21Update (sUnk_084F0DF8[33] /
              * sUnk_084F0ED8[33]): the cyclic lift. Create's sprite
@@ -7116,9 +7153,10 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
              * slot 2 — exported as special_38. */
             if (e->id == 38 || e->id == 39 || e->id == 40)
                 art = &objects->special_objects[38];
-            else if (e->id == 48)
-                /* Object30's sub_08058FE8 loads the identical
-                 * triple as Object2F — special_47. */
+            else if (e->id == 48 || e->id == 49)
+                /* Object30's sub_08058FE8 and Object31's
+                 * sub_080593C0 load the identical triple as
+                 * Object2F — special_47. */
                 art = &objects->special_objects[47];
             else
                 art = &objects->special_objects[e->id];

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-13T20:23:40+00:00",
+ "generated_at": "2026-11-13T20:38:13+00:00",
  "git": {
-  "commit": "22290cc0",
+  "commit": "e536df4f",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 335,
+   "total": 336,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 102,
+    "partial": 103,
     "functional": 223,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 223,
-   "functional_or_better_percent": 66.6,
-   "with_passing_tests": 322,
+   "functional_or_better_percent": 66.4,
+   "with_passing_tests": 323,
    "with_passing_tests_percent": 96.1,
    "unknown_or_blocked": 1,
    "features": [
@@ -319,6 +319,7 @@
     "aos.events.opening_scene",
     "aos.input.gamepad",
     "aos.items.money_pickups",
+    "aos.math.entity_helpers",
     "aos.menus.config",
     "aos.menus.enemy",
     "aos.menus.equipment",
@@ -569,11 +570,11 @@
    "areas": [
     "aos"
    ],
-   "total": 190,
+   "total": 191,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 74,
+    "partial": 75,
     "functional": 116,
     "faithful": 0,
     "validated": 0,
@@ -581,8 +582,8 @@
     "unknown": 0
    },
    "functional_or_better": 116,
-   "functional_or_better_percent": 61.1,
-   "with_passing_tests": 190,
+   "functional_or_better_percent": 60.7,
+   "with_passing_tests": 191,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -704,6 +705,7 @@
     "aos.events.opening_scene",
     "aos.input.gamepad",
     "aos.items.money_pickups",
+    "aos.math.entity_helpers",
     "aos.menus.config",
     "aos.menus.enemy",
     "aos.menus.equipment",
@@ -20271,6 +20273,71 @@
    }
   },
   {
+   "id": "aos.math.entity_helpers",
+   "area": "aos",
+   "category": "technical",
+   "title": "Entity-space math helpers (probe box, angle, phase, sign, range, steering)",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/math/aos_math.c",
+    "src/runtime/aos/math/aos_math.h"
+   ],
+   "tests": [
+    "tests/test_aos_math.c"
+   ],
+   "dependencies": [
+    "aos.objects.opening_gate"
+   ],
+   "native_routines": [
+    "sub_08068A70",
+    "sub_08068AA0",
+    "sub_08068AB4",
+    "sub_08068ABC",
+    "sub_08068AC8",
+    "sub_08068AD4",
+    "sub_08068B14",
+    "sub_08068B44",
+    "sub_08068B74",
+    "sub_08068BC0",
+    "sub_08068BF0",
+    "sub_08068C74",
+    "sub_08068CA8",
+    "sub_08068CDC"
+   ],
+   "limitations": "Helpers take plain coordinates instead of the entity struct, so callers pass the +0x40/+0x44 fine or +0x42/+0x46 whole positions themselves. sub_08068AD4's box compare is approximated as a signed 0<=d<=size test (the ROM's shifted unsigned compares reject negatives the same way). sub_08068B74 computes the distance in whole pixels like the ROM's >>16 before Sqrt. The sine lookups of sub_08068BF0 reuse the ported sub_080009E4 table. sub_08068C74/68CA8/68CDC are the clamped-approach family: aos_approach_step returns the ROM's clamped cur + step*scale value for the caller to add to +0x40/+0x44, and aos_advance_along reproduces 68CDC's sine-displaced advance. sub_08068D3C (the two-axis variant) remains unported. Unit-tested helpers only; no runtime caller consumes them yet beyond existing modules.",
+   "next_action": "Wire the helpers into the object/enemy state machines that call the native routines.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_math.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_math.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_math"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-13"
+   }
+  },
+  {
    "id": "aos.menus.config",
    "area": "aos",
    "category": "menus",
@@ -31548,6 +31615,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_math",
+    "files": [
+     "tests/test_aos_math.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_object24",
     "files": [
      "tests/test_aos_object24.c"
@@ -31836,12 +31910,18 @@
    }
   ],
   "summary": {
-   "passed": 211,
+   "passed": 212,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "e536df4f",
+   "date": "2026-11-13",
+   "subject": "Port Aria Object20 misc state callbacks",
+   "scope": "project"
+  },
   {
    "commit": "22290cc0",
    "date": "2026-11-13",
@@ -32315,12 +32395,6 @@
    "date": "2026-11-11",
    "subject": "aos: port red soul 53 (Killer Mantle)",
    "scope": "project"
-  },
-  {
-   "commit": "6a629f73",
-   "date": "2026-11-11",
-   "subject": "aos: port red soul 23 (Werewolf) walker",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -32381,9 +32455,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 2121,
-    "routines_attached_to_features": 2121,
-    "unassigned_routines": 1452,
+    "routines_cited_by_features": 2132,
+    "routines_attached_to_features": 2132,
+    "unassigned_routines": 1441,
     "call_edges": 14228
    }
   },

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 190 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 191 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2121 | 1452 |
+| Castlevania: Aria of Sorrow | 2132 | 1441 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2955,6 +2955,15 @@ Next action: Compare the death sparkle animation and the emitter entity bounce; 
 ### GBA-specific technical systems
 
 [?] **`aos.technical.inventory-boundary` — source coverage.** The current classifier assigns 68 discovered routine(s) to this category (32 by source path, 26 by native name, 10 by exclusive referrers). Category completeness has not been established.
+
+[~] **`aos.math.entity_helpers` — Entity-space math helpers (probe box, angle, phase, sign, range, steering).** Unit-tested helpers only; no runtime caller consumes them yet beyond existing modules.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_08068A70`, `aos:asm:asm/code/code_08060B98.s:sub_08068AA0`, `aos:asm:asm/code/code_08060B98.s:sub_08068AB4`, `aos:asm:asm/code/code_08060B98.s:sub_08068ABC`, `aos:asm:asm/code/code_08060B98.s:sub_08068AC8`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:asm:asm/code/code_08060B98.s:sub_08068B14`, `aos:asm:asm/code/code_08060B98.s:sub_08068B44`, `aos:asm:asm/code/code_08060B98.s:sub_08068B74`, `aos:asm:asm/code/code_08060B98.s:sub_08068BC0`, `aos:asm:asm/code/code_08060B98.s:sub_08068BF0`, `aos:asm:asm/code/code_08060B98.s:sub_08068C74`, `aos:asm:asm/code/code_08060B98.s:sub_08068CA8`, `aos:asm:asm/code/code_08060B98.s:sub_08068CDC`.  
+Local implementation: [`src/runtime/aos/math/aos_math.c`](../src/runtime/aos/math/aos_math.c), [`src/runtime/aos/math/aos_math.h`](../src/runtime/aos/math/aos_math.h).  
+Tests: [`tests/test_aos_math.c`](../tests/test_aos_math.c).
+Dependencies: `aos.objects.opening_gate`.  
+Known divergences: Helpers take plain coordinates instead of the entity struct, so callers pass the +0x40/+0x44 fine or +0x42/+0x46 whole positions themselves. sub_08068AD4's box compare is approximated as a signed 0<=d<=size test (the ROM's shifted unsigned compares reject negatives the same way). sub_08068B74 computes the distance in whole pixels like the ROM's >>16 before Sqrt. The sine lookups of sub_08068BF0 reuse the ported sub_080009E4 table. sub_08068C74/68CA8/68CDC are the clamped-approach family: aos_approach_step returns the ROM's clamped cur + step*scale value for the caller to add to +0x40/+0x44, and aos_advance_along reproduces 68CDC's sine-displaced advance. sub_08068D3C (the two-axis variant) remains unported.  
+Next action: Wire the helpers into the object/enemy state machines that call the native routines.
 
 ### Unclassified source routines
 

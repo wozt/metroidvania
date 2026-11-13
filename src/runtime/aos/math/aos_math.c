@@ -85,3 +85,103 @@ int32_t aos_fixed_mul(int32_t a, int32_t b) {
     if (p < 0) p += 0xFF;
     return (int32_t)((uint32_t)(p >> 8) << 8);
 }
+
+bool aos_probe_box(int16_t ex, int16_t ey, int16_t x, int16_t y,
+                   int16_t w, int16_t h) {
+    /* (ent - origin) must fit the box; the ROM's shifted
+     * compares make negative deltas fail. */
+    int32_t dx = (int16_t)(ex - x);
+    int32_t dy = (int16_t)(ey - y);
+    return dx >= 0 && dx <= w && dy >= 0 && dy <= h;
+}
+
+uint16_t aos_entity_angle(int16_t ax, int16_t ay,
+                          int16_t bx, int16_t by) {
+    return aos_arctan2((int16_t)(bx - ax), (int16_t)(by - ay));
+}
+
+int32_t aos_phase_opposite(int32_t v) {
+    return (int16_t)(0x8000 - (int16_t)v);
+}
+
+int32_t aos_phase_negate(int32_t v) {
+    return -(int16_t)v;
+}
+
+int32_t aos_phase_comp_f0(int32_t v) {
+    return 0xF00000 - v;
+}
+
+int32_t aos_phase_comp_a0(int32_t v) {
+    return 0xA00000 - v;
+}
+
+int aos_sign_delta(int32_t v, int32_t ref) {
+    if (v < ref) return 1;
+    if (v > ref) return -1;
+    return 0;
+}
+
+bool aos_within_range(int32_t ex, int32_t ey,
+                      int32_t rx, int32_t ry, int32_t range) {
+    int32_t dx = (ex - rx) >> 16;
+    int32_t dy = (ey - ry) >> 16;
+    uint32_t d2 = (uint32_t)(dx * dx + dy * dy);
+    return ((uint32_t)aos_isqrt(d2) << 16) <= (uint32_t)range;
+}
+
+int aos_s16_sign(int16_t a, int16_t b) {
+    /* ROM: +1 when (a - b) as u16 exceeds (b - a) as u16,
+     * i.e. when b is "ahead" of a on the s16 circle. */
+    uint16_t d1 = (uint16_t)(a - b);
+    uint16_t d2 = (uint16_t)(b - a);
+    if (d1 == d2) return 0;
+    return d1 > d2 ? 1 : -1;
+}
+
+void aos_steer_toward(int32_t *px, int32_t *py,
+                      int32_t tx, int32_t ty, uint32_t angle) {
+    /* Faithful port of sub_08068BF0: the ROM rotates the
+     * target delta by the entity angle through two sine
+     * lookups (angle and angle + 0x4000) and writes the
+     * result back into the fine position. */
+    uint16_t a = (uint16_t)(int16_t)angle;
+    uint16_t a90 = (uint16_t)(a + 0x4000);
+    int32_t dx = (*px - tx) >> 16;
+    int32_t dy = (*py - ty) >> 16;
+    int32_t s90 = (int32_t)aos_sine(a90) >> 8;
+    int32_t s0 = (int32_t)aos_sine(a) >> 8;
+    int32_t nx = dx * s90 - dy * s0 + tx;
+    int32_t ny = dx * s0 + dy * s90 + ty;
+    *px = nx;
+    *py = ny;
+}
+
+static int32_t clamp_approach(int32_t cur, int32_t bound, int32_t next) {
+    /* The ROM's branch pair: approaching from below clamps at
+     * bound from above, approaching from above clamps at bound
+     * from below; an exact bound match keeps next. */
+    if (bound > cur) {
+        if (next > bound) return bound;
+    } else if (bound < cur && next < bound) {
+        return bound;
+    }
+    return next;
+}
+
+int32_t aos_approach_step(int32_t cur, int32_t bound,
+                          int32_t step, int32_t scale) {
+    return clamp_approach(cur, bound, cur + step * scale);
+}
+
+int32_t aos_advance_along(int32_t *px, int32_t *py, uint16_t angle,
+                          int32_t cur, int32_t bound,
+                          int32_t step, int32_t scale) {
+    int32_t dist = clamp_approach(cur, bound, cur + step * scale);
+    int32_t d = dist >> 8;
+    int32_t sx = (int32_t)aos_sine((uint16_t)(angle + 0x4000)) >> 8;
+    int32_t sy = (int32_t)aos_sine(angle) >> 8;
+    *px += sx * d;
+    *py += sy * d;
+    return dist;
+}

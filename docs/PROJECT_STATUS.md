@@ -1,3 +1,20 @@
+## Patch 1084 - Aria entity math helpers ported (sub_08068A70-CDC)
+
+- `src/runtime/aos/math/aos_math.c` gains the entity-space
+  helpers from code_08060B98.s: aos_probe_box (sub_08068AD4,
+  the unsigned box probe used across the object states),
+  aos_entity_angle (sub_08068A70 ArcTan2 of + 0x42/+ 0x46
+  deltas), the phase complements sub_08068AA0/AB4/ABC/AC8,
+  aos_sign_delta (sub_08068B14/44 against a reference),
+  aos_within_range (sub_08068B74 pixel distance probe),
+  aos_s16_sign (sub_08068BC0), aos_steer_toward
+  (sub_08068BF0 sine steering) and the clamped-approach
+  family aos_approach_step (sub_08068C74/68CA8) plus
+  aos_advance_along (sub_08068CDC).
+- Helpers take plain coordinates instead of the entity
+  struct; unit-tested in test_aos_math. sub_08068D3C (the
+  two-axis approach variant) remains unported.
+
 ## Patch 1083 - Aria Object20 misc state callbacks ported
 
 - `aos_npc_talk` gains the small Object20 callbacks:

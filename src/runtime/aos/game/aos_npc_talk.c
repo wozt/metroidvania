@@ -230,3 +230,25 @@ unsigned aos_npc_talk_65c2c(int16_t x_px, uint16_t flags_37e,
     (void)original; /* +0x42 restored by the ROM tail */
     return count;
 }
+
+void aos_npc_talk_65cd8(AosNpcCompanion *c, bool flag_12078_20,
+                        bool flag_12078_2e, bool keep_5b754,
+                        int rng_bit, uint8_t player_anim5c,
+                        bool (*spawn_child)(void)) {
+    if (!flag_12078_20 || !flag_12078_2e || !keep_5b754) {
+        c->flags59 |= 0x8;
+        c->marked = true;
+        return;
+    }
+    c->variant_a = (rng_bit & 1) == 0;  /* sub_0803F2C8(1|2, 0, 1) */
+    c->flags58 |= 0x40;
+    c->anim5c = (uint8_t)(player_anim5c + 1);
+    if (spawn_child && spawn_child()) {
+        c->child = 1;                   /* +0x18 non-NULL */
+        c->child_anim = (uint8_t)(c->anim5c + 1);
+        c->child_x = c->spawn_x;
+        c->child_y = c->spawn_y;
+        /* child +4 = sub_08065C2C, +0 = EntityUpdateNothing —
+         * engine-side wiring. */
+    }
+}

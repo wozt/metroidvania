@@ -5,6 +5,7 @@
 
 static int step_calls;
 static void step_count(void *c) { (void)c; step_calls++; }
+static bool spawn_ok(void) { return true; }
 
 int main(void) {
     AosNpcTalk t;
@@ -139,6 +140,28 @@ int main(void) {
     step_calls = 0;
     assert(aos_npc_talk_65c2c(100, 0x12, step_count, NULL, tg) == 3);
     assert(step_calls == 3 && tg[2] == 92);
+
+    /* sub_08065CD8: companion spawn gates and child copy. */
+    AosNpcCompanion cp;
+    memset(&cp, 0, sizeof cp);
+    aos_npc_talk_65cd8(&cp, false, true, true, 0, 3, NULL);
+    assert(cp.marked && (cp.flags59 & 0x8));
+    memset(&cp, 0, sizeof cp);
+    aos_npc_talk_65cd8(&cp, true, false, true, 0, 3, NULL);
+    assert(cp.marked);
+    memset(&cp, 0, sizeof cp);
+    aos_npc_talk_65cd8(&cp, true, true, false, 0, 3, NULL);
+    assert(cp.marked);
+    memset(&cp, 0, sizeof cp);
+    cp.spawn_x = 11; cp.spawn_y = 22;
+    aos_npc_talk_65cd8(&cp, true, true, true, 1, 3, NULL);
+    assert(!cp.marked && !cp.variant_a && (cp.flags58 & 0x40) &&
+           cp.anim5c == 4 && cp.child == 0);
+    memset(&cp, 0, sizeof cp);
+    cp.spawn_x = 11; cp.spawn_y = 22;
+    aos_npc_talk_65cd8(&cp, true, true, true, 0, 3, spawn_ok);
+    assert(cp.variant_a && cp.child == 1 && cp.child_anim == 5 &&
+           cp.child_x == 11 && cp.child_y == 22);
 
     puts("aos_npc_talk: ok");
     return 0;

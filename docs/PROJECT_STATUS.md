@@ -1,3 +1,14 @@
+## Patch 1097 - Aria companion spawn sub_08065CD8
+
+- `aos_npc_talk_65cd8` ports the companion spawn: both
+  sub_08012078(0x20)/(0x2E) gates and the sub_0805B754 keep
+  check (else +0x59 bit 3), the RNG&1 variant pick through
+  sub_0803F2C8(1|2, 0, 1), +0x58 bit 6, +0x5C = player +0x5C + 1,
+  and the sub_0805B5E8(3) child copying +0x42/+0x46/+0x5C + 1
+  with update sub_08065C2C.
+- Unit-tested; sub_08065CD8 added to the
+  aos.events.opening_scene annotation.
+
 ## Patch 1096 - Aria sidestep writer sub_08065C2C
 
 - `aos_npc_talk_65c2c` ports the +0x42 sidestep writer: count

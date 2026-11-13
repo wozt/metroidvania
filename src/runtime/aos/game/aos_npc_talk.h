@@ -141,3 +141,26 @@ uint32_t aos_npc_talk_65a5c(AosNpcGuide *g, bool text_done,
 unsigned aos_npc_talk_65c2c(int16_t x_px, uint16_t flags_37e,
                             void (*step)(void *ctx), void *ctx,
                             int16_t *targets);
+
+/* sub_08065CD8: companion spawn — both sub_08012078(0x20) and
+ * sub_08012078(0x2E) must be set and sub_0805B754(e, 3) must
+ * keep the entity, else +0x59 bit 3. On success a RNG&1 pick
+ * runs sub_0803F2C8(1|2, 0, 1), +0x58 bit 6 arms, +0x5C becomes
+ * player +0x5C + 1, and the sub_0805B5E8(3) child copies
+ * +0x42/+0x46/+0x5C + 1 with update sub_08065C2C. */
+typedef struct {
+    uint8_t flags58;    /* +0x58 */
+    uint8_t flags59;    /* +0x59 */
+    uint8_t anim5c;     /* +0x5C */
+    int16_t spawn_x, spawn_y;   /* own +0x42/+0x46 */
+    uint32_t child;     /* +0x18 entity, 0 none */
+    uint8_t child_anim; /* child +0x5C */
+    int16_t child_x, child_y; /* child +0x42/+0x46 */
+    bool marked;        /* +0x59 bit 3 */
+    bool variant_a;     /* RNG&1 == 0 -> sub_0803F2C8 arg 1 */
+} AosNpcCompanion;
+
+void aos_npc_talk_65cd8(AosNpcCompanion *c, bool flag_12078_20,
+                        bool flag_12078_2e, bool keep_5b754,
+                        int rng_bit, uint8_t player_anim5c,
+                        bool (*spawn_child)(void));

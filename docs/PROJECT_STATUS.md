@@ -1,3 +1,14 @@
+## Patch 1082 - Aria Object20 talk-state callbacks ported
+
+- `src/runtime/aos/game/aos_npc_talk.c` ports the small
+  Object20 dialogue callbacks from code_08060B98.s:
+  sub_08061928 (text 0x17), sub_08061994 (text 0x18 with
+  the window close and + 0x59 bit 3, plus the 0x80 release
+  state), sub_08061978 (unconditional + 0x42C bit-0 arm)
+  and the empty sub_08061924.
+- Not yet wired into the Object20 state dispatch; unit-
+  tested in test_aos_npc_talk.
+
 ## Patch 1081 - Aria save-room ambience children ported
 
 - `src/runtime/aos/game/aos_save_room_fx.c` ports the eight

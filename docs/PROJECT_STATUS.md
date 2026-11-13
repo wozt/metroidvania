@@ -1,3 +1,16 @@
+## Patch 1098 - Aria looping NPC interaction sub_08065DB8
+
+- `aos_npc_talk_65db8` ports the four-state loop: state 0
+  clears +0x42C bit 0x200; state 1 gates on the sub_08068AD4
+  probe, the +0x16 & 0x42 mask and the +0x4BE pause word,
+  freezes player +0x48/+0x50/+0x4C, picks the +0x14 text through
+  the flag-pair priority chain and arms +0x42C bit 0 with the
+  window open; state 2 polls sub_08067A04 and closes; state 3
+  releases with sub_0805B66C(0), sub_0805B878(0x1041),
+  PlaySong(0x26) and the +0x254CC writes, then loops.
+- Unit-tested; sub_08065DB8 added to the
+  aos.events.opening_scene annotation.
+
 ## Patch 1097 - Aria companion spawn sub_08065CD8
 
 - `aos_npc_talk_65cd8` ports the companion spawn: both

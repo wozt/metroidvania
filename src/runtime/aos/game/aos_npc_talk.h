@@ -164,3 +164,46 @@ void aos_npc_talk_65cd8(AosNpcCompanion *c, bool flag_12078_20,
                         bool flag_12078_2e, bool keep_5b754,
                         int rng_bit, uint8_t player_anim5c,
                         bool (*spawn_child)(void));
+
+/* sub_08065DB8: the looping NPC interaction — state 0 clears
+ * +0x42C bit 0x200; state 1 gates on the sub_08068AD4 probe, the
+ * gEwramData + 0x16 & 0x42 mask and the + 0x4BE pause word, freezes
+ * the player's +0x48/+0x50/+0x4C, picks the +0x14 text through
+ * the sub_08012078/sub_08012048 flag pairs (0x32/0x2C, 0x31/0x2B,
+ * 0x30/0x2A, 0x2F/0x29, default 0x2D), arms +0x42C bit 0, opens
+ * the window, mirrors facing and advances; state 2 polls
+ * sub_08067A04 then closes; state 3 releases with sub_0805B66C(0),
+ * plays sub_0805B878(0x1041) + PlaySong(0x26), writes the
+ * gEwramData + 0x254CC pair and loops to state 1. */
+typedef struct {
+    uint8_t state;      /* +0xA */
+    uint8_t ctr_b;      /* +0xB */
+    uint8_t ctr_c;      /* +0xC */
+    uint8_t text_id;    /* +0x14 */
+    uint8_t flags58;    /* +0x58 */
+    uint8_t flags6d;    /* +0x6D */
+    int32_t x;          /* +0x40 for the facing compare */
+    /* outputs */
+    bool cleared_42c_200;   /* +0x42C &= ~0x200 */
+    bool froze_player;      /* player +0x48/+0x50 = 0, +0x4C clamp */
+    bool window_text;       /* sub_08067934(+0x14) */
+    bool armed_42c_0;       /* +0x42C |= 1 */
+    bool facing_mirror;     /* +0x58 bit 6 update */
+    bool f2c8_3;            /* +0x6D == 2 -> sub_0803F2C8(3,0,1) */
+    bool window_close;      /* sub_08067898 */
+    bool f2c8_2;            /* +0x6D == 3 -> sub_0803F2C8(2,0,1) */
+    bool release_0;         /* sub_0805B66C(0) */
+    bool sound_1041;        /* sub_0805B878(0x1041) */
+    bool song_26;           /* PlaySong(0x26) */
+    bool wrote_254cc;       /* +0x254CC pair writes */
+    bool sfx_26;            /* sub_08013E18(0x26) */
+    bool ev_1e;             /* sub_08013CF0(0x1E) */
+} AosNpcLoop;
+
+/* `flags` packs the injected globals: bit0 probe_inside,
+ * bit1 gEwramData+0x16 & 0x42, bit2 +0x4BE == 0, bit3 the
+ * sub_0805B864 result, bits 4-10 the flag bytes 0x32, 0x26,
+ * 0x31, 0x25, 0x30, 0x2E, 0x2F. `text_done` is the sub_08067A04
+ * result; `player_x` the player +0x40. */
+void aos_npc_talk_65db8(AosNpcLoop *g, uint32_t flags,
+                        bool text_done, int32_t player_x);

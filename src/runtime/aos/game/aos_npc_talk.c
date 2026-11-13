@@ -252,3 +252,61 @@ void aos_npc_talk_65cd8(AosNpcCompanion *c, bool flag_12078_20,
          * engine-side wiring. */
     }
 }
+void aos_npc_talk_65db8(AosNpcLoop *g, uint32_t flags,
+                        bool text_done, int32_t player_x) {
+    g->cleared_42c_200 = g->froze_player = g->window_text =
+        g->armed_42c_0 = g->facing_mirror = g->f2c8_3 =
+        g->window_close = g->f2c8_2 = g->release_0 =
+        g->sound_1041 = g->song_26 = g->wrote_254cc =
+        g->sfx_26 = g->ev_1e = false;
+    (void)player_x;
+    if (g->state == 0) {
+        g->cleared_42c_200 = true;      /* +0x42C &= ~0x200 */
+        g->state = 1;
+        g->ctr_b = g->ctr_c = 0;
+    }
+    if (g->state == 1) {
+        if (!(flags & 1)) return;               /* probe miss */
+        if (!(flags & 2)) return;               /* +0x16 & 0x42 == 0 */
+        if (!(flags & 4)) return;               /* +0x4BE != 0 */
+        g->froze_player = true;
+        /* Text priority chain: the sub_0805B864 result selects
+         * the 0x32 pair, else flag26/25/2E pick pairs
+         * (31/30/2F); a set selector with a clear partner shows
+         * the alternate text and arms the partner through
+         * sub_08012048. Default stays 0x2D. */
+        g->text_id = 0x2D;
+        if (flags & 8) {                        /* sub_0805B864 != 0 */
+            if (!(flags & 0x10)) {              /* 0x32 clear */
+                g->text_id = 0x2C;
+            }
+        } else if (flags & 0x20) {              /* 0x26 set */
+            if (!(flags & 0x40)) g->text_id = 0x2B;   /* 0x31 clear */
+        } else if (flags & 0x80) {              /* 0x25 set */
+            if (!(flags & 0x100)) g->text_id = 0x2A;  /* 0x30 clear */
+        } else if (flags & 0x200) {             /* 0x2E set */
+            if (!(flags & 0x400)) g->text_id = 0x29;  /* 0x2F clear */
+        }
+        g->armed_42c_0 = true;      /* +0x42C |= 1 */
+        g->window_text = true;      /* sub_08067934(+0x14) */
+        g->facing_mirror = true;    /* +0x58 bit 6 vs player x */
+        g->state = 2;
+        g->ctr_b = g->ctr_c = 0;
+        g->sfx_26 = true;           /* sub_08013E18(0x26) */
+        g->ev_1e = true;            /* sub_08013CF0(0x1E) */
+        if (g->flags6d == 2) g->f2c8_3 = true;
+    } else if (g->state == 2) {
+        if (!text_done) return;
+        if (g->flags6d == 3) g->f2c8_2 = true;
+        g->window_close = true;     /* sub_08067898 */
+        g->state = 3;
+    } else if (g->state == 3) {
+        g->release_0 = true;        /* sub_0805B66C(0) */
+        g->sound_1041 = true;       /* sub_0805B878(0x1041) */
+        g->wrote_254cc = true;      /* +0x254CC pair writes */
+        g->song_26 = true;          /* PlaySong(0x26) */
+        g->text_id = 0x2D;
+        g->state = 1;               /* loops */
+    }
+    /* tail: sub_0803F17C animation step every call. */
+}

@@ -163,6 +163,59 @@ int main(void) {
     assert(cp.variant_a && cp.child == 1 && cp.child_anim == 5 &&
            cp.child_x == 11 && cp.child_y == 22);
 
+    /* sub_08065DB8: looping NPC interaction. */
+    AosNpcLoop lp;
+    memset(&lp, 0, sizeof lp);
+    /* state 0 clears +0x42C bit 0x200 then falls into state 1;
+     * a probe miss stops before the freeze. */
+    aos_npc_talk_65db8(&lp, 0, false, 0);
+    assert(lp.cleared_42c_200 && lp.state == 1 && !lp.froze_player);
+    /* gates: need probe + mask + pause-clear. */
+    aos_npc_talk_65db8(&lp, 1, false, 0);
+    assert(!lp.froze_player);
+    aos_npc_talk_65db8(&lp, 3, false, 0);
+    assert(!lp.froze_player);
+    aos_npc_talk_65db8(&lp, 7, false, 0);
+    assert(lp.froze_player && lp.armed_42c_0 && lp.window_text &&
+           lp.state == 2 && lp.text_id == 0x2D && lp.sfx_26 &&
+           lp.ev_1e);
+    /* text poll pending keeps state 2. */
+    aos_npc_talk_65db8(&lp, 7, false, 0);
+    assert(lp.state == 2 && !lp.window_close);
+    /* poll done -> close, state 3. */
+    aos_npc_talk_65db8(&lp, 7, true, 0);
+    assert(lp.window_close && lp.state == 3);
+    /* state 3 releases, sounds, loops to 1. */
+    aos_npc_talk_65db8(&lp, 0, false, 0);
+    assert(lp.release_0 && lp.sound_1041 && lp.song_26 &&
+           lp.wrote_254cc && lp.state == 1 && lp.text_id == 0x2D);
+    /* text picks: b864 + 0x32 clear -> 0x2C. */
+    memset(&lp, 0, sizeof lp); lp.state = 1;
+    aos_npc_talk_65db8(&lp, 7 | 8, false, 0);
+    assert(lp.text_id == 0x2C);
+    /* 0x26 set + 0x31 clear -> 0x2B. */
+    memset(&lp, 0, sizeof lp); lp.state = 1;
+    aos_npc_talk_65db8(&lp, 7 | 0x20, false, 0);
+    assert(lp.text_id == 0x2B);
+    /* 0x26+0x31 set -> stays 0x2D (elif consumed). */
+    memset(&lp, 0, sizeof lp); lp.state = 1;
+    aos_npc_talk_65db8(&lp, 7 | 0x20 | 0x40, false, 0);
+    assert(lp.text_id == 0x2D);
+    /* 0x25 set + 0x30 clear -> 0x2A; 0x2E set + 0x2F clear -> 0x29. */
+    memset(&lp, 0, sizeof lp); lp.state = 1;
+    aos_npc_talk_65db8(&lp, 7 | 0x80, false, 0);
+    assert(lp.text_id == 0x2A);
+    memset(&lp, 0, sizeof lp); lp.state = 1;
+    aos_npc_talk_65db8(&lp, 7 | 0x200, false, 0);
+    assert(lp.text_id == 0x29);
+    /* +0x6D variants: 2 -> f2c8_3 in state1, 3 -> f2c8_2 in state2. */
+    memset(&lp, 0, sizeof lp); lp.state = 1; lp.flags6d = 2;
+    aos_npc_talk_65db8(&lp, 7, false, 0);
+    assert(lp.f2c8_3 && lp.state == 2);
+    lp.flags6d = 3;
+    aos_npc_talk_65db8(&lp, 7, true, 0);
+    assert(lp.f2c8_2);
+
     puts("aos_npc_talk: ok");
     return 0;
 }

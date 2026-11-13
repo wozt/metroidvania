@@ -207,3 +207,49 @@ typedef struct {
  * result; `player_x` the player +0x40. */
 void aos_npc_talk_65db8(AosNpcLoop *g, uint32_t flags,
                         bool text_done, int32_t player_x);
+
+/* sub_08066094: the guard NPC sequence — state 0 clears
+ * +0x42C bit 0x200 and plays sub_08013EEC(0x26); state 1 gates on
+ * the probe/+0x16 mask/+0x4BE pause, sets +0x42C bit 0x200,
+ * freezes the player, picks the +0x14 text through the +0x18 /
+ * sub_0805B864 branches (sub_08066308, sub_0806666C -> 0x44,
+ * sub_0806668C — unported, text supplied by the caller), mirrors
+ * facing, opens the window and plays sub_0805B878(0x1040);
+ * state 2 polls, clears +0x18, plays the 0x1B5/0x26 songs and
+ * either loops to state 1 (release) or advances to state 3 on
+ * sub_0805B864; state 3 runs the +0xB escort sub-states and
+ * returns 0x10 while waiting for the player 48 px ahead. */
+typedef struct {
+    uint8_t state;      /* +0xA */
+    uint8_t ctr_b;      /* +0xB */
+    uint8_t ctr_c;      /* +0xC */
+    uint8_t timer_d;    /* +0xD */
+    uint8_t field18;    /* +0x18 variant flag */
+    uint8_t text_id;    /* +0x14 */
+    uint8_t flags58;    /* +0x58 */
+    uint8_t flags6d;    /* unused here, kept for parity */
+    int32_t x;          /* +0x40 */
+    /* outputs */
+    bool cleared_42c_200;
+    bool sfx_26_entry;      /* sub_08013EEC(0x26) on state 0 */
+    bool froze_player;
+    bool armed_42c_200;     /* +0x42C |= 0x200 */
+    bool facing_mirror;
+    bool window_text;
+    bool ev_1d;             /* sub_08013CF0(0x1D) */
+    bool sound_1040;        /* sub_0805B878(0x1040) */
+    bool cleared_18;        /* +0x18 = 0 on state-2 exit */
+    bool song_1b5;
+    bool wrote_254cc;
+    bool song_26;
+    bool sound_1041;
+    bool release_0;         /* sub_0805B66C(0) */
+    uint32_t ret;           /* ROM return value (0 or 0x10) */
+} AosNpcGuard;
+
+/* `flags`: bit0 probe_inside, bit1 +0x16 & 0x42, bit2 +0x4BE == 0,
+ * bit3 sub_0805B864 result. `picked_text` is the +0x14 chosen by
+ * the unported pickers; `player_x` the player +0x40. */
+uint32_t aos_npc_talk_66094(AosNpcGuard *g, uint32_t flags,
+                            uint8_t picked_text, bool text_done,
+                            int32_t player_x);

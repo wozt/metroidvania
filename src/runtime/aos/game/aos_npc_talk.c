@@ -310,3 +310,84 @@ void aos_npc_talk_65db8(AosNpcLoop *g, uint32_t flags,
     }
     /* tail: sub_0803F17C animation step every call. */
 }
+
+uint32_t aos_npc_talk_66094(AosNpcGuard *g, uint32_t flags,
+                            uint8_t picked_text, bool text_done,
+                            int32_t player_x) {
+    g->cleared_42c_200 = g->sfx_26_entry = g->froze_player =
+        g->armed_42c_200 = g->facing_mirror = g->window_text =
+        g->ev_1d = g->sound_1040 = g->cleared_18 = g->song_1b5 =
+        g->wrote_254cc = g->song_26 = g->sound_1041 =
+        g->release_0 = false;
+    g->ret = 0;
+    if (g->state == 0) {
+        g->cleared_42c_200 = true;      /* +0x42C &= ~0x200 */
+        g->sfx_26_entry = true;         /* sub_08013EEC(0x26) */
+        g->state = 1;
+        g->ctr_b = g->ctr_c = 0;
+    }
+    if (g->state == 1) {
+        if ((flags & 7) != 7) return g->ret; /* probe+mask+pause */
+        g->armed_42c_200 = true;            /* +0x42C |= 0x200 */
+        g->froze_player = true;
+        g->text_id = picked_text;
+        /* facing: +0x58 = (own & ~0x41) | (self_x >= player_x ?
+         * 0x40 : 0) — the ROM's inverted compare. */
+        g->flags58 = (uint8_t)((g->flags58 & ~0x41u) |
+                               (g->x >= player_x ? 0x40u : 0u));
+        g->facing_mirror = true;
+        g->state = 2;
+        g->ctr_b = g->ctr_c = 0;
+        g->window_text = true;              /* sub_08067934(+0x14) */
+        g->ev_1d = true;                    /* sub_08013CF0(0x1D) */
+        g->sound_1040 = true;               /* sub_0805B878(0x1040) */
+        if (g->field18) {
+            g->song_1b5 = true;             /* PlaySong(0x1B6) +
+                                             * sub_08066308 — the
+                                             * variant path */
+        }
+    } else if (g->state == 2) {
+        if (!text_done) return g->ret;
+        if (g->field18) {
+            g->cleared_18 = true;
+            g->field18 = 0;
+        }
+        g->song_1b5 = true;         /* PlaySong(0x1B5) */
+        g->wrote_254cc = true;      /* +0x254CC pair writes */
+        g->song_26 = true;          /* PlaySong(0x26) */
+        g->sound_1041 = true;       /* sub_0805B878(0x1041) */
+        if (flags & 8) {            /* sub_0805B864 -> advance */
+            g->state = 3;
+        } else {
+            g->release_0 = true;    /* sub_0805B66C(0) */
+            g->state = 1;
+        }
+        g->ctr_b = g->ctr_c = 0;
+    } else if (g->state == 3) {
+        if (g->ctr_b == 0) {
+            g->timer_d = 0x10;
+            g->ctr_b = 1;
+            g->ctr_c = 0;
+            g->ret = 0x10;
+            return g->ret;
+        }
+        if (g->ctr_b == 1) {
+            /* facing mirror (same inverted compare) */
+            g->flags58 = (uint8_t)((g->flags58 & ~0x41u) |
+                                   (g->x >= player_x ? 0x40u : 0u));
+            g->facing_mirror = true;
+            g->timer_d = 0x10;
+            g->ret = 0x10;
+            /* wait while self_x + 0x300000 >= player_x */
+            if (g->x + 0x300000 >= player_x) return g->ret;
+            g->timer_d = 0;
+            g->ctr_b = 2;
+            g->ctr_c = 0;
+            return g->ret;
+        }
+        g->release_0 = true;        /* sub_0805B66C(0) */
+        g->state = 1;
+        g->ctr_b = g->ctr_c = 0;
+    }
+    return g->ret;
+}

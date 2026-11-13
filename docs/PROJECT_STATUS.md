@@ -1,3 +1,18 @@
+## Patch 1099 - Aria guard NPC sequence sub_08066094
+
+- `aos_npc_talk_66094` ports the four-state guard sequence:
+  state 0 clears +0x42C bit 0x200 with sub_08013EEC(0x26); state 1
+  gates on probe/+0x16 mask/+0x4BE pause, sets +0x42C bit 0x200,
+  freezes the player, takes the caller-picked +0x14 text (the
+  sub_08066308/sub_0806666C/sub_0806668C pickers stay unported),
+  mirrors the inverted facing compare, opens the window and plays
+  sub_0805B878(0x1040); state 2 polls, clears +0x18, plays the
+  0x1B5/0x26 songs and loops to state 1 or advances on
+  sub_0805B864; state 3 runs the +0xB escort sub-states and
+  returns 0x10 while the player is under 48 px ahead.
+- Unit-tested; sub_08066094 added to the
+  aos.events.opening_scene annotation.
+
 ## Patch 1098 - Aria looping NPC interaction sub_08065DB8
 
 - `aos_npc_talk_65db8` ports the four-state loop: state 0

@@ -216,6 +216,48 @@ int main(void) {
     aos_npc_talk_65db8(&lp, 7, true, 0);
     assert(lp.f2c8_2);
 
+    /* sub_08066094: guard NPC sequence. */
+    AosNpcGuard gd2;
+    memset(&gd2, 0, sizeof gd2);
+    uint32_t rr = aos_npc_talk_66094(&gd2, 0, 0, false, 0);
+    assert(gd2.cleared_42c_200 && gd2.sfx_26_entry &&
+           gd2.state == 1 && rr == 0);
+    /* gates block state 1. */
+    rr = aos_npc_talk_66094(&gd2, 1, 0, false, 0);
+    assert(!gd2.froze_player && gd2.state == 1);
+    /* full gates: freeze, facing (inverted), window, state 2. */
+    gd2.x = 0x100000; /* 16 px */
+    rr = aos_npc_talk_66094(&gd2, 7, 0x44, false, 0x200000);
+    assert(gd2.armed_42c_200 && gd2.froze_player &&
+           gd2.window_text && gd2.text_id == 0x44 &&
+           gd2.state == 2 && gd2.sound_1040 && gd2.ev_1d);
+    /* self_x < player_x -> bit6 clear (inverted compare). */
+    assert((gd2.flags58 & 0x40) == 0);
+    /* poll pending keeps state 2; done -> songs + release loop. */
+    rr = aos_npc_talk_66094(&gd2, 7, 0, false, 0);
+    assert(gd2.state == 2 && !gd2.song_1b5);
+    rr = aos_npc_talk_66094(&gd2, 7, 0, true, 0);
+    assert(gd2.song_1b5 && gd2.wrote_254cc && gd2.song_26 &&
+           gd2.sound_1041 && gd2.release_0 && gd2.state == 1);
+    /* b864 set on exit -> state 3 escort substates. */
+    memset(&gd2, 0, sizeof gd2); gd2.state = 2;
+    rr = aos_npc_talk_66094(&gd2, 15, 0, true, 0);
+    assert(gd2.state == 3);
+    rr = aos_npc_talk_66094(&gd2, 0, 0, false, 0);
+    assert(gd2.ctr_b == 1 && gd2.timer_d == 0x10 && rr == 0x10);
+    /* player far ahead (self + 0x300000 < player_x) advances. */
+    gd2.x = 0;
+    rr = aos_npc_talk_66094(&gd2, 0, 0, false, 0x400000);
+    assert(gd2.ctr_b == 2 && rr == 0x10);
+    rr = aos_npc_talk_66094(&gd2, 0, 0, false, 0);
+    assert(gd2.release_0 && gd2.state == 1);
+    /* +0x18 variant: song on entry, cleared on exit. */
+    memset(&gd2, 0, sizeof gd2); gd2.state = 1; gd2.field18 = 1;
+    aos_npc_talk_66094(&gd2, 7, 0x30, false, 0);
+    assert(gd2.song_1b5);
+    aos_npc_talk_66094(&gd2, 7, 0, true, 0);
+    assert(gd2.cleared_18 && gd2.field18 == 0);
+
     puts("aos_npc_talk: ok");
     return 0;
 }

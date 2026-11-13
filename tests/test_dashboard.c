@@ -549,7 +549,7 @@ static void test_static_page(void) {
            "generated Zero Mission and Aria catalog previews");
     EXPECT(strstr(app, "indicatorCard(indicator, false)") != NULL,
            "no duplicate feature cards in area view");
-    EXPECT(strstr(app, "bestiaryTable(g.bosses, \"Bosses\", g.coverage.bosses, true)") != NULL,
+    EXPECT(strstr(app, "bestiaryTable(g.bosses, \"Bosses\", g.coverage.bosses, aspectNames, \"Soul reference\")") != NULL,
            "bosses share the five-aspect monster table");
     EXPECT(strstr(app, "data-open-view=\"bestiary\"") != NULL,
            "canonical bestiary navigation");

@@ -1190,6 +1190,55 @@ static bool load_aspects(FusionJson *aspects) {
     return ok;
 }
 
+/* Generic keyed aspect table: same shape as aos_monster_aspects.tsv but
+ * with caller-chosen columns, used for the weapon, item and equipment
+ * registries. Returns an object keyed by the first column. */
+static bool load_aspect_table(const char *relative, const char *const *columns,
+                              size_t columns_count, FusionJson *table) {
+    char *text = read_file(relative, NULL);
+    if (!text) return fail("cannot load %s", relative);
+    *table = fusion_json_object();
+    char previous[160] = "";
+    int number = 1;
+    bool ok = true;
+    for (char *line = text, *next; ok && line; line = next, ++number) {
+        next = strchr(line, '\n');
+        if (next) *next++ = '\0';
+        char *fields[16];
+        size_t count = *line ? split_tabs(line, fields, 16) : 0;
+        if (number == 1) {
+            bool header = count == columns_count;
+            for (size_t index = 0; header && index < count; ++index)
+                header = !strcmp(fields[index], columns[index]);
+            if (!header) ok = fail("%s: header must be exactly the aspect columns", relative);
+            continue;
+        }
+        if (!*line) continue;
+        if (count != columns_count) {
+            ok = fail("%s:%d: expected %zu columns, got %zu", relative, number,
+                      columns_count, count);
+            break;
+        }
+        if (strcmp(fields[0], previous) <= 0) {
+            ok = fail("%s:%d: rows must be sorted by unique key; '%s' is out of order or "
+                      "duplicated", relative, number, fields[0]);
+            break;
+        }
+        snprintf(previous, sizeof previous, "%s", fields[0]);
+        FusionJson row = fusion_json_object();
+        for (size_t index = 1; ok && index < count; ++index) {
+            if (index + 1 < count &&
+                !known(fields[index], aspect_values, COUNT(aspect_values)))
+                ok = fail("%s:%d: unknown aspect value '%s'", relative, number, fields[index]);
+            put_string(&row, columns[index], fields[index]);
+        }
+        put(table, fields[0], row);
+    }
+    free(text);
+    if (!ok) fusion_json_free(table);
+    return ok;
+}
+
 typedef struct {
     char enemies[0x71][96];
     bool bosses[0x71];
@@ -1357,8 +1406,34 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
         fusion_json_free(&items);
         return false;
     }
+    /* Per-kind Aria registries, same shape as the monster aspects. */
+    static const char *const weapon_cols[] = {"weapon", "entity", "fire", "sprite",
+                                              "sound", "notes"};
+    static const char *const item_cols[] = {"ref", "pickup", "record", "use", "icon",
+                                            "notes"};
+    static const char *const equip_cols[] = {"equipment", "stats", "behavior", "icon",
+                                             "notes"};
+    FusionJson weapon_asp = fusion_json_object(), item_asp = fusion_json_object(),
+               equip_asp = fusion_json_object();
+    if (!load_aspect_table("data/native_parity/aos_weapon_aspects.tsv", weapon_cols,
+                           COUNT(weapon_cols), &weapon_asp) ||
+        !load_aspect_table("data/native_parity/aos_item_aspects.tsv", item_cols,
+                           COUNT(item_cols), &item_asp) ||
+        !load_aspect_table("data/native_parity/aos_equipment_aspects.tsv", equip_cols,
+                           COUNT(equip_cols), &equip_asp)) {
+        fusion_json_free(&weapon_asp);
+        fusion_json_free(&item_asp);
+        fusion_json_free(&equip_asp);
+        fusion_json_free(&aspects);
+        fusion_json_free(&monsters);
+        fusion_json_free(&items);
+        return false;
+    }
     AosCatalog catalog;
     if (!load_aos_catalog(&catalog)) {
+        fusion_json_free(&weapon_asp);
+        fusion_json_free(&item_asp);
+        fusion_json_free(&equip_asp);
         fusion_json_free(&aspects);
         fusion_json_free(&monsters);
         fusion_json_free(&items);
@@ -1367,6 +1442,9 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
     char *header = read_file("src/runtime/aos/core/aos_enemy.h", NULL);
     if (!header) {
         free_aos_catalog(&catalog);
+        fusion_json_free(&weapon_asp);
+        fusion_json_free(&item_asp);
+        fusion_json_free(&equip_asp);
         fusion_json_free(&aspects);
         return fail("cannot read src/runtime/aos/core/aos_enemy.h");
     }
@@ -1427,6 +1505,9 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
                   "enemies", aspects.count, (long long)listed);
     if (!ok) {
         free_aos_catalog(&catalog);
+        fusion_json_free(&weapon_asp);
+        fusion_json_free(&item_asp);
+        fusion_json_free(&equip_asp);
         fusion_json_free(&aspects);
         fusion_json_free(&monsters);
         fusion_json_free(&items);
@@ -1459,15 +1540,55 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
     aos_monsters = aos_regular;
 
     FusionJson aos_items = fusion_json_array();
+    FusionJson aos_consumables = fusion_json_array(), aos_weapons = fusion_json_array(),
+               aos_equipment = fusion_json_array();
     for (size_t index = 0; index < catalog.items.count; ++index) {
         const FusionJson *source = &catalog.items.items[index];
         int64_t native = fusion_json_member(source, "native_id")->integer;
+        int64_t item = fusion_json_member(source, "item_id")->integer;
         const char *annotation = native == 3 || native == 4
                                      ? "aos.progression.equipment_stats"
                                      : "aos.items.money_pickups";
-        push(&aos_items, bestiary_row(copy_of(fusion_json_member(source, "id")),
-                                      text_of(source, "name"), annotation, "", annotations));
+        FusionJson row = bestiary_row(copy_of(fusion_json_member(source, "id")),
+                                      text_of(source, "name"), annotation, "", annotations);
+        /* native_id: 1 money, 2 consumable, 3 weapon, 4 armor/accessory.
+         * Each kind has its own aspect registry keyed by the item index
+         * ("item:N" for consumables, "money" for the money pickup). */
+        const FusionJson *aspect = NULL;
+        const char *kind = "item";
+        FusionJson *group = &aos_consumables;
+        char key[24];
+        if (native == 1) {
+            kind = "money";
+            aspect = fusion_json_member(&item_asp, "money");
+        } else if (native == 2) {
+            snprintf(key, sizeof key, "item:%lld", (long long)item);
+            aspect = fusion_json_member(&item_asp, key);
+        } else if (native == 3) {
+            kind = "weapon";
+            group = &aos_weapons;
+            snprintf(key, sizeof key, "%lld", (long long)item);
+            aspect = fusion_json_member(&weapon_asp, key);
+        } else {
+            kind = "equipment";
+            group = &aos_equipment;
+            snprintf(key, sizeof key, "%lld", (long long)item);
+            aspect = fusion_json_member(&equip_asp, key);
+        }
+        put_string(&row, "kind", kind);
+        if (aspect) {
+            put(&row, "aspects", copy_of(aspect));
+            put_string(&row, "note", text_of(aspect, "notes"));
+        }
+        push(group, copy_of(&row));
+        push(&aos_items, row);
     }
+    FusionJson coverage_consumables = catalog_coverage(&aos_consumables);
+    FusionJson coverage_weapons = catalog_coverage(&aos_weapons);
+    FusionJson coverage_equipment = catalog_coverage(&aos_equipment);
+    fusion_json_free(&aos_consumables);
+    fusion_json_free(&aos_weapons);
+    fusion_json_free(&aos_equipment);
     static const char *const soul_keys[] = {"red", "blue", "yellow", "ability"};
     static const char *const soul_annotations[] = {
         "aos.souls.red_soul_use", "aos.souls.inventory_pickups",
@@ -1500,6 +1621,9 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
         put(&aos_souls, soul_keys[group], rows);
     }
     free_aos_catalog(&catalog);
+    fusion_json_free(&weapon_asp);
+    fusion_json_free(&item_asp);
+    fusion_json_free(&equip_asp);
     fusion_json_free(&aspects);
     /* Tanks are Clipdata (BgClipCheckTouchingTransitionOrTank), not sprites. */
     static const char *const tanks[][2] = {{"tank_energy", "Energy Tank"},
@@ -1526,6 +1650,9 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
     put(&aos_coverage, "monsters", catalog_coverage(&aos_monsters));
     put(&aos_coverage, "bosses", catalog_coverage(&aos_bosses));
     put(&aos_coverage, "items", catalog_coverage(&aos_items));
+    put(&aos_coverage, "consumables", coverage_consumables);
+    put(&aos_coverage, "weapons", coverage_weapons);
+    put(&aos_coverage, "equipment", coverage_equipment);
     put(&aos_coverage, "red_souls",
         catalog_coverage(fusion_json_member(&aos_souls, "red")));
     put(&aos_coverage, "blue_souls",
@@ -1558,7 +1685,9 @@ static bool bestiary(const FusionJson *annotations, FusionJson *result) {
     put_string(&aos, "items_note",
                "All 137 normal-mode money, consumable, weapon, armor and accessory records are "
                "listed individually; Hard Mode and All Souls placements reuse these native "
-               "definitions.");
+               "definitions. The consumable, weapon and equipment tables carry per-record aspect "
+               "columns from data/native_parity/aos_item_aspects.tsv, "
+               "aos_weapon_aspects.tsv and aos_equipment_aspects.tsv.");
     put(&games, "mzm", mzm);
     put(&games, "aos", aos);
     *result = fusion_json_object();

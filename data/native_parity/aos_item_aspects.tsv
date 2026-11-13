@@ -1,0 +1,34 @@
+ref	pickup	record	use	icon	notes
+item:0	partial	ported	partial	ported	Potion: item_use record effect 0 (restore HP 100); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:1	partial	ported	partial	ported	High Potion: item_use record effect 0 (restore HP 400); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:10	partial	ported	partial	ported	Potato Pancake: item_use record effect 0 (restore HP 400); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:11	partial	ported	partial	ported	Beef Curry: item_use record effect 0 (restore HP 800); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:12	partial	ported	partial	ported	Ramen: item_use record effect 0 (restore HP 500); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:13	partial	ported	partial	ported	Cream Soda: item_use record effect 0 (restore HP 200); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:14	partial	ported	partial	ported	Cream Puff: item_use record effect 0 (restore HP 180); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:15	partial	ported	partial	ported	Milk: item_use record effect 0 (restore HP 150); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:16	partial	ported	partial	ported	Coffee: item_use record effect 0 (restore HP 200); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:17	partial	ported	partial	ported	Tea: item_use record effect 0 (restore HP 180); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:18	partial	ported	partial	ported	Pudding: item_use record effect 0 (restore HP 200); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:19	partial	ported	partial	ported	Strawberry: item_use record effect 0 (restore HP 300); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:2	partial	ported	partial	ported	Super Potion: item_use record effect 0 (restore HP 5000); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:20	partial	ported	partial	ported	Melon: item_use record effect 0 (restore HP 600); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:21	partial	ported	partial	ported	Grapes: item_use record effect 0 (restore HP 150); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:22	partial	ported	partial	ported	Persimmon: item_use record effect 0 (restore HP 80); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:23	partial	ported	partial	ported	Rotten Meat: item_use record effect 3 (lose HP 200); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:24	partial	ported	partial	ported	Spoiled Milk: item_use record effect 3 (lose HP 800); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:25	partial	ported	n/a	ported	Skull Key: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:26	partial	ported	n/a	ported	Ancient Book 1: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:27	partial	ported	n/a	ported	Ancient Book 2: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:28	partial	ported	n/a	ported	Ancient Book 3: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:29	partial	ported	n/a	ported	CASTLE MAP 1: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:3	partial	ported	partial	ported	Meat Strip: item_use record effect 0 (restore HP 29); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:30	partial	ported	n/a	ported	CASTLE MAP 2: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:31	partial	ported	n/a	ported	CASTLE MAP 3: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:4	partial	ported	partial	ported	Tasty Meat: item_use record effect 0 (restore HP 290); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:5	partial	ported	partial	ported	Mind Up: item_use record effect 1 (restore MP percent 20); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:6	partial	ported	partial	ported	High Mind Up: item_use record effect 1 (restore MP percent 50); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:7	partial	ported	partial	ported	Mana Prism: item_use record effect 1 (restore MP percent 100); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:8	partial	ported	partial	ported	Anti-Venom: item_use record effect 2 (cure status 1); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+item:9	partial	ported	partial	ported	Uncurse Potion: item_use record effect 2 (cure status 2); pickup entity and menu use wired, per-effect vitals approximated in the host model.
+money	ported	ported	n/a	n/a	Money pickup: native money records and pickup behavior ported (aos.items.money_pickups).

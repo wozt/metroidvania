@@ -203,6 +203,8 @@
       ["Enemy and boss actors", "monsters"], ["Items and pickups", "items"]
     ] : [
       ["Monsters", "monsters"], ["Bosses", "bosses"], ["Items", "items"],
+      ["Consumables", "consumables"], ["Weapons", "weapons"],
+      ["Equipment", "equipment"],
       ["Red souls", "red_souls"], ["Blue souls", "blue_souls"],
       ["Yellow souls", "yellow_souls"], ["Ability souls", "ability_souls"]
     ];
@@ -280,21 +282,22 @@
     ).join("")}</div>`;
   }
 
-  function bestiaryTable(rows, kind, coverage, aspects) {
+  function bestiaryTable(rows, kind, coverage, names, refLabel) {
     const q = state.query;
+    const aspects = !!names;
     const visible = rows.filter((row) =>
       (!state.statuses.size || state.statuses.has(row.status)) &&
       (!q || (row.name + " " + (row.note || "") + " " + (row.feature || "") + " " +
-        (row.aspects ? row.aspects.notes + " " + row.aspects.soul_ref : "")).toLowerCase().includes(q)));
-    const aspectHeaders = aspects ? `${aspectNames.map((name) => `<th>${esc(name)}</th>`).join("")}<th>Soul reference</th>` : "";
-    const columns = aspects ? 11 : 5;
+        (row.aspects ? row.aspects.notes + " " + (row.aspects.soul_ref || "") : "")).toLowerCase().includes(q)));
+    const aspectHeaders = aspects ? `${names.map((name) => `<th>${esc(name)}</th>`).join("")}${refLabel ? `<th>${esc(refLabel)}</th>` : ""}` : "";
+    const columns = aspects ? 5 + names.length + (refLabel ? 1 : 0) : 5;
     return `<details class="group catalog-group" open>
       <summary><span class="title">${esc(kind)}</span><span class="muted">${coverage.functional_or_better}/${coverage.total} functional+ · ${coverage.functional_or_better_percent}%</span></summary>
       <div class="catalog-distribution">${stackBar(coverage.by_status, coverage.total)}${legend(coverage.by_status)}</div>
       <div class="table-wrap"><table><thead><tr><th>Id</th><th>Name</th><th>Status</th>${aspectHeaders}<th>Evidence</th><th>Note</th></tr></thead><tbody>
       ${visible.map((row) => {
         const feature = row.feature ? data.features.find((item) => item.id === row.feature) : null;
-        const aspectCells = aspects ? `${aspectNames.map((name) => `<td>${row.aspects ? aspectBadge(row.aspects[name]) : '<span class="muted">—</span>'}</td>`).join("")}<td>${row.aspects ? `<code>${esc(row.aspects.soul_ref)}</code>` : '<span class="muted">—</span>'}</td>` : "";
+        const aspectCells = aspects ? `${names.map((name) => `<td>${row.aspects ? aspectBadge(row.aspects[name]) : '<span class="muted">—</span>'}</td>`).join("")}${refLabel ? `<td>${row.aspects && row.aspects.soul_ref ? `<code>${esc(row.aspects.soul_ref)}</code>` : '<span class="muted">—</span>'}</td>` : ""}` : "";
         return `<tr><td><code>${esc(typeof row.id === "number" ? "0x" + row.id.toString(16).toUpperCase().padStart(2, "0") : row.id)}</code></td><td>${esc(row.name)}${row.feature ? `<br><code class="muted">${esc(row.feature)}</code>` : ""}</td><td>${statusBadge(row.status)}</td>${aspectCells}<td>${evidenceBadges(row.evidence, feature && feature.verification)}</td><td class="muted">${esc(row.note || "")}</td></tr>`;
       }).join("") ||
       `<tr><td colspan="${columns}" class="muted">No match.</td></tr>`}
@@ -332,8 +335,8 @@
           ["Items and pickups", m.coverage.items, "mzm"]
         ])}
         <p class="muted">${esc(m.items_note)}</p>
-        ${bestiaryTable(m.monsters, "Enemy and boss actors", m.coverage.monsters, false)}
-        ${bestiaryTable(m.items, "Items and pickups", m.coverage.items, false)}
+        ${bestiaryTable(m.monsters, "Enemy and boss actors", m.coverage.monsters, null, null)}
+        ${bestiaryTable(m.items, "Items and pickups", m.coverage.items, null, null)}
       </section>
       <section class="catalog-game catalog-aos"><h2>${esc(g.title)}</h2>
         ${coverageCards([
@@ -344,14 +347,22 @@
           ["Ability souls", g.coverage.ability_souls, "aos"]
         ])}
         ${aspectOverview(g)}
-        ${bestiaryTable(g.monsters, "Monsters", g.coverage.monsters, true)}
-        ${bestiaryTable(g.bosses, "Bosses", g.coverage.bosses, true)}
+        ${bestiaryTable(g.monsters, "Monsters", g.coverage.monsters, aspectNames, "Soul reference")}
+        ${bestiaryTable(g.bosses, "Bosses", g.coverage.bosses, aspectNames, "Soul reference")}
         <p class="muted">${esc(g.items_note)}</p>
-        ${bestiaryTable(g.items, "Items", g.coverage.items, false)}
-        ${bestiaryTable(g.souls.red, "Red souls (offensive)", g.coverage.red_souls, false)}
-        ${bestiaryTable(g.souls.blue, "Blue souls (guardian)", g.coverage.blue_souls, false)}
-        ${bestiaryTable(g.souls.yellow, "Yellow souls (passive)", g.coverage.yellow_souls, false)}
-        ${bestiaryTable(g.souls.ability, "Ability souls (movement)", g.coverage.ability_souls, false)}
+        ${bestiaryTable(g.items.filter((row) => row.kind === "money" || row.kind === "item"),
+          "Money & consumables", g.coverage.consumables || g.coverage.items,
+          ["pickup", "record", "use", "icon"], null)}
+        ${bestiaryTable(g.items.filter((row) => row.kind === "weapon"),
+          "Weapons", g.coverage.weapons || g.coverage.items,
+          ["entity", "fire", "sprite", "sound"], null)}
+        ${bestiaryTable(g.items.filter((row) => row.kind === "equipment"),
+          "Armor & accessories", g.coverage.equipment || g.coverage.items,
+          ["stats", "behavior", "icon"], null)}
+        ${bestiaryTable(g.souls.red, "Red souls (offensive)", g.coverage.red_souls, null, null)}
+        ${bestiaryTable(g.souls.blue, "Blue souls (guardian)", g.coverage.blue_souls, null, null)}
+        ${bestiaryTable(g.souls.yellow, "Yellow souls (passive)", g.coverage.yellow_souls, null, null)}
+        ${bestiaryTable(g.souls.ability, "Ability souls (movement)", g.coverage.ability_souls, null, null)}
       </section>`;
   }
 

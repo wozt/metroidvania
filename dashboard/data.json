@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-13T20:38:13+00:00",
+ "generated_at": "2026-11-13T20:55:43+00:00",
  "git": {
-  "commit": "e536df4f",
+  "commit": "3eded38d",
   "branch": "main",
   "dirty": true
  },
@@ -31917,6 +31917,12 @@
  },
  "timeline": [
   {
+   "commit": "3eded38d",
+   "date": "2026-11-13",
+   "subject": "Port Aria entity math helpers sub_08068A70 through sub_08068CDC",
+   "scope": "project"
+  },
+  {
    "commit": "e536df4f",
    "date": "2026-11-13",
    "subject": "Port Aria Object20 misc state callbacks",
@@ -32388,12 +32394,6 @@
    "commit": "2e9848e8",
    "date": "2026-11-11",
    "subject": "aos: port red souls 35/36 (Werejaguar/Weretiger)",
-   "scope": "project"
-  },
-  {
-   "commit": "d71722e3",
-   "date": "2026-11-11",
-   "subject": "aos: port red soul 53 (Killer Mantle)",
    "scope": "project"
   }
  ],
@@ -34723,6 +34723,33 @@
       "functional_or_better_percent": 0,
       "by_status": {
        "partial": 137
+      }
+     },
+     "consumables": {
+      "total": 33,
+      "implemented": 33,
+      "functional_or_better": 0,
+      "functional_or_better_percent": 0,
+      "by_status": {
+       "partial": 33
+      }
+     },
+     "weapons": {
+      "total": 59,
+      "implemented": 59,
+      "functional_or_better": 0,
+      "functional_or_better_percent": 0,
+      "by_status": {
+       "partial": 59
+      }
+     },
+     "equipment": {
+      "total": 45,
+      "implemented": 45,
+      "functional_or_better": 0,
+      "functional_or_better_percent": 0,
+      "by_status": {
+       "partial": 45
       }
      },
      "red_souls": {
@@ -37829,7 +37856,7 @@
       "id": "01:00",
       "name": "Money pickup",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Money pickup: native money records and pickup behavior ported (aos.items.money_pickups).",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -37844,13 +37871,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "money",
+      "aspects": {
+       "pickup": "ported",
+       "record": "ported",
+       "use": "n/a",
+       "icon": "n/a",
+       "notes": "Money pickup: native money records and pickup behavior ported (aos.items.money_pickups)."
+      }
      },
      {
       "id": "02:00",
       "name": "Potion",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Potion: item_use record effect 0 (restore HP 100); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -37865,13 +37900,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Potion: item_use record effect 0 (restore HP 100); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:01",
       "name": "High Potion",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "High Potion: item_use record effect 0 (restore HP 400); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -37886,13 +37929,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "High Potion: item_use record effect 0 (restore HP 400); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:02",
       "name": "Super Potion",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Super Potion: item_use record effect 0 (restore HP 5000); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -37907,13 +37958,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Super Potion: item_use record effect 0 (restore HP 5000); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:03",
       "name": "Meat Strip",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Meat Strip: item_use record effect 0 (restore HP 29); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -37928,13 +37987,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Meat Strip: item_use record effect 0 (restore HP 29); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:04",
       "name": "Tasty Meat",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Tasty Meat: item_use record effect 0 (restore HP 290); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -37949,13 +38016,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Tasty Meat: item_use record effect 0 (restore HP 290); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:05",
       "name": "Mind Up",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Mind Up: item_use record effect 1 (restore MP percent 20); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -37970,13 +38045,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Mind Up: item_use record effect 1 (restore MP percent 20); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:06",
       "name": "High Mind Up",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "High Mind Up: item_use record effect 1 (restore MP percent 50); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -37991,13 +38074,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "High Mind Up: item_use record effect 1 (restore MP percent 50); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:07",
       "name": "Mana Prism",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Mana Prism: item_use record effect 1 (restore MP percent 100); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38012,13 +38103,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Mana Prism: item_use record effect 1 (restore MP percent 100); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:08",
       "name": "Anti-Venom",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Anti-Venom: item_use record effect 2 (cure status 1); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38033,13 +38132,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Anti-Venom: item_use record effect 2 (cure status 1); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:09",
       "name": "Uncurse Potion",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Uncurse Potion: item_use record effect 2 (cure status 2); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38054,13 +38161,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Uncurse Potion: item_use record effect 2 (cure status 2); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:0A",
       "name": "Potato Pancake",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Potato Pancake: item_use record effect 0 (restore HP 400); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38075,13 +38190,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Potato Pancake: item_use record effect 0 (restore HP 400); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:0B",
       "name": "Beef Curry",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Beef Curry: item_use record effect 0 (restore HP 800); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38096,13 +38219,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Beef Curry: item_use record effect 0 (restore HP 800); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:0C",
       "name": "Ramen",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Ramen: item_use record effect 0 (restore HP 500); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38117,13 +38248,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Ramen: item_use record effect 0 (restore HP 500); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:0D",
       "name": "Cream Soda",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Cream Soda: item_use record effect 0 (restore HP 200); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38138,13 +38277,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Cream Soda: item_use record effect 0 (restore HP 200); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:0E",
       "name": "Cream Puff",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Cream Puff: item_use record effect 0 (restore HP 180); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38159,13 +38306,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Cream Puff: item_use record effect 0 (restore HP 180); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:0F",
       "name": "Milk",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Milk: item_use record effect 0 (restore HP 150); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38180,13 +38335,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Milk: item_use record effect 0 (restore HP 150); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:10",
       "name": "Coffee",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Coffee: item_use record effect 0 (restore HP 200); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38201,13 +38364,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Coffee: item_use record effect 0 (restore HP 200); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:11",
       "name": "Tea",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Tea: item_use record effect 0 (restore HP 180); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38222,13 +38393,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Tea: item_use record effect 0 (restore HP 180); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:12",
       "name": "Pudding",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Pudding: item_use record effect 0 (restore HP 200); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38243,13 +38422,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Pudding: item_use record effect 0 (restore HP 200); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:13",
       "name": "Strawberry",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Strawberry: item_use record effect 0 (restore HP 300); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38264,13 +38451,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Strawberry: item_use record effect 0 (restore HP 300); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:14",
       "name": "Melon",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Melon: item_use record effect 0 (restore HP 600); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38285,13 +38480,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Melon: item_use record effect 0 (restore HP 600); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:15",
       "name": "Grapes",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Grapes: item_use record effect 0 (restore HP 150); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38306,13 +38509,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Grapes: item_use record effect 0 (restore HP 150); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:16",
       "name": "Persimmon",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Persimmon: item_use record effect 0 (restore HP 80); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38327,13 +38538,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Persimmon: item_use record effect 0 (restore HP 80); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:17",
       "name": "Rotten Meat",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Rotten Meat: item_use record effect 3 (lose HP 200); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38348,13 +38567,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Rotten Meat: item_use record effect 3 (lose HP 200); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:18",
       "name": "Spoiled Milk",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Spoiled Milk: item_use record effect 3 (lose HP 800); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38369,13 +38596,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "partial",
+       "icon": "ported",
+       "notes": "Spoiled Milk: item_use record effect 3 (lose HP 800); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:19",
       "name": "Skull Key",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Skull Key: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38390,13 +38625,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "n/a",
+       "icon": "ported",
+       "notes": "Skull Key: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:1A",
       "name": "Ancient Book 1",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Ancient Book 1: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38411,13 +38654,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "n/a",
+       "icon": "ported",
+       "notes": "Ancient Book 1: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:1B",
       "name": "Ancient Book 2",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Ancient Book 2: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38432,13 +38683,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "n/a",
+       "icon": "ported",
+       "notes": "Ancient Book 2: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:1C",
       "name": "Ancient Book 3",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "Ancient Book 3: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38453,13 +38712,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "n/a",
+       "icon": "ported",
+       "notes": "Ancient Book 3: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:1D",
       "name": "CASTLE MAP 1",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "CASTLE MAP 1: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38474,13 +38741,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "n/a",
+       "icon": "ported",
+       "notes": "CASTLE MAP 1: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:1E",
       "name": "CASTLE MAP 2",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "CASTLE MAP 2: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38495,13 +38770,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "n/a",
+       "icon": "ported",
+       "notes": "CASTLE MAP 2: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "02:1F",
       "name": "CASTLE MAP 3",
       "status": "partial",
-      "note": "Aria money, item and MP heart pickups",
+      "note": "CASTLE MAP 3: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_pickup.c",
@@ -38516,13 +38799,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.items.money_pickups"
+      "feature": "aos.items.money_pickups",
+      "kind": "item",
+      "aspects": {
+       "pickup": "partial",
+       "record": "ported",
+       "use": "n/a",
+       "icon": "ported",
+       "notes": "CASTLE MAP 3: item_use record effect 4 (non-consumable); pickup entity and menu use wired, per-effect vitals approximated in the host model."
+      }
      },
      {
       "id": "03:00",
       "name": "Knife",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Knife: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38532,13 +38823,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Knife: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:01",
       "name": "Baselard",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Baselard: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38548,13 +38847,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Baselard: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:02",
       "name": "Combat Knife",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Combat Knife: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38564,13 +38871,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Combat Knife: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:03",
       "name": "Short Sword",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Short Sword: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38580,13 +38895,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Short Sword: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:04",
       "name": "Bastard Sword",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Bastard Sword: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38596,13 +38919,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Bastard Sword: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:05",
       "name": "Whip Sword",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Whip Sword: class 0 melee slash record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38612,13 +38943,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Whip Sword: class 0 melee slash record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:06",
       "name": "Gladius",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Gladius: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38628,13 +38967,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Gladius: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:07",
       "name": "Gram",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Gram: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38644,13 +38991,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Gram: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:08",
       "name": "Milican's Sword",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Milican's Sword: class 0 melee slash record; record flags 0x0101; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38660,13 +39015,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Milican's Sword: class 0 melee slash record; record flags 0x0101; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:09",
       "name": "Hrunting",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Hrunting: class 0 melee slash record; record flags 0x0041; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38676,13 +39039,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Hrunting: class 0 melee slash record; record flags 0x0041; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:0A",
       "name": "Mystletain",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Mystletain: class 0 melee slash record; record flags 0x0021; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38692,13 +39063,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Mystletain: class 0 melee slash record; record flags 0x0021; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:0B",
       "name": "Rahab's Sword",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Rahab's Sword: class 0 melee slash record; record flags 0x0005; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38708,13 +39087,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Rahab's Sword: class 0 melee slash record; record flags 0x0005; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:0C",
       "name": "Durandal",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Durandal: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38724,13 +39111,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Durandal: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:0D",
       "name": "Laevatain",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Laevatain: class 0 melee slash record; record flags 0x0003; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38740,13 +39135,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Laevatain: class 0 melee slash record; record flags 0x0003; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:0E",
       "name": "Burtgang",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Burtgang: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38756,13 +39159,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Burtgang: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:0F",
       "name": "Kaladbolg",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Kaladbolg: class 0 melee slash record; record flags 0x0011; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38772,13 +39183,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Kaladbolg: class 0 melee slash record; record flags 0x0011; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:10",
       "name": "Vjaya",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Vjaya: class 0 melee slash record; record flags 0x0008; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38788,13 +39207,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Vjaya: class 0 melee slash record; record flags 0x0008; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:11",
       "name": "Balmung",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Balmung: class 0 melee slash record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38804,13 +39231,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Balmung: class 0 melee slash record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:12",
       "name": "Broadsword",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Broadsword: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38820,13 +39255,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Broadsword: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:13",
       "name": "Scimitar",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Scimitar: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38836,13 +39279,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Scimitar: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:14",
       "name": "Claymore",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Claymore: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38852,13 +39303,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Claymore: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:15",
       "name": "Great Sword",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Great Sword: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38868,13 +39327,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Great Sword: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:16",
       "name": "Joyeuse",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Joyeuse: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38884,13 +39351,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Joyeuse: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:17",
       "name": "Dainslef",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Dainslef: class 1 whip swing record (affine angle); record flags 0x2011; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38900,13 +39375,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Dainslef: class 1 whip swing record (affine angle); record flags 0x2011; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:18",
       "name": "Ascalon",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Ascalon: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38916,13 +39399,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Ascalon: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:19",
       "name": "Claimh Solais",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Claimh Solais: class 1 whip swing record (affine angle); record flags 0x0021; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38932,13 +39423,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Claimh Solais: class 1 whip swing record (affine angle); record flags 0x0021; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:1A",
       "name": "Final Sword",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Final Sword: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38948,13 +39447,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Final Sword: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:1B",
       "name": "Bamboo Sword",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Bamboo Sword: class 1 whip swing record (affine angle); record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38964,13 +39471,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Bamboo Sword: class 1 whip swing record (affine angle); record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:1C",
       "name": "Katana",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Katana: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38980,13 +39495,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Katana: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:1D",
       "name": "Osafune",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Osafune: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -38996,13 +39519,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Osafune: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:1E",
       "name": "Onikiri",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Onikiri: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39012,13 +39543,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Onikiri: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:1F",
       "name": "Kunitsuna",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Kunitsuna: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39028,13 +39567,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Kunitsuna: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:20",
       "name": "Yasutsuna",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Yasutsuna: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39044,13 +39591,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Yasutsuna: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:21",
       "name": "Muramasa",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Muramasa: class 1 whip swing record (affine angle); record flags 0x0081; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39060,13 +39615,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Muramasa: class 1 whip swing record (affine angle); record flags 0x0081; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:22",
       "name": "Hammer",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Hammer: class 1 whip swing record (affine angle); record flags 0x2000; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39076,13 +39639,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Hammer: class 1 whip swing record (affine angle); record flags 0x2000; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:23",
       "name": "Warhammer",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Warhammer: class 1 whip swing record (affine angle); record flags 0x2000; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39092,13 +39663,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Warhammer: class 1 whip swing record (affine angle); record flags 0x2000; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:24",
       "name": "Excalibur",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Excalibur: class 1 whip swing record (affine angle); record flags 0x2000; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39108,13 +39687,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Excalibur: class 1 whip swing record (affine angle); record flags 0x2000; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:25",
       "name": "Tallhammer",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Tallhammer: class 1 whip swing record (affine angle); record flags 0x2008; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39124,13 +39711,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Tallhammer: class 1 whip swing record (affine angle); record flags 0x2008; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:26",
       "name": "Battle Axe",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Battle Axe: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39140,13 +39735,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Battle Axe: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:27",
       "name": "Death's Sickle",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Death's Sickle: class 1 whip swing record (affine angle); record flags 0x2011; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39156,13 +39759,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Death's Sickle: class 1 whip swing record (affine angle); record flags 0x2011; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:28",
       "name": "Rapier",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Rapier: class 2 thrust/poke record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39172,13 +39783,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Rapier: class 2 thrust/poke record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:29",
       "name": "Estoc",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Estoc: class 2 thrust/poke record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39188,13 +39807,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Estoc: class 2 thrust/poke record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:2A",
       "name": "Cutall",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Cutall: class 2 thrust/poke record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39204,13 +39831,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Cutall: class 2 thrust/poke record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:2B",
       "name": "Spear",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Spear: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39220,13 +39855,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Spear: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:2C",
       "name": "Trident",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Trident: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39236,13 +39879,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Trident: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:2D",
       "name": "Lance",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Lance: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39252,13 +39903,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Lance: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:2E",
       "name": "Partizan",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Partizan: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39268,13 +39927,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Partizan: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:2F",
       "name": "Gabolg",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Gabolg: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39284,13 +39951,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Gabolg: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:30",
       "name": "Gungner",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Gungner: class 2 thrust/poke record; record flags 0x2008; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39300,13 +39975,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Gungner: class 2 thrust/poke record; record flags 0x2008; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:31",
       "name": "Ronginus' Spear",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Ronginus' Spear: class 2 thrust/poke record; record flags 0x2021; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39316,13 +39999,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Ronginus' Spear: class 2 thrust/poke record; record flags 0x2021; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:32",
       "name": "Cestus",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Cestus: class 3 heavy swing record; record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39332,13 +40023,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Cestus: class 3 heavy swing record; record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:33",
       "name": "Kaiser Knuckle",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Kaiser Knuckle: class 3 heavy swing record; record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39348,13 +40047,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Kaiser Knuckle: class 3 heavy swing record; record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:34",
       "name": "Mach Punch",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Mach Punch: class 3 heavy swing record; record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39364,13 +40071,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Mach Punch: class 3 heavy swing record; record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:35",
       "name": "Whip Knuckle",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Whip Knuckle: class 3 heavy swing record; record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39380,13 +40095,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Whip Knuckle: class 3 heavy swing record; record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:36",
       "name": "Poison Fist",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Poison Fist: class 3 heavy swing record; record flags 0x0040; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39396,13 +40119,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Poison Fist: class 3 heavy swing record; record flags 0x0040; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:37",
       "name": "Handgun",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Handgun: class 4 firearm record (class-4 shot entity); record flags 0x1001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39412,13 +40143,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Handgun: class 4 firearm record (class-4 shot entity); record flags 0x1001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:38",
       "name": "Silver Gun",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Silver Gun: class 4 firearm record (class-4 shot entity); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39428,13 +40167,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Silver Gun: class 4 firearm record (class-4 shot entity); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:39",
       "name": "Positron Rifle",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Positron Rifle: class 2 thrust/poke record; record flags 0x2002; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39444,13 +40191,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "partial",
+       "fire": "partial",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Positron Rifle: class 2 thrust/poke record; record flags 0x2002; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "03:3A",
       "name": "Valmanway",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Valmanway: class 5 player-copy record (class 5, only sub_08033F58); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39460,13 +40215,21 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "weapon",
+      "aspects": {
+       "entity": "missing",
+       "fire": "missing",
+       "sprite": "ported",
+       "sound": "partial",
+       "notes": "Valmanway: class 5 player-copy record (class 5, only sub_08033F58); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated."
+      }
      },
      {
       "id": "04:00",
       "name": "Casual Clothes",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Casual Clothes: armor record 0; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39476,13 +40239,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Casual Clothes: armor record 0; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:01",
       "name": "Cloth Tunic",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Cloth Tunic: armor record 1; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39492,13 +40262,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Cloth Tunic: armor record 1; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:02",
       "name": "Gym Clothes",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Gym Clothes: armor record 2; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39508,13 +40285,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Gym Clothes: armor record 2; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:03",
       "name": "War Fatigues",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "War Fatigues: armor record 3; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39524,13 +40308,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "War Fatigues: armor record 3; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:04",
       "name": "Ninja Suit",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Ninja Suit: armor record 4; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39540,13 +40331,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Ninja Suit: armor record 4; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:05",
       "name": "Soldier Uniform",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Soldier Uniform: armor record 5; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39556,13 +40354,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Soldier Uniform: armor record 5; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:06",
       "name": "Pitch Black Suit",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Pitch Black Suit: armor record 6; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39572,13 +40377,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Pitch Black Suit: armor record 6; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:07",
       "name": "Olrox's Suit",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Olrox's Suit: armor record 7; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39588,13 +40400,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Olrox's Suit: armor record 7; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:08",
       "name": "Dracula's Tunic",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Dracula's Tunic: armor record 8; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39604,13 +40423,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Dracula's Tunic: armor record 8; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:09",
       "name": "Leather Plate",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Leather Plate: armor record 9; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39620,13 +40446,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Leather Plate: armor record 9; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:0A",
       "name": "Copper Plate",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Copper Plate: armor record 10; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39636,13 +40469,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Copper Plate: armor record 10; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:0B",
       "name": "Iron Plate",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Iron Plate: armor record 11; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39652,13 +40492,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Iron Plate: armor record 11; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:0C",
       "name": "Steel Plate",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Steel Plate: armor record 12; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39668,13 +40515,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Steel Plate: armor record 12; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:0D",
       "name": "Silver Plate",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Silver Plate: armor record 13; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39684,13 +40538,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Silver Plate: armor record 13; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:0E",
       "name": "Gold Plate",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Gold Plate: armor record 14; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39700,13 +40561,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Gold Plate: armor record 14; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:0F",
       "name": "Eversing",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Eversing: armor record 15; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39716,13 +40584,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Eversing: armor record 15; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:10",
       "name": "Samurai Armor",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Samurai Armor: armor record 16; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39732,13 +40607,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Samurai Armor: armor record 16; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:11",
       "name": "Silk Robe",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Silk Robe: armor record 17; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39748,13 +40630,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Silk Robe: armor record 17; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:12",
       "name": "Elfin Robe",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Elfin Robe: armor record 18; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39764,13 +40653,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Elfin Robe: armor record 18; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:13",
       "name": "Death's Robe",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Death's Robe: armor record 19; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39780,13 +40676,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Death's Robe: armor record 19; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:14",
       "name": "Demon's Mail",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Demon's Mail: armor record 20; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39796,13 +40699,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Demon's Mail: armor record 20; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:15",
       "name": "Armor of Fire",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Armor of Fire: armor record 21; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39812,13 +40722,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Armor of Fire: armor record 21; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:16",
       "name": "Armor of Water",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Armor of Water: armor record 22; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39828,13 +40745,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Armor of Water: armor record 22; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:17",
       "name": "Blocking Mail",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Blocking Mail: armor record 23; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39844,13 +40768,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Blocking Mail: armor record 23; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:18",
       "name": "Army Jacket",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Army Jacket: armor record 24; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39860,13 +40791,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Army Jacket: armor record 24; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:19",
       "name": "Cape",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Cape: accessory record 25; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39876,13 +40814,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Cape: accessory record 25; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:1A",
       "name": "Crimson Cloak",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Crimson Cloak: accessory record 26; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39892,13 +40837,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Crimson Cloak: accessory record 26; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:1B",
       "name": "Black Cloak",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Black Cloak: accessory record 27; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39908,13 +40860,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Black Cloak: accessory record 27; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:1C",
       "name": "Pendant",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Pendant: accessory record 28; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39924,13 +40883,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Pendant: accessory record 28; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:1D",
       "name": "Heart Pendant",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Heart Pendant: accessory record 29; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39940,13 +40906,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Heart Pendant: accessory record 29; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:1E",
       "name": "Scarf",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Scarf: accessory record 30; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39956,13 +40929,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Scarf: accessory record 30; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:1F",
       "name": "Red Scarf",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Red Scarf: accessory record 31; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39972,13 +40952,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Red Scarf: accessory record 31; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:20",
       "name": "Ancient Belt",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Ancient Belt: accessory record 32; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -39988,13 +40975,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Ancient Belt: accessory record 32; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:21",
       "name": "Black Belt",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Black Belt: accessory record 33; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -40004,13 +40998,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Black Belt: accessory record 33; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:22",
       "name": "Skull Necklace",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Skull Necklace: accessory record 34; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -40020,13 +41021,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Skull Necklace: accessory record 34; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:23",
       "name": "Flame Necklace",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Flame Necklace: accessory record 35; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -40036,13 +41044,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Flame Necklace: accessory record 35; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:24",
       "name": "Satan's Ring",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Satan's Ring: accessory record 36; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -40052,13 +41067,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Satan's Ring: accessory record 36; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:25",
       "name": "Tear Of Blood",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Tear Of Blood: accessory record 37; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -40068,13 +41090,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Tear Of Blood: accessory record 37; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:26",
       "name": "Lucky Charm",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Lucky Charm: accessory record 38; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -40084,13 +41113,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Lucky Charm: accessory record 38; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:27",
       "name": "Rare Ring",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Rare Ring: accessory record 39; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -40100,13 +41136,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Rare Ring: accessory record 39; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:28",
       "name": "Soul Eater Ring",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Soul Eater Ring: accessory record 40; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -40116,13 +41159,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Soul Eater Ring: accessory record 40; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:29",
       "name": "Rune Ring",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Rune Ring: accessory record 41; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -40132,13 +41182,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Rune Ring: accessory record 41; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:2A",
       "name": "Sherman Ring",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Sherman Ring: accessory record 42; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -40148,13 +41205,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Sherman Ring: accessory record 42; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:2B",
       "name": "Gold Ring",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Gold Ring: accessory record 43; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -40164,13 +41228,20 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Gold Ring: accessory record 43; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      },
      {
       "id": "04:2C",
       "name": "Chaos Ring",
       "status": "partial",
-      "note": "Aria equipment and derived ATK and DEF",
+      "note": "Chaos Ring: accessory record 44; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.",
       "evidence": {
        "unit_tests": [
         "tests/test_aos_stats.c",
@@ -40180,7 +41251,14 @@
        "emulator_compared": false,
        "played_through": false
       },
-      "feature": "aos.progression.equipment_stats"
+      "feature": "aos.progression.equipment_stats",
+      "kind": "equipment",
+      "aspects": {
+       "stats": "ported",
+       "behavior": "missing",
+       "icon": "ported",
+       "notes": "Chaos Ring: accessory record 44; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported."
+      }
      }
     ],
     "souls": {
@@ -44763,7 +45841,7 @@
       }
      ]
     },
-    "items_note": "All 137 normal-mode money, consumable, weapon, armor and accessory records are listed individually; Hard Mode and All Souls placements reuse these native definitions."
+    "items_note": "All 137 normal-mode money, consumable, weapon, armor and accessory records are listed individually; Hard Mode and All Souls placements reuse these native definitions. The consumable, weapon and equipment tables carry per-record aspect columns from data/native_parity/aos_item_aspects.tsv, aos_weapon_aspects.tsv and aos_equipment_aspects.tsv."
    }
   }
  },

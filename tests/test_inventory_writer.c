@@ -337,7 +337,8 @@ static void test_tracked_inventory(void) {
     EXPECT(fusion_inventory_build(FUSION_SOURCE_DIR, output, true, summary, error, sizeof error),
            "tracked build: %s", error);
     EXPECT(!shell("diff -r -q '%s' '%s/data/native_parity' -x annotations.tsv -x aos_monster_aspects.tsv -x "
-                  "aos_unassigned_routines.tsv >/dev/null", root, FUSION_SOURCE_DIR),
+                  "aos_weapon_aspects.tsv -x aos_item_aspects.tsv -x "
+                  "aos_equipment_aspects.tsv -x aos_unassigned_routines.tsv >/dev/null", root, FUSION_SOURCE_DIR),
            "the tracked inventory is not what the writer produces");
     EXPECT(summary[0].routines > 2500 && summary[1].routines > 3000, "routine counts");
     const char *tracked = FUSION_SOURCE_DIR "/data/native_parity";

@@ -1,3 +1,23 @@
+## Patch 1085 - Aria item aspect registries and dashboard tables
+
+- Three new parity registries in the monster-aspect format:
+  `data/native_parity/aos_weapon_aspects.tsv` (59 weapons:
+  entity/fire/sprite/sound aspects), `aos_item_aspects.tsv`
+  (money + 32 consumables: pickup/record/use/icon) and
+  `aos_equipment_aspects.tsv` (45 armor/accessories:
+  stats/behavior/icon). Statuses reflect the real coverage:
+  weapon entity classes and item records are ported or
+  partial, damage resolution and equipment passive behavior
+  are missing.
+- `fusion_dashboard` loads the three tables through a generic
+  keyed-aspect loader, attaches a `kind` and an `aspects`
+  object to each of the 137 collectible rows, and reports
+  per-group coverage (consumables, weapons, equipment).
+- The web bestiary splits Aria items into Money &
+  consumables, Weapons and Armor & accessories tables with
+  per-kind aspect columns; `bestiaryTable` takes the aspect
+  names and reference label as parameters.
+
 ## Patch 1084 - Aria entity math helpers ported (sub_08068A70-CDC)
 
 - `src/runtime/aos/math/aos_math.c` gains the entity-space

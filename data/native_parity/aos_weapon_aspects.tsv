@@ -1,0 +1,60 @@
+weapon	entity	fire	sprite	sound	notes
+0	partial	partial	ported	partial	Knife: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+1	partial	partial	ported	partial	Baselard: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+10	partial	partial	ported	partial	Mystletain: class 0 melee slash record; record flags 0x0021; entity lifetime/placement ported, per-record flag quirks approximated.
+11	partial	partial	ported	partial	Rahab's Sword: class 0 melee slash record; record flags 0x0005; entity lifetime/placement ported, per-record flag quirks approximated.
+12	partial	partial	ported	partial	Durandal: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+13	partial	partial	ported	partial	Laevatain: class 0 melee slash record; record flags 0x0003; entity lifetime/placement ported, per-record flag quirks approximated.
+14	partial	partial	ported	partial	Burtgang: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+15	partial	partial	ported	partial	Kaladbolg: class 0 melee slash record; record flags 0x0011; entity lifetime/placement ported, per-record flag quirks approximated.
+16	partial	partial	ported	partial	Vjaya: class 0 melee slash record; record flags 0x0008; entity lifetime/placement ported, per-record flag quirks approximated.
+17	partial	partial	ported	partial	Balmung: class 0 melee slash record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+18	partial	partial	ported	partial	Broadsword: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+19	partial	partial	ported	partial	Scimitar: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+2	partial	partial	ported	partial	Combat Knife: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+20	partial	partial	ported	partial	Claymore: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+21	partial	partial	ported	partial	Great Sword: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+22	partial	partial	ported	partial	Joyeuse: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+23	partial	partial	ported	partial	Dainslef: class 1 whip swing record (affine angle); record flags 0x2011; entity lifetime/placement ported, per-record flag quirks approximated.
+24	partial	partial	ported	partial	Ascalon: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+25	partial	partial	ported	partial	Claimh Solais: class 1 whip swing record (affine angle); record flags 0x0021; entity lifetime/placement ported, per-record flag quirks approximated.
+26	partial	partial	ported	partial	Final Sword: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+27	partial	partial	ported	partial	Bamboo Sword: class 1 whip swing record (affine angle); record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated.
+28	partial	partial	ported	partial	Katana: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+29	partial	partial	ported	partial	Osafune: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+3	partial	partial	ported	partial	Short Sword: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+30	partial	partial	ported	partial	Onikiri: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+31	partial	partial	ported	partial	Kunitsuna: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+32	partial	partial	ported	partial	Yasutsuna: class 1 whip swing record (affine angle); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+33	partial	partial	ported	partial	Muramasa: class 1 whip swing record (affine angle); record flags 0x0081; entity lifetime/placement ported, per-record flag quirks approximated.
+34	partial	partial	ported	partial	Hammer: class 1 whip swing record (affine angle); record flags 0x2000; entity lifetime/placement ported, per-record flag quirks approximated.
+35	partial	partial	ported	partial	Warhammer: class 1 whip swing record (affine angle); record flags 0x2000; entity lifetime/placement ported, per-record flag quirks approximated.
+36	partial	partial	ported	partial	Excalibur: class 1 whip swing record (affine angle); record flags 0x2000; entity lifetime/placement ported, per-record flag quirks approximated.
+37	partial	partial	ported	partial	Tallhammer: class 1 whip swing record (affine angle); record flags 0x2008; entity lifetime/placement ported, per-record flag quirks approximated.
+38	partial	partial	ported	partial	Battle Axe: class 1 whip swing record (affine angle); record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+39	partial	partial	ported	partial	Death's Sickle: class 1 whip swing record (affine angle); record flags 0x2011; entity lifetime/placement ported, per-record flag quirks approximated.
+4	partial	partial	ported	partial	Bastard Sword: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+40	partial	partial	ported	partial	Rapier: class 2 thrust/poke record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+41	partial	partial	ported	partial	Estoc: class 2 thrust/poke record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+42	partial	partial	ported	partial	Cutall: class 2 thrust/poke record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+43	partial	partial	ported	partial	Spear: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+44	partial	partial	ported	partial	Trident: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+45	partial	partial	ported	partial	Lance: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+46	partial	partial	ported	partial	Partizan: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+47	partial	partial	ported	partial	Gabolg: class 2 thrust/poke record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+48	partial	partial	ported	partial	Gungner: class 2 thrust/poke record; record flags 0x2008; entity lifetime/placement ported, per-record flag quirks approximated.
+49	partial	partial	ported	partial	Ronginus' Spear: class 2 thrust/poke record; record flags 0x2021; entity lifetime/placement ported, per-record flag quirks approximated.
+5	partial	partial	ported	partial	Whip Sword: class 0 melee slash record; record flags 0x2001; entity lifetime/placement ported, per-record flag quirks approximated.
+50	partial	partial	ported	partial	Cestus: class 3 heavy swing record; record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated.
+51	partial	partial	ported	partial	Kaiser Knuckle: class 3 heavy swing record; record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated.
+52	partial	partial	ported	partial	Mach Punch: class 3 heavy swing record; record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated.
+53	partial	partial	ported	partial	Whip Knuckle: class 3 heavy swing record; record flags 0x0000; entity lifetime/placement ported, per-record flag quirks approximated.
+54	partial	partial	ported	partial	Poison Fist: class 3 heavy swing record; record flags 0x0040; entity lifetime/placement ported, per-record flag quirks approximated.
+55	partial	partial	ported	partial	Handgun: class 4 firearm record (class-4 shot entity); record flags 0x1001; entity lifetime/placement ported, per-record flag quirks approximated.
+56	partial	partial	ported	partial	Silver Gun: class 4 firearm record (class-4 shot entity); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+57	partial	partial	ported	partial	Positron Rifle: class 2 thrust/poke record; record flags 0x2002; entity lifetime/placement ported, per-record flag quirks approximated.
+58	missing	missing	ported	partial	Valmanway: class 5 player-copy record (class 5, only sub_08033F58); record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+6	partial	partial	ported	partial	Gladius: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+7	partial	partial	ported	partial	Gram: class 0 melee slash record; record flags 0x0001; entity lifetime/placement ported, per-record flag quirks approximated.
+8	partial	partial	ported	partial	Milican's Sword: class 0 melee slash record; record flags 0x0101; entity lifetime/placement ported, per-record flag quirks approximated.
+9	partial	partial	ported	partial	Hrunting: class 0 melee slash record; record flags 0x0041; entity lifetime/placement ported, per-record flag quirks approximated.

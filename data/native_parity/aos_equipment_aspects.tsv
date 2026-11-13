@@ -1,0 +1,46 @@
+equipment	stats	behavior	icon	notes
+0	ported	missing	ported	Casual Clothes: armor record 0; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+1	ported	missing	ported	Cloth Tunic: armor record 1; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+10	ported	missing	ported	Copper Plate: armor record 10; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+11	ported	missing	ported	Iron Plate: armor record 11; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+12	ported	missing	ported	Steel Plate: armor record 12; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+13	ported	missing	ported	Silver Plate: armor record 13; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+14	ported	missing	ported	Gold Plate: armor record 14; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+15	ported	missing	ported	Eversing: armor record 15; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+16	ported	missing	ported	Samurai Armor: armor record 16; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+17	ported	missing	ported	Silk Robe: armor record 17; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+18	ported	missing	ported	Elfin Robe: armor record 18; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+19	ported	missing	ported	Death's Robe: armor record 19; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+2	ported	missing	ported	Gym Clothes: armor record 2; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+20	ported	missing	ported	Demon's Mail: armor record 20; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+21	ported	missing	ported	Armor of Fire: armor record 21; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+22	ported	missing	ported	Armor of Water: armor record 22; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+23	ported	missing	ported	Blocking Mail: armor record 23; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+24	ported	missing	ported	Army Jacket: armor record 24; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+25	ported	missing	ported	Cape: accessory record 25; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+26	ported	missing	ported	Crimson Cloak: accessory record 26; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+27	ported	missing	ported	Black Cloak: accessory record 27; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+28	ported	missing	ported	Pendant: accessory record 28; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+29	ported	missing	ported	Heart Pendant: accessory record 29; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+3	ported	missing	ported	War Fatigues: armor record 3; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+30	ported	missing	ported	Scarf: accessory record 30; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+31	ported	missing	ported	Red Scarf: accessory record 31; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+32	ported	missing	ported	Ancient Belt: accessory record 32; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+33	ported	missing	ported	Black Belt: accessory record 33; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+34	ported	missing	ported	Skull Necklace: accessory record 34; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+35	ported	missing	ported	Flame Necklace: accessory record 35; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+36	ported	missing	ported	Satan's Ring: accessory record 36; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+37	ported	missing	ported	Tear Of Blood: accessory record 37; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+38	ported	missing	ported	Lucky Charm: accessory record 38; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+39	ported	missing	ported	Rare Ring: accessory record 39; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+4	ported	missing	ported	Ninja Suit: armor record 4; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+40	ported	missing	ported	Soul Eater Ring: accessory record 40; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+41	ported	missing	ported	Rune Ring: accessory record 41; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+42	ported	missing	ported	Sherman Ring: accessory record 42; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+43	ported	missing	ported	Gold Ring: accessory record 43; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+44	ported	missing	ported	Chaos Ring: accessory record 44; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+5	ported	missing	ported	Soldier Uniform: armor record 5; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+6	ported	missing	ported	Pitch Black Suit: armor record 6; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+7	ported	missing	ported	Olrox's Suit: armor record 7; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+8	ported	missing	ported	Dracula's Tunic: armor record 8; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+9	ported	missing	ported	Leather Plate: armor record 9; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.

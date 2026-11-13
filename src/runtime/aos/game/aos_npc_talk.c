@@ -462,3 +462,69 @@ uint32_t aos_guard_seq_tick(AosGuardSeq *g,
     g->counter = (uint16_t)(g->counter + 1);
     return 1;
 }
+
+void aos_npc_talk_667dc(AosNpcTalkLoop *g, bool cond864,
+                        uint32_t rng, AosGuardSeq *seq) {
+    /* sub_080667DC */
+    g->text_id = 0;
+    if (cond864 && (rng & 0xF) <= 3) {
+        g->text_id = 0x59;
+    }
+    if (g->text_id == 0) {
+        g->text_id = 0x54;
+        if (seq) {
+            seq->mode = 0x54;
+            seq->counter = 0;
+            seq->index = 5;
+            seq->fallback = 0;
+        }
+    }
+}
+
+void aos_npc_talk_666d4(AosNpcTalkLoop *g, uint32_t flags,
+                        bool cond864, uint32_t rng) {
+    /* sub_080666d4 */
+    g->cleared_42c_200 = g->froze_player = g->armed_42c_1 =
+        g->window_text = g->mark_38 = g->release_0 = false;
+    if (g->state == 0) {
+        g->cleared_42c_200 = true;      /* +0x42C &= ~0x200 */
+        g->state = 1;
+        g->ctr_b = g->ctr_c = 0;
+    }
+    if (g->state == 1) {
+        if ((flags & 7) != 7) return;   /* probe+mask+pause */
+        g->froze_player = true;
+        g->armed_42c_1 = true;          /* +0x42C |= 1 */
+        /* the ROM calls sub_080667DC here to fill +0x14; the
+         * port exposes that pick as aos_npc_talk_667dc so the
+         * caller composes both (cond864/rng are its inputs). */
+        g->window_text = true;          /* sub_08067934(+0x14) */
+        g->state = 2;
+        g->ctr_b = g->ctr_c = 0;
+        (void)cond864; (void)rng;
+    } else if (g->state == 2) {
+        if (!(flags & 8)) return;       /* sub_08067A04 poll */
+        g->mark_38 = true;              /* sub_08012048(0x38) */
+        g->release_0 = true;            /* sub_0805B66C(0) */
+        g->state = 0;
+        g->ctr_b = g->ctr_c = 0;
+    }
+}
+
+void aos_npc_talk_66828(AosNpcSpawnGate2 *g, bool flag20,
+                        bool flag26, bool keep) {
+    /* sub_08066828 */
+    g->marked_8 = g->deleted = g->variant = g->anim_step = false;
+    if (!flag20 || !flag26) {
+        g->flags59 |= 8;
+        g->marked_8 = true;
+        return;
+    }
+    if (!keep) {
+        g->deleted = true;              /* EntityDelete */
+        return;
+    }
+    g->variant = true;                  /* sub_0803F2C8(e,6,0,1) */
+    g->anim_step = true;                /* sub_0803F17C */
+    g->flags58 |= 0x40;
+}

@@ -306,3 +306,52 @@ uint32_t aos_guard_seq_tick(AosGuardSeq *g,
                             const uint16_t *const *table,
                             uint32_t rng, AosGuardXform xform,
                             uint16_t *out);
+
+/* sub_080666d4: repeating NPC dialogue — state 0 clears +0x42C
+ * bit 0x200; state 1 gates on probe/+0x16 mask/+0x4BE pause,
+ * freezes the player, picks the +0x14 text through
+ * sub_080667DC, sets +0x42C bit 0 and opens the window; state 2
+ * polls, marks sub_08012048(0x38), releases with
+ * sub_0805B66C(0) and loops to state 0. */
+typedef struct {
+    uint8_t state;      /* +0xA */
+    uint8_t ctr_b;      /* +0xB */
+    uint8_t ctr_c;      /* +0xC */
+    uint32_t text_id;   /* +0x14 (word) */
+    uint8_t flags58;    /* +0x58 unused here */
+    /* outputs */
+    bool cleared_42c_200;
+    bool froze_player;
+    bool armed_42c_1;
+    bool window_text;
+    bool mark_38;       /* sub_08012048(0x38) */
+    bool release_0;     /* sub_0805B66C(0) */
+} AosNpcTalkLoop;
+
+/* `flags`: bit0 probe_inside, bit1 +0x16 & 0x42, bit2 +0x4BE == 0,
+ * bit3 sub_08067A04 done. */
+void aos_npc_talk_666d4(AosNpcTalkLoop *g, uint32_t flags,
+                        bool cond864, uint32_t rng);
+
+/* sub_080667DC: +0x14 text pick — 0x59 when sub_0805B864 and
+ * (rng & 0xF) <= 3, else 0x54 which also programs the guard
+ * sequence (+0x138F4 = 0x54, counter 0, index 5, fallback 0). */
+void aos_npc_talk_667dc(AosNpcTalkLoop *g, bool cond864,
+                        uint32_t rng, AosGuardSeq *seq);
+
+/* sub_08066828: spawn gate — flags 0x20 AND 0x26 must both be
+ * set or +0x59 |= 8; then sub_0805B754(e, 2) keep: failure runs
+ * EntityDelete, success runs sub_0803F2C8(e,6,0,1),
+ * sub_0803F17C and sets +0x58 bit 0x40. */
+typedef struct {
+    uint8_t flags58;    /* +0x58 */
+    uint8_t flags59;    /* +0x59 */
+    /* outputs */
+    bool marked_8;      /* +0x59 |= 8 */
+    bool deleted;       /* EntityDelete */
+    bool variant;       /* sub_0803F2C8(6,0,1) */
+    bool anim_step;     /* sub_0803F17C */
+} AosNpcSpawnGate2;
+
+void aos_npc_talk_66828(AosNpcSpawnGate2 *g, bool flag20,
+                        bool flag26, bool keep);

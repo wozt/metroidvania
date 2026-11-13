@@ -1,3 +1,21 @@
+## Patch 1101 - Aria repeating dialogue and spawn gates
+
+- `aos_npc_talk_666d4` ports the three-state repeating NPC
+  dialogue: state 0 clears +0x42C bit 0x200, state 1 gates on
+  probe/+0x16 mask/+0x4BE pause, freezes the player, sets
+  +0x42C bit 0 and opens the +0x14 window, state 2 polls,
+  marks sub_08012048(0x38), releases with sub_0805B66C(0) and
+  loops to state 0.
+- `aos_npc_talk_667dc` ports the text pick: 0x59 when
+  sub_0805B864 and (rng & 0xF) <= 3, else 0x54 which also
+  programs the guard sequence (+0x138F4 = 0x54, index 5).
+- `aos_npc_talk_66828` ports the double-flag spawn gate:
+  flags 0x20 AND 0x26 required else +0x59 |= 8; keep
+  sub_0805B754(2) failure runs EntityDelete, success runs
+  sub_0803F2C8(6,0,1) + sub_0803F17C + facing 0x40.
+- Unit-tested; three routines added to the
+  aos.events.opening_scene annotation.
+
 ## Patch 1100 - Aria guard spawn gate and sequence cursor
 
 - `aos_npc_talk_66024` ports the Object20 spawn gate: flag 0x20 +

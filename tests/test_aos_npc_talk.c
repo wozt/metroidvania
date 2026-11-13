@@ -309,6 +309,48 @@ int main(void) {
     tr = aos_guard_seq_tick(&gs, tbl, 0, NULL_XFORM, &out);
     assert(tr == 1 && out == 20);    /* recA[3 + 1] */
 
+    /* sub_080667dc text pick + guard seq side effect. */
+    AosNpcTalkLoop tl; AosGuardSeq gs2;
+    memset(&tl, 0, sizeof tl); memset(&gs2, 0, sizeof gs2);
+    aos_npc_talk_667dc(&tl, true, 5, &gs2);   /* (5 & 0xF) <= 3? no */
+    assert(tl.text_id == 0x54 && gs2.mode == 0x54 &&
+           gs2.index == 5 && gs2.counter == 0);
+    memset(&tl, 0, sizeof tl); memset(&gs2, 0, sizeof gs2);
+    aos_npc_talk_667dc(&tl, true, 2, &gs2);   /* 2 <= 3 -> 0x59 */
+    assert(tl.text_id == 0x59 && gs2.mode == 0);
+    memset(&tl, 0, sizeof tl);
+    aos_npc_talk_667dc(&tl, false, 0, NULL);
+    assert(tl.text_id == 0x54);
+
+    /* sub_080666d4 repeating dialogue. */
+    memset(&tl, 0, sizeof tl);
+    aos_npc_talk_666d4(&tl, 0, false, 0);
+    assert(tl.cleared_42c_200 && tl.state == 1);
+    aos_npc_talk_666d4(&tl, 1, false, 0);
+    assert(!tl.froze_player && tl.state == 1);
+    aos_npc_talk_666d4(&tl, 7, false, 0);
+    assert(tl.froze_player && tl.armed_42c_1 && tl.window_text &&
+           tl.state == 2);
+    aos_npc_talk_666d4(&tl, 7, false, 0);
+    assert(tl.state == 2 && !tl.release_0);
+    aos_npc_talk_666d4(&tl, 15, false, 0);
+    assert(tl.mark_38 && tl.release_0 && tl.state == 0);
+
+    /* sub_08066828 double-flag spawn gate. */
+    AosNpcSpawnGate2 sg2;
+    memset(&sg2, 0, sizeof sg2);
+    aos_npc_talk_66828(&sg2, false, true, true);
+    assert(sg2.marked_8 && (sg2.flags59 & 8));
+    memset(&sg2, 0, sizeof sg2);
+    aos_npc_talk_66828(&sg2, true, false, true);
+    assert(sg2.marked_8);
+    memset(&sg2, 0, sizeof sg2);
+    aos_npc_talk_66828(&sg2, true, true, false);
+    assert(sg2.deleted && !sg2.variant);
+    memset(&sg2, 0, sizeof sg2);
+    aos_npc_talk_66828(&sg2, true, true, true);
+    assert(sg2.variant && sg2.anim_step && (sg2.flags58 & 0x40));
+
     puts("aos_npc_talk: ok");
     return 0;
 }

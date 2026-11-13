@@ -3,6 +3,12 @@
  * sub_08054E38/sub_08054F74 spawners and the sub_08055070/
  * sub_0805514C/sub_080552C4/sub_080554BC updates that
  * Object1CUpdate installs on its type-0x1B/0x49 children. */
+/* Integration status: faithful native-routine port kept as a
+ * parity reference. It is unit-tested but NOT linked into
+ * fusion_aria_runtime; classified partial in
+ * data/native_parity/annotations.tsv until a real gameplay
+ * path consumes it. */
+
 #ifndef AOS_SAVE_ROOM_FX_H
 #define AOS_SAVE_ROOM_FX_H
 

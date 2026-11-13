@@ -7,6 +7,12 @@
  * callback, offset position, timer, random word and index
  * fields. The entity itself is not instantiated here; the spawn
  * is injected. */
+/* Integration status: faithful native-routine port kept as a
+ * parity reference. It is unit-tested but NOT linked into
+ * fusion_aria_runtime; classified partial in
+ * data/native_parity/annotations.tsv until a real gameplay
+ * path consumes it. */
+
 #ifndef AOS_SEQ_PARTICLES_H
 #define AOS_SEQ_PARTICLES_H
 

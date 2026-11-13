@@ -7,6 +7,12 @@
  * two also spin + 0x38 by s16 + 0x26 and run the sub_0803E058
  * affine call; sub_080658AC additionally restores the palette
  * through sub_0803E6BC(+ 0x58 & 7) on the failed probe. */
+/* Integration status: faithful native-routine port kept as a
+ * parity reference. It is unit-tested but NOT linked into
+ * fusion_aria_runtime; classified partial in
+ * data/native_parity/annotations.tsv until a real gameplay
+ * path consumes it. */
+
 #ifndef AOS_FLYER_H
 #define AOS_FLYER_H
 

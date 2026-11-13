@@ -1,3 +1,42 @@
+## Patch 1108 - Architecture audit and consolidation rules
+
+Phase A audit of commits b9912cc9..142d171f findings:
+
+- Six `src/runtime/aos/game/` modules are faithful native-routine
+  ports compiled only into their own unit tests and never linked
+  into `fusion_aria_runtime`: `aos_menu_cursor`, `aos_npc_talk`,
+  `aos_shop`, `aos_flyer`, `aos_seq_particles`,
+  `aos_save_room_fx`. They overlap functionally with the playable
+  menu/NPC layers but are parity references, honestly classified
+  `partial` in `annotations.tsv`; each header now states its
+  integration status explicitly.
+- `aos_menu_cursor.h` had its include guard closing at line 42
+  with every later typedef outside it; the boundary is fixed.
+- The constant-looking runtime arguments
+  (`aos_object22_update(..., false, 0)`, `object29(0,0)`,
+  `object32(false, near)`, `object35(false,false)`,
+  `object1f(false)`, `object21(0,0)`) are documented
+  approximations for missing native links, not silent fakes.
+- Save responsibilities are distinct: `aos_save` (portable
+  slots), `aos_save_room` (Object1C interaction, wired),
+  `aos_save_room_fx` (ambient children, test-only) and
+  `aos_menu_save_bridge` (title launch). No duplication found.
+- `src/runtime/aos/menus/` owns playable menu presentation;
+  `aos_menu_cursor` is the unintegrated native parity port of
+  the same domain. No runtime duplication, but future menu work
+  must extend `aos/menus/`, not add another port.
+- `aria_runtime.c` is ~11.5k lines with the SPECIAL-object
+  dispatch inline; recorded as a maintainability risk. Refactor
+  must be incremental and is deferred to a dedicated cycle.
+- Uncommitted in-flight work on the text engine was discarded;
+  committed history is unchanged.
+
+Phase B: `AGENTS.md` gained the permanent section
+"Architecture, Native Fidelity and Integration Rules" (search
+before implementing, no duplicate ownership, unit tests are not
+integration, no placeholder states, minimal monolith growth,
+registry synchronization, honest statuses).
+
 ## Patch 1107 - Aria menu lifecycle and stat-compare routines
 
 - `aos_menu_equip_stats_66a00` ports sub_08066A00: candidate

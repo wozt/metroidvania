@@ -5,6 +5,12 @@
  * the + 0xB/+ 0xC menu substates, the + 0xD countdown and the
  * text-window polls; native globals are injected as inputs and
  * every engine effect is reported as an output request. */
+/* Integration status: faithful native-routine port kept as a
+ * parity reference. It is unit-tested but NOT linked into
+ * fusion_aria_runtime; classified partial in
+ * data/native_parity/annotations.tsv until a real gameplay
+ * path consumes it. */
+
 #ifndef AOS_SHOP_H
 #define AOS_SHOP_H
 

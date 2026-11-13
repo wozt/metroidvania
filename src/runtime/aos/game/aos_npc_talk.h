@@ -3,6 +3,12 @@
  * code_08060B98.s: the + 0x42C bit-1 arm, the sub_08067934
  * window open, the sub_08067A04 text poll and the
  * sub_0805B66C/sub_08067898 exits. */
+/* Integration status: faithful native-routine port kept as a
+ * parity reference. It is unit-tested but NOT linked into
+ * fusion_aria_runtime; classified partial in
+ * data/native_parity/annotations.tsv until a real gameplay
+ * path consumes it. */
+
 #ifndef AOS_NPC_TALK_H
 #define AOS_NPC_TALK_H
 

@@ -52,3 +52,72 @@ decode both games' data), so target it while working and run it in full only onc
 
 NO JULIUS MODE and NO SOUL TRADE in aria of sorrow
 NO NES METROID in metroid zero mission
+## Architecture, Native Fidelity and Integration Rules
+
+These rules are permanent and apply to every development cycle.
+
+1. **Search before implementing; reuse existing systems.** Before
+   writing any new implementation, search the whole codebase for
+   equivalent behavior and identify the current owner of that
+   responsibility. Extend or integrate the existing implementation
+   whenever appropriate; create a new component only when a genuine
+   distinct responsibility requires it, and document why.
+2. **No duplicate functional ownership.** One functional
+   responsibility must have one clearly identified owner. Do not
+   implement a second menu, equipment, stat-comparison or save
+   system when an existing one can be extended correctly. Check
+   `src/runtime/aos/menus/`, `src/runtime/aos/game/`,
+   `src/runtime/aos/souls/` and the other established directories
+   first.
+3. **Respect the established directory and module
+   responsibilities.** `src/runtime/aos/menus/` owns playable
+   menu presentation and UX; `src/runtime/aos/game/` owns object
+   and gameplay behavior; `src/runtime/aos/souls/` owns the soul
+   systems; `src/runtime/aria_runtime.c` is the Aria runtime
+   host. New code goes where its responsibility already lives.
+4. **Preserve native routine traceability and human-readable
+   object identities.** Native object numbers and source routine
+   references stay in code comments, annotations and registries;
+   every native object must have a documented, understandable
+   functional identity. Use the existing registries as the source
+   of truth and generate readable views instead of creating
+   redundant registries.
+5. **Unit tests are not integration.** Every feature must
+   distinguish: native routine translated, unit-tested
+   independently, linked into the actual runtime, connected to
+   the correct native state and dependencies, exercised through
+   a real gameplay path, and compared with native behavior where
+   possible. Never mark a module functionally integrated because
+   its unit tests pass. Unconnected implementations must remain
+   explicitly classified as partial or unintegrated.
+6. **No arbitrary state constants or silent gameplay
+   approximations.** Never replace missing native state with
+   arbitrary constants to make code compile or advance. Never
+   silently replace native entities, animations, collision,
+   events or particles with generic placeholders. When a
+   dependency is missing, identify it, implement or connect it
+   when in scope, otherwise document the limitation and keep the
+   feature partial.
+7. **No placeholder implementations presented as completed
+   features.** Honest `partial`/`missing` statuses are required;
+   never inflate completion percentages without evidence.
+8. **Minimize monolithic runtime growth.** `aria_runtime.c`
+   concentrates object dispatch; move coherent handling behind
+   interfaces where it improves maintainability, without breaking
+   native dispatch ordering or behavior. Refactor incrementally,
+   preserving behavior and testing each step. Do not perform
+   blind large-scale rewrites.
+9. **Keep native source data, engine behavior and
+   project-specific extensions separate.**
+10. **Update existing registries and documentation** rather than
+    duplicating tracking data: `annotations.tsv`,
+    `aos_monster_aspects.tsv`, `features.tsv`, and the hand-written
+    docs in the same commit as the change.
+11. **Preserve the two distinct native gameplay engines** (Aria
+    of Sorrow and Metroid: Zero Mission). No Julius mode, no soul
+    trade, no NES Metroid.
+12. **Require integration evidence before claiming fidelity.**
+    Relevant integration tests and native comparisons are needed
+    before a feature is called faithful or validated.
+13. **Never remove or rewrite working systems** without an
+    architectural justification and regression checks.

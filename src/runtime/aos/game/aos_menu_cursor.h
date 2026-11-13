@@ -1,3 +1,9 @@
+/* Integration status: faithful native-routine port kept as a
+ * parity reference. It is unit-tested but NOT linked into
+ * fusion_aria_runtime; classified partial in
+ * data/native_parity/annotations.tsv until a real gameplay
+ * path consumes it. */
+
 #ifndef FUSION_AOS_MENU_CURSOR_H
 #define FUSION_AOS_MENU_CURSOR_H
 
@@ -39,7 +45,6 @@ uint32_t aos_menu_cursor_tick(AosMenuCursor *s, uint8_t *ctr,
                               AosMenuKindSpanFn span_fn, void *ctx,
                               uint32_t input, bool *song);
 
-#endif
 
 /* sub_08067660: menu span resolver — runs sub_08044E94(kind)
  * for its side effect, then returns the inventory byte at
@@ -332,3 +337,5 @@ typedef struct {
 } AosMenuPopupOps;
 
 void aos_menu_popup_6724c(AosMenuPopupOps *ops);
+
+#endif

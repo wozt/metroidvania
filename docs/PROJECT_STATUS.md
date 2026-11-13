@@ -1,3 +1,13 @@
+## Patch 1093 - Aria sequence particle child and table pick
+
+- `aos_seq_particles` gains `aos_seq_particle_child_update`
+  (sub_08065834: +0x59 bit 0 marks bit 3, else the sub_0803F17C
+  animation step) and `aos_seq_table_pick` (sub_08065800: the
+  0x085268A8 table indexed by (gEwramData + 6 >> 1) % count for
+  the sub_0803C918 spawn triple).
+- Unit-tested; both routines added to the
+  aos.events.opening_scene annotation.
+
 ## Patch 1092 - Aria sequence particle update sub_08062C18
 
 - `aos_seq_particles` gains `aos_seq_particle_update`: the two-state

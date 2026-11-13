@@ -100,3 +100,22 @@ void aos_seq_particle_update(AosSeqParticleEnt *e,
         e->flags59 |= 0x8;
     }
 }
+
+void aos_seq_particle_child_update(uint8_t *flags59, bool *anim_step) {
+    if (*flags59 & 1) {
+        *flags59 |= 0x8;
+    } else {
+        *anim_step = true;  /* sub_0803F17C */
+    }
+}
+
+int aos_seq_table_pick(const AosSeqTableA8 *table, uint16_t room_word,
+                       uint32_t *word0, uint16_t *h4) {
+    if (!table || !table->count) return -1;
+    int index = (int)((room_word >> 1) % table->count);
+    const uint8_t *rec = table->records + index * 8;
+    memcpy(word0, rec, 4);
+    memcpy(h4, rec + 4, 2);
+    (void)table->field2; /* sub_0803C918 arg3, draw-side */
+    return index;
+}

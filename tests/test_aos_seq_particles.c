@@ -89,6 +89,32 @@ int main(void) {
     assert(pe.timer == 0x40 && pe.anim5c == 0x11 &&
            pe.pal_restored && (pe.flags59 & 0x8));
 
+    /* sub_08065834: bit-0 mark or animation step. */
+    uint8_t ch = 0; bool step = false;
+    aos_seq_particle_child_update(&ch, &step);
+    assert(step && ch == 0);
+    ch = 1; step = false;
+    aos_seq_particle_child_update(&ch, &step);
+    assert(!step && (ch & 0x9) == 0x9);
+
+    /* sub_08065800: table pick by (room_word >> 1) % count. */
+    static const uint8_t blob[24] = {
+        1,2,3,4, 5,6,7,8,
+        9,10,11,12, 13,14,15,16,
+        17,18,19,20, 21,22,23,24 };
+    AosSeqTableA8 tab;
+    memset(&tab, 0, sizeof tab);
+    tab.count = 3; tab.field2 = 0x1234; tab.records = blob;
+    uint32_t w0; uint16_t h4;
+    int idx = aos_seq_table_pick(&tab, 8, &w0, &h4);
+    /* (8 >> 1) % 3 = 1 -> record 1: bytes 8..15 */
+    assert(idx == 1);
+    assert(w0 == 0x0C0B0A09u && h4 == 0x0E0D);
+    idx = aos_seq_table_pick(&tab, 0, &w0, &h4);
+    assert(idx == 0 && w0 == 0x04030201u && h4 == 0x0605);
+    tab.count = 0;
+    assert(aos_seq_table_pick(&tab, 4, &w0, &h4) == -1);
+
     puts("aos_seq_particles: ok");
     return 0;
 }

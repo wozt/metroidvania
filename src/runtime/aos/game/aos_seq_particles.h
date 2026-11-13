@@ -95,3 +95,22 @@ void aos_seq_particle_update(AosSeqParticleEnt *e,
                              bool (*spawn_child)(int16_t x,
                                                  int16_t y),
                              int32_t (*sine)(uint32_t angle));
+
+/* sub_08065834: the spawned child's update — +0x59 bit 0 set
+ * marks +0x59 bit 3, otherwise the sub_0803F17C animation step
+ * runs (reported through `anim_step`). */
+void aos_seq_particle_child_update(uint8_t *flags59, bool *anim_step);
+
+/* sub_08065800: indexes the 0x085268A8 table by
+ * (gEwramData + 6 u16 >> 1) % count and calls
+ * sub_0803C918(record->word0, record->h4, table->h2, 1).
+ * `room_word` is the injected gEwramData + 6 halfword; the
+ * table is caller-owned. Returns the chosen record index. */
+typedef struct {
+    uint16_t count;     /* +0 */
+    uint16_t field2;    /* +2 -> sub_0803C918 arg3 */
+    const uint8_t *records; /* +4, stride 8: {u32, u16 at +4} */
+} AosSeqTableA8;
+
+int aos_seq_table_pick(const AosSeqTableA8 *table, uint16_t room_word,
+                       uint32_t *word0, uint16_t *h4);

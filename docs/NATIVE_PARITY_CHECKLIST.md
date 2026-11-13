@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 183 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 184 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2052 | 1521 |
+| Castlevania: Aria of Sorrow | 2061 | 1512 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2668,6 +2668,15 @@ Tests: [`tests/test_aos_object2a.c`](../tests/test_aos_object2a.c).
 Dependencies: `aos.objects.special_sprites`.  
 Known divergences: The bgInfo[1] scroll frame (gEwramData + 0xA094 xPos/yPos) is approximated by the logic camera so the screen-locking only tracks the main view, the + 0x13190 focus slot compare is approximated by a player-near window counting sub_0802138C calls, the sub_080421AC armed-slot read is approximated by a weapon hitbox overlap against a small box at the draw position, the sub_080428B4/sub_08042848 attack and hurt records (the 0x08118640 five-word stack copy indexed by param1 * 4) and the sub_0804277C(8) attack preset are exposed as the hitbox_word field but not attached to the combat system, the sub_080577DC draw-position swap and the sub_0803F2C8 preset argument are not applied to the exported animation, param1 outside 0-3 marks the object invalid where the native create would EntityDelete, and there is no emulator comparison.  
 Next action: Attach the 0x08118640 attack records to the combat system and identify the bgInfo[1] scroll consumer difference versus the logic camera once a room uses id 42.
+
+[~] **`aos.objects.scripted_elevator` — Object22 scripted elevator sequence director.** Object22Create (0x08056828) runs the sub_08057034 sprite attach exporting as special_34 (tiles 0x081CBE8C, palette sub_08068264(0x08209FD8, 2), frames 0x082103F4), installs the sub_0804277C(8) hurt slot and 0x0C20FFF0 collision box, derives the + 0x3C camera byte, sets + 0x42 = 0x40 - A094[6], + 0x46 = 0x9D - A094[0xA] and + 0x54 = 0x2800. Object22Update (0x08056F14) requests sub_08021278(1) on the + 0x23 bit-0 mark, runs the 12-state sub_080568F4 machine while + 0xA == 0 and finishes with sub_0803F17C and the sub_080421AC read. The machine visits six stops (bounds 0x0852649C, records 0x085264BC -> 0x085264A8, lifetimes 0x08118628): state 0 arms on the linked check, state 1 integrates + 0x48 and clamps + 0x42 to the stop bound, state 2 runs the delay/volley/hit-mask substates firing sub_08056F50 shots with PlaySong 0x15B/0x15A, state 3 advances stops back to state 1 or to state 10 past stop 5, state 4 spawns the sub_08056D6C carrier with PlaySong 0x15C into state 5, state 5 runs the approximated finale physics and phase timer, and state 10 sets the gEwramData + 0x348 bit 15. Unit-tested in test_aos_object22.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_0804277C`, `aos:asm:asm/code/code_08040A38.s:sub_08042848`, `aos:asm:asm/code/code_08040A38.s:sub_080428B4`, `aos:asm:asm/code/code_08050A3C.s:Object22Create`, `aos:asm:asm/code/code_08050A3C.s:Object22Update`, `aos:asm:asm/code/code_08050A3C.s:sub_080568F4`, `aos:asm:asm/code/code_08050A3C.s:sub_08056D6C`, `aos:asm:asm/code/code_08050A3C.s:sub_08056E74`, `aos:asm:asm/code/code_08050A3C.s:sub_08056F50`, `aos:asm:asm/code/code_08050A3C.s:sub_08056FE8`, `aos:asm:asm/code/code_08050A3C.s:sub_08057004`, `aos:asm:asm/code/code_08050A3C.s:sub_08057034`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:asm:asm/code/code_08060B98.s:sub_0806A224`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3C0`, `aos:asm:asm/code/code_08060B98.s:sub_0806D518`, `aos:c:src/code/code_080211F0.c:sub_08021278`, `aos:c:src/code/code_080211F0.c:sub_08021654`, `aos:c:src/code/code_08039340.c:sub_0803AFB8`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:EntityCreateInRange`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/game/aos_object22.c`](../src/runtime/aos/game/aos_object22.c), [`src/runtime/aos/game/aos_object22.h`](../src/runtime/aos/game/aos_object22.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object22.c`](../tests/test_aos_object22.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The gEwramData + 0x13190 linked-entity check is an input approximated as false in the runtime, the sub_0806A224 state-5 physics collapses to the shared gravity model without its collision probes, the sub_08056F50 projectiles and the sub_08056D6C carrier child become sparkle effects (their entities, + 0x18 parent link, + 0x36 tag, hurt box and sub_08056E74 follow-update are not modelled), the volley hit mask reads 0, sub_08021278 becomes a deactivate output, the + 0x3C camera byte and A094 room fields pass approximations, and there is no emulator comparison.  
+Next action: Port the sub_0806A224 collision physics and the sub_08056F50/sub_08056D6C children as real entities once the projectile and parent-link paths exist, and compare an elevator room against an emulator.
 
 [~] **`aos.objects.skull_eye_flames` — Object2F skull-eye flame jets.** Object2FCreate (0x08058C1C) deletes the entity when the + 0x37E bitfield bit 2 is set, loads the sprite through sub_08058CF8 (tiles 0x081CBEEC, palette slot sub_08068264(0x0820A1C4, 9), frames 0x08211844 = special_47), presets sub_0803F2C8(6, 0, 1), rolls + 0x6F = rng % 6, sets + 0x5C = 0x1A, clears + 0x59 bit 1, sets + 0x58 bit 0x20 and + 0xA = 0; the + 0x30 s16 param indexes the 0x08118650 table (x {0x30, 0x78, 0xA8}, y {0x38, 0x48, 0x30}) into + 0x42/+ 0x46. Object2FUpdate (0x08058CD8) runs sub_08058D44 while + 0xA == 0 then sub_0803F17C: while + 0xB == 0 and the + 0x42C bit-0x1000 trigger is set, + 0xB latches and + 0x58 bit 0x20 clears.
 

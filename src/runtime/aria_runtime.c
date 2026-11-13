@@ -54,6 +54,7 @@
 #include "aos/game/aos_object25.h"
 #include "aos/game/aos_object31.h"
 #include "aos/game/aos_object33.h"
+#include "aos/game/aos_object22.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -480,6 +481,7 @@ typedef struct {
     AosObject25 object25;   /* object 0x25: soul carrier spawner */
     AosObject31 object31;   /* object 0x31: delayed-launch spinner */
     AosObject33 object33;   /* object 0x33: dual-burst emitter */
+    AosObject22 object22;   /* object 0x22: scripted elevator */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5270,6 +5272,44 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     .kind = AOS_EFFECT_SPARKLE, .direct = false,
                     .x = e->x + (int)(aos_random() % 0x81) - 0x40,
                     .y = e->y + (int)(aos_random() % 0x41) - 0x20};
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 34) {
+            /* Object22Create / Object22Update (sUnk_084F0DF8[34] /
+             * sUnk_084F0ED8[34]): the scripted elevator director.
+             * The sprite triple exports as special_34; the + 0x13190
+             * linked-entity check approximates as false (no linked
+             * carrier in the runtime), the volley hit mask reads 0,
+             * room fields pass 0 and each sub_08056F50 shot /
+             * sub_08056D6C carrier becomes a sparkle effect. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object22_create(&e->object22, e->param1, 0, 0,
+                                    0, 0, true, &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            aos_object22_update(&e->object22, false, 0);
+            if (e->object22.song >= 0)
+                aos_audio_play_song((uint16_t)e->object22.song);
+            if (e->object22.spawn_projectile &&
+                room->effect_count < MAX_EFFECTS) {
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = false,
+                    .x = (int)(e->object22.shot_x >> 16) + e->x - cam_x,
+                    .y = (int)(e->object22.shot_y >> 16) + e->y - cam_y};
+            }
+            if (e->object22.spawn_carrier &&
+                room->effect_count < MAX_EFFECTS) {
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = false,
+                    .x = e->x, .y = e->y};
+            }
+            if (e->object22.set_global_348)
+                aria_pickup_state.global_flags |= 0x8000;
+            if (e->object22.deactivate) e->spawned = false;
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 33) {

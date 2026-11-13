@@ -1,3 +1,27 @@
+## Patch 1072 - Aria Object22 scripted elevator ported
+
+- `src/runtime/aos/game/aos_object22.c` ports Object22Create
+  (0x08056828), Object22Update (0x08056F14) and the
+  sub_080568F4 machine, dispatch index 34: the sub_08057034
+  sprite attach exporting as the new `special_34` asset
+  (tiles 0x081CBE8C, palette 0x08209FD8 bank 2, frames
+  0x082103F4), the hurt/collision install, the camera byte,
+  the six-stop bound table 0x0852649C, the volley records
+  0x085264BC -> 0x085264A8 and the lifetime table
+  0x08118628.
+- The 12-state machine arms on the + 0x13190 linked check,
+  moves + 0x42 to each stop bound, runs the delay/volley/
+  hit-mask substates firing sub_08056F50 shots (songs
+  0x15B/0x15A), advances stops through state 3, drops to the
+  state-4 carrier spawn (sub_08056D6C, song 0x15C) and state
+  5 finale, and sets the gEwramData + 0x348 bit 15 at state
+  10.
+- Approximations: linked check as input, state-5 physics as
+  the shared gravity model, projectiles/carrier as sparkle
+  effects, hit mask 0. Registered as
+  aos.objects.scripted_elevator; unit-tested in
+  test_aos_object22.
+
 ## Patch 1071 - Aria Object33 dual-burst emitter ported
 
 - `src/runtime/aos/game/aos_object33.c` ports Object33Create

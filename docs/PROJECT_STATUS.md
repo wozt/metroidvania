@@ -1,3 +1,16 @@
+## Patch 1095 - Aria guide follower machine sub_08065A5C
+
+- `aos_npc_talk_65a5c` ports the follower state machine:
+  state 0 opens window 0x28 and sets gEwramData + 0x417, state 1
+  polls sub_08067A04 then runs the +0xB/+0xC scripts — script A
+  (flag byte, 0x30-tick wait, player x clamp at 0xA0, return
+  flag 0x20) and script B (vx 0x8000 walk, +0x58 facing mirrors
+  on the player, sub_0805B878(0x1040) past x 0xFF); state 0x80
+  releases through sub_0805B66C(1). The ROM same-call
+  fallthroughs between cases are preserved.
+- Unit-tested; sub_08065A5C added to the
+  aos.events.opening_scene annotation.
+
 ## Patch 1094 - Aria Object20 follower spawn sub_080659A4
 
 - `aos_npc_talk_659a4` ports the spawn init: the

@@ -81,6 +81,47 @@ int main(void) {
     aos_npc_talk_659a4(&sp, false, true, 0, 0, 300, 200, 0);
     assert(!(sp.flags58 & 0x40));
 
+    /* sub_08065A5C: guide follower state machine. */
+    AosNpcGuide gd;
+    bool bit6 = false, f417 = false;
+    memset(&gd, 0, sizeof gd);
+    uint32_t r = aos_npc_talk_65a5c(&gd, false, 0, 0, 0, &bit6, &f417);
+    assert(gd.window_open && gd.wrote_417 && gd.state_a == 1 &&
+           f417 && gd.text_poll);
+    /* state 0 falls into state 1 in the same call: script A
+     * case 0 -> 1 with the ROM fallthrough decrement. */
+    assert(gd.ctr_c == 1 && gd.timer_d == 0x2F && gd.flag_3b7_set);
+    /* count down to the wrap: 0x30 more calls (0x2F -> 0 -> 0xFF). */
+    for (int i = 0; i < 0x30; ++i)
+        aos_npc_talk_65a5c(&gd, false, 0, 0, 0, &bit6, &f417);
+    assert(gd.ctr_c == 2);
+    /* case 2 with player x <= 0xA0 clamps and advances. */
+    aos_npc_talk_65a5c(&gd, false, 0xA0, 0, 0, &bit6, &f417);
+    assert(gd.player_x_clamped && gd.ctr_c == 3);
+    aos_npc_talk_65a5c(&gd, false, 0, 0, 0, &bit6, &f417);
+    assert(gd.flag_3b7_clear && gd.ctr_c == 3);
+    /* player x > 0xA0 returns flag 0x20 without advancing. */
+    memset(&gd, 0, sizeof gd); gd.state_a = 1; gd.ctr_b = 0;
+    gd.ctr_c = 2;
+    r = aos_npc_talk_65a5c(&gd, false, 0xA1, 0, 0, &bit6, &f417);
+    assert(r == 0x20 && gd.ctr_c == 2);
+    /* script B: case 0 arms vx and falls into case 1. */
+    memset(&gd, 0, sizeof gd); gd.state_a = 1; gd.ctr_b = 1;
+    gd.flags58 = 0xFF;
+    aos_npc_talk_65a5c(&gd, false, 0, 0x10000, 0x40, &bit6, &f417);
+    assert(gd.vx == 0x8000 && gd.ctr_c == 1);
+    assert((gd.flags58 & 0x41) == 0x40);
+    /* x int part <= 0xFF: x += 0x8000, facing mirror vs player. */
+    gd.x = 0x10000; /* 1.0 px */
+    aos_npc_talk_65a5c(&gd, false, 0, 0x20000, 0, &bit6, &f417);
+    assert(gd.x == 0x18000 && bit6);
+    /* text done -> state 0x80 -> release next call. */
+    memset(&gd, 0, sizeof gd); gd.state_a = 1;
+    aos_npc_talk_65a5c(&gd, true, 0, 0, 0, &bit6, &f417);
+    assert(gd.state_a == 0x80 && gd.state_80);
+    aos_npc_talk_65a5c(&gd, false, 0, 0, 0, &bit6, &f417);
+    assert(gd.release);
+
     puts("aos_npc_talk: ok");
     return 0;
 }

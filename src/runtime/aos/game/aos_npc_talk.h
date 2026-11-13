@@ -97,3 +97,38 @@ void aos_npc_talk_659a4(AosNpcSpawn *s, bool gate_12078,
                         bool keep_5b754, uint16_t cam_x, uint16_t cam_y,
                         int32_t self_x, int32_t player_x,
                         uint8_t player_anim5c);
+
+/* sub_08065A5C: the guide follower state machine — dispatch on
+ * +0xA (0 opens window 0x28 and sets gEwramData + 0x417, 1 polls
+ * sub_08067A04 then runs the +0xB/+0xC script, 0x80 closes through
+ * sub_08013960/sub_08012048/sub_0805B66C); returns the ROM's r7
+ * flag word (0x20 when the +0xC==2 x-clamp branch fires). The
+ * gEwramData + 0x60 + 0x3B7 byte and the player entity fields are
+ * injected. */
+typedef struct {
+    uint8_t state_a;    /* +0xA */
+    uint8_t ctr_b;      /* +0xB */
+    uint8_t ctr_c;      /* +0xC */
+    uint8_t timer_d;    /* +0xD */
+    uint8_t flags58;   /* +0x58 */
+    uint8_t flags6d;    /* +0x6D */
+    int32_t x;          /* +0x40 16.16 */
+    int32_t vx;         /* +0x48 */
+    uint32_t flag_r7;   /* return value */
+    /* outputs */
+    bool window_open;       /* sub_08067934(0x28) */
+    bool wrote_417;         /* gEwramData + 0x417 = 1 */
+    bool text_poll;         /* sub_08067A04 ran */
+    bool state_80;          /* +0xA became 0x80 */
+    bool song_1040;         /* sub_0805B878(0x1040) */
+    bool flag_3b7_set;      /* gEwramData + 0x60 + 0x3B7 = 1 */
+    bool flag_3b7_clear;    /* gEwramData + 0x60 + 0x3B7 = 0 */
+    bool player_x_clamped;  /* player +0x42 forced to 0xA0 */
+    bool player_facing_set; /* player +0x58 bit 6 updates */
+    bool release;           /* sub_0805B66C(1) on state 0x80 */
+} AosNpcGuide;
+
+uint32_t aos_npc_talk_65a5c(AosNpcGuide *g, bool text_done,
+                            int16_t player_x_px, int32_t player_x,
+                            uint8_t player_flags58, bool *player_bit6,
+                            bool *flag_417);

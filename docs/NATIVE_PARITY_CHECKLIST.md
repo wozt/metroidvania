@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 187 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 188 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2078 | 1495 |
+| Castlevania: Aria of Sorrow | 2084 | 1489 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2551,6 +2551,15 @@ Tests: [`tests/test_aos_object03.c`](../tests/test_aos_object03.c).
 Dependencies: `aos.objects.cinematic_trigger`.  
 Known divergences: The + 0x13220 escort-busy word, the + 0x4CC bit 6 cinematic flag and the + 0x13114/+ 0x13118 partner entities are not modelled — the runtime passes cinematic false so state 0 takes the direct state-0 -> 2 path; the winOut blend and the sub_0804DF3C sprite attach are approximated by the exported art; states 4+ are native no-ops.  
 Next action: Model the + 0x13220/+ 0x13114/+ 0x13118 escort entities and the + 0x4CC cinematic flag, then compare a scripted escort scene against an emulator.
+
+[~] **`aos.objects.fade_director` — Object37 proximity fade director.** Object37Create (0x0805A930) attaches the sub_0805AE18 sprite (tiles 0x08259130 bank 0, palette sub_08068264(0x08259138, 0), frames 0x082591BC — exported as special_55), deletes on load or RNG failure, seeds + 0x65 = 1, + 0x5C = 9, + 0x58 variant bits and + 0x72, then probes the player on the + 0x40 x axis: near sets + 0x18 = 0x3000 and + 0x1C = 0, far arms + 0x1C, fires five sub_08002200 placements and the sub_0805AC50 child. Object37Update (0x0805AE00) runs sub_0805AA94 while + 0xA == 0: state 0 decays + 0x18 by 0x100 and enters state 1 with PlaySong 0x113 when far with player flag 0x40 set; state 1 grows + 0x18 by 0x100 to 0x3000, drains a pending + 0x1C into five sub_08002248 placements and returns to state 0 — re-arming + 0x1C with five sub_08002200 placements and PlaySong 0x113 — when far with the flag clear. Unit-tested in test_aos_object37.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object37Create`, `aos:asm:asm/code/code_08050A3C.s:Object37Update`, `aos:asm:asm/code/code_08050A3C.s:sub_0805AA94`, `aos:asm:asm/code/code_08050A3C.s:sub_0805AC50`, `aos:asm:asm/code/code_08050A3C.s:sub_0805AD9C`, `aos:asm:asm/code/code_08050A3C.s:sub_0805AE18`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:c:src/code/code_08039340.c:sub_0803AFB8`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803B9D0`, `aos:c:src/code/code_08039340.c:sub_0803E058`, `aos:c:src/code/code_08039340.c:sub_0803E654`, `aos:c:src/code_080009A0.c:EntityCreateInRange`, `aos:c:src/code_080009A0.c:RandomNumberGenerator`, `aos:c:src/code_08001194.c:sub_08002200`, `aos:c:src/code_08001194.c:sub_08002248`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/game/aos_object37.c`](../src/runtime/aos/game/aos_object37.c), [`src/runtime/aos/game/aos_object37.h`](../src/runtime/aos/game/aos_object37.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object37.c`](../tests/test_aos_object37.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The + 0x18 fade counter is exposed raw — its native consumer (likely a lighting mask read elsewhere) is not wired; the sub_08002200/sub_08002248 five-placement display lists become output counts; the player + 0x58 bit 0x40 probe and both RNG rolls are inputs; the sub_0805AC50 child (and its sub_0805AD9C update) collapses to a counted spawn; the sub_0803E058 affine transform is not modelled; and there is no emulator comparison.  
+Next action: Find the native + 0x18 consumer and port the sub_0805AC50 child with sub_0805AD9C once the effect path exists.
 
 [~] **`aos.objects.fountain` — Object2C fountain droplet spawner.** Object2CCreate (0x080585B0) loops four EntityCreateInRange(0x49, 0xCF, sub_0805866C) children: each copies the parent's + 0x36 byte to + 0x36, takes drawFunc sub_0803B9D0, loads the sub_080586E0 sprite triple (tiles 0x081CBED4, palette slot sub_08068264(0x0820A1C4, 0), frames 0x08211464), rolls + 0x40 = RandomNumberGenerator & 0xFFFFFF, and is configured per index — + 0x37 = 0, + 0x46 y offset {0x1E, 0x3E, 0x56, 0x66}, + 0x48 {0x4000, 0x3000, 0x2000, 0x1000}, + 0x65 = index — before sub_0805869C marks + 0x72 bits 1-2, + 0x5C = 0x1D, clears + 0x59 bit 0x20 and deletes on sprite-load failure. Object2CUpdate (0x08058664) is a bare frame.
 

@@ -1,3 +1,23 @@
+## Patch 1076 - Aria Object37 fade director ported
+
+- `src/runtime/aos/game/aos_object37.c` ports Object37Create
+  (0x0805A930), Object37Update (0x0805AE00), sub_0805AA94,
+  sub_0805AC50, sub_0805AD9C and sub_0805AE18, dispatch index
+  55: the proximity fade director.
+- Create probes the player on the + 0x40 x axis against
+  0x2FFFFF: near starts at fade 0x3000, far arms the + 0x1C
+  placement flag, fires five sub_08002200 placements and one
+  sub_0805AC50 child.
+- The two-state machine decays/grows the + 0x18 fade counter
+  by 0x100 per frame with hysteresis on the player distance
+  and the + 0x58 bit-0x40 flag, playing song 0x113 on each
+  transition and draining pending display placements.
+- The sprite triple (tiles 0x08259130, palette 0x08259138,
+  frames 0x082591BC) exports as special_55; the fade consumer,
+  placements, RNG rolls and child update are approximations.
+- Registered as aos.objects.fade_director; unit-tested in
+  test_aos_object37.
+
 ## Patch 1075 - Aria Object35 sequence actor ported
 
 - `src/runtime/aos/game/aos_object35.c` ports Object35Create

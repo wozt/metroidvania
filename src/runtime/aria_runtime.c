@@ -58,6 +58,7 @@
 #include "aos/game/aos_object29.h"
 #include "aos/game/aos_object32.h"
 #include "aos/game/aos_object35.h"
+#include "aos/game/aos_object37.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -488,6 +489,7 @@ typedef struct {
     AosObject29 object29;   /* object 0x29: ping-pong platform */
     AosObject32 object32;   /* object 0x32: cinematic director */
     AosObject35 object35;   /* object 0x35: sequence actor */
+    AosObject37 object37;   /* object 0x37: fade director */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5400,6 +5402,34 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 room->effects[room->effect_count++] = (AosEffect){
                     .kind = AOS_EFFECT_SPARKLE, .direct = false,
                     .x = e->x, .y = e->y};
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 55) {
+            /* Object37Create / Object37Update (sUnk_084F10F8[55] /
+             * sUnk_084F1278[55]): the proximity fade director.
+             * The sprite triple exports as special_55; the + 0x40
+             * x-axis probe uses the entity screen position, the
+             * player + 0x58 bit 0x40 and the RNG rolls are
+             * approximated. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                int32_t psx = soma ? (int32_t)(soma->x >> 16) : 0x7FFFFFFF;
+                int32_t ddx = psx - e->x;
+                if (ddx < 0) ddx = -ddx;
+                aos_object37_create(&e->object37, e->x << 16,
+                                    e->y << 16, ddx <= 0x2F,
+                                    true, 0, true, &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            int32_t psx = soma ? (int32_t)(soma->x >> 16) : 0x7FFFFFFF;
+            int32_t ddx = psx - e->x;
+            if (ddx < 0) ddx = -ddx;
+            aos_object37_update(&e->object37, ddx > 0x2F, false);
+            if (e->object37.song >= 0)
+                aos_audio_play_song((uint16_t)e->object37.song);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 33) {

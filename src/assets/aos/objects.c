@@ -761,6 +761,10 @@ static const EntitySpec special_objects[] = {
      * 0x081CBF1C, palette sub_08068264(0x0820A3B4, 0), frames
      * 0x08211FB0 — shared with its sub_0805A50C child. */
     ENTITY("special_53", 0x081CBF1C, 0x0820A3B4, 0, 0x08211FB0),
+    /* Object37's sprite loader sub_0805AE18 (id 55 / 0x37): tiles
+     * 0x08259130 bank 0, palette sub_08068264(0x08259138, 0),
+     * frames 0x082591BC — shared with its sub_0805AC50 child. */
+    ENTITY("special_55", 0x08259130, 0x08259138, 0, 0x082591BC),
     /* Object2C's child sprite loader sub_080586E0 (id 44 / 0x2C):
      * tiles 0x081CBED4, palette slot sub_08068264(0x0820A1C4, 0),
      * frames 0x08211464, drawFunc sub_0803B9D0. */

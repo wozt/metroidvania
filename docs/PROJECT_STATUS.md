@@ -1,3 +1,16 @@
+## Patch 1091 - Aria sequence particle spawn helpers
+
+- `src/runtime/aos/game/aos_seq_particles.c/.h` ports
+  sub_08062B60 (one type-0x1B particle through
+  EntityCreateInRange: graphics 0x08260390, frames 0x08267EE4
+  animation 0xE, +0x1C = 0x12000, palette variant through
+  sub_0803E654, +0x59 bit 4, affine request, +0x5C = 0x11) and
+  sub_08062D8C (the nine-record 0x085268B8 loop seeding each
+  child's callback sub_08062C18, offset position, timer,
+  RandomNumberGenerator word and index fields).
+- Unit-tested in test_aos_seq_particles; routines added to the
+  aos.events.opening_scene annotation.
+
 ## Patch 1090 - Aria thrown-object updates and misc Object20 callbacks
 
 - `src/runtime/aos/game/aos_flyer.c/.h` ports the three shared

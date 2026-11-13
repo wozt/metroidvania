@@ -232,14 +232,6 @@ aos:asm:asm/code/code_08050A3C.s:sub_08054280	sub_08054280	environment	referrers
 aos:asm:asm/code/code_08050A3C.s:sub_0805444C	sub_0805444C	unclassified				asm_function	0x0805444C	asm/code/code_08050A3C.s	7342	0	0
 aos:asm:asm/code/code_08050A3C.s:sub_080544E8	sub_080544E8	environment	referrers			asm_function	0x080544E8	asm/code/code_08050A3C.s	7426	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_08054574	sub_08054574	unclassified				asm_function	0x08054574	asm/code/code_08050A3C.s	7499	0	1
-aos:asm:asm/code/code_08050A3C.s:sub_08054E38	sub_08054E38	environment	referrers			asm_function	0x08054E38	asm/code/code_08050A3C.s	8494	1	4
-aos:asm:asm/code/code_08050A3C.s:sub_08054F74	sub_08054F74	environment	referrers			asm_function	0x08054F74	asm/code/code_08050A3C.s	8652	1	3
-aos:asm:asm/code/code_08050A3C.s:sub_08055070	sub_08055070	environment	referrers			asm_function	0x08055070	asm/code/code_08050A3C.s	8775	0	2
-aos:asm:asm/code/code_08050A3C.s:sub_0805514C	sub_0805514C	environment	referrers			asm_function	0x0805514C	asm/code/code_08050A3C.s	8897	0	5
-aos:asm:asm/code/code_08050A3C.s:sub_080552C4	sub_080552C4	environment	referrers			asm_function	0x080552C4	asm/code/code_08050A3C.s	9084	0	4
-aos:asm:asm/code/code_08050A3C.s:sub_080553A0	sub_080553A0	environment	referrers			asm_function	0x080553A0	asm/code/code_08050A3C.s	9195	1	2
-aos:asm:asm/code/code_08050A3C.s:sub_08055414	sub_08055414	environment	referrers			asm_function	0x08055414	asm/code/code_08050A3C.s	9253	1	2
-aos:asm:asm/code/code_08050A3C.s:sub_080554BC	sub_080554BC	environment	referrers			asm_function	0x080554BC	asm/code/code_08050A3C.s	9337	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_08055684	sub_08055684	unclassified				asm_function	0x08055684	asm/code/code_08050A3C.s	9573	0	3
 aos:asm:asm/code/code_08050A3C.s:sub_0805573C	sub_0805573C	unclassified				asm_function	0x0805573C	asm/code/code_08050A3C.s	9671	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_08058B84	sub_08058B84	environment	referrers			asm_function	0x08058B84	asm/code/code_08050A3C.s	16410	0	1

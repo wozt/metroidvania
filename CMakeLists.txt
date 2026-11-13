@@ -762,6 +762,12 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_save_room_tests)
     add_test(NAME aos_save_room COMMAND fusion_aos_save_room_tests)
 
+    add_executable(fusion_aos_save_room_fx_tests tests/test_aos_save_room_fx.c
+                   src/runtime/aos/game/aos_save_room_fx.c)
+    target_include_directories(fusion_aos_save_room_fx_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_save_room_fx_tests)
+    add_test(NAME aos_save_room_fx COMMAND fusion_aos_save_room_fx_tests)
+
     add_executable(fusion_aos_pickup_tests tests/test_aos_pickup.c src/runtime/aos/game/aos_recent_items.c src/runtime/aos/game/aos_pickup.c
                    src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_audio.c ${AOS_ENEMY_SOURCES} src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/weapons/aos_weapon.c
                    src/runtime/aos/core/aos_effect.c src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/core/aos_collision.c

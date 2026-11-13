@@ -1,3 +1,17 @@
+## Patch 1081 - Aria save-room ambience children ported
+
+- `src/runtime/aos/game/aos_save_room_fx.c` ports the eight
+  Object1C child routines: the sub_08054E38/sub_08054F74
+  type-0x1B orbiter spawners, sub_08055070 (phase-gated
+  orbit A), sub_0805514C (two-state orbit B with the
+  sub_080009E4 sine approximated by an injected callback and
+  every-fourth-tick sparkle bursts), sub_080552C4 plus
+  sub_080554BC (the type-0x49 sparkle particle and its
+  oscillation callback) and sub_080553A0/sub_08055414 (the
+  scatter spawn).
+- The runtime does not instantiate the children yet; they
+  are unit-tested in test_aos_save_room_fx.
+
 ## Patch 1080 - Aria Object1F child updates ported
 
 - `AosObject1FChild` ports the ten opening-gate children:

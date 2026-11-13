@@ -211,3 +211,22 @@ tail:
      * engine-side, not tracked here. */
     return g->flag_r7;
 }
+
+unsigned aos_npc_talk_65c2c(int16_t x_px, uint16_t flags_37e,
+                            void (*step)(void *), void *ctx,
+                            int16_t *targets) {
+    unsigned count = 1;
+    if (flags_37e & 0x10) count = 2;
+    if (flags_37e & 0x02) count++;
+    int16_t original = x_px;
+    for (unsigned i = 0; i < count; ++i) {
+        int16_t target = i == 0 ? (int16_t)(x_px - 0x10)
+                        : i == 1 ? (int16_t)(x_px + 0x10)
+                        : i == 2 ? (int16_t)(x_px - 8)
+                                 : (int16_t)(x_px + 8);
+        if (targets) targets[i] = target;
+        if (step) step(ctx);
+    }
+    (void)original; /* +0x42 restored by the ROM tail */
+    return count;
+}

@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
+static int step_calls;
+static void step_count(void *c) { (void)c; step_calls++; }
+
 int main(void) {
     AosNpcTalk t;
 
@@ -121,6 +124,21 @@ int main(void) {
     assert(gd.state_a == 0x80 && gd.state_80);
     aos_npc_talk_65a5c(&gd, false, 0, 0, 0, &bit6, &f417);
     assert(gd.release);
+
+    /* sub_08065C2C: sidestep count and targets. */
+    int16_t tg[4];
+    step_calls = 0;
+    assert(aos_npc_talk_65c2c(100, 0, step_count, NULL, tg) == 1);
+    assert(step_calls == 1 && tg[0] == 84);
+    step_calls = 0;
+    assert(aos_npc_talk_65c2c(100, 0x02, step_count, NULL, tg) == 2);
+    assert(step_calls == 2 && tg[0] == 84 && tg[1] == 116);
+    step_calls = 0;
+    assert(aos_npc_talk_65c2c(100, 0x10, step_count, NULL, tg) == 2);
+    assert(tg[0] == 84 && tg[1] == 116);
+    step_calls = 0;
+    assert(aos_npc_talk_65c2c(100, 0x12, step_count, NULL, tg) == 3);
+    assert(step_calls == 3 && tg[2] == 92);
 
     puts("aos_npc_talk: ok");
     return 0;

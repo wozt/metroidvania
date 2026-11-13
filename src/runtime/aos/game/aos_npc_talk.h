@@ -132,3 +132,12 @@ uint32_t aos_npc_talk_65a5c(AosNpcGuide *g, bool text_done,
                             int16_t player_x_px, int32_t player_x,
                             uint8_t player_flags58, bool *player_bit6,
                             bool *flag_417);
+
+/* sub_08065C2C: sidestep writer — count = 1, forced to 2 by
+ * gEwramData + 0x37E bit 0x10, +1 by bit 0x02; for each step it
+ * writes the s16 pixel x at +0x42 (x-16, x+16, x-8, then x+8)
+ * and calls sub_0803AC40(e), restoring the original +0x42 after.
+ * `step` is the injected sub_0803AC40. Returns the count. */
+unsigned aos_npc_talk_65c2c(int16_t x_px, uint16_t flags_37e,
+                            void (*step)(void *ctx), void *ctx,
+                            int16_t *targets);

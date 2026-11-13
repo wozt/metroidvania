@@ -1,3 +1,12 @@
+## Patch 1096 - Aria sidestep writer sub_08065C2C
+
+- `aos_npc_talk_65c2c` ports the +0x42 sidestep writer: count
+  from gEwramData + 0x37E bits 0x10 (force 2) and 0x02 (+1),
+  targets x-16 / x+16 / x-8 / x+8 with an injected sub_0803AC40
+  step per write and the original +0x42 restored.
+- Unit-tested; sub_08065C2C added to the
+  aos.events.opening_scene annotation.
+
 ## Patch 1095 - Aria guide follower machine sub_08065A5C
 
 - `aos_npc_talk_65a5c` ports the follower state machine:

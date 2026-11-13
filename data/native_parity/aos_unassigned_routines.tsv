@@ -204,8 +204,6 @@ aos:asm:asm/code/code_08040A38.s:sub_0804F7A4	sub_0804F7A4	unclassified				asm_f
 aos:asm:asm/code/code_08040A38.s:sub_0804F84C	sub_0804F84C	unclassified				asm_function	0x0804F84C	asm/code/code_08040A38.s	28945	1	0
 aos:asm:asm/code/code_08040A38.s:sub_0804F85C	sub_0804F85C	unclassified				asm_function	0x0804F85C	asm/code/code_08040A38.s	28955	1	0
 aos:asm:asm/code/code_08040A38.s:sub_08050920	sub_08050920	environment	referrers			asm_function	0x08050920	asm/code/code_08040A38.s	31125	0	9
-aos:asm:asm/code/code_08050A3C.s:Object1FCreate	Object1FCreate	environment	name			asm_function		asm/code/code_08050A3C.s	11429	0	3
-aos:asm:asm/code/code_08050A3C.s:Object1FUpdate	Object1FUpdate	environment	name			asm_function		asm/code/code_08050A3C.s	11046	0	4
 aos:asm:asm/code/code_08050A3C.s:sub_08050F1C	sub_08050F1C	environment	referrers			asm_function	0x08050F1C	asm/code/code_08050A3C.s	628	0	5
 aos:asm:asm/code/code_08050A3C.s:sub_08051BF8	sub_08051BF8	unclassified		technical	exclusive_callees	asm_function	0x08051BF8	asm/code/code_08050A3C.s	2268	1	6
 aos:asm:asm/code/code_08050A3C.s:sub_08051CC4	sub_08051CC4	unclassified		technical	exclusive_callees	asm_function	0x08051CC4	asm/code/code_08050A3C.s	2370	2	4
@@ -245,13 +243,10 @@ aos:asm:asm/code/code_08050A3C.s:sub_080554BC	sub_080554BC	environment	referrers
 aos:asm:asm/code/code_08050A3C.s:sub_08055684	sub_08055684	unclassified				asm_function	0x08055684	asm/code/code_08050A3C.s	9573	0	3
 aos:asm:asm/code/code_08050A3C.s:sub_0805573C	sub_0805573C	unclassified				asm_function	0x0805573C	asm/code/code_08050A3C.s	9671	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_08055748	sub_08055748	environment	referrers			asm_function	0x08055748	asm/code/code_08050A3C.s	9679	0	17
-aos:asm:asm/code/code_08050A3C.s:sub_08055BE0	sub_08055BE0	environment	referrers			asm_function	0x08055BE0	asm/code/code_08050A3C.s	10235	1	6
 aos:asm:asm/code/code_08050A3C.s:sub_08055CB4	sub_08055CB4	environment	referrers			asm_function	0x08055CB4	asm/code/code_08050A3C.s	10338	2	1
 aos:asm:asm/code/code_08050A3C.s:sub_08055DF8	sub_08055DF8	environment	referrers			asm_function	0x08055DF8	asm/code/code_08050A3C.s	10508	0	3
-aos:asm:asm/code/code_08050A3C.s:sub_0805607C	sub_0805607C	environment	referrers			asm_function	0x0805607C	asm/code/code_08050A3C.s	10838	1	4
 aos:asm:asm/code/code_08050A3C.s:sub_08056130	sub_08056130	environment	referrers			asm_function	0x08056130	asm/code/code_08050A3C.s	10927	0	3
 aos:asm:asm/code/code_08050A3C.s:sub_0805632C	sub_0805632C	unclassified		technical	exclusive_callees	asm_function	0x0805632C	asm/code/code_08050A3C.s	11178	0	4
-aos:asm:asm/code/code_08050A3C.s:sub_08056514	sub_08056514	environment	referrers			asm_function	0x08056514	asm/code/code_08050A3C.s	11443	1	3
 aos:asm:asm/code/code_08050A3C.s:sub_08058B84	sub_08058B84	environment	referrers			asm_function	0x08058B84	asm/code/code_08050A3C.s	16410	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_08058B94	sub_08058B94	environment	referrers			asm_function	0x08058B94	asm/code/code_08050A3C.s	16420	1	5
 aos:asm:asm/code/code_08050A3C.s:sub_08059FB4	sub_08059FB4	environment	referrers			asm_function	0x08059FB4	asm/code/code_08050A3C.s	18946	0	6
@@ -1226,7 +1221,6 @@ aos:c:src/code_0800F1FC.c:sub_0801083C	sub_0801083C	unclassified		rooms	exclusiv
 aos:c:src/code_0800F1FC.c:sub_080108DC	sub_080108DC	unclassified				c_function	0x080108DC	src/code_0800F1FC.c	1490	5	1
 aos:c:src/code_0800F1FC.c:sub_080108FC	sub_080108FC	unclassified				c_function	0x080108FC	src/code_0800F1FC.c	1508	5	2
 aos:c:src/code_0800F1FC.c:sub_0801093C	sub_0801093C	unclassified				c_function	0x0801093C	src/code_0800F1FC.c	1530	5	1
-aos:c:src/code_0800F1FC.c:sub_08010978	sub_08010978	environment	referrers			c_function	0x08010978	src/code_0800F1FC.c	1546	1	0
 aos:c:src/code_0800F1FC.c:sub_080109B8	sub_080109B8	unclassified		technical	exclusive_callees	c_function	0x080109B8	src/code_0800F1FC.c	1562	2	4
 aos:c:src/code_080109F4.c:Get_unk_13110	Get_unk_13110	unclassified				c_function		src/code_080109F4.c	340	2	0
 aos:c:src/code_080109F4.c:sub_080109F4_inline_0	sub_080109F4_inline_0	unclassified				c_function		src/code_080109F4.c	35	3	0

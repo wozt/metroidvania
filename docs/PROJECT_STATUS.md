@@ -1,3 +1,22 @@
+## Patch 1078 - Aria Object1F opening gate ported
+
+- `src/runtime/aos/game/aos_object1f.c` ports Object1FCreate
+  (0x080564F8) and Object1FUpdate (0x08056224), dispatch index
+  31: the opening sequence gate.
+- Create chains the palette-descriptor sprite attach
+  (sub_08056514), eight ring children (sub_08055BE0) and two
+  flank children (sub_0805607C) — counted as ten spawn
+  outputs; the + 0 = sub_08055748 nine-state think stays an
+  unassigned referrer.
+- The dispatch update is the three-state gate: the bundled
+  proximity/flag probe fires sub_0800C5A8(0), the player flag
+  write and the 0x10 display blend, then the 0x80-frame
+  input-locked countdown with the ((d >> 3) << 8) |
+  (0x10 - (d >> 3)) blend and the sub_08010978 sequence end.
+- Registered as aos.objects.opening_gate; unit-tested in
+  test_aos_object1f. This closes the ObjectNN dispatch
+  inventory: every create/update pair is now annotated.
+
 ## Patch 1077 - Aria Object1D display create ported
 
 - `src/runtime/aos/game/aos_object1d.c` ports Object1DCreate

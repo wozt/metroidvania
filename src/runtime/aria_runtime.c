@@ -60,6 +60,7 @@
 #include "aos/game/aos_object35.h"
 #include "aos/game/aos_object37.h"
 #include "aos/game/aos_object1d.h"
+#include "aos/game/aos_object1f.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -494,6 +495,7 @@ typedef struct {
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject1D object1d;   /* object 0x1D: sum-indexed display */
+    AosObject1F object1f;   /* object 0x1F: opening gate */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
     AosObject2D object2d;   /* object 0x2D: proximity attack sprite */
     AosObject2E object2e;   /* object 0x2E: one-shot breakable prop */
@@ -5446,6 +5448,30 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 bool deleted;
                 aos_object1d_create(&e->object1d, (int16_t)e->param0,
                                     e->x, e->y, 0, &deleted);
+            }
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 31) {
+            /* Object1FCreate / Object1FUpdate (sUnk_084F0F0C[31] /
+             * sUnk_084F108C[31]): the opening gate. The + 0 =
+             * sub_08055748 nine-state think is not ported; the
+             * state-0 gate globals and the sub_08068AD4 probe
+             * are approximated (gate closed until room flags
+             * exist), the children are counted and the
+             * gDisplayRegisters/global writes are outputs. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object1f_create(&e->object1f, true, &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            aos_object1f_update(&e->object1f, false);
+            if (e->object1f.input_lock) {
+                /* SetPlayerInput(1, 0): lock player input. */
+                input->active = true;
+                input->held = 0;
             }
             continue;
         }

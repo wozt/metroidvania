@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 189 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 190 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2085 | 1488 |
+| Castlevania: Aria of Sorrow | 2091 | 1482 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2605,6 +2605,15 @@ Tests: [`tests/test_aos_object2e.c`](../tests/test_aos_object2e.c).
 Dependencies: `aos.objects.special_sprites`, `aos.objects.destructible_prop`.  
 Known divergences: The sub_0806CFFC (x - 0x20, y - 0x20, 0x40, 0x70) rectangle probe collapses to the weapon hitbox overlap used by Object0F/0E, the three sub_080589A4 children (type 0x49 with tiles 0x081CBECC, frames 0x0821137C, callback sub_08058B84 and their fixed-point offsets) are counted rather than spawned, the sub_0803F2C8 preset and the + 0x58 bit-0x20 mark are not applied, the sub_0803F17C steps are counted, and there is no emulator comparison.  
 Next action: Port the sub_080589A4 children and their sub_08058B84 animation once a type-0x49 draw path exists.
+
+[~] **`aos.objects.opening_gate` — Object1F opening sequence gate.** Object1FCreate (0x080564F8) chains sub_08056514 (palette descriptor 0x082052F0, opening-actor family, + 0 = sub_08055748), sub_08055BE0 (eight type-0x1B children, frames 0x08257BD8, + 0x65 = index) and sub_0805607C (two flank children at + 0x42 = 0x54/0x9C, + 0x46 = 0x80). Object1FUpdate (0x08056224) is the dispatch-side gate: state 0 waits on gEwramData + 0x14 bit 0x40, + 0x64 == 1 and the player probe, then plays sub_0800C5A8(0), sets player + 0x5A = (+ 0x5A & ~7) OR 2, display + 0x4A = 0x10, + 0x14 = 0x80 -> 1; state 1 sets + 0x42C bit 0 and SetPlayerInput(1, 0), counts + 0xD (s8) into the ((d >> 3) << 8) OR (0x10 - (d >> 3)) blend — the negative branch flags the player and its 0x808 store is overwritten as in the ROM — decrements + 0x14 and runs sub_08010978(gEwramData + 0x60) on the wrap -> 2. Unit-tested in test_aos_object1f.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object1FCreate`, `aos:asm:asm/code/code_08050A3C.s:Object1FUpdate`, `aos:asm:asm/code/code_08050A3C.s:sub_08055BE0`, `aos:asm:asm/code/code_08050A3C.s:sub_0805607C`, `aos:asm:asm/code/code_08050A3C.s:sub_08056514`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:c:src/code_080009A0.c:SetPlayerInput`, `aos:c:src/code_0800B700.c:sub_0800C5A8`, `aos:c:src/code_0800F1FC.c:sub_08010978`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/game/aos_object1f.c`](../src/runtime/aos/game/aos_object1f.c), [`src/runtime/aos/game/aos_object1f.h`](../src/runtime/aos/game/aos_object1f.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object1f.c`](../tests/test_aos_object1f.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The + 0 = sub_08055748 think callback — the nine-state cinematic machine that owns most of the sequence — is NOT ported and stays an unassigned referrer, nor are the ten children's updates (sub_08055DF8/sub_08056130/sub_08055CB4/sub_0805632C) or the sub_08068AD4 probe geometry; the gEwramData + 0x14/+ 0x64/+ 0x42C/+ 0x60 globals are bundled inputs, the gDisplayRegisters + 0x4A blend and the player + 0x5A/+ 0x58 writes are outputs, the sprite attach stays under special_sprites and there is no emulator comparison.  
+Next action: Port the sub_08055748 nine cases and the child updates once the opening-cutscene path is scheduled.
 
 [~] **`aos.objects.parametric_sprite` — Object12 param-driven animated sprite.** Object12Create (0x0805140C) indexes the four 24-byte records at 0x085263A8 by param0 (gfx/palette/frames exported as special_18_v00-v03), loads through sub_0806E0D0, applies the record animation and + 0x5C/+ 0x59 marks and deletes on load failure. Object12Update (0x0805158C) skips everything on a bit-3 probe miss, runs the record callback — sub_0805133C's five-state sequence machine with random timers and hit re-arms for record 0, sub_080514D8's drift/palette stepper for records 2/3 — or the shared sub_0803F17C animation step. Unit-tested in test_aos_object12.
 

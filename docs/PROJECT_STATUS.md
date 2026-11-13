@@ -1,3 +1,29 @@
+## Patch 1110 - SPECIAL dispatch coverage audit
+
+- Audited every kind-2 entity record in the exported runtime
+  rooms against the `update_entities` SPECIAL dispatch in
+  `aria_runtime.c`: 1020 records across the rooms use 49
+  distinct ids; 43 dispatch cases plus the door/wall/event-wall
+  and save-point paths cover all of them except two.
+- **Uncovered id 32 (native Object20, 0x20)**: 12 rooms spawn it
+  (area_00/02/03/05/06/07/08/11) — the NPC dialogue/sequence
+  director whose routines live in the parity-reference modules
+  `aos_npc_talk`, `aos_shop`, `aos_flyer` and
+  `aos_seq_particles`. The entity loads but never updates or
+  draws through the dispatch; only the opening room's Mina and
+  Arikado conversations run, through the bespoke
+  `opening_talk_armed` path, not the entity.
+- **Uncovered id 20 (native Object14, 0x14)**: 4 rooms in
+  area_07 spawn it; no dispatch case and no `AosObject` state
+  member exist for it.
+- `--check` loads the room and audio but never ticks
+  `update_entities`, and no test links `aria_runtime.c`, so the
+  whole SPECIAL dispatch (and these dead entities) has no
+  automated coverage — interactive play is the only exercise.
+  A headless simulate mode is the scoped follow-up; wiring
+  Object20 into gameplay is a dedicated integration feature,
+  not a consolidation fix.
+
 ## Patch 1109 - Include-guard fixes and runtime module map
 
 - Three more headers had declarations appended after their

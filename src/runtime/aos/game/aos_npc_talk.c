@@ -105,3 +105,24 @@ uint32_t aos_npc_talk_65fe4(uint8_t state_a, int32_t field48,
     if (mag > 0x8000) return 1;
     return field10 & 0x30010000u;
 }
+
+void aos_npc_talk_659a4(AosNpcSpawn *s, bool gate_12078,
+                        bool keep_5b754, uint16_t cam_x, uint16_t cam_y,
+                        int32_t self_x, int32_t player_x,
+                        uint8_t player_anim5c) {
+    if (gate_12078) {
+        s->flags59 |= 0x8;
+        return;
+    }
+    if (!keep_5b754) {
+        s->deleted = true;
+        return;
+    }
+    s->anim_stepped = true;         /* sub_0803F17C */
+    s->field42 = (int16_t)(0x60 - cam_x);
+    s->field46 = (int16_t)(0xA0 - cam_y);
+    s->flags58 = (uint8_t)((s->flags58 & ~0x40u) |
+                           (self_x < player_x ? 0x40u : 0u));
+    s->anim5c = (uint8_t)(player_anim5c - 1);
+    s->flag42c |= 1;
+}

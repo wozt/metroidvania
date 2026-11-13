@@ -75,3 +75,25 @@ void aos_npc_talk_657b4(uint8_t *flags59, uint32_t *flag42c,
  * 0x8000, else the + 0x10 & 0x30010000 mask. */
 uint32_t aos_npc_talk_65fe4(uint8_t state_a, int32_t field48,
                             uint32_t field10);
+
+/* sub_080659A4: Object20 follower spawn — the sub_08012078(0x2E)
+ * gate marks +0x59 bit 3, the sub_0805B754(e, 3) failure deletes
+ * the entity; on success it steps the animation, parks +0x42/+0x46
+ * at (0x60 - cam_x, 0xA0 - cam_y) from the gEwramData + 0xA094
+ * words, sets +0x58 bit 6 from the player x compare, copies
+ * player +0x5C - 1 and arms gEwramData + 0x42C bit 0. */
+typedef struct {
+    uint8_t flags59;    /* +0x59 in/out */
+    uint8_t flags58;    /* +0x58 in/out */
+    uint8_t anim5c;     /* +0x5C out */
+    int16_t field42;    /* +0x42 out */
+    int16_t field46;    /* +0x46 out */
+    uint32_t flag42c;   /* gEwramData + 0x42C out (|= 1) */
+    bool deleted;       /* EntityDelete path */
+    bool anim_stepped;  /* sub_0803F17C ran */
+} AosNpcSpawn;
+
+void aos_npc_talk_659a4(AosNpcSpawn *s, bool gate_12078,
+                        bool keep_5b754, uint16_t cam_x, uint16_t cam_y,
+                        int32_t self_x, int32_t player_x,
+                        uint8_t player_anim5c);

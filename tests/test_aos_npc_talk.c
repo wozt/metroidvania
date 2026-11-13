@@ -63,6 +63,24 @@ int main(void) {
     assert(aos_npc_talk_65fe4(0, 0, 0x30010000u) == 0x30010000u);
     assert(aos_npc_talk_65fe4(0, 0, 0x1000u) == 0);
 
+    /* sub_080659A4: follower spawn gates and fields. */
+    AosNpcSpawn sp;
+    memset(&sp, 0, sizeof sp);
+    aos_npc_talk_659a4(&sp, true, true, 0, 0, 0, 0, 0);
+    assert((sp.flags59 & 0x8) && !sp.anim_stepped && !sp.deleted);
+    memset(&sp, 0, sizeof sp);
+    aos_npc_talk_659a4(&sp, false, false, 0, 0, 0, 0, 0);
+    assert(sp.deleted && !sp.anim_stepped);
+    memset(&sp, 0, sizeof sp);
+    sp.flags58 = 0xFF;
+    aos_npc_talk_659a4(&sp, false, true, 0x20, 0x30, 100, 200, 5);
+    assert(sp.anim_stepped && sp.field42 == 0x40 &&
+           sp.field46 == 0x70 && (sp.flags58 & 0x40) &&
+           sp.anim5c == 4 && sp.flag42c == 1);
+    memset(&sp, 0, sizeof sp);
+    aos_npc_talk_659a4(&sp, false, true, 0, 0, 300, 200, 0);
+    assert(!(sp.flags58 & 0x40));
+
     puts("aos_npc_talk: ok");
     return 0;
 }

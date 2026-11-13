@@ -1,3 +1,14 @@
+## Patch 1094 - Aria Object20 follower spawn sub_080659A4
+
+- `aos_npc_talk_659a4` ports the spawn init: the
+  sub_08012078(0x2E) gate marks +0x59 bit 3, the sub_0805B754
+  keep check deletes otherwise, and on success the entity parks
+  at (0x60 - cam_x, 0xA0 - cam_y), takes +0x58 bit 6 from the
+  player x compare, copies player +0x5C - 1 and arms
+  gEwramData + 0x42C bit 0.
+- Unit-tested; sub_080659A4 added to the
+  aos.events.opening_scene annotation.
+
 ## Patch 1093 - Aria sequence particle child and table pick
 
 - `aos_seq_particles` gains `aos_seq_particle_child_update`

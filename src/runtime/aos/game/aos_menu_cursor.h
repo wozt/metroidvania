@@ -250,3 +250,85 @@ void aos_menu_render_66b70(AosMenuCursor *cur, uint8_t *ctr,
                            uint32_t stack_arg,
                            AosMenuKindSpanFn span_fn, void *sctx,
                            AosMenuDrawOps *ops);
+
+/* sub_08066A00: equipment-stat comparison drawer. Copies the
+ * six halfwords at +0x131EE, stages the candidate kind/idx
+ * into the equipment slot bytes (+0x13268 weapon; +0x1326C /
+ * +0x1326D armor head/body chosen by armor record byte 8),
+ * recomputes stats (sub_0804AD9C) and the +0x1326B byte
+ * (sub_08031FC4), then draws six stat rows: mark 3 for equal,
+ * 9 for up, 8 for down, stat clamped to 999 above 1000.
+ * Restores the slots, recomputes and re-applies +0x1326B.
+ * All engine calls are injected through AosMenuEquipOps. */
+typedef struct {
+    void *ctx;
+    uint8_t *slot68;   /* +0x13268 weapon slot */
+    uint8_t *slot6b;   /* +0x1326B sprite/palette byte */
+    uint8_t *slot6c;   /* +0x1326C armor slot A */
+    uint8_t *slot6d;   /* +0x1326D armor slot B */
+    int16_t *stats;    /* +0x131EE six halfwords, mutated by
+                        * recompute */
+    void (*recompute)(void *ctx);            /* sub_0804AD9C */
+    void (*set_6b)(uint8_t value, uint8_t mode,
+                    void *ctx);            /* sub_08031FC4 */
+    void (*pos)(uint8_t x, uint8_t y, void *ctx); /* sub_08047180 */
+    void (*stat)(uint8_t mode, uint8_t y, int32_t value,
+                 uint8_t r3, uint8_t mark, uint32_t pad,
+                 void *ctx);                 /* sub_08046FFC */
+    uint8_t (*armor_rec8)(uint8_t idx, void *ctx); /* record +8 */
+} AosMenuEquipOps;
+
+void aos_menu_equip_stats_66a00(uint8_t kind, uint8_t idx,
+                                AosMenuEquipOps *ops);
+
+/* sub_08067804: menu scroll position. Sets display +0x4C = 8,
+ * rewrites +0x48 = (old & 0xFF3E) | 0x00FE, ORs 0x2100 into
+ * the input word, adds the argument to the +0x41B scroll byte
+ * clamped to 0..0x24, and stores
+ * ((0x7C - q) << 8) | (q + 0x7C) at display +0x3C with
+ * q = (clamped << 5) / 0x24. Returns 1 when the value was
+ * clamped, 0 when in range. */
+typedef struct {
+    void *ctx;
+    uint16_t *input;      /* gUnk_03002CB0 */
+    uint16_t *disp48;     /* gDisplayRegisters + 0x48 */
+    uint16_t *disp4c;     /* + 0x4C */
+    uint16_t *disp3c;     /* + 0x3C */
+    uint8_t *scroll;      /* +0x41B */
+} AosMenuScrollOps;
+
+uint8_t aos_menu_scroll_67804(int32_t delta, AosMenuScrollOps *ops);
+
+/* sub_08067898: menu close. input &= 0x1FFF, display +0x4C = 0;
+ * when word +0x42C has bit 0x10000 the DMA registers are
+ * programmed (injected) instead of sub_0800DA50, and bit 0x20
+ * is cleared either way; +0x417 = 0xFF. */
+typedef struct {
+    void *ctx;
+    uint16_t *input;
+    uint16_t *disp4c;
+    uint32_t *flags42c;   /* word at +0x42C */
+    uint8_t *state417;    /* +0x417 */
+    void (*dma_setup)(void *ctx);  /* 0x040000D4 sequence */
+    void (*release)(void *ctx);    /* sub_0800DA50 */
+} AosMenuCloseOps;
+
+void aos_menu_close_67898(AosMenuCloseOps *ops);
+
+/* sub_0806724C: quantity popup window setup. Selects the
+ * window buffer bank from dirty byte +0x7864 bit 3
+ * (bit clear -> bank 1, set -> bank 0; stride 0xA00 at
+ * +0x786C), programs the HBlank effect, fills 0x40 halfwords
+ * of 0x0040 from buffer +0xC2 and clears +0x140, sets
+ * +0x7864 |= 1 and input |= 0x6000, then writes the fixed
+ * display-register sequence. All hardware effects injected. */
+typedef struct {
+    void *ctx;
+    uint8_t *dirty;       /* +0x7864 */
+    uint16_t *input;
+    uint16_t *win_buf;    /* selected bank base (+0xC0 used) */
+    void (*hblank)(void *ctx);               /* HBlankEffectSetup */
+    void (*display)(uint8_t reg, uint16_t value, void *ctx);
+} AosMenuPopupOps;
+
+void aos_menu_popup_6724c(AosMenuPopupOps *ops);

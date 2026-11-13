@@ -75,6 +75,23 @@ static void rd_reset(void) {
     n_arrow_t=n_arrow_f=n_empties=0;
 }
 
+static int eq_bump;
+static int nstat_g, npos_g, nrecomp_g, nset6b_g;
+static int16_t *eq_bump_stats;
+static void eq_recompute(void *c){(void)c;nrecomp_g++;if(eq_bump&&eq_bump_stats)eq_bump_stats[0]+=5;}
+static void eq_set6b(uint8_t v,uint8_t m,void*c){(void)v;(void)m;(void)c;nset6b_g++;}
+static void eq_pos(uint8_t x,uint8_t y,void*c){(void)x;(void)y;(void)c;npos_g++;}
+static uint8_t eq_last_mark[6]; static int eq_stat_n;
+static void eq_stat(uint8_t mo,uint8_t y,int32_t v,uint8_t r3,uint8_t mk,uint32_t p,void*c){(void)mo;(void)y;(void)v;(void)r3;(void)p;(void)c;eq_last_mark[y/2-1]=mk;eq_stat_n++;}
+static uint8_t eq_rec8_v;
+static uint8_t eq_rec8(uint8_t i,void*c){(void)i;(void)c;return eq_rec8_v;}
+static int cl_dma_n, cl_rel_n;
+static void cl_dma(void*c){(void)c;cl_dma_n++;}
+static void cl_rel(void*c){(void)c;cl_rel_n++;}
+static int pp_hb_n, pp_dsp_n;
+static void pp_hb(void*c){(void)c;pp_hb_n++;}
+static void pp_dsp(uint8_t r,uint16_t v,void*c){(void)r;(void)v;(void)c;pp_dsp_n++;}
+
 int main(void) {
     AosMenuCursor s; uint8_t ctr = 0, cols[8] = {0};
     bool song;
@@ -489,6 +506,83 @@ int main(void) {
         aos_menu_render_66b70(&rc, rctr, rst, rlist, rprs, 2, 1,
                               span_small, NULL, &ops);
         assert(n_icons_i == 0 && n_descs == 0);
+    }
+
+    /* sub_08066A00 equip-stat comparison. */
+    {
+        static int16_t st[6] = {10, 20, 30, 40, 50, 60};
+        static uint8_t sl68, sl6b, sl6c, sl6d;
+
+        AosMenuEquipOps eo; memset(&eo, 0, sizeof eo);
+        eo.slot68 = &sl68; eo.slot6b = &sl6b; eo.slot6c = &sl6c;
+        eo.slot6d = &sl6d; eo.stats = st;
+        eo.recompute = eq_recompute; eo.set_6b = eq_set6b;
+        eo.pos = eq_pos; eo.stat = eq_stat; eo.armor_rec8 = eq_rec8;
+        sl68 = 7; sl6c = 9; sl6d = 11; sl6b = 3;
+        /* kind4 idx4, rec8 = 0 -> slot6c; stats get +5 on row0 */
+        eq_rec8_v = 0;
+        eq_stat_n = npos_g = nrecomp_g = nset6b_g = 0;
+        memset(eq_last_mark, 0, sizeof eq_last_mark);
+        eq_bump = 1; eq_rec8_v = 0;
+        /* recompute bumps stats[0] on first call only */
+        eq_bump_stats = st;
+        aos_menu_equip_stats_66a00(4, 4, &eo);
+        /* slots restored after the compare; the +5 bump on
+         * stats[0] proves the candidate was staged. */
+        assert(sl6c == 9 && sl6d == 11 && sl68 == 7);
+        assert(eq_stat_n == 6 && nrecomp_g == 2 && nset6b_g == 2);
+        assert(eq_last_mark[0] == 9);   /* stat up */
+        /* kind3 -> slot68 staged then restored */
+        sl68 = 7; eq_stat_n = 0; eq_bump = 0;
+        aos_menu_equip_stats_66a00(3, 21, &eo);
+        assert(sl68 == 7);
+        /* kind2 -> no slot writes */
+        sl6c = 9; sl6d = 11;
+        aos_menu_equip_stats_66a00(2, 5, &eo);
+        assert(sl6c == 9 && sl6d == 11);
+    }
+    /* sub_08067804 scroll + sub_08067898 close + sub_0806724C popup */
+    {
+        static uint16_t inw, d48, d3c, d4c; static uint8_t scr;
+        static uint32_t fl; static uint8_t s417;
+        int hb_n, dsp_n;
+        AosMenuScrollOps so; AosMenuCloseOps co; AosMenuPopupOps po;
+        memset(&so,0,sizeof so); memset(&co,0,sizeof co);
+        memset(&po,0,sizeof po);
+        so.input=&inw; so.disp48=&d48; so.disp3c=&d3c;
+        so.disp4c=&d4c; so.scroll=&scr;
+        co.input=&inw; co.disp4c=&d4c; co.flags42c=&fl;
+        co.state417=&s417; co.dma_setup=cl_dma; co.release=cl_rel;
+        co.ctx=NULL;
+        inw=0; d48=0x1234; d3c=0; d4c=0; scr=10; fl=0; s417=0;
+        hb_n=dsp_n=0; pp_hb_n=pp_dsp_n=0;
+        assert(aos_menu_scroll_67804(5,&so)==0);
+        assert(scr==15 && d4c==8);
+        assert(aos_menu_scroll_67804(100,&so)==1 && scr==0x24);
+        /* u8 wrap: -36 from 0x24 lands exactly on 0 -> low clamp */
+        assert(aos_menu_scroll_67804(-36,&so)==1 && scr==0);
+        fl=0x10000; s417=7; d4c=9;
+        cl_dma_n=cl_rel_n=0;
+        aos_menu_close_67898(&co);
+        /* DMA path leaves +0x42C untouched (bit 0x20 clear only
+         * happens on the release path). */
+        assert(cl_dma_n==1 && cl_rel_n==0 && fl==0x10000);
+        fl=0; aos_menu_close_67898(&co);
+        assert(cl_dma_n==1 && cl_rel_n==1 && fl==0);
+        assert(s417==0xFF);
+        /* popup: dirty bit3 clear -> bank1 (win_buf+0x500) */
+        static uint16_t wbuf[0xA00]; static uint8_t dirty;
+        po.dirty=&dirty; po.input=&inw; po.win_buf=wbuf;
+        po.hblank=pp_hb; po.display=pp_dsp; po.ctx=NULL;
+        dirty=0; hb_n=dsp_n=0; pp_hb_n=pp_dsp_n=0; inw=0;
+        aos_menu_popup_6724c(&po);
+        assert(dirty&1 && (inw&0x6000)==0x6000);
+        assert(wbuf[0x500+0x61]==0x40 && wbuf[0x500+0xA0]==0);
+        assert(pp_hb_n==1 && pp_dsp_n==7);
+        /* bit3 set -> bank0 */
+        dirty=8; memset(wbuf,0,sizeof wbuf);
+        aos_menu_popup_6724c(&po);
+        assert(wbuf[0x61]==0x40 && wbuf[0xA0]==0);
     }
 
     puts("aos_menu_cursor: ok");

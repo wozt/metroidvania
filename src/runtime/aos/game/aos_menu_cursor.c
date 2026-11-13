@@ -518,3 +518,91 @@ void aos_menu_render_66b70(AosMenuCursor *cur, uint8_t *ctr,
         ops->arrow(1, false, ops->ctx);
     }
 }
+
+void aos_menu_equip_stats_66a00(uint8_t kind, uint8_t idx,
+                                AosMenuEquipOps *ops) {
+    /* sub_08066A00 */
+    int16_t old[6];
+    memcpy(old, ops->stats, sizeof old);
+    uint8_t sv68 = *ops->slot68, sv6c = *ops->slot6c,
+            sv6d = *ops->slot6d;
+    if (kind == AOS_MENU_KIND_WEAPON) {
+        *ops->slot68 = idx;
+    } else if (kind == AOS_MENU_KIND_ARMOR) {
+        uint8_t flag8 = ops->armor_rec8 ? ops->armor_rec8(idx, ops->ctx)
+                                      : 0;
+        if (flag8 == 0) *ops->slot6c = idx;
+        else            *ops->slot6d = idx;
+    }
+    if (ops->recompute) ops->recompute(ops->ctx);
+    if (ops->set_6b) ops->set_6b(*ops->slot6b, 1, ops->ctx);
+    for (int i = 0; i < 6; i++) {
+        int32_t diff = (int16_t)(uint16_t)(ops->stats[i] - old[i]);
+        uint8_t mark;
+        if (diff == 0)      mark = 3;
+        else if (diff > 0)  mark = 9;
+        else                mark = 8;
+        int32_t v = ops->stats[i];
+        if (v > 0x3E8) v = 0x3E7;
+        uint8_t y = (uint8_t)(i * 2 + 2);
+        if (ops->pos) ops->pos(0x18, y, ops->ctx);
+        if (ops->stat) ops->stat(0x1B, y, v, 3, mark, 0, ops->ctx);
+    }
+    *ops->slot68 = sv68;
+    *ops->slot6c = sv6c;
+    *ops->slot6d = sv6d;
+    if (ops->recompute) ops->recompute(ops->ctx);
+    if (ops->set_6b) ops->set_6b(*ops->slot6b, 1, ops->ctx);
+}
+
+uint8_t aos_menu_scroll_67804(int32_t delta, AosMenuScrollOps *ops) {
+    /* sub_08067804 */
+    if (ops->disp4c) *ops->disp4c = 8;
+    if (ops->disp48)
+        *ops->disp48 = (uint16_t)((*ops->disp48 & 0xFF3F) | 0xC0 |
+                                 0x3F) & 0xFFFE;
+    if (ops->input) *ops->input |= 0x2100;
+    uint8_t v = (uint8_t)(*ops->scroll + delta);   /* strb wrap */
+    uint8_t clamped = 0;
+    if (v > 0x23) { v = 0x24; clamped = 1; }
+    else if (v == 0) { v = 0; clamped = 1; }
+    *ops->scroll = v;
+    uint32_t q = ((uint32_t)v << 5) / 0x24;
+    if (ops->disp3c)
+        *ops->disp3c = (uint16_t)(((0x7C - q) << 8) | (q + 0x7C));
+    return clamped;
+}
+
+void aos_menu_close_67898(AosMenuCloseOps *ops) {
+    /* sub_08067898 */
+    if (ops->input) *ops->input &= 0x1FFF;
+    if (ops->disp4c) *ops->disp4c = 0;
+    if (ops->flags42c && (*ops->flags42c & 0x10000)) {
+        if (ops->dma_setup) ops->dma_setup(ops->ctx);
+    } else {
+        if (ops->release) ops->release(ops->ctx);
+        if (ops->flags42c) *ops->flags42c &= ~0x20u;
+    }
+    if (ops->state417) *ops->state417 = 0xFF;
+}
+
+void aos_menu_popup_6724c(AosMenuPopupOps *ops) {
+    /* sub_0806724C — bank = bit3 of +0x7864 ? 0 : 1, stride
+     * 0xA00 bytes; tilemap at bank +0xC0 (hw index 0x60). */
+    uint16_t *bank = ops->win_buf + ((*ops->dirty & 8) ? 0 : 0x500);
+    if (ops->hblank) ops->hblank(ops->ctx);
+    uint16_t *p = bank + 0x61; /* byte +0xC2 */
+    for (int i = 0; i < 0x40; i++) p[i] = 0x40;
+    bank[0xA0] = 0; /* byte +0x140 */
+    *ops->dirty |= 1;
+    if (ops->input) *ops->input |= 0x6000;
+    if (ops->display) {
+        ops->display(0x40, 0x3E, ops->ctx);
+        ops->display(0x38, 0x28F0, ops->ctx);
+        ops->display(0x3C, 0x7898, ops->ctx);
+        ops->display(0x42, 0x3F, ops->ctx);
+        ops->display(0x41, 0x2F, ops->ctx);
+        ops->display(0x3A, 0x28, ops->ctx);
+        ops->display(0x3E, 0x7898, ops->ctx);
+    }
+}

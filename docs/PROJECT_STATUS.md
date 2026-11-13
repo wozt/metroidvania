@@ -1,3 +1,21 @@
+## Patch 1107 - Aria menu lifecycle and stat-compare routines
+
+- `aos_menu_equip_stats_66a00` ports sub_08066A00: candidate
+  kind/index staged into the equipment slot bytes (weapon
+  +0x13268; armor +0x1326C/+0x1326D chosen by record byte 8),
+  stats recomputed and six comparison rows drawn (marks
+  3/9/8, clamp 999), then slots restored and stats
+  recomputed again.
+- `aos_menu_scroll_67804` ports the scroll-byte update with
+  the ROM u8 wrap and 0..0x24 clamp plus the +0x3C position
+  word; `aos_menu_close_67898` ports menu close (input mask,
+  DMA-vs-release on +0x42C bit 0x10000, +0x417 = 0xFF);
+  `aos_menu_popup_6724c` ports the quantity popup window
+  setup (bank select, HBlank, tilemap fill, dirty/input and
+  display-register sequence) with all hardware injected.
+- Unit-tested; all four routines added to
+  aos.menus.equipment.
+
 ## Patch 1106 - Aria menu row renderer sub_08066B70
 
 - `aos_menu_render_66b70` ports the ~400-line row renderer:

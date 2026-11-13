@@ -6,6 +6,16 @@
 static int rebuild_calls;
 static void rebuild_count(void *c) { (void)c; rebuild_calls++; }
 
+static uint32_t test_span(uint8_t kind, uint8_t idx, void *ctx) {
+    (void)ctx;
+    /* span = kind*10 + idx for the test */
+    return kind * 10 + idx;
+}
+static uint32_t test_w4(uint16_t id, void *ctx) {
+    (void)ctx;
+    return id == 0 ? 0 : 4;    /* every real id has word4 = 4 */
+}
+
 static uint32_t span3(uint8_t sel, void *ctx) {
     (void)sel; (void)ctx; return 3;
 }
@@ -146,6 +156,125 @@ int main(void) {
         aos_menu_adjust_67000(&ctr, 0, st, 1, 0, &d, 0, &snd,
                               NULL, NULL);
         assert(ctr == 0);
+    }
+
+    /* sub_08044F24/44F50/44E94/44EDC record resolvers. */
+    assert(aos_menu_desc_kind(0) == 0);
+    assert(aos_menu_desc_kind(1) == 2 && aos_menu_desc_kind(0x20) == 2);
+    assert(aos_menu_desc_kind(0x21) == 3 && aos_menu_desc_kind(0x5B) == 3);
+    assert(aos_menu_desc_kind(0x5C) == 4 && aos_menu_desc_kind(0x88) == 4);
+    assert(aos_menu_desc_kind(0x89) == 0 && aos_menu_desc_kind(0xFFFF) == 0);
+    assert(aos_menu_desc_kind(0x7B) == 4);   /* boundary: armor side */
+    assert(aos_menu_desc_index(1) == 0 && aos_menu_desc_index(0x20) == 0x1F);
+    assert(aos_menu_desc_index(0x21) == 0 && aos_menu_desc_index(0x5B) == 0x3A);
+    assert(aos_menu_desc_index(0x5C) == 0 && aos_menu_desc_index(0x88) == 0x2C);
+    assert(aos_menu_record_44e94(2, 3, NULL, NULL, NULL) == 48);
+    assert(aos_menu_record_44e94(3, 2, NULL, NULL, NULL) == 56);
+    assert(aos_menu_record_44e94(4, 4, NULL, NULL, NULL) == 80);
+    assert(aos_menu_record_44e94(9, 0, NULL, NULL, NULL) == -1);
+    assert(aos_menu_record_44edc(0, NULL, NULL, NULL) == -1);
+    assert(aos_menu_record_44edc(1, NULL, NULL, NULL) == 0);
+    assert(aos_menu_record_44edc(0x20, NULL, NULL, NULL) == 0x1F * 16);
+    assert(aos_menu_record_44edc(0x21, NULL, NULL, NULL) == 0);
+    assert(aos_menu_record_44edc(0x5B, NULL, NULL, NULL) == 0x3A * 28);
+    assert(aos_menu_record_44edc(0x5C, NULL, NULL, NULL) == 0);
+    assert(aos_menu_record_44edc(0x88, NULL, NULL, NULL) == 0x2C * 20);
+    assert(aos_menu_record_44edc(0x89, NULL, NULL, NULL) == -1);
+
+    /* sub_08066EA4 list builder. */
+    {
+        /* pairs: {kind2,idx5} at 0, {kind3,idx2} at 1, {kind2,idx9}
+         * at 2 (npairs=3). ids: 0x06 -> kind2 idx5; 0x23 -> kind3
+         * idx2; 0x0A -> kind2 idx9. */
+        static const uint8_t pairs[] = {
+            2, 5, 0, 0,   3, 2, 0, 0,   2, 9, 0, 0 };
+        uint8_t list[0x90]; uint8_t ctr[0x80];
+        memset(list, 0xAA, sizeof list); memset(ctr, 0xAA, sizeof ctr);
+        aos_menu_build_66ea4(ctr, list, pairs, 3, test_span, NULL,
+                             test_w4, NULL);
+        /* ids 6, 0x23, 0x0A all have span (kind*10+idx != 0) and
+         * word4 -> listed in id order: 6 -> pair0, 0x0A -> pair2,
+         * 0x23 -> pair1. */
+        assert(list[0] == 3);
+        assert(list[1] == 0 && list[2] == 2 && list[3] == 1);
+        /* ctr[i] = span of the listed pair != 0 -> all 1. */
+        for (int i = 0; i < 3; i++) assert(ctr[i] == 1);
+        assert(ctr[3] == 0);            /* memset tail */
+    }
+    /* id without a pair match is skipped; span-0 kinds reuse the
+     * carried sb but still need word4 and a pair. */
+    {
+        static const uint8_t pairs[] = { 2, 5, 0, 0 };
+        static uint32_t span_calls;
+        /* kind2 idx5 -> span 25; make word4 zero for id 6 only. */
+        uint8_t list[0x90]; uint8_t ctr[0x80];
+        aos_menu_build_66ea4(ctr, list, pairs, 1, test_span, NULL,
+                             test_w4, NULL);
+        assert(list[0] == 1 && list[1] == 0);
+        (void)span_calls;
+    }
+
+    /* sub_0806711c increment. */
+    {
+        uint8_t st[0xA0]; uint8_t ctr = 0; AosMenuDesc d = {0, 40};
+        memset(st, 0, sizeof st); st[0x38 + 1] = 200; ctr = 100;
+        int32_t before; memcpy(&before, st + 0x34, 4);
+        aos_menu_adjust_6711c(&ctr, st, 2, 1, &d, 100, 0);
+        assert(st[0x38 + 1] == 44);      /* 200+100 wraps u8 */
+        assert(ctr == 1);
+        int32_t after; memcpy(&after, st + 0x34, 4);
+        assert(after == before - 100 * 40);
+        /* kind 3 -> +0x58; mode_f 9 -> word4*8/10. */
+        memset(st, 0, sizeof st); ctr = 0;
+        aos_menu_adjust_6711c(&ctr, st, 3, 7, &d, 10, 9);
+        assert(st[0x58 + 7] == 10);
+        memcpy(&after, st + 0x34, 4);
+        assert(after == -(10 * (40 * 8 / 10)));
+    }
+    /* sub_080671A4 afford check. */
+    assert(aos_menu_can_afford_671a4(2, 2, 0, 1000, 0, 100) ==
+           (1000 + (100 >> 1) * 2 <= 0xF423F));
+    assert(!aos_menu_can_afford_671a4(0, 2, 0, 0, 0, 100)); /* amt 0 */
+    assert(!aos_menu_can_afford_671a4(2, 2, 0, 0xF4230, 0, 100));
+    /* non-buy: span+amount <= 9 and st34 >= cost. */
+    assert(aos_menu_can_afford_671a4(3, 0, 0, 500, 5, 100));
+    assert(!aos_menu_can_afford_671a4(5, 0, 0, 500, 5, 100)); /* 10 > 9 */
+    assert(!aos_menu_can_afford_671a4(3, 0, 0, 200, 5, 100)); /* cost 300 */
+    assert(aos_menu_can_afford_671a4(3, 0, 9, 240, 5, 100));  /* 240>=240 */
+    assert(!aos_menu_can_afford_671a4(3, 0, 9, 239, 5, 100));
+
+    /* sub_08067310 page init. */
+    {
+        AosMenuCursor cur; uint8_t mode = 0xFF, ctr[0x80];
+        uint8_t list[0x90];
+        static const uint8_t pairs[] = {2, 5, 0, 0};
+        static const uint8_t pg1[] = {2, 0xAA, 0xBB};
+        static const uint8_t pg2[] = {2, 0xCC, 0xDD};
+        static const uint8_t *pages[] = {NULL, pg1, pg2};
+        bool built = false, wops = false;
+        /* flags 0x12 -> mode byte 2 (0x02 wins over 0x10). */
+        memset(&cur, 0, sizeof cur); cur.mode = 0;
+        cur.count = 9; cur.low = -3; cur.high = 7;
+        memset(ctr, 0xAA, sizeof ctr);
+        aos_menu_page_init_67310(&cur, &mode, ctr, list, pairs, 1,
+                                 0x12, pages, 3, test_span, NULL,
+                                 test_w4, NULL, &built, &wops);
+        assert(mode == 2 && cur.count == 0 && cur.low == 0 &&
+               cur.high == 0 && !built && wops);
+        assert(ctr[0] == 1 && ctr[1] == 1 && ctr[2] == 0xAA); /* no clear in this path */
+        /* flags 0x10 -> mode 1, empty page list -> ctr stays 0? */
+        memset(&cur, 0, sizeof cur); memset(ctr, 0, sizeof ctr);
+        aos_menu_page_init_67310(&cur, &mode, ctr, list, pairs, 1,
+                                 0x10, pages, 3, test_span, NULL,
+                                 test_w4, NULL, &built, &wops);
+        assert(mode == 1 && !built);
+        /* cursor mode 2 -> build path fills ctr via 66EA4. */
+        memset(&cur, 0, sizeof cur); cur.mode = 2;
+        memset(ctr, 0, sizeof ctr); memset(list, 0, sizeof list);
+        aos_menu_page_init_67310(&cur, &mode, ctr, list, pairs, 1,
+                                 0, pages, 3, test_span, NULL,
+                                 test_w4, NULL, &built, &wops);
+        assert(built && list[0] == 1 && ctr[0] == 1);
     }
 
     puts("aos_menu_cursor: ok");

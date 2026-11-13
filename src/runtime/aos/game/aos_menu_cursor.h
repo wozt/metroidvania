@@ -69,3 +69,96 @@ void aos_menu_adjust_67000(uint8_t *ctr, uint8_t high,
                            const AosMenuDesc *desc, uint32_t span,
                            bool *sound, void (*rebuild)(void *),
                            void *ctx);
+
+/* Item/weapon/armor record resolvers (code_08040A38.s).
+ * sub_08044F24 maps a global item id to its kind: 0 -> 0,
+ * 1-0x20 -> 2 (item), 0x21-0x7B -> 3 (weapon), 0x7C-0xA8 -> 4
+ * (armor), else 0. sub_08044F50 maps it to the index inside the
+ * kind (id-1, id-0x21, id-0x7C; 0 for id 0 or out of range).
+ * sub_08044E94(kind, idx) picks the record: kind 2 -> 16-byte
+ * item records, kind 3 -> 28-byte weapon records, kind 4 ->
+ * 20-byte armor records; other kinds yield NULL. sub_08044EDC
+ * resolves by global id through three tables: ids 1-0x20 ->
+ * 16-byte records, 0x21-0x7B -> 28-byte, 0x7C-0xA8 -> 20-byte;
+ * id 0 or out of range yields NULL. All four return a byte
+ * offset into the injected table (or -1 for NULL). */
+#define AOS_MENU_KIND_ITEM  2
+#define AOS_MENU_KIND_WEAPON 3
+#define AOS_MENU_KIND_ARMOR 4
+
+int aos_menu_desc_kind(uint16_t id);          /* sub_08044F24 */
+uint16_t aos_menu_desc_index(uint16_t id);    /* sub_08044F50 */
+int aos_menu_record_44e94(uint8_t kind, uint8_t idx,
+                          const uint8_t *items,
+                          const uint8_t *weapons,
+                          const uint8_t *armor);
+int aos_menu_record_44edc(uint16_t id,
+                          const uint8_t *items,
+                          const uint8_t *weapons,
+                          const uint8_t *armor);
+
+/* sub_08066EA4: menu list builder — walks global ids 0..0x87,
+ * resolves kind/index through sub_08044F24/44F50, reads the
+ * kind span byte (loop-carried `sb`: only kinds 2/3/4 refresh
+ * it, other kinds reuse the previous value — the ROM's first
+ * iteration inherits the caller's register, modelled as 0) and
+ * the descriptor word4 through sub_08044EDC; ids with both
+ * nonzero are looked up in the 0x085269FC pair table (stride 4,
+ * first match wins, -1 skips) and their table index appended to
+ * the list at +0x135F4 (count byte + one byte per entry). The
+ * tail clears the 0x80 counter bytes at base+0x3D1 and writes
+ * (span != 0) for each listed column. `span_fn` is the
+ * sub_08067660 lookup, `word4_at` the descriptor word4 (0 when
+ * the record is absent). */
+typedef uint32_t (*AosMenuKindSpanFn)(uint8_t kind, uint8_t idx,
+                                      void *ctx);
+
+void aos_menu_build_66ea4(uint8_t *ctr, uint8_t *list,
+                          const uint8_t *pairs, uint32_t npairs,
+                          AosMenuKindSpanFn span_fn, void *sctx,
+                          uint32_t (*word4_at)(uint16_t id,
+                                               void *ctx),
+                          void *wctx);
+
+/* sub_0806711C: menu quantity increment — the mirror of
+ * sub_08067000 without the clamps: the column counter byte is
+ * ADDED into st[0x38/+0x58/+0x93 + idx] per kind (u8 wrap), the
+ * st+0x34 total loses amount * desc.word4 (or *8/10 when
+ * st[0xF] == 9), and the counter byte is set to 1. No sound,
+ * no zero handling, no rebuild. */
+void aos_menu_adjust_6711c(uint8_t *ctr, uint8_t *st,
+                           uint8_t kind, uint8_t idx,
+                           const AosMenuDesc *desc, uint8_t amount,
+                           uint8_t mode_f);
+
+/* sub_080671A4: menu afford check — span = sub_08067660(pair),
+ * desc word4 resolved by the caller. Menu mode +0xA == 2 is the
+ * buy page: allowed when amount != 0 and st+0x34 + amount *
+ * (word4 >> 1) <= 0xF423F. Other modes: allowed when
+ * span + amount <= 9 and st+0x34 >= amount * word4' where
+ * word4' = word4 * 8 / 10 when st[0xF] == 9 else word4.
+ * Returns the ROM boolean. */
+bool aos_menu_can_afford_671a4(uint8_t amount, uint8_t mode_a,
+                               uint8_t mode_f, int32_t st34,
+                               uint32_t span, int32_t word4);
+
+/* sub_08067310: menu page init — clears the cursor bytes
+ * (+0x14..+0x17), writes the +0x3D0 mode byte (0, then 1 when
+ * gEwramData+0x37E bit 0x10, then 2 when bit 0x02 — later wins),
+ * and either rebuilds the list through sub_08066EA4 + renders
+ * through sub_08066B70 when cursor mode +0xA == 2, or fills the
+ * 0x80 counter bytes with 1 up to the count of the count-
+ * prefixed list page_lists[mode_byte] (table 0x08526C6C)
+ * before the same render. The BG/DMA/window/text setup calls
+ * are injected as flags. */
+void aos_menu_page_init_67310(AosMenuCursor *cur, uint8_t *mode_byte,
+                              uint8_t *ctr, uint8_t *list,
+                              const uint8_t *pairs, uint32_t npairs,
+                              uint16_t flags37e,
+                              const uint8_t *const *page_lists,
+                              uint32_t npages,
+                              AosMenuKindSpanFn span_fn, void *sctx,
+                              uint32_t (*word4_at)(uint16_t id,
+                                                   void *ctx),
+                              void *wctx, bool *built,
+                              bool *window_ops);

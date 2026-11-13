@@ -1,3 +1,26 @@
+## Patch 1104 - Aria menu engine: resolvers, builder, adjusters, page init
+
+- Record resolvers ported as pure index math: sub_08044F24
+  (id -> kind 2/3/4), sub_08044F50 (id -> kind index),
+  sub_08044E94 (kind+index -> 16/28/20-byte record offset) and
+  sub_08044EDC (global id -> record offset through the three
+  id-range tables).
+- `aos_menu_build_66ea4` ports the list builder: ids 0..0x87,
+  loop-carried span byte (only kinds 2/3/4 refresh it),
+  descriptor word4 gate, first-match pair-table lookup,
+  +0x135F4 count+index list and the +0x3D1 span-flag tail.
+- `aos_menu_adjust_6711c` ports the quantity increment mirror
+  (u8 wrap into +0x38/+0x58/+0x93, +0x34 -= amount*word4 or
+  *8/10 in mode 9, counter byte = 1, no clamps).
+- `aos_menu_can_afford_671a4` ports the afford check (buy page
+  gold cap 0xF423F, other pages span+amount <= 9 and sufficient
+  st34).
+- `aos_menu_page_init_67310` ports the page init state portion:
+  cursor bytes cleared, +0x3D0 mode byte from +0x37E bits
+  0x10/0x02, build+render on cursor mode 2 else count-prefilled
+  page lists; graphics calls reported as flags.
+- Unit-tested; eight routines added to aos.menus.equipment.
+
 ## Patch 1103 - Aria menu span resolver and quantity adjust
 
 - `aos_menu_span_67660` ports sub_08067660: kind 2/3/4 read the

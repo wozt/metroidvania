@@ -26,13 +26,17 @@ typedef struct {
     int8_t  low;        /* +0x16 signed window low */
     uint8_t high;       /* +0x17 cursor high */
     uint8_t mode;       /* +0xA */
+    uint8_t ctr_c;      /* +0xC adjust counter */
+    uint8_t sub_d;      /* +0xD sub-mode */
 } AosMenuCursor;
 
-typedef uint32_t (*AosMenuSpanFn)(uint8_t sel, void *ctx);
+typedef uint32_t (*AosMenuKindSpanFn)(uint8_t kind, uint8_t idx,
+                                      void *ctx);
 
 uint32_t aos_menu_cursor_tick(AosMenuCursor *s, uint8_t *ctr,
                               const uint8_t *cols,
-                              AosMenuSpanFn span_fn, void *ctx,
+                              const uint8_t *pairs, uint32_t npairs,
+                              AosMenuKindSpanFn span_fn, void *ctx,
                               uint32_t input, bool *song);
 
 #endif
@@ -110,9 +114,6 @@ int aos_menu_record_44edc(uint16_t id,
  * (span != 0) for each listed column. `span_fn` is the
  * sub_08067660 lookup, `word4_at` the descriptor word4 (0 when
  * the record is absent). */
-typedef uint32_t (*AosMenuKindSpanFn)(uint8_t kind, uint8_t idx,
-                                      void *ctx);
-
 void aos_menu_build_66ea4(uint8_t *ctr, uint8_t *list,
                           const uint8_t *pairs, uint32_t npairs,
                           AosMenuKindSpanFn span_fn, void *sctx,
@@ -162,3 +163,44 @@ void aos_menu_page_init_67310(AosMenuCursor *cur, uint8_t *mode_byte,
                                                    void *ctx),
                               void *wctx, bool *built,
                               bool *window_ops);
+
+/* sub_08067488: menu page input handler — resolves the active
+ * list (built +0x135F4 when cursor mode +0xA == 2, else the
+ * count-prefixed page list for the +0x3D0 mode byte) and
+ * dispatches the gEwramData+0x18 input bits in ROM order:
+ * with +0xC == 0, bit 0x2 returns 1 after PlaySong(0xF0), bit
+ * 0x1 runs the afford check on the highlighted column
+ * (sub_080671A4) then sub_0806724C + PlaySong(0xF3) +
+ * sub_d = 2 + ctr_c++ on success or PlaySong(0xEF) on failure,
+ * anything else runs the cursor sub_0806688C and re-renders
+ * through sub_08066B70 when it moved; with +0xC != 0, bit 0x1
+ * and sub_d == 0 adjusts the quantity (sub_08067000 on mode 2,
+ * sub_0806711C otherwise), re-renders, redraws the gold counter
+ * and clears ctr_c; bit 0x3 confirms (PlaySong(0xF0), dirty
+ * flags, ctr_c = 0); bit 0x10 enters a sub-mode and bit 0x20
+ * leaves it (both PlaySong(0xF1)). Songs, the 66B70 render, the
+ * 6724C popup, the gold redraw and the dirty/system flag writes
+ * are injected; returns the ROM value (1 only on bit 0x2). */
+typedef const AosMenuDesc *(*AosMenuDescKiFn)(uint8_t kind,
+                                              uint8_t idx,
+                                              void *ctx);
+typedef void (*AosMenuSongFn)(uint16_t id, void *ctx);
+typedef void (*AosMenuRenderFn)(uint32_t arg, void *ctx);
+
+uint32_t aos_menu_page_input_67488(AosMenuCursor *cur,
+                                   uint8_t *ctr, uint8_t *st,
+                                   const uint8_t *cols,
+                                   const uint8_t *list,
+                                   const uint8_t *pairs,
+                                   uint32_t npairs, uint16_t input,
+                                   AosMenuKindSpanFn span_fn,
+                                   void *sctx,
+                                   AosMenuDescKiFn desc_ki,
+                                   void *dctx,
+                                   AosMenuSongFn song,
+                                   AosMenuRenderFn render,
+                                   void (*popup)(void *),
+                                   void (*rebuild)(void *),
+                                   void *ctx,
+                                   uint8_t *menu_dirty,
+                                   uint16_t *sys_flags);

@@ -1,3 +1,20 @@
+## Patch 1105 - Aria menu page input handler sub_08067488
+
+- `aos_menu_page_input_67488` ports the page handler: list
+  resolution (built +0x135F4 vs count-prefixed page lists),
+  the +0xC==0 branch (bit 0x2 -> return 1 + F0; bit 0x1 ->
+  afford check, 6724C popup, F3, sub_d=2, ctr_c++; else cursor
+  tick + 66B70 render) and the +0xC!=0 branch (bit 0x1 adjust
+  through 67000/6711C + F5 + dirty flags + gold redraw, bits
+  0x1|0x2 confirm, 0x10/0x20 sub-mode enter/exit with F1).
+- The cursor tick signature now mirrors the ROM: the column
+  selector byte indexes the 0x085269FC pair table and the span
+  resolves as sub_08067660(kind, idx).
+- AosMenuCursor gained the +0xC adjust counter and +0xD
+  sub-mode bytes the handler needs.
+- Unit-tested across all dispatch branches; sub_08067488 added
+  to aos.menus.equipment.
+
 ## Patch 1104 - Aria menu engine: resolvers, builder, adjusters, page init
 
 - Record resolvers ported as pure index math: sub_08044F24

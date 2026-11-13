@@ -348,7 +348,6 @@ aos:asm:asm/code/code_08060B98.s:sub_08066308	sub_08066308	unclassified		technic
 aos:asm:asm/code/code_08060B98.s:sub_08066A00	sub_08066A00	unclassified		technical	exclusive_callees	asm_function	0x08066A00	asm/code/code_08060B98.s	11981	1	4
 aos:asm:asm/code/code_08060B98.s:sub_08066B70	sub_08066B70	unclassified		technical	exclusive_callees	asm_function	0x08066B70	asm/code/code_08060B98.s	12162	2	18
 aos:asm:asm/code/code_08060B98.s:sub_0806724C	sub_0806724C	unclassified				asm_function	0x0806724C	asm/code/code_08060B98.s	13038	1	1
-aos:asm:asm/code/code_08060B98.s:sub_08067488	sub_08067488	unclassified				asm_function	0x08067488	asm/code/code_08060B98.s	13308	1	9
 aos:asm:asm/code/code_08060B98.s:sub_08067804	sub_08067804	unclassified		technical	exclusive_callees	asm_function	0x08067804	asm/code/code_08060B98.s	13736	2	1
 aos:asm:asm/code/code_08060B98.s:sub_08067898	sub_08067898	unclassified		technical	exclusive_callees	asm_function	0x08067898	asm/code/code_08060B98.s	13808	10	1
 aos:asm:asm/code/code_08060B98.s:sub_08068104	sub_08068104	unclassified				asm_function	0x08068104	asm/code/code_08060B98.s	14828	1	1

@@ -16,11 +16,31 @@ static uint32_t test_w4(uint16_t id, void *ctx) {
     return id == 0 ? 0 : 4;    /* every real id has word4 = 4 */
 }
 
-static uint32_t span3(uint8_t sel, void *ctx) {
-    (void)sel; (void)ctx; return 3;
+static uint16_t rec_songs[16]; static int n_songs;
+static void rec_song(uint16_t id, void *ctx) {
+    (void)ctx; rec_songs[n_songs++] = id;
 }
-static uint32_t span5(uint8_t sel, void *ctx) {
-    (void)sel; (void)ctx; return 5;
+static uint32_t rec_renders[16]; static int n_renders;
+static void rec_render(uint32_t arg, void *ctx) {
+    (void)ctx; rec_renders[n_renders++] = arg;
+}
+static int n_popups;
+static void rec_popup(void *ctx) { (void)ctx; n_popups++; }
+static const AosMenuDesc test_desc = {0, 40};
+static uint32_t span_small(uint8_t kind, uint8_t idx, void *ctx) {
+    (void)kind; (void)idx; (void)ctx; return 2;
+}
+static const AosMenuDesc *test_desc_ki(uint8_t kind, uint8_t idx,
+                                       void *ctx) {
+    (void)kind; (void)idx; (void)ctx; return &test_desc;
+}
+
+static const uint8_t tpairs[] = {2, 5, 0, 0, 3, 2, 0, 0};
+static uint32_t span3(uint8_t kind, uint8_t idx, void *ctx) {
+    (void)kind; (void)idx; (void)ctx; return 3;
+}
+static uint32_t span5(uint8_t kind, uint8_t idx, void *ctx) {
+    (void)kind; (void)idx; (void)ctx; return 5;
 }
 
 int main(void) {
@@ -30,82 +50,82 @@ int main(void) {
     /* counter+ : mode!=2 needs ctr+span <= 8. */
     memset(&s, 0, sizeof s); s.count = 10; s.mode = 0;
     ctr = 0;
-    uint32_t r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL,
+    uint32_t r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL,
                                       0x10, &song);
     assert(r == 0 && ctr == 0);         /* ctr==0 -> fall through */
     ctr = 4;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x10, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x10, &song);
     assert(r == 1 && ctr == 5 && song); /* 4+3 <= 8 */
     ctr = 6;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x10, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x10, &song);
     assert(r == 0 && ctr == 6 && !song); /* 6+3 > 8 -> tail */
     /* mode==2 bound is ctr < span. */
     memset(&s, 0, sizeof s); s.count = 10; s.mode = 2;
     ctr = 2;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x10, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x10, &song);
     assert(r == 1 && ctr == 3 && song);
     ctr = 3;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x10, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x10, &song);
     assert(r == 0 && ctr == 3 && !song);
     /* counter- needs ctr > 1. */
     memset(&s, 0, sizeof s); s.count = 10;
     ctr = 1;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x20, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x20, &song);
     assert(r == 0 && ctr == 1 && !song);
     ctr = 2;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x20, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x20, &song);
     assert(r == 1 && ctr == 1 && song);
     /* cursor up: high>0, low clamps to high. */
     memset(&s, 0, sizeof s); s.count = 10; s.high = 4; s.low = 2;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x40, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x40, &song);
     assert(r == 2 && s.high == 3 && s.low == 2 && song);
     s.high = 1; s.low = 1;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x40, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x40, &song);
     assert(s.high == 0 && s.low == 0);
     /* low stays when <= high. */
     memset(&s, 0, sizeof s); s.count = 10; s.high = 3; s.low = -5;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x40, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x40, &song);
     assert(s.high == 2 && s.low == -5);
     /* cursor down: bound count-1, low window follows at -3. */
     memset(&s, 0, sizeof s); s.count = 6; s.high = 3; s.low = 0;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x80, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x80, &song);
     assert(r == 3 && s.high == 4 && s.low == 1); /* low moved -> 3 */
     s.high = 5;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x80, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x80, &song);
     assert(r == 0 && s.high == 5);       /* high >= count-1 */
     /* page down 0x100: +4 each, clamp to count-4/count-1. */
     memset(&s, 0, sizeof s); s.count = 20; s.high = 4; s.low = 1;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x100, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x100, &song);
     assert(r == 3 && s.high == 8 && s.low == 5); /* low moved */
     s.high = 18; s.low = 10;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x100, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x100, &song);
     /* low 14 <= count-4 16 -> no clamp: high wraps to 22 like
      * the ROM; low moved -> ret 3. */
     assert(r == 3 && s.high == 22 && s.low == 14);
     /* page up 0x200: -4 each; low<=3 resets both. */
     memset(&s, 0, sizeof s); s.count = 20; s.high = 8; s.low = 5;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x200, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x200, &song);
     assert(r == 3 && s.high == 4 && s.low == 1);
     memset(&s, 0, sizeof s); s.count = 20; s.high = 6; s.low = 2;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x200, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x200, &song);
     assert(r == 3 && s.high == 0 && s.low == 0); /* low moved -> 3 */
     /* bit priority: 0x10 set with ctr==0 falls to 0x40. */
     memset(&s, 0, sizeof s); s.count = 10; s.high = 5; s.low = 3;
     ctr = 0;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL,
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL,
                              0x10 | 0x40, &song);
     assert(r == 2 && s.high == 4);
     /* no input -> ret 0 but diff still written. */
     memset(&s, 0, sizeof s); s.count = 10; s.high = 5; s.low = 2;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0, &song);
     assert(r == 0 && s.diff == 3 && !song);
     /* clamp: diff >= count -> ret 3 even without input. */
     memset(&s, 0, sizeof s); s.count = 4; s.high = 9; s.low = 0;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0, &song);
     assert(r == 3 && s.high == 3 && s.diff == 3);
     /* low window follows on page down even near the bound. */
     memset(&s, 0, sizeof s); s.count = 6; s.high = 4; s.low = 4;
-    r = aos_menu_cursor_tick(&s, &ctr, cols, span3, NULL, 0x80, &song);
+    r = aos_menu_cursor_tick(&s, &ctr, cols, tpairs, 2, span3, NULL, 0x80, &song);
     /* low 4 >= high-3=2 -> window stays; ret 2. */
     assert(r == 2 && s.high == 5 && s.low == 4);
 
@@ -275,6 +295,120 @@ int main(void) {
                                  0, pages, 3, test_span, NULL,
                                  test_w4, NULL, &built, &wops);
         assert(built && list[0] == 1 && ctr[0] == 1);
+    }
+
+    /* sub_08067488 page input handler. */
+    {
+        static const uint8_t prs[] = {2, 5, 0, 0, 3, 2, 0, 0};
+        static const uint8_t lst[] = {1, 0};
+        uint8_t ctr[0x80]; uint8_t st[0xA0]; uint8_t cols[0x20];
+        uint8_t dirty; uint16_t sysf;
+        AosMenuCursor c;
+
+        /* bit 0x2 with +0xC == 0 -> return 1 + PlaySong(0xF0). */
+        memset(&c, 0, sizeof c); memset(ctr, 0, sizeof ctr);
+        memset(st, 0, sizeof st); dirty = 0; sysf = 0xFFFF;
+        n_songs = n_renders = n_popups = 0;
+        uint32_t rr = aos_menu_page_input_67488(
+            &c, ctr, st, cols, lst, prs, 2, 0x2, test_span, NULL,
+            test_desc_ki, NULL, rec_song, rec_render, rec_popup,
+            NULL, NULL, &dirty, &sysf);
+        assert(rr == 1 && n_songs == 1 && rec_songs[0] == 0xF0);
+
+        /* bit 0x1 afford ok -> popup + F3 + sub_d=2 + ctr_c=1. */
+        memset(&c, 0, sizeof c); memset(ctr, 0, sizeof ctr);
+        memset(st, 0, sizeof st); dirty = 0; sysf = 0xFFFF;
+        n_songs = n_renders = n_popups = 0;
+        ctr[0] = 1;                 /* amount 1, affordable */
+        memcpy(st + 0x34, &(int32_t){1000}, 4);
+        rr = aos_menu_page_input_67488(
+            &c, ctr, st, cols, lst, prs, 2, 0x1, span_small, NULL,
+            test_desc_ki, NULL, rec_song, rec_render, rec_popup,
+            NULL, NULL, &dirty, &sysf);
+        assert(rr == 0 && n_popups == 1 && c.sub_d == 2 &&
+               c.ctr_c == 1 && rec_songs[0] == 0xF3);
+
+        /* afford fail (amount too big vs st34) -> EF only. */
+        memset(&c, 0, sizeof c); memset(ctr, 0, sizeof ctr);
+        memset(st, 0, sizeof st); dirty = 0; sysf = 0xFFFF;
+        n_songs = n_renders = n_popups = 0;
+        memcpy(st + 0x34, &(int32_t){0}, 4);
+        ctr[0] = 100;
+        rr = aos_menu_page_input_67488(
+            &c, ctr, st, cols, lst, prs, 2, 0x1, span_small, NULL,
+            test_desc_ki, NULL, rec_song, rec_render, rec_popup,
+            NULL, NULL, &dirty, &sysf);
+        /* mode 0 path: span 25 + amount 100 > 9 -> fail */
+        assert(rr == 0 && n_popups == 0 && rec_songs[0] == 0xEF &&
+               c.ctr_c == 0);
+
+        /* +0xC != 0, bit 0x1, sub_d == 0 -> adjust + F5 + dirty. */
+        memset(&c, 0, sizeof c); c.ctr_c = 1; c.mode = 0;
+        memset(ctr, 0, sizeof ctr); memset(st, 0, sizeof st);
+        dirty = 0; sysf = 0xFFFF; n_songs = n_renders = 0;
+        memcpy(st + 0x34, &(int32_t){100000}, 4);
+        ctr[0] = 2; st[0x38 + 5] = 50;
+        rr = aos_menu_page_input_67488(
+            &c, ctr, st, cols, lst, prs, 2, 0x1, test_span, NULL,
+            test_desc_ki, NULL, rec_song, rec_render, rec_popup,
+            NULL, NULL, &dirty, &sysf);
+        assert(rr == 0 && rec_songs[0] == 0xF5 &&
+               st[0x38 + 5] == 52 && c.ctr_c == 0 &&
+               (dirty & 2) && (sysf & 0x9FFF) == 0x9FFF &&
+               n_renders == 1 && rec_renders[0] == 3);
+
+        /* mode 2 +0xC!=0 -> decrement path (67000). */
+        memset(&c, 0, sizeof c); c.ctr_c = 1; c.mode = 2;
+        memset(ctr, 0, sizeof ctr); memset(st, 0, sizeof st);
+        dirty = 0; sysf = 0xFFFF; n_songs = 0;
+        memcpy(st + 0x34, &(int32_t){500}, 4);
+        ctr[0] = 3; st[0x58 + 5] = 20;      /* kind2->wait mode2 uses
+                                             * 67000 kind dispatch:
+                                             * kind=2 -> +0x38 */
+        st[0x38 + 5] = 20;
+        rr = aos_menu_page_input_67488(
+            &c, ctr, st, cols, lst, prs, 2, 0x1, test_span, NULL,
+            test_desc_ki, NULL, rec_song, rec_render, rec_popup,
+            NULL, NULL, &dirty, &sysf);
+        assert(st[0x38 + 5] == 17 && c.ctr_c == 0);
+
+        /* bit 0x2 confirm (bit 0x1 would adjust first) with
+         * sub_d==0 -> F0 + dirty + ctr_c=0. */
+        memset(&c, 0, sizeof c); c.ctr_c = 1;
+        memset(ctr, 0, sizeof ctr); memset(st, 0, sizeof st);
+        dirty = 0; sysf = 0xFFFF; n_songs = 0;
+        rr = aos_menu_page_input_67488(
+            &c, ctr, st, cols, lst, prs, 2, 0x2, test_span, NULL,
+            test_desc_ki, NULL, rec_song, rec_render, rec_popup,
+            NULL, NULL, &dirty, &sysf);
+        assert(rec_songs[0] == 0xF0 && (dirty & 2) &&
+               c.ctr_c == 0);
+
+        /* bit 0x10 enter / 0x20 exit sub-mode (+0xC must be
+         * nonzero for this branch). */
+        memset(&c, 0, sizeof c); c.ctr_c = 1;
+        memset(ctr, 0, sizeof ctr); memset(st, 0, sizeof st);
+        dirty = 0; sysf = 0xFFFF; n_songs = 0;
+        rr = aos_menu_page_input_67488(
+            &c, ctr, st, cols, lst, prs, 2, 0x10, test_span, NULL,
+            test_desc_ki, NULL, rec_song, rec_render, rec_popup,
+            NULL, NULL, &dirty, &sysf);
+        assert(c.sub_d == 1 && rec_songs[0] == 0xF1);
+        rr = aos_menu_page_input_67488(
+            &c, ctr, st, cols, lst, prs, 2, 0x20, test_span, NULL,
+            test_desc_ki, NULL, rec_song, rec_render, rec_popup,
+            NULL, NULL, &dirty, &sysf);
+        assert(c.sub_d == 0 && rec_songs[1] == 0xF1);
+
+        /* cursor path: bit 0x40 moves high, renders once. */
+        memset(&c, 0, sizeof c); c.count = 10; c.high = 3; c.low = 1;
+        memset(ctr, 0, sizeof ctr); memset(st, 0, sizeof st);
+        dirty = 0; sysf = 0xFFFF; n_songs = n_renders = 0;
+        rr = aos_menu_page_input_67488(
+            &c, ctr, st, cols, lst, prs, 2, 0x40, test_span, NULL,
+            test_desc_ki, NULL, rec_song, rec_render, rec_popup,
+            NULL, NULL, &dirty, &sysf);
+        assert(c.high == 2 && n_renders == 1);
     }
 
     puts("aos_menu_cursor: ok");

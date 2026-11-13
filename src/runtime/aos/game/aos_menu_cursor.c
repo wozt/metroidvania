@@ -4,9 +4,14 @@
 
 uint32_t aos_menu_cursor_tick(AosMenuCursor *s, uint8_t *ctr,
                               const uint8_t *cols,
-                              AosMenuSpanFn span_fn, void *ctx,
+                              const uint8_t *pairs, uint32_t npairs,
+                              AosMenuKindSpanFn span_fn, void *ctx,
                               uint32_t input, bool *song) {
-    uint32_t span = span_fn(cols[s->high], ctx);
+    /* sel byte indexes the pair table; span = 67660(kind, idx) */
+    uint8_t sel = cols[s->high];
+    uint8_t pk = sel < npairs ? pairs[sel * 4] : 0;
+    uint8_t pi = sel < npairs ? pairs[sel * 4 + 1] : 0;
+    uint32_t span = span_fn(pk, pi, ctx);
     int32_t lo0 = s->low;
     uint32_t ret = 0;
 
@@ -291,4 +296,104 @@ void aos_menu_page_init_67310(AosMenuCursor *cur, uint8_t *mode_byte,
         for (uint32_t i = 0; i < pl[0]; i++) ctr[i] = 1;
     }
     *built = false;
+}
+
+static uint32_t pair_field(const uint8_t *pairs, uint8_t idx,
+                           uint32_t npairs, int field) {
+    if (idx >= npairs) return 0;
+    return pairs[idx * 4 + field];
+}
+
+uint32_t aos_menu_page_input_67488(AosMenuCursor *cur,
+                                   uint8_t *ctr, uint8_t *st,
+                                   const uint8_t *cols,
+                                   const uint8_t *list,
+                                   const uint8_t *pairs,
+                                   uint32_t npairs, uint16_t input,
+                                   AosMenuKindSpanFn span_fn,
+                                   void *sctx,
+                                   AosMenuDescKiFn desc_ki,
+                                   void *dctx,
+                                   AosMenuSongFn song,
+                                   AosMenuRenderFn render,
+                                   void (*popup)(void *),
+                                   void (*rebuild)(void *),
+                                   void *ctx,
+                                   uint8_t *menu_dirty,
+                                   uint16_t *sys_flags) {
+    /* sub_08067488 */
+    uint32_t ret = 0;
+    /* active column index byte: list[1 + high] */
+    uint8_t colidx = list[1 + cur->high];
+    uint8_t kind = (uint8_t)pair_field(pairs, colidx, npairs, 0);
+    uint8_t pidx = (uint8_t)pair_field(pairs, colidx, npairs, 1);
+    const AosMenuDesc *desc = desc_ki ? desc_ki(kind, pidx, dctx)
+                                    : NULL;
+    int32_t st34;
+    memcpy(&st34, st + 0x34, sizeof st34);
+
+    if (cur->ctr_c == 0) {
+        if (input & 0x2) {
+            if (song) song(0xF0, ctx);
+            return 1;
+        }
+        if (input & 0x1) {
+            /* afford check on the highlighted column */
+            uint32_t span = span_fn ? span_fn(kind, pidx, sctx) : 0;
+            int32_t w4 = desc ? desc->word4 : 0;
+            if (aos_menu_can_afford_671a4(ctr[cur->high], cur->mode,
+                                          st[0xF], st34, span, w4)) {
+                if (popup) popup(ctx);           /* sub_0806724C */
+                if (song) song(0xF3, ctx);
+                cur->sub_d = 2;
+                cur->ctr_c++;
+            } else if (song) song(0xEF, ctx);
+            return ret;
+        }
+        /* cursor move + optional re-render */
+        bool song_out = false;
+        uint32_t moved = aos_menu_cursor_tick(
+            cur, &ctr[cur->high], cols, pairs, npairs, span_fn,
+            sctx, input, &song_out);
+        if (moved && render) render(moved, ctx);   /* 66B70 arg */
+        return ret;
+    }
+    /* +0xC != 0 */
+    if ((input & 0x1) && cur->sub_d == 0) {
+        uint8_t *cell_ctr = &ctr[cur->high];
+        if (cur->mode == 2) {
+            bool snd = false;
+            aos_menu_adjust_67000(cell_ctr, cur->high, st, kind,
+                                  pidx, desc, span_fn ?
+                                  span_fn(kind, pidx, sctx) : 0,
+                                  &snd, rebuild, ctx);
+        } else {
+            aos_menu_adjust_6711c(cell_ctr, st, kind, pidx, desc,
+                                  *cell_ctr, st[0xF]);
+        }
+        if (song) song(0xF5, ctx);
+        if (render) render(3, ctx);
+        /* gold redraw + digit position — injected via render */
+        *menu_dirty |= 2;                            /* +0x7864 */
+        *sys_flags &= 0x9FFF;                        /* 0x2CB0 hword */
+        cur->ctr_c = 0;
+        return ret;
+    }
+    if ((input & 0x3) != 0 && cur->sub_d == 0) {
+        if (song) song(0xF0, ctx);
+        *menu_dirty |= 2;
+        *sys_flags &= 0x9FFF;
+        cur->ctr_c = 0;
+        return ret;
+    }
+    if ((input & 0x10) && cur->sub_d == 0) {
+        if (song) song(0xF1, ctx);
+        cur->sub_d++;
+        return ret;
+    }
+    if ((input & 0x20) && cur->sub_d != 0) {
+        if (song) song(0xF1, ctx);
+        cur->sub_d = 0;
+    }
+    return ret;
 }

@@ -12862,6 +12862,37 @@ static void great_armor_tests(void) {
         ++frames;
     }
     assert(e.removed);
+
+    /* Final Guard (0x67) and Shadow Knight (0x69): EnemyFinalGuardCreate
+     * 0x0808EC40 / EnemyShadowKnightCreate 0x0808EC58 thunk to
+     * EnemyGreatArmorCreate and their updates thunk likewise, so the
+     * same machine runs with their own stats; their GA_PART children
+     * inherit their id and are not dropped by the body's id check. */
+    static const AosEnemyStats fg = {1200, 75, 50, 0x0000, 0x0FFF, 2000};
+    AosEnemy variant;
+    assert(aos_enemy_create(&variant, 0x67, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &fg));
+    assert(variant.state == 0 && variant.hp == 1200);
+    AosHitReport vhit = aos_enemy_update(&variant, &soma, &layer,
+                                         &kind, NULL, NULL, 10, 4, 0, 0,
+                                         always_zero);
+    int vid = -1;
+    for (int i = 0; i < vhit.child_count; ++i)
+        if (vhit.children[i].role == AOS_ROLE_GA_PART)
+            vid = vhit.children[i].id;
+    assert(vid == 0x67);
+    AosEnemy vpart;
+    memset(&vpart, 0, sizeof vpart);
+    vpart.id = 0x67;
+    vpart.role = AOS_ROLE_GA_PART;
+    vpart.variant = 0;
+    vpart.parent = &variant;
+    aos_enemy_update(&vpart, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(!vpart.removed);
+    assert(aos_enemy_create(&variant, 0x69, 300, 150, 0, 0,
+                            &soma, &layer, &kind, &fg));
+    assert(variant.state == 0 && variant.hp == 1200);
 }
 
 static void graham_tests(void) {
@@ -13144,7 +13175,7 @@ int main(void) {
     /* The bat climbs from its record to the ceiling and hangs there. */
     AosSoma soma = aos_soma_spawn(AOS_FIXED(400), AOS_FIXED(159), NULL);
     AosEnemy bat;
-    assert(!aos_enemy_create(&bat, 0x67, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
+    assert(!aos_enemy_create(&bat, 0x72, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert(aos_enemy_create(&bat, 0x00, 100, 100, 0, 0, &soma, &layer, &kind, &stats));
     assert((bat.y >> 16) == 16 && bat.state == 1 && bat.mirrored);
 

@@ -287,6 +287,8 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
                                                      [92] = "giant_skeleton",
                                                      [108] = "legion",
                                                      [60] = "great_armor",
+                                                     [103] = "final_guard",
+                                                     [105] = "shadow_knight",
                                                      [69] = "big_golem",
                                                      [110] = "belmont",
                                                      [111] = "graham",

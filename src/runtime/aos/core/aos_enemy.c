@@ -414,6 +414,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         id != AOS_ENEMY_CREAKING_SKULL && id != AOS_ENEMY_GIANT_SKELETON &&
         id != AOS_ENEMY_LEGION && id != AOS_ENEMY_BELMONT &&
         id != AOS_ENEMY_BIG_GOLEM && id != AOS_ENEMY_GREAT_ARMOR &&
+        id != AOS_ENEMY_FINAL_GUARD && id != AOS_ENEMY_SHADOW_KNIGHT &&
         id != AOS_ENEMY_GRAHAM && id != AOS_ENEMY_CHAOS &&
         id != AOS_ENEMY_SKULL_ARCHER && id != AOS_ENEMY_NEEDLES && id != AOS_ENEMY_MEDUSA_HEAD &&
         id != AOS_ENEMY_ZOMBIE_OFFICER && id != AOS_ENEMY_GARGOYLE && id != AOS_ENEMY_GHOST_DANCER &&
@@ -1530,10 +1531,13 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         step_anim(enemy, anims);
         return true;
     }
-    if (id == AOS_ENEMY_GREAT_ARMOR) {
-        /* EnemyGreatArmorCreate 0x0808A43C / sub_0808E024: tiles
-         * 0x081CC004, palette bank of the 0x0820A8F8 table picked by
-         * the + 0x36 id byte, frames 0x0821F240; the + 0x30 param
+    if (id == AOS_ENEMY_GREAT_ARMOR || id == AOS_ENEMY_FINAL_GUARD ||
+        id == AOS_ENEMY_SHADOW_KNIGHT) {
+        /* EnemyGreatArmorCreate 0x0808A43C / sub_0808E024 — EnemyFinalGuard
+         * Create 0x0808EC40 and EnemyShadowKnightCreate 0x0808EC58 are thunks
+         * to it: tiles 0x081CC004, palette bank of the 0x0820A8F8 table
+         * picked by the + 0x36 id byte (0x3C -> 0, 0x67 -> 1, 0x69 -> 2),
+         * frames 0x0821F240; the + 0x30 param
          * gate and the gEwramData + 0x4CC & 3 / + 0x37E room checks
          * can delete the spawn; the variant adds 0x3E8 hp and + 0x14
          * to + 0x3C; the + 0x1C container's fourteen sub_0806DFF8
@@ -4567,7 +4571,10 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_graham_update(enemy, soma, layer, kind, weapon,
                                        weapon_frames, soma_atk, soma_def,
                                        cam_x, cam_y, random);
-    if (enemy->id == AOS_ENEMY_GREAT_ARMOR)
+    /* EnemyFinalGuardUpdate 0x0808EC34 and EnemyShadowKnightUpdate
+     * 0x0808EC4C are thunks to EnemyGreatArmorUpdate 0x0808A224. */
+    if (enemy->id == AOS_ENEMY_GREAT_ARMOR || enemy->id == AOS_ENEMY_FINAL_GUARD ||
+        enemy->id == AOS_ENEMY_SHADOW_KNIGHT)
         return aos_enemy_great_armor_update(enemy, soma, layer, kind,
                                             weapon, weapon_frames,
                                             soma_atk, soma_def, cam_x,

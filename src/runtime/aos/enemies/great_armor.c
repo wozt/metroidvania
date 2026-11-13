@@ -65,7 +65,11 @@ static void ga_emit_parts(AosEnemy *e, AosHitReport *hit) {
 }
 
 static void ga_part_update(AosEnemy *part, AosEnemy *body) {
-    if (!body || body->removed || body->id != 0x3C) {
+    /* The Final Guard (0x67) and Shadow Knight (0x69) thunks share this
+     * machine and their parts inherit their own id. */
+    if (!body || body->removed ||
+        (body->id != AOS_ENEMY_GREAT_ARMOR && body->id != AOS_ENEMY_FINAL_GUARD &&
+         body->id != AOS_ENEMY_SHADOW_KNIGHT)) {
         part->removed = true;
         return;
     }

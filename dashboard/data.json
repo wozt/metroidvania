@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-13T21:20:08+00:00",
+ "generated_at": "2026-11-13T22:26:59+00:00",
  "git": {
-  "commit": "7190f7fd",
+  "commit": "55814899",
   "branch": "main",
   "dirty": true
  },
@@ -92,21 +92,21 @@
     "assets",
     "platform"
    ],
-   "total": 337,
+   "total": 339,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
     "partial": 104,
-    "functional": 223,
+    "functional": 225,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 1
    },
-   "functional_or_better": 223,
-   "functional_or_better_percent": 66.2,
-   "with_passing_tests": 324,
-   "with_passing_tests_percent": 96.1,
+   "functional_or_better": 225,
+   "functional_or_better_percent": 66.4,
+   "with_passing_tests": 326,
+   "with_passing_tests_percent": 96.2,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -239,6 +239,7 @@
     "aos.enemies.ectoplasm",
     "aos.enemies.erinys",
     "aos.enemies.evil_butcher",
+    "aos.enemies.final_guard",
     "aos.enemies.fish_head",
     "aos.enemies.flame_demon",
     "aos.enemies.fleaman",
@@ -287,6 +288,7 @@
     "aos.enemies.red_minotaur",
     "aos.enemies.ripper",
     "aos.enemies.rock_armor",
+    "aos.enemies.shadow_knight",
     "aos.enemies.siren",
     "aos.enemies.skeleton",
     "aos.enemies.skeleton_knight",
@@ -571,20 +573,20 @@
    "areas": [
     "aos"
    ],
-   "total": 192,
+   "total": 194,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
     "partial": 76,
-    "functional": 116,
+    "functional": 118,
     "faithful": 0,
     "validated": 0,
     "blocked": 0,
     "unknown": 0
    },
-   "functional_or_better": 116,
-   "functional_or_better_percent": 60.4,
-   "with_passing_tests": 192,
+   "functional_or_better": 118,
+   "functional_or_better_percent": 60.8,
+   "with_passing_tests": 194,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -626,6 +628,7 @@
     "aos.enemies.ectoplasm",
     "aos.enemies.erinys",
     "aos.enemies.evil_butcher",
+    "aos.enemies.final_guard",
     "aos.enemies.fish_head",
     "aos.enemies.flame_demon",
     "aos.enemies.fleaman",
@@ -674,6 +677,7 @@
     "aos.enemies.red_minotaur",
     "aos.enemies.ripper",
     "aos.enemies.rock_armor",
+    "aos.enemies.shadow_knight",
     "aos.enemies.siren",
     "aos.enemies.skeleton",
     "aos.enemies.skeleton_knight",
@@ -12483,6 +12487,124 @@
    }
   },
   {
+   "id": "aos.enemies.final_guard",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Final Guard",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/core/aos_enemy.h",
+    "src/runtime/aos/enemies/great_armor.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyFinalGuardCreate",
+    "EnemyFinalGuardUpdate",
+    "EnemyGreatArmorCreate",
+    "EnemyGreatArmorUpdate",
+    "sub_0808E024",
+    "sub_0808A908",
+    "sub_0808C400",
+    "sub_0808DD38",
+    "sub_0808E164",
+    "sub_0808EC08",
+    "sub_0808E0A8",
+    "sub_08068264",
+    "sub_0803B800",
+    "sub_0803B924",
+    "sub_0803B9D0",
+    "sub_0803E058",
+    "sub_0803E654",
+    "sub_0803F17C",
+    "sub_0803F2C8",
+    "sub_0806E0D0",
+    "sub_0806D244",
+    "sub_0806DF20",
+    "sub_0806E314",
+    "sub_08068AD4",
+    "sub_08021924",
+    "sub_0806C1B0",
+    "sub_0806DF40",
+    "sub_0806E140",
+    "sub_080683BC",
+    "sub_08013CF0",
+    "sub_0800C5A8",
+    "sub_08034498",
+    "sub_08045B44",
+    "sub_08022088",
+    "sub_08013D60",
+    "sub_08013E18",
+    "sub_080009E4",
+    "sub_08021530",
+    "sub_08042848",
+    "sub_080428B4",
+    "sub_080421AC",
+    "sub_0804277C",
+    "sub_0806AE54",
+    "sub_0806D128",
+    "sub_0806D4C0",
+    "sub_0806E1B8",
+    "PlaySong",
+    "RandomNumberGenerator",
+    "RandomNumberGenerator2",
+    "ArcTan2"
+   ],
+   "limitations": "Shares every Great Armor divergence (the fourteen sub_0806DFF8 children fold into AOS_ROLE_GA_PART trackers, the state-0/state-1 case choreographies collapse, the 0x67-only + 0xB = 0x1E attack entry stays collapsed); the palette bank 1 of the 0x0820A8F8 descriptor is exported as Enemy/final_guard. Unit-tested; the area_09_room_003 headless room run spawns it; no emulator comparison yet. EnemyFinalGuardCreate 0x0808EC40 and EnemyFinalGuardUpdate 0x0808EC34 are thunks to the Great Armor routines; sub_0808E024 picks palette bank 1 of 0x0820A8F8 for the + 0x36 id byte 0x67. enemies.tsv id 103: hp 1200, contact 75, defence 50, weak 0x0000, resist 0x0FFF, exp 2000, common 0x006A, rare 0x003B, blue soul 7. The shared state machine, child emit and hurt path are unit-tested in test_aos_enemy.c and spawned by the area_09 rooms.",
+   "next_action": "Port the shared child brains with Great Armor; verify a real room spawn and compare against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_09_room_003 (--check): Final Guard (id 103) spawns through the shared Great Armor machine with palette bank 1; headless room run loads and simulates."
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-13"
+   }
+  },
+  {
    "id": "aos.enemies.fish_head",
    "area": "aos",
    "category": "enemies",
@@ -17009,6 +17131,124 @@
     ],
     "in_game_check": [
      "aria area_00_room_024 (--spawn 470 184 --hp 9999): Rock Armor walks and raises its rock toward Soma"
+    ],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_enemy.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_enemy"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-13"
+   }
+  },
+  {
+   "id": "aos.enemies.shadow_knight",
+   "area": "aos",
+   "category": "enemies",
+   "title": "Shadow Knight",
+   "status": "functional",
+   "fidelity": "unknown",
+   "local_sources": [
+    "src/runtime/aos/core/aos_enemy.c",
+    "src/runtime/aos/core/aos_enemy_internal.h",
+    "src/runtime/aos/core/aos_enemy.h",
+    "src/runtime/aos/enemies/great_armor.c",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_enemy.c",
+    "tests/test_native_golden.c"
+   ],
+   "dependencies": [],
+   "native_routines": [
+    "EnemyShadowKnightCreate",
+    "EnemyShadowKnightUpdate",
+    "EnemyGreatArmorCreate",
+    "EnemyGreatArmorUpdate",
+    "sub_0808E024",
+    "sub_0808A908",
+    "sub_0808C400",
+    "sub_0808DD38",
+    "sub_0808E164",
+    "sub_0808EC08",
+    "sub_0808E0A8",
+    "sub_08068264",
+    "sub_0803B800",
+    "sub_0803B924",
+    "sub_0803B9D0",
+    "sub_0803E058",
+    "sub_0803E654",
+    "sub_0803F17C",
+    "sub_0803F2C8",
+    "sub_0806E0D0",
+    "sub_0806D244",
+    "sub_0806DF20",
+    "sub_0806E314",
+    "sub_08068AD4",
+    "sub_08021924",
+    "sub_0806C1B0",
+    "sub_0806DF40",
+    "sub_0806E140",
+    "sub_080683BC",
+    "sub_08013CF0",
+    "sub_0800C5A8",
+    "sub_08034498",
+    "sub_08045B44",
+    "sub_08022088",
+    "sub_08013D60",
+    "sub_08013E18",
+    "sub_080009E4",
+    "sub_08021530",
+    "sub_08042848",
+    "sub_080428B4",
+    "sub_080421AC",
+    "sub_0804277C",
+    "sub_0806AE54",
+    "sub_0806D128",
+    "sub_0806D4C0",
+    "sub_0806E1B8",
+    "PlaySong",
+    "RandomNumberGenerator",
+    "RandomNumberGenerator2",
+    "ArcTan2"
+   ],
+   "limitations": "Shares every Great Armor divergence; the palette bank 2 of the 0x0820A8F8 descriptor is exported as Enemy/shadow_knight. Unit-tested; the area_11_room_015/017 headless room run spawns it; no emulator comparison yet. EnemyShadowKnightCreate 0x0808EC58 and EnemyShadowKnightUpdate 0x0808EC4C are thunks to the Great Armor routines; sub_0808E024 picks palette bank 2 of 0x0820A8F8 for the + 0x36 id byte 0x69. enemies.tsv id 105: hp 3000, contact 85, defence 45, weak 0x0020, resist 0x0411, exp 3000, no common item, rare 0x0003, blue soul 13. The shared state machine, child emit and hurt path are unit-tested in test_aos_enemy.c and spawned by the area_11 rooms.",
+   "next_action": "Port the shared child brains with Great Armor; verify a real room spawn and compare against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_enemy.c",
+     "tests/test_native_golden.c"
+    ],
+    "in_game_check": [
+     "aria area_11_room_015 (--check): Shadow Knight (id 105) spawns through the shared Great Armor machine with palette bank 2; headless room run loads and simulates."
     ],
     "emulator_compared": false,
     "played_through": false
@@ -31982,6 +32222,12 @@
  },
  "timeline": [
   {
+   "commit": "55814899",
+   "date": "2026-11-13",
+   "subject": "Port Aria weapon contact callbacks sub_0802346C / sub_080234B0",
+   "scope": "project"
+  },
+  {
    "commit": "7190f7fd",
    "date": "2026-11-13",
    "subject": "Add Aria scene/cutscene aspect registry and dashboard table",
@@ -32454,12 +32700,6 @@
    "date": "2026-11-11",
    "subject": "aos: port red soul 54 (Kyoma Demon)",
    "scope": "project"
-  },
-  {
-   "commit": "eb132a98",
-   "date": "2026-11-11",
-   "subject": "aos: port red soul 50 (Balore)",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -32520,9 +32760,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 2136,
-    "routines_attached_to_features": 2136,
-    "unassigned_routines": 1437,
+    "routines_cited_by_features": 2140,
+    "routines_attached_to_features": 2140,
+    "unassigned_routines": 1433,
     "call_edges": 14228
    }
   },
@@ -34764,12 +35004,11 @@
     "coverage": {
      "monsters": {
       "total": 102,
-      "implemented": 100,
-      "functional_or_better": 100,
-      "functional_or_better_percent": 98,
+      "implemented": 102,
+      "functional_or_better": 102,
+      "functional_or_better_percent": 100,
       "by_status": {
-       "functional": 100,
-       "not_started": 2
+       "functional": 102
       }
      },
      "bosses": {
@@ -37547,13 +37786,28 @@
      {
       "id": 103,
       "name": "Final Guard",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Final Guard",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_09_room_003 (--check): Final Guard (id 103) spawns through the shared Great Armor machine with palette bank 1; headless room run loads and simulates."
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.final_guard",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "ported",
+       "soul": "ported",
+       "soul_ref": "blue:7",
+       "notes": "Soul: drops (common 0x006A, rare 0x003B, rates 30/50 through the generic roll) and is collected; its blue soul 7 (SkillFinalGuardUse) is ported as aos_soul_blue_final_guard. Animations: EnemyFinalGuardCreate 0x0808EC40 / EnemyFinalGuardUpdate 0x0808EC34 are thunks to the Great Armor routines — the shared sub_0808A908/sub_0808C400 machines and 0x0821F240 record run unchanged; unit-tested in test_aos_enemy.c. Sounds: the shared songs (0x64, 0x7C, 0x7F, 0x86) are requested through the same paths. Sprite: tiles 0x081CC004, frames 0x0821F240 shared with Great Armor; palette bank 1 of the 0x0820A8F8 descriptor (the + 0x36 id byte pick of sub_0808E024) is exported as Enemy/final_guard. Loot: the enemies.tsv record drops common 0x006A and rare 0x003B through the generic roll. Divergences: identical to Great Armor (children folded into GA_PART trackers, choreographies collapsed) plus the collapsed 0x67-only attack entry; no emulator comparison."
       }
      },
      {
@@ -37586,13 +37840,28 @@
      {
       "id": 105,
       "name": "Shadow Knight",
-      "status": "not_started",
-      "note": "Native constructor identified; runtime port not started",
+      "status": "functional",
+      "note": "Shadow Knight",
       "evidence": {
-       "unit_tests": [],
-       "in_game_check": [],
+       "unit_tests": [
+        "tests/test_aos_enemy.c",
+        "tests/test_native_golden.c"
+       ],
+       "in_game_check": [
+        "aria area_11_room_015 (--check): Shadow Knight (id 105) spawns through the shared Great Armor machine with palette bank 2; headless room run loads and simulates."
+       ],
        "emulator_compared": false,
        "played_through": false
+      },
+      "feature": "aos.enemies.shadow_knight",
+      "aspects": {
+       "sprite": "ported",
+       "animations": "ported",
+       "sounds": "ported",
+       "loot": "ported",
+       "soul": "ported",
+       "soul_ref": "blue:13",
+       "notes": "Soul: drops (no common item, rare 0x0003, rates 30/35 through the generic roll) and is collected; its blue soul 13 (SkillShadowKnightUse) is ported — the stretched translucent guardian in aos_soul.c. Animations: EnemyShadowKnightCreate 0x0808EC58 / EnemyShadowKnightUpdate 0x0808EC4C are thunks to the Great Armor routines — the shared machines run unchanged; unit-tested in test_aos_enemy.c. Sounds: the shared songs are requested through the same paths. Sprite: tiles 0x081CC004, frames 0x0821F240 shared; palette bank 2 of 0x0820A8F8 exported as Enemy/shadow_knight. Loot: the enemies.tsv record drops rare 0x0003 (no common item) through the generic roll. Divergences: identical to Great Armor; no emulator comparison."
       }
      }
     ],
@@ -37897,32 +38166,32 @@
     ],
     "aspects": {
      "sprite": {
-      "ported": 111,
+      "ported": 113,
       "partial": 0,
       "missing": 0
      },
      "animations": {
-      "ported": 111,
+      "ported": 113,
       "partial": 0,
       "missing": 0
      },
      "sounds": {
-      "ported": 110,
+      "ported": 112,
       "partial": 0,
       "missing": 0
      },
      "loot": {
-      "ported": 65,
+      "ported": 67,
       "partial": 0,
       "missing": 0
      },
      "soul": {
-      "ported": 108,
+      "ported": 110,
       "partial": 0,
       "missing": 0
      },
-     "complete": 111,
-     "monsters": 111
+     "complete": 113,
+     "monsters": 113
     },
     "aspects_note": "Per ported monster, from data/native_parity/aos_monster_aspects.tsv: its sprite, animations, sounds, loot and dropped soul (including the soul's use). 'ported' means implemented from the native routines, unit-tested and seen in a local run; not emulator-compared. A monster is complete when every aspect is ported or n/a.",
     "items": [
@@ -45312,7 +45581,7 @@
        "id": "06:07",
        "name": "Final Guard",
        "status": "functional",
-       "note": "Native soul effect is ported and tracked by the red-soul runtime",
+       "note": "Soul: drops (common 0x006A, rare 0x003B, rates 30/50 through the generic roll) and is collected; its blue soul 7 (SkillFinalGuardUse) is ported as aos_soul_blue_final_guard. Animations: EnemyFinalGuardCreate 0x0808EC40 / EnemyFinalGuardUpdate 0x0808EC34 are thunks to the Great Armor routines — the shared sub_0808A908/sub_0808C400 machines and 0x0821F240 record run unchanged; unit-tested in test_aos_enemy.c. Sounds: the shared songs (0x64, 0x7C, 0x7F, 0x86) are requested through the same paths. Sprite: tiles 0x081CC004, frames 0x0821F240 shared with Great Armor; palette bank 1 of the 0x0820A8F8 descriptor (the + 0x36 id byte pick of sub_0808E024) is exported as Enemy/final_guard. Loot: the enemies.tsv record drops common 0x006A and rare 0x003B through the generic roll. Divergences: identical to Great Armor (children folded into GA_PART trackers, choreographies collapsed) plus the collapsed 0x67-only attack entry; no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",
@@ -45414,7 +45683,7 @@
        "id": "06:0D",
        "name": "Shadow Knight",
        "status": "functional",
-       "note": "Native soul effect is ported and tracked by the red-soul runtime",
+       "note": "Soul: drops (no common item, rare 0x0003, rates 30/35 through the generic roll) and is collected; its blue soul 13 (SkillShadowKnightUse) is ported — the stretched translucent guardian in aos_soul.c. Animations: EnemyShadowKnightCreate 0x0808EC58 / EnemyShadowKnightUpdate 0x0808EC4C are thunks to the Great Armor routines — the shared machines run unchanged; unit-tested in test_aos_enemy.c. Sounds: the shared songs are requested through the same paths. Sprite: tiles 0x081CC004, frames 0x0821F240 shared; palette bank 2 of 0x0820A8F8 exported as Enemy/shadow_knight. Loot: the enemies.tsv record drops rare 0x0003 (no common item) through the generic roll. Divergences: identical to Great Armor; no emulator comparison.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

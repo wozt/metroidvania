@@ -1,3 +1,27 @@
+## Patch 1089 - Aria Final Guard and Shadow Knight wired as Great Armor variants
+
+- `AOS_ENEMY_FINAL_GUARD = 0x67` and `AOS_ENEMY_SHADOW_KNIGHT =
+  0x69` join the enemy enum: EnemyFinalGuardCreate 0x0808EC40 /
+  EnemyFinalGuardUpdate 0x0808EC34 and EnemyShadowKnightCreate
+  0x0808EC58 / EnemyShadowKnightUpdate 0x0808EC4C are thunks to
+  the Great Armor routines, so the create whitelist, the init
+  block and the update dispatch share the ported machine; the
+  GA_PART children keep their own id in ga_part_update.
+- `objects.c` exports Enemy/final_guard and
+  Enemy/shadow_knight — same tiles 0x081CC004, frames 0x0821F240
+  and the 0x0820A8F8 palette descriptor at banks 1 and 2, the
+  pick sub_0808E024 makes on the + 0x36 id byte; the runtime
+  name table maps ids 103/105.
+- New parity annotations aos.enemies.final_guard /
+  aos.enemies.shadow_knight and aspect rows (all five aspects
+  ported; blue souls 7 and 13 already ported); enemies.tsv
+  stats and drops apply through the generic path.
+- Unit-tested in test_aos_enemy.c (create, child id, part
+  tracking); the golden fixture gained the new object frames.
+  Room records spawn id 103 in area_09 rooms 003/008/015 and
+  id 105 in area_11 rooms 015/017/024; headless `--check`
+  loads and simulates those rooms. No emulator comparison.
+
 ## Patch 1088 - Aria weapon contact callbacks ported
 
 - `src/runtime/aos/weapons/aos_weapon.c` now ports the two contact

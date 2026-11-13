@@ -277,6 +277,13 @@ static const EntitySpec entities[] = {
      * 0x0821F240 through sub_0803B924; the fourteen sub_0806DFF8
      * children of sub_0808E164 share the sheet. */
     ENTITY("great_armor", 0x081CC004, 0x0820A8F8, 0, 0x0821F240),
+    /* EnemyFinalGuardCreate 0x0808EC40 / EnemyShadowKnightCreate
+     * 0x0808EC58 are thunks to EnemyGreatArmorCreate: same tiles
+     * 0x081CC004, frames 0x0821F240 and the 0x0820A8F8 palette
+     * descriptor, banks 1 and 2 picked by the + 0x36 id byte in
+     * sub_0808E024. */
+    ENTITY("final_guard", 0x081CC004, 0x0820A8F8, 1, 0x0821F240),
+    ENTITY("shadow_knight", 0x081CC004, 0x0820A8F8, 2, 0x0821F240),
     /* EnemyGrahamCreate 0x080D2424: the conductor entity carries no
      * graphics of its own; the visible fighter is the sub_080D4168
      * shadow clone — tiles 0x081FB2BC, palette 0x0820C090, frames

@@ -1,3 +1,17 @@
+## Patch 1109 - Include-guard fixes and runtime module map
+
+- Three more headers had declarations appended after their
+  include guard closed, same defect as aos_menu_cursor.h:
+  `aos_npc_talk.h`, `aos_object1f.h`, `aos_seq_particles.h`.
+  All four headers now keep their entire public surface inside
+  the guard; builds and tests unchanged.
+- `docs/ARCHITECTURE.md` gained a "Runtime module map (Aria)"
+  section documenting directory responsibilities and the
+  parity-reference convention for unintegrated `game/` ports.
+- No shop or duplicate menu implementation exists in the
+  playable runtime; `aos_shop` remains the only shop code and
+  is honestly test-only.
+
 ## Patch 1108 - Architecture audit and consolidation rules
 
 Phase A audit of commits b9912cc9..142d171f findings:

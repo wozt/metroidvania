@@ -68,7 +68,6 @@ typedef struct {
 AosSeqParticleSpawn aos_seq_particle_spawn(void *entity, bool has_arg,
                                            int variant_sign);
 
-#endif
 
 /* Runtime fields of the spawned particle for sub_08062C18. */
 typedef struct {
@@ -120,3 +119,5 @@ typedef struct {
 
 int aos_seq_table_pick(const AosSeqTableA8 *table, uint16_t room_word,
                        uint32_t *word0, uint16_t *h4);
+
+#endif

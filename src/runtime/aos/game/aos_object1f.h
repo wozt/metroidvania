@@ -93,7 +93,6 @@ void aos_object1f_think(AosObject1F *o, bool flags_42c_40,
                         bool probe_ok, bool think_done,
                         bool s8_3f4_neg, bool words_differ);
 
-#endif
 
 /* The ten children of the opening gate. sub_08055DF8 drives the
  * eight ring children through states 0-8 off a per-slot 132-byte
@@ -164,3 +163,5 @@ void aos_object1f_child_flank_update(AosObject1FChild *c,
 void aos_object1f_child_free_update(AosObject1FChild *c,
                                     uint8_t record_state,
                                     uint32_t rng);
+
+#endif

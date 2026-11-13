@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-13T23:49:25+00:00",
+ "generated_at": "2026-11-13T23:51:08+00:00",
  "git": {
-  "commit": "142d171f",
+  "commit": "cc6f4ebb",
   "branch": "main",
   "dirty": true
  },
@@ -32326,6 +32326,12 @@
  },
  "timeline": [
   {
+   "commit": "cc6f4ebb",
+   "date": "2026-11-14",
+   "subject": "Audit architecture and add permanent integration rules",
+   "scope": "project"
+  },
+  {
    "commit": "142d171f",
    "date": "2026-11-14",
    "subject": "Port Aria menu lifecycle and stat-compare routines",
@@ -32797,12 +32803,6 @@
    "commit": "cdad05d7",
    "date": "2026-11-12",
    "subject": "Port blue souls 2 (Giant Bat) and 7 (Final Guard)",
-   "scope": "project"
-  },
-  {
-   "commit": "aac18ab7",
-   "date": "2026-11-12",
-   "subject": "Port blue soul 23 (Alastor) — all blue souls complete",
    "scope": "project"
   }
  ],

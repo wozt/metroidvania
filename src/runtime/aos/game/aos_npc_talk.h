@@ -38,7 +38,6 @@ void aos_npc_talk_18_update(AosNpcTalk *t, bool text_done);
  * returns the modified flag word). */
 bool aos_npc_talk_arm_flag(void);
 
-#endif
 
 /* sub_08061FDC: sprite-variant gate — sub_0806E0D0 picks the
  * 0x0811892C/0x08252748/0x0820C028 triple; a nonzero variant
@@ -361,3 +360,5 @@ typedef struct {
 
 void aos_npc_talk_66828(AosNpcSpawnGate2 *g, bool flag20,
                         bool flag26, bool keep);
+
+#endif

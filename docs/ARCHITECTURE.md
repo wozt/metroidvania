@@ -543,3 +543,29 @@ AI-controlled. Character switching is distinct from world travel.
 Cross-world travel will only occur at authored portal/save links. Transferable
 state must be specified field by field; source-local room coordinates and raw
 engine state must never be copied blindly between engines.
+
+## Runtime module map (Aria)
+
+`src/runtime/aria_runtime.c` is the Aria runtime host: room loading,
+entity dispatch, combat, rendering and the frame loop. It is large by
+historical growth; the SPECIAL-object dispatch delegates each object to
+its own module, and further extraction must be incremental.
+
+Responsibilities inside `src/runtime/aos/`:
+
+| Directory | Owns |
+|---|---|
+| `core/` | shared engine services: audio/MP2K, collision, room music, enemy base |
+| `enemies/` | per-family enemy AI translation units |
+| `game/` | object behaviors (`aos_objectNN`), pickups, doors, save-room interaction, room/lifecycle helpers, and faithful native-routine ports kept as parity references |
+| `menus/` | playable menu presentation and UX: pause graphics, soul menu hub/pages, main menu, HUD, text windows, quick map, portraits |
+| `souls/` | soul systems: soul entities, the soul menu state machine, notices |
+| `intro/`, `title/` | opening story/cutscene and title-screen flows |
+| `math/`, `blue_souls/`, `red_souls/`, `weapons/` | domain-specific helpers |
+
+Parity-reference convention: a `game/` module that ports native routines
+1:1 for `annotations.tsv` traceability but is not yet consumed by a real
+gameplay path must say so in its header ("Integration status") and stay
+classified `partial`. Playable behavior belongs in `menus/`, `souls/`,
+`enemies/` or the wired `game/` objects — never in a second parallel
+implementation of an existing responsibility.

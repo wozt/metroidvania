@@ -1,3 +1,21 @@
+## Patch 1071 - Aria Object33 dual-burst emitter ported
+
+- `src/runtime/aos/game/aos_object33.c` ports Object33Create
+  (0x080598B0) and Object33Update (0x08059B9C), dispatch
+  index 51: the sub_08059C04 sprite attach exporting as the
+  new `special_51` asset (tiles 0x081CBEFC, palette
+  0x0820A32C bank 0, frames 0x08211CB0 — shared with the
+  particle children), the param-indexed anim select and
+  flag setup, and the + 0xB == 0 gated cadence tick.
+- The tick pre-decrements + 0xD and fires when the old u8
+  was 0 or 1: cadence reload (RNG & 0xF) + 0x10, burst A
+  (sub_08059928) always and burst B (sub_08059A8C) for
+  nonzero params — both approximated by sparkle effects at
+  the entity position.
+- Registered in annotations.tsv as
+  aos.objects.dual_burst_emitter; unit-tested in
+  test_aos_object33.
+
 ## Patch 1070 - Aria Object31 delayed-launch spinner ported
 
 - `src/runtime/aos/game/aos_object31.c` ports Object31Create

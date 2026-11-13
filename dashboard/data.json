@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-13T13:47:26+00:00",
+ "generated_at": "2026-11-13T14:36:05+00:00",
  "git": {
-  "commit": "5a1bb603",
+  "commit": "d3fe2905",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 327,
+   "total": 328,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 94,
+    "partial": 95,
     "functional": 223,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 223,
-   "functional_or_better_percent": 68.2,
-   "with_passing_tests": 314,
+   "functional_or_better_percent": 68.0,
+   "with_passing_tests": 315,
    "with_passing_tests_percent": 96.0,
    "unknown_or_blocked": 1,
    "features": [
@@ -338,6 +338,7 @@
     "aos.objects.cyclic_lift",
     "aos.objects.destructible_prop",
     "aos.objects.directional_director",
+    "aos.objects.dual_burst_emitter",
     "aos.objects.enemy_spawners",
     "aos.objects.escort_director",
     "aos.objects.flickering_sprite",
@@ -561,11 +562,11 @@
    "areas": [
     "aos"
    ],
-   "total": 182,
+   "total": 183,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 66,
+    "partial": 67,
     "functional": 116,
     "faithful": 0,
     "validated": 0,
@@ -573,8 +574,8 @@
     "unknown": 0
    },
    "functional_or_better": 116,
-   "functional_or_better_percent": 63.7,
-   "with_passing_tests": 182,
+   "functional_or_better_percent": 63.4,
+   "with_passing_tests": 183,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -715,6 +716,7 @@
     "aos.objects.cyclic_lift",
     "aos.objects.destructible_prop",
     "aos.objects.directional_director",
+    "aos.objects.dual_burst_emitter",
     "aos.objects.enemy_spawners",
     "aos.objects.escort_director",
     "aos.objects.flickering_sprite",
@@ -21751,6 +21753,78 @@
    }
   },
   {
+   "id": "aos.objects.dual_burst_emitter",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object33 dual-burst ambient particle emitter",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object33.c",
+    "src/runtime/aos/game/aos_object33.h",
+    "src/runtime/aria_runtime.c",
+    "src/assets/aos/objects.c"
+   ],
+   "tests": [
+    "tests/test_aos_object33.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object33Create",
+    "Object33Update",
+    "sub_08059C50",
+    "sub_08059928",
+    "sub_08059A8C",
+    "sub_08059C90",
+    "sub_08059BBC",
+    "sub_08059C04",
+    "sub_0806D490",
+    "sub_0806D3D8",
+    "sub_0806D518",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0803B800",
+    "sub_0803AFB8",
+    "sub_0803B924",
+    "sub_08068264",
+    "EntityCreateInRange",
+    "RandomNumberGenerator"
+   ],
+   "limitations": "Both type-0x49 child kinds collapse to per-burst sparkle effects: the sub_08059928 burst-A velocities (+/-65536 x drift, param-2 +/-0x20000, small negative y kick, + 0x54 = 0x2800 gravity, + 0x65 = (RNG & 3) + 0xB, + 0x72 gets bits 6, + 0x58 bits 6/7, + 0x59 gets bits 2, + 0xD = 0x32) and the sub_08059A8C burst-B scatter (+/-0x100000 x offset, (RNG % 0xC000) - 0x6000 x velocity, -0x4000..-0x2000 y velocity) are not modelled, nor are the child updates sub_08059C90/sub_08059BBC (sub_0806D490 physics, sub_0806D3D8 integration, sub_0806D518 phase-table + 0x58 bit 5 and the + 0x59 bit-3 done mark), and there is no emulator comparison. Object33Create (0x080598B0) deletes on sprite-load failure, loads the special_51 triple (tiles 0x081CBEFC, palette sub_08068264(0x0820A32C, 0), frames 0x08211CB0) shared with its children, runs sub_0803F2C8(param == 1, 0, 1), sets + 0x5A = (+ 0x5A & ~7) OR 2, + 0x5C = 9, + 0x58 = old & 0x4A with bit 0x20 for param 0 and clears + 0xA. Object33Update (0x08059B9C) runs sub_08059C50 while + 0xA == 0: while + 0xB == 0 it pre-decrements + 0xD and, when the old u8 was 0 or 1, reloads (RNG & 0xF) + 0x10 and fires burst A, plus burst B when the + 0x30 param is nonzero. Unit-tested in test_aos_object33.",
+   "next_action": "Port the sub_08059928/sub_08059A8C children as real type-0x49 entities with their sub_08059C90/sub_08059BBC updates once the particle path exists.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object33.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object33.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object33"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-13"
+   }
+  },
+  {
    "id": "aos.objects.enemy_spawners",
    "area": "aos",
    "category": "environment",
@@ -31034,6 +31108,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object33",
+    "files": [
+     "tests/test_aos_object33.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_object1a",
     "files": [
      "tests/test_aos_object1a.c"
@@ -31126,12 +31207,18 @@
    }
   ],
   "summary": {
-   "passed": 201,
+   "passed": 202,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "d3fe2905",
+   "date": "2026-11-13",
+   "subject": "Port Aria Object31 delayed-launch spinner (dispatch 49)",
+   "scope": "project"
+  },
   {
    "commit": "5a1bb603",
    "date": "2026-11-13",
@@ -31605,12 +31692,6 @@
    "date": "2026-11-11",
    "subject": "Port Legion (id 108) with encoding-3 object graphics",
    "scope": "project"
-  },
-  {
-   "commit": "ea514aac",
-   "date": "2026-11-11",
-   "subject": "aos: port Creaking Skull and Giant Skeleton (ids 33, 92)",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -31671,9 +31752,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 2044,
-    "routines_attached_to_features": 2044,
-    "unassigned_routines": 1529,
+    "routines_cited_by_features": 2052,
+    "routines_attached_to_features": 2052,
+    "unassigned_routines": 1521,
     "call_edges": 14228
    }
   },

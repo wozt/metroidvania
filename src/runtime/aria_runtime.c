@@ -53,6 +53,7 @@
 #include "aos/game/aos_object21.h"
 #include "aos/game/aos_object25.h"
 #include "aos/game/aos_object31.h"
+#include "aos/game/aos_object33.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -478,6 +479,7 @@ typedef struct {
     AosObject21 object21;   /* object 0x21: cyclic lift */
     AosObject25 object25;   /* object 0x25: soul carrier spawner */
     AosObject31 object31;   /* object 0x31: delayed-launch spinner */
+    AosObject33 object33;   /* object 0x33: dual-burst emitter */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5241,6 +5243,33 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     .kind = AOS_EFFECT_SPARKLE, .direct = false,
                     .x = e->x, .y = e->y};
             }
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 51) {
+            /* Object33Create / Object33Update (sUnk_084F0DF8[51] /
+             * sUnk_084F0ED8[51]): the dual-burst ambient emitter.
+             * The sprite triple exports as special_51; the + 0x30
+             * param is param0 and each sub_08059928/sub_08059A8C
+             * child burst is approximated by sparkle effects at
+             * the entity position. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object33_create(&e->object33, (int16_t)e->param0,
+                                    true, &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            aos_object33_update(&e->object33, aos_random);
+            unsigned bursts = (e->object33.burst_a ? 1u : 0u) +
+                              (e->object33.burst_b ? 1u : 0u);
+            for (unsigned b = 0; b < bursts &&
+                 room->effect_count < MAX_EFFECTS; ++b)
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = false,
+                    .x = e->x + (int)(aos_random() % 0x81) - 0x40,
+                    .y = e->y + (int)(aos_random() % 0x41) - 0x20};
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 33) {

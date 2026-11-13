@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 182 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 183 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2044 | 1529 |
+| Castlevania: Aria of Sorrow | 2052 | 1521 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2515,6 +2515,15 @@ Tests: [`tests/test_aos_object04.c`](../tests/test_aos_object04.c), [`tests/test
 Dependencies: `aos.objects.cutscene_director`.  
 Known divergences: The gDisplayRegisters winOut blend, sub_080235C8 bookkeeping, the sub_08013F6C(0x1040) state-20 accent (including its + 0x42C bit 0x40000000 gate) and the + 0x5C/+ 0x65/+ 0x59 palette writes are not ported; states 1, 3-9, 12-19 are native no-ops covered by the default branch.  
 Next action: Port the remaining object pairs (03 escort, 05-07, 0x0C-0x37) and compare a scripted scene against an emulator.
+
+[~] **`aos.objects.dual_burst_emitter` — Object33 dual-burst ambient particle emitter.** Object33Create (0x080598B0) deletes on sprite-load failure, loads the special_51 triple (tiles 0x081CBEFC, palette sub_08068264(0x0820A32C, 0), frames 0x08211CB0) shared with its children, runs sub_0803F2C8(param == 1, 0, 1), sets + 0x5A = (+ 0x5A & ~7) OR 2, + 0x5C = 9, + 0x58 = old & 0x4A with bit 0x20 for param 0 and clears + 0xA. Object33Update (0x08059B9C) runs sub_08059C50 while + 0xA == 0: while + 0xB == 0 it pre-decrements + 0xD and, when the old u8 was 0 or 1, reloads (RNG & 0xF) + 0x10 and fires burst A, plus burst B when the + 0x30 param is nonzero. Unit-tested in test_aos_object33.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object33Create`, `aos:asm:asm/code/code_08050A3C.s:Object33Update`, `aos:asm:asm/code/code_08050A3C.s:sub_08059928`, `aos:asm:asm/code/code_08050A3C.s:sub_08059A8C`, `aos:asm:asm/code/code_08050A3C.s:sub_08059BBC`, `aos:asm:asm/code/code_08050A3C.s:sub_08059C04`, `aos:asm:asm/code/code_08050A3C.s:sub_08059C50`, `aos:asm:asm/code/code_08050A3C.s:sub_08059C90`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:asm:asm/code/code_08060B98.s:sub_0806D3D8`, `aos:asm:asm/code/code_08060B98.s:sub_0806D490`, `aos:asm:asm/code/code_08060B98.s:sub_0806D518`, `aos:c:src/code/code_08039340.c:sub_0803AFB8`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:EntityCreateInRange`, `aos:c:src/code_080009A0.c:RandomNumberGenerator`.  
+Local implementation: [`src/runtime/aos/game/aos_object33.c`](../src/runtime/aos/game/aos_object33.c), [`src/runtime/aos/game/aos_object33.h`](../src/runtime/aos/game/aos_object33.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object33.c`](../tests/test_aos_object33.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: Both type-0x49 child kinds collapse to per-burst sparkle effects: the sub_08059928 burst-A velocities (+/-65536 x drift, param-2 +/-0x20000, small negative y kick, + 0x54 = 0x2800 gravity, + 0x65 = (RNG & 3) + 0xB, + 0x72 gets bits 6, + 0x58 bits 6/7, + 0x59 gets bits 2, + 0xD = 0x32) and the sub_08059A8C burst-B scatter (+/-0x100000 x offset, (RNG % 0xC000) - 0x6000 x velocity, -0x4000..-0x2000 y velocity) are not modelled, nor are the child updates sub_08059C90/sub_08059BBC (sub_0806D490 physics, sub_0806D3D8 integration, sub_0806D518 phase-table + 0x58 bit 5 and the + 0x59 bit-3 done mark), and there is no emulator comparison.  
+Next action: Port the sub_08059928/sub_08059A8C children as real type-0x49 entities with their sub_08059C90/sub_08059BBC updates once the particle path exists.
 
 [~] **`aos.objects.enemy_spawners` — Object0A/Object0B event-gated enemy spawners (0x080E9644 records).** Object0ACreate (0x0805045C) deletes the entity when the + 0x37E bit param1 is clear, else indexes the 36-byte records of 0x080E9644 by param0 (= the enemy id: record + 0 the create, + 4 the update installed on entity + 0), stores record + 0xC at + 0x34, clears + 0x30/+ 0x32 and calls the create. Object0BCreate (0x080504C0) gates on sub_08012078(param1), the + 0x33C bitfield (= aria_events). The runtime spawns the ported enemy kind at the object position when the gate passes and consumes the object either way. Unit coverage is the runtime wiring; per-enemy behaviour is covered by the enemy tests.
 

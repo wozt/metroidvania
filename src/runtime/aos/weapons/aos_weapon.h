@@ -18,8 +18,9 @@
  * until it meets a wall (an impact effect there); a shell casing is
  * ejected at creation. Class 5 (sub_08022DEC) is class 0 without the
  * deletion on Soma's 0x20; only sub_08033F58 (a player copy driven by
- * gEwramData + 0x4DC) creates it, as the attack refuses class 5. Damage
- * (sub_0802346C / sub_080234B0) is not ported. At its creation the entity
+ * gEwramData + 0x4DC) creates it, as the attack refuses class 5. The
+ * contact callbacks sub_0802346C / sub_080234B0 are ported below. At its
+ * creation the entity
  * plays the weapon's sound (record + 0x18) and, one time in two (not for
  * class 4), one of Soma's voices 0x191-0x194 (0x084F1264). No SDL. */
 #ifndef AOS_WEAPON_H
@@ -72,5 +73,18 @@ void aos_weapon_update(AosWeaponEntity *weapon, AosSoma *soma, const AosWeaponFr
 /* Active hitbox in room pixels; false when the frame has none. */
 bool aos_weapon_hitbox(const AosWeaponEntity *weapon, const AosSoma *soma,
                        const AosWeaponFrames *frames, int *x, int *y, int *w, int *h);
+
+/* sub_0802346C / sub_080234B0, the contact callbacks installed through
+ * sub_0804277C when the weapon entity is created. Both arm bit 0x80000
+ * of + 0x10 on the entity at gEwramData + 0x13110 — except while the
+ * weapon-swap byte + 0x4CC holds 0x40 and the touched entity is not the
+ * one kept at + 0x13220. sub_080234B0 (the class-4 shot) first marks its
+ * own entity: byte + 0x72 |= 2 and the word + 0x1C becomes 1. The native
+ * globals are injected; nothing here reads ROM state. */
+void aos_weapon_contact_hit(uint32_t *owner_flags10, uint32_t touched,
+                            uint32_t swap_target, bool swap_mode);
+void aos_weapon_contact_stop(uint8_t *own_flags72, uint32_t *own_field1c,
+                             uint32_t *owner_flags10, uint32_t touched,
+                             uint32_t swap_target, bool swap_mode);
 
 #endif /* AOS_WEAPON_H */

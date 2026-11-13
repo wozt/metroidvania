@@ -152,3 +152,24 @@ bool aos_weapon_hitbox(const AosWeaponEntity *weapon, const AosSoma *soma,
     *h = box->height;
     return true;
 }
+
+/* sub_0802346C: the shared tail of both contact callbacks — arm bit
+ * 0x80000 of + 0x10 on the owner entity unless the swap byte is set and
+ * the touched entity is not the swap target. */
+static void contact_flag(uint32_t *owner_flags10, uint32_t touched,
+                         uint32_t swap_target, bool swap_mode) {
+    if (!swap_mode || touched == swap_target) *owner_flags10 |= 0x00080000;
+}
+
+void aos_weapon_contact_hit(uint32_t *owner_flags10, uint32_t touched,
+                            uint32_t swap_target, bool swap_mode) {
+    contact_flag(owner_flags10, touched, swap_target, swap_mode);
+}
+
+void aos_weapon_contact_stop(uint8_t *own_flags72, uint32_t *own_field1c,
+                             uint32_t *owner_flags10, uint32_t touched,
+                             uint32_t swap_target, bool swap_mode) {
+    *own_flags72 |= 2;
+    *own_field1c = 1;
+    contact_flag(owner_flags10, touched, swap_target, swap_mode);
+}

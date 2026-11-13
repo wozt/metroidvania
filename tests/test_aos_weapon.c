@@ -204,6 +204,27 @@ int main(void) {
         ++life;
     }
     assert(life == 6 && !soma.weapon_active);
+
+    /* Contact callbacks sub_0802346C / sub_080234B0: the owner flag is
+     * armed unless the swap byte is set and the touched entity is not
+     * the swap target; 234B0 also stops its own entity. */
+    uint32_t flags10 = 0;
+    aos_weapon_contact_hit(&flags10, 0x1111, 0x2222, false);
+    assert(flags10 == 0x00080000);
+    flags10 = 0;
+    aos_weapon_contact_hit(&flags10, 0x1111, 0x2222, true);
+    assert(flags10 == 0);
+    aos_weapon_contact_hit(&flags10, 0x2222, 0x2222, true);
+    assert(flags10 == 0x00080000);
+    uint8_t flags72 = 0;
+    uint32_t field1c = 0;
+    flags10 = 0;
+    aos_weapon_contact_stop(&flags72, &field1c, &flags10, 0x3333, 0x2222, true);
+    assert(flags72 == 2 && field1c == 1 && flags10 == 0);
+    flags72 = 0x10;
+    field1c = 9;
+    aos_weapon_contact_stop(&flags72, &field1c, &flags10, 0x2222, 0x2222, false);
+    assert(flags72 == 0x12 && field1c == 1 && flags10 == 0x00080000);
     puts("aos_weapon: ok");
     return 0;
 }

@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-13T21:13:22+00:00",
+ "generated_at": "2026-11-13T21:20:08+00:00",
  "git": {
-  "commit": "12c68a25",
+  "commit": "7190f7fd",
   "branch": "main",
   "dirty": true
  },
@@ -26846,9 +26846,11 @@
     "sub_080228F8",
     "sub_08031EA4",
     "sub_08042884",
-    "sub_0803E058"
+    "sub_0803E058",
+    "sub_0802346C",
+    "sub_080234B0"
    ],
-   "limitations": "The affine double-size placement of class 1 sprites is not modelled (rotation about the entity position); damage callbacks (sub_0802346C, sub_080234B0) beyond the shared formula, the weapon swap check (0x4CC & 0x40 / 0x13268), the casing's priority and the sounds are not ported. Class 5 is only created by sub_08033F58 (a player copy driven by gEwramData + 0x4DC), which is not ported, so it is checked by unit test only. Weapon classes 0, 2 and 3 (sub_080221CC), class 1 (sub_080224BC: the swing, its affine angle and lifetime), class 4 (sub_08022A54: the gun, its accelerating shot with the box (-8, -4, 16, 8) packed in the pointer 0x0810FCF8, the wall impact and the bouncing casing of sub_080228F8) and class 5 (sub_08022DEC: class 0 without the deletion on Soma's 0x20) are ported; the native C11 asset path exports all 59 records, frame boxes and sprite sequences byte-identically. The entity's creation plays the weapon's sound (record + 0x18, now exported as the sound column of weapons.tsv schema v3; the runtime still reads v2 tables, without it) and one time in two one of Soma's voices 0x191-0x194 (0x084F1264, chosen by RandomNumberGenerator) for classes 0-3 and 5 (sub_080221CC, sub_080224BC, sub_08022DEC); class 4 plays only the weapon's sound, without sub_08022A54's condition on its first byte (not traced). Unit-tested.",
+   "limitations": "The affine double-size placement of class 1 sprites is not modelled (rotation about the entity position); the contact callbacks sub_0802346C / sub_080234B0 are ported (owner +0x10 bit 0x80000 behind the 0x4CC & 0x40 / +0x13220 swap gate, plus the class-4 entity marks +0x72 bit 1 and word +0x1C = 1); the casing's priority and the sounds are not ported. Class 5 is only created by sub_08033F58 (a player copy driven by gEwramData + 0x4DC), which is not ported, so it is checked by unit test only. Weapon classes 0, 2 and 3 (sub_080221CC), class 1 (sub_080224BC: the swing, its affine angle and lifetime), class 4 (sub_08022A54: the gun, its accelerating shot with the box (-8, -4, 16, 8) packed in the pointer 0x0810FCF8, the wall impact and the bouncing casing of sub_080228F8) and class 5 (sub_08022DEC: class 0 without the deletion on Soma's 0x20) are ported; the native C11 asset path exports all 59 records, frame boxes and sprite sequences byte-identically. The entity's creation plays the weapon's sound (record + 0x18, now exported as the sound column of weapons.tsv schema v3; the runtime still reads v2 tables, without it) and one time in two one of Soma's voices 0x191-0x194 (0x084F1264, chosen by RandomNumberGenerator) for classes 0-3 and 5 (sub_080221CC, sub_080224BC, sub_08022DEC); class 4 plays only the weapon's sound, without sub_08022A54's condition on its first byte (not traced). Unit-tested.",
    "next_action": "Port sub_08033F58's player copy if its data source is traced; play the sounds once the Aria sound path exists.",
    "evidence": {
     "unit_tests": [
@@ -31980,6 +31982,12 @@
  },
  "timeline": [
   {
+   "commit": "7190f7fd",
+   "date": "2026-11-13",
+   "subject": "Add Aria scene/cutscene aspect registry and dashboard table",
+   "scope": "project"
+  },
+  {
    "commit": "12c68a25",
    "date": "2026-11-13",
    "subject": "Port Object20 shop sequences into a dedicated aos_shop module",
@@ -32452,12 +32460,6 @@
    "date": "2026-11-11",
    "subject": "aos: port red soul 50 (Balore)",
    "scope": "project"
-  },
-  {
-   "commit": "9765bf89",
-   "date": "2026-11-11",
-   "subject": "aos: port red soul 37 (Biphron)",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -32518,9 +32520,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 2134,
-    "routines_attached_to_features": 2134,
-    "unassigned_routines": 1439,
+    "routines_cited_by_features": 2136,
+    "routines_attached_to_features": 2136,
+    "unassigned_routines": 1437,
     "call_edges": 14228
    }
   },

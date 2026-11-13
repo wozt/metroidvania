@@ -1,3 +1,17 @@
+## Patch 1088 - Aria weapon contact callbacks ported
+
+- `src/runtime/aos/weapons/aos_weapon.c` now ports the two contact
+  callbacks installed through sub_0804277C at weapon creation:
+  sub_0802346C (classes 0-3) and sub_080234B0 (the class-4 shot,
+  which also marks its own entity: byte +0x72 |= 2 and word
+  +0x1C = 1). Both arm bit 0x80000 of +0x10 on the owner entity
+  unless the weapon-swap byte +0x4CC holds 0x40 and the touched
+  entity is not the one at +0x13220. The native globals are
+  injected inputs; the shared damage formula was already ported
+  in aos_combat/aos_enemy_damage.
+- Unit-tested in test_aos_weapon; the annotation's divergences
+  and routine list are updated.
+
 ## Patch 1087 - Aria scene/cutscene aspect registry and dashboard table
 
 - `data/native_parity/aos_scene_aspects.tsv` lists the 20

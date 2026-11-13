@@ -1,3 +1,19 @@
+## Patch 1073 - Aria Object29 ping-pong platform ported
+
+- `src/runtime/aos/game/aos_object29.c` ports Object29Create
+  (0x08057080), Object29Update (0x08057380) and sub_08057180,
+  dispatch index 41: the param-indexed 0x085264D0 sprite
+  records (resolving to the exported special_42_v00-v03
+  variants), the collision box and hurt-slot install, the
+  + 0x18 bottom / + 0x1C param0-threshold anchors and the
+  + 0x20 direction flag.
+- The + 0xB machine ping-pongs the platform origin between
+  threshold and bottom with the dumped spring law — far
+  cruise +/-0x800, near damped step — two-frame dwells from
+  the record table and a direction toggle per cycle.
+- Registered as aos.objects.ping_pong_platform; unit-tested
+  in test_aos_object29.
+
 ## Patch 1072 - Aria Object22 scripted elevator ported
 
 - `src/runtime/aos/game/aos_object22.c` ports Object22Create

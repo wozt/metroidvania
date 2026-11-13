@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 184 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 185 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2061 | 1512 |
+| Castlevania: Aria of Sorrow | 2066 | 1507 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2605,6 +2605,15 @@ Tests: [`tests/test_aos_object1a.c`](../tests/test_aos_object1a.c).
 Dependencies: `aos.objects.special_sprites`.  
 Next action: None — the slot is dead code natively; revisit only if a room spawn proves otherwise.
 Evidence: in game: `dead code: no exported room spawns SPECIAL id 26; both native routines are bare bx lr (0x080540A0/0x080540A4)`.
+
+[~] **`aos.objects.ping_pong_platform` — Object29 ping-pong moving platform.** Object29Create (0x08057080) loads the param1-indexed record (tiles/palette/frames pointers, bank + 0xD, anim seq + 0xC, dwell u16 + 0xE = 2 in every dumped record), installs the hurt slot and collision box, sets + 0x18 = + 0x44 + A094[8], + 0x1C = param0 << 16, the + 0x10/+ 0x14 world origin and + 0x24/+ 0x28 screen mirrors and + 0x20 = (+ 0x18 > + 0x1C). Object29Update (0x08057380) calls sub_08021278(1) then sub_08057180 while + 0xA == 0: the + 0xB machine ping-pongs the + 0x14 origin between the + 0x1C threshold (states 0/1) and the + 0x18 bottom (states 2/3) with the spring + 0x4C — far cruise +/-0x800 capped at +0xFFFF/-0x10000, near damped step set to +/-(dist_px * 0x1000 + 0x1000) — dwelling the record value on each arrival and toggling + 0x20 on exit; the tail rewrites + 0x40/+ 0x44 from the screen mirror. Unit-tested in test_aos_object29.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_0804277C`, `aos:asm:asm/code/code_08040A38.s:sub_08042848`, `aos:asm:asm/code/code_08040A38.s:sub_080428B4`, `aos:asm:asm/code/code_08050A3C.s:Object29Create`, `aos:asm:asm/code/code_08050A3C.s:Object29Update`, `aos:asm:asm/code/code_08050A3C.s:sub_08057180`, `aos:asm:asm/code/code_08050A3C.s:sub_080573B0`, `aos:asm:asm/code/code_08050A3C.s:sub_08057418`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:c:src/code/code_080211F0.c:sub_08021278`, `aos:c:src/code/code_08039340.c:sub_0803AC40`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:EntityDelete`.  
+Local implementation: [`src/runtime/aos/game/aos_object29.c`](../src/runtime/aos/game/aos_object29.c), [`src/runtime/aos/game/aos_object29.h`](../src/runtime/aos/game/aos_object29.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object29.c`](../tests/test_aos_object29.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The sprite resolves through the exported special_42_v00-v03 variant art (the 0x085264D0 record table repeats every four entries and the port maps param1 & 3), the four 0x08118630 collision boxes and the sub_0804277C(8) hurt slot stay under special_sprites, rider carry through the + 0x40/+ 0x44 world mirror is not modelled, sub_08021278 runs unconditionally each frame without a runtime consumer and there is no emulator comparison.  
+Next action: Port the rider-carry collision response and compare a moving-platform room against an emulator.
 
 [~] **`aos.objects.proximity_attack` — Object2D proximity-armed attack sprite.** Object2DCreate (0x080588EC) resolves tiles 0x081CBEBC, palette sub_08068264(0x0820A100, 2), frames 0x082111F4 (exported as special_45), presets sub_0803F2C8(2, 0, 0), sets + 0x6F = 0, + 0x6E = 6, + 0x5C = 0x12 and + 0xB = 0xA. Object2DUpdate (0x08058938) runs sub_0805872C while + 0xA == 0 then sub_0803F17C: dormant state 0xA swaps the preset by the + 0x6D flags byte (0 -> 1, 1 -> 2, 3/4 -> 0, all gated on + 0x59 bit 0) and enters active 0xC inside the abs(dx) <= 0x4FFFFF, abs(dy) <= 0x5FFFFF window around the + 0x13110 entity; active state 0xC swaps presets (1 -> 3, 2 -> 4, 3/4 -> 0), returns to 0xA outside the window and runs sub_0806D128(ent, 3) inside it. Unit-tested in test_aos_object2d.
 

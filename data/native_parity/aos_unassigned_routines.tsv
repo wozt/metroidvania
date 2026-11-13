@@ -207,8 +207,6 @@ aos:asm:asm/code/code_08040A38.s:sub_08050920	sub_08050920	environment	referrers
 aos:asm:asm/code/code_08050A3C.s:Object1DCreate	Object1DCreate	environment	name			asm_function		asm/code/code_08050A3C.s	9364	0	6
 aos:asm:asm/code/code_08050A3C.s:Object1FCreate	Object1FCreate	environment	name			asm_function		asm/code/code_08050A3C.s	11429	0	3
 aos:asm:asm/code/code_08050A3C.s:Object1FUpdate	Object1FUpdate	environment	name			asm_function		asm/code/code_08050A3C.s	11046	0	4
-aos:asm:asm/code/code_08050A3C.s:Object29Create	Object29Create	environment	name			asm_function		asm/code/code_08050A3C.s	12895	0	7
-aos:asm:asm/code/code_08050A3C.s:Object29Update	Object29Update	environment	name			asm_function		asm/code/code_08050A3C.s	13297	0	4
 aos:asm:asm/code/code_08050A3C.s:Object32Create	Object32Create	environment	name			asm_function		asm/code/code_08050A3C.s	17549	0	5
 aos:asm:asm/code/code_08050A3C.s:Object32Update	Object32Update	environment	name			asm_function		asm/code/code_08050A3C.s	17956	0	3
 aos:asm:asm/code/code_08050A3C.s:Object35Create	Object35Create	environment	name			asm_function		asm/code/code_08050A3C.s	19183	0	7
@@ -261,9 +259,6 @@ aos:asm:asm/code/code_08050A3C.s:sub_0805607C	sub_0805607C	environment	referrers
 aos:asm:asm/code/code_08050A3C.s:sub_08056130	sub_08056130	environment	referrers			asm_function	0x08056130	asm/code/code_08050A3C.s	10927	0	3
 aos:asm:asm/code/code_08050A3C.s:sub_0805632C	sub_0805632C	unclassified		technical	exclusive_callees	asm_function	0x0805632C	asm/code/code_08050A3C.s	11178	0	4
 aos:asm:asm/code/code_08050A3C.s:sub_08056514	sub_08056514	environment	referrers			asm_function	0x08056514	asm/code/code_08050A3C.s	11443	1	3
-aos:asm:asm/code/code_08050A3C.s:sub_08057180	sub_08057180	environment	referrers			asm_function	0x08057180	asm/code/code_08050A3C.s	13018	1	0
-aos:asm:asm/code/code_08050A3C.s:sub_080573B0	sub_080573B0	environment	referrers			asm_function	0x080573B0	asm/code/code_08050A3C.s	13321	1	3
-aos:asm:asm/code/code_08050A3C.s:sub_08057418	sub_08057418	environment	referrers			asm_function	0x08057418	asm/code/code_08050A3C.s	13373	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_08058B84	sub_08058B84	environment	referrers			asm_function	0x08058B84	asm/code/code_08050A3C.s	16410	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_08058B94	sub_08058B94	environment	referrers			asm_function	0x08058B94	asm/code/code_08050A3C.s	16420	1	5
 aos:asm:asm/code/code_08050A3C.s:sub_08059580	sub_08059580	environment	referrers			asm_function	0x08059580	asm/code/code_08050A3C.s	17668	1	2

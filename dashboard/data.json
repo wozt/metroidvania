@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-13T17:47:26+00:00",
+ "generated_at": "2026-11-13T17:53:01+00:00",
  "git": {
-  "commit": "8987ab21",
+  "commit": "49880829",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 329,
+   "total": 330,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 96,
+    "partial": 97,
     "functional": 223,
     "faithful": 0,
     "validated": 0,
@@ -104,9 +104,9 @@
     "unknown": 1
    },
    "functional_or_better": 223,
-   "functional_or_better_percent": 67.8,
-   "with_passing_tests": 316,
-   "with_passing_tests_percent": 96.0,
+   "functional_or_better_percent": 67.6,
+   "with_passing_tests": 317,
+   "with_passing_tests_percent": 96.1,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -350,6 +350,7 @@
     "aos.objects.parametric_sprite",
     "aos.objects.patrol_mover",
     "aos.objects.patrolling_skull",
+    "aos.objects.ping_pong_platform",
     "aos.objects.proximity_attack",
     "aos.objects.proximity_trigger",
     "aos.objects.region_trigger",
@@ -563,11 +564,11 @@
    "areas": [
     "aos"
    ],
-   "total": 184,
+   "total": 185,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 68,
+    "partial": 69,
     "functional": 116,
     "faithful": 0,
     "validated": 0,
@@ -575,8 +576,8 @@
     "unknown": 0
    },
    "functional_or_better": 116,
-   "functional_or_better_percent": 63.0,
-   "with_passing_tests": 184,
+   "functional_or_better_percent": 62.7,
+   "with_passing_tests": 185,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -729,6 +730,7 @@
     "aos.objects.parametric_sprite",
     "aos.objects.patrol_mover",
     "aos.objects.patrolling_skull",
+    "aos.objects.ping_pong_platform",
     "aos.objects.proximity_attack",
     "aos.objects.proximity_trigger",
     "aos.objects.region_trigger",
@@ -22517,6 +22519,75 @@
    }
   },
   {
+   "id": "aos.objects.ping_pong_platform",
+   "area": "aos",
+   "category": "environment",
+   "title": "Object29 ping-pong moving platform",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_object29.c",
+    "src/runtime/aos/game/aos_object29.h",
+    "src/runtime/aria_runtime.c"
+   ],
+   "tests": [
+    "tests/test_aos_object29.c"
+   ],
+   "dependencies": [
+    "aos.objects.special_sprites"
+   ],
+   "native_routines": [
+    "Object29Create",
+    "Object29Update",
+    "sub_08057180",
+    "sub_080573B0",
+    "sub_08057418",
+    "sub_08021278",
+    "sub_080421AC",
+    "sub_0804277C",
+    "sub_08042848",
+    "sub_080428B4",
+    "sub_0803F2C8",
+    "sub_0803F17C",
+    "sub_0803B800",
+    "sub_08068264",
+    "sub_0803B924",
+    "sub_0803AC40",
+    "EntityDelete"
+   ],
+   "limitations": "The sprite resolves through the exported special_42_v00-v03 variant art (the 0x085264D0 record table repeats every four entries and the port maps param1 & 3), the four 0x08118630 collision boxes and the sub_0804277C(8) hurt slot stay under special_sprites, rider carry through the + 0x40/+ 0x44 world mirror is not modelled, sub_08021278 runs unconditionally each frame without a runtime consumer and there is no emulator comparison. Object29Create (0x08057080) loads the param1-indexed record (tiles/palette/frames pointers, bank + 0xD, anim seq + 0xC, dwell u16 + 0xE = 2 in every dumped record), installs the hurt slot and collision box, sets + 0x18 = + 0x44 + A094[8], + 0x1C = param0 << 16, the + 0x10/+ 0x14 world origin and + 0x24/+ 0x28 screen mirrors and + 0x20 = (+ 0x18 > + 0x1C). Object29Update (0x08057380) calls sub_08021278(1) then sub_08057180 while + 0xA == 0: the + 0xB machine ping-pongs the + 0x14 origin between the + 0x1C threshold (states 0/1) and the + 0x18 bottom (states 2/3) with the spring + 0x4C — far cruise +/-0x800 capped at +0xFFFF/-0x10000, near damped step set to +/-(dist_px * 0x1000 + 0x1000) — dwelling the record value on each arrival and toggling + 0x20 on exit; the tail rewrites + 0x40/+ 0x44 from the screen mirror. Unit-tested in test_aos_object29.",
+   "next_action": "Port the rider-carry collision response and compare a moving-platform room against an emulator.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_object29.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_object29.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_object29"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-13"
+   }
+  },
+  {
    "id": "aos.objects.proximity_attack",
    "area": "aos",
    "category": "environment",
@@ -31203,6 +31274,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_object29",
+    "files": [
+     "tests/test_aos_object29.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_object1a",
     "files": [
      "tests/test_aos_object1a.c"
@@ -31295,12 +31373,18 @@
    }
   ],
   "summary": {
-   "passed": 203,
+   "passed": 204,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "49880829",
+   "date": "2026-11-13",
+   "subject": "Port Aria Object22 scripted elevator director (dispatch 34)",
+   "scope": "project"
+  },
   {
    "commit": "8987ab21",
    "date": "2026-11-13",
@@ -31774,12 +31858,6 @@
    "date": "2026-11-11",
    "subject": "Port Julius Belmont (Aria id 0x6E) with his thirteen-state machine",
    "scope": "project"
-  },
-  {
-   "commit": "aa52fde6",
-   "date": "2026-11-11",
-   "subject": "Make Headhunter's death machine faithful (sub_08083860)",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -31840,9 +31918,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 2061,
-    "routines_attached_to_features": 2061,
-    "unassigned_routines": 1512,
+    "routines_cited_by_features": 2066,
+    "routines_attached_to_features": 2066,
+    "unassigned_routines": 1507,
     "call_edges": 14228
    }
   },

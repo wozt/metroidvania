@@ -55,6 +55,7 @@
 #include "aos/game/aos_object31.h"
 #include "aos/game/aos_object33.h"
 #include "aos/game/aos_object22.h"
+#include "aos/game/aos_object29.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -482,6 +483,7 @@ typedef struct {
     AosObject31 object31;   /* object 0x31: delayed-launch spinner */
     AosObject33 object33;   /* object 0x33: dual-burst emitter */
     AosObject22 object22;   /* object 0x22: scripted elevator */
+    AosObject29 object29;   /* object 0x29: ping-pong platform */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5312,6 +5314,27 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (e->object22.deactivate) e->spawned = false;
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 41) {
+            /* Object29Create / Object29Update (sUnk_084F0DF8[41] /
+             * sUnk_084F0ED8[41]): the ping-pong moving platform.
+             * The + 0x30 param is param0 (threshold << 16), the
+             * + 0x32 record selector is param1, the sprite
+             * resolves through the special_42_v00-v03 variants
+             * and room fields pass 0. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object29_create(&e->object29, (int16_t)e->param0,
+                                    (int16_t)e->param1, 0, 0,
+                                    e->x << 16, e->y << 16, true,
+                                    &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            aos_object29_update(&e->object29, 0, 0);
+            continue;
+        }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 33) {
             /* Object21Create / Object21Update (sUnk_084F0DF8[33] /
              * sUnk_084F0ED8[33]): the cyclic lift. Create's sprite
@@ -7208,9 +7231,16 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
             /* Object2A's 0x08526510 records index param1 (+ 0x32),
              * not param0 — the _vP suffix carries param1. */
             variant_key = e->param1;
+        } else if (e->id == 41) {
+            /* Object29's 0x085264D0 records repeat every four
+             * entries and share the special_42_v00-v03 triples;
+             * the + 0x32 param selects the record. */
+            variant_key = e->param1 & 3;
         }
         for (int v = 0; v < 24; ++v)
-            if (objects->special_variants[v].id == e->id &&
+            if ((objects->special_variants[v].id == e->id ||
+                 (e->id == 41 &&
+                  objects->special_variants[v].id == 42)) &&
                 objects->special_variants[v].param0 == variant_key &&
                 objects->special_variants[v].loaded) {
                 art = &objects->special_variants[v];

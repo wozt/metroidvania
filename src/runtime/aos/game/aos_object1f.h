@@ -94,3 +94,73 @@ void aos_object1f_think(AosObject1F *o, bool flags_42c_40,
                         bool s8_3f4_neg, bool words_differ);
 
 #endif
+
+/* The ten children of the opening gate. sub_08055DF8 drives the
+ * eight ring children through states 0-8 off a per-slot 132-byte
+ * record at gEwramData + 0x4E4 + slot * 132 (only the record's
+ * + 0xA state byte is modelled); sub_08056130 drives the two
+ * flank children; sub_0805632C drives the free child. ROM helpers
+ * (sub_0803E058 affine, sub_0803C7B4 anim, sub_0803E6BC, the
+ * sub_08068AD4 probe and sub_08021304 poll) are inputs/outputs. */
+typedef struct {
+    uint8_t state;          /* +0xA */
+    uint8_t timer_d;        /* +0xD */
+    int8_t anim_idx;        /* +0x12 (s8, flank anim cycle) */
+    uint8_t slot;           /* +0x11 record slot */
+    uint8_t aux61;          /* +0x61 ring init index */
+    uint8_t aux17;          /* +0x17 sprite/affine aux */
+    uint8_t aux37;          /* +0x37 land sound gate */
+    uint8_t flags58;        /* +0x58 */
+    uint8_t flags59;        /* +0x59 */
+    uint8_t idx65;          /* +0x65 ring index */
+    int32_t life;           /* +0x14 s32 decay counter */
+    int32_t acc20;          /* +0x20 s16 drift accumulator */
+    int32_t acc22;          /* +0x22 s16 drift step */
+    int32_t vel18;          /* +0x18 s16 */
+    int32_t vel1a;          /* +0x1A s16 */
+    int32_t anchor_x;       /* +0x1C s16 saved position */
+    int32_t anchor_y;       /* +0x1E s16 */
+    int16_t pos42;          /* +0x42 s16 x */
+    int16_t pos46;          /* +0x46 s16 y */
+    int32_t fine40;         /* +0x40 s32 fine x */
+    int32_t fine44;         /* +0x44 s32 fine y */
+    int32_t vel48;          /* +0x48 s32 fine vx */
+    int32_t vel4c;          /* +0x4C s32 fine vy */
+    /* outputs, reset each update */
+    int sound;              /* sub_0800C5A8 argument, -1 none */
+    unsigned affine_ops;    /* sub_0803E058 calls this frame */
+    unsigned anim_sets;     /* sub_0803C7B4 calls this frame */
+    uint8_t anim_id;        /* last sub_0803C7B4 frame arg */
+    bool flags_42c_clr41;   /* +0x42C &= ~0x41 request */
+    bool record_inc;        /* gEwramData record +0xA increment */
+} AosObject1FChild;
+
+/* sub_08055CB4: ring child state-0 init — fixed anchor
+ * (+0x42 = 0x78, +0x46 = 0x48), the *5 (+0xF when aux61) timer,
+ * the 0xFFFF life decay and the fall/rise half, then state 6. */
+void aos_object1f_child_ring_init(AosObject1FChild *c,
+                                  bool flag42c_40);
+
+/* sub_08055DF8: ring child dispatcher, states 0-8. `record_state`
+ * is the slot record's +0xA byte, `rng` a RandomNumberGenerator
+ * sample and `flag42c_40` the + 0x42C bit-0x40 gate. */
+void aos_object1f_child_ring_update(AosObject1FChild *c,
+                                    uint8_t record_state,
+                                    uint32_t rng, bool flag42c_40);
+
+/* sub_08056130: flank child update. `record_state` gates the
+ * state-1 abort, `probe_ok`/`poll_done` stand in for
+ * sub_08068AD4 and sub_08021304; the 12-entry ROM table
+ * 0x081185F8 {4,7,5,6,5,7,4,7,6,5,6,7} cycles through
+ * anim_idx every eighth tick. */
+void aos_object1f_child_flank_update(AosObject1FChild *c,
+                                     uint8_t record_state,
+                                     bool probe_ok, bool poll_done);
+
+/* sub_0805632C: free child update — states 0,1,2,3 then 0xA,
+ * 0xB and 0x63 (the ROM jump table's other cases are empty).
+ * `record_state` is read by state 0 and `rng` feeds the
+ * state-0/1 delays. */
+void aos_object1f_child_free_update(AosObject1FChild *c,
+                                    uint8_t record_state,
+                                    uint32_t rng);

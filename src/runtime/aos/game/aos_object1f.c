@@ -230,3 +230,268 @@ void aos_object1f_think(AosObject1F *o, bool flags_42c_40,
          * exposed through frames_left; no runtime consumer. */
     }
 }
+
+static void child_outputs_reset(AosObject1FChild *c) {
+    c->sound = -1;
+    c->affine_ops = 0;
+    c->anim_sets = 0;
+    c->anim_id = 0;
+    c->flags_42c_clr41 = false;
+    c->record_inc = false;
+}
+
+/* The period table shared by the ring decay loops: index <= 3
+ * -> 0x1E, <= 5 -> 0x14, else 0xA (sub_08055CB4/sub_08055DF8
+ * cases 4); state 8 uses 0 for <= 5 and 5 above. */
+static int ring_period(uint8_t idx, bool state8) {
+    if (state8) return idx > 5 ? 5 : 0;
+    if (idx <= 3) return 0x1E;
+    return idx <= 5 ? 0x14 : 0xA;
+}
+
+/* The shared decay body: +0x14 -= +0x1A, +0x1A += +0x18, +0xD++
+ * and +0x20 += +0x22 once the old timer passes the period; the
+ * affine call runs every frame in the dispatcher cases. */
+static void ring_decay(AosObject1FChild *c, int period,
+                       bool affine) {
+    c->life -= c->vel1a;
+    c->vel1a += c->vel18;
+    uint8_t old = c->timer_d;
+    c->timer_d = (uint8_t)(old + 1);
+    if (old > period)
+        c->acc20 += c->acc22;
+    if (affine)
+        c->affine_ops++;
+}
+
+void aos_object1f_child_ring_init(AosObject1FChild *c,
+                                  bool flag42c_40) {
+    child_outputs_reset(c);
+    c->pos42 = 0x78;
+    c->pos46 = 0x48;
+    c->state = 1;
+    /* +0xD = aux61 * 5 (+0xF when aux61 != 0), read at +0x61. */
+    c->timer_d = (uint8_t)(c->aux61 * 5 + (c->aux61 ? 0xF : 0));
+    c->life = 0xFFFF;
+    c->vel1a = 0xA;
+    c->vel18 = 0x3C;
+    c->acc20 = 0;
+    c->acc22 = 0x800;
+    c->affine_ops++;
+    c->flags59 &= 0x7F;
+    if (flag42c_40)
+        c->timer_d = 0;
+    /* The gated half runs only while +0x42C bit 0x40 is set;
+     * the ROM loops inside the same call. */
+    if (!flag42c_40)
+        goto rise;
+    while (c->life > 0) {
+        ring_decay(c, ring_period(c->idx65, false), false);
+        if (c->life <= 0)
+            break;
+    }
+rise:
+    c->state = 6;
+    c->acc22 = -c->acc22;
+    c->vel1a = -c->vel1a;
+    c->vel18 = -c->vel18;
+    c->timer_d = (uint8_t)((9 - c->idx65) * 5 +
+                           (c->idx65 ? 0 : 0xF));
+    c->affine_ops++;
+    c->flags59 |= 0x10;
+}
+
+void aos_object1f_child_ring_update(AosObject1FChild *c,
+                                    uint8_t record_state,
+                                    uint32_t rng, bool flag42c_40) {
+    child_outputs_reset(c);
+    switch (c->state) {
+    case 0:
+        aos_object1f_child_ring_init(c, flag42c_40);
+        break;
+    case 1:
+        if (record_state == 3)
+            c->state++;
+        break;
+    case 2:
+        if ((uint8_t)(c->timer_d - 1) == 0xFF) {
+            c->flags59 |= 0x10;
+            c->anchor_x = c->pos42;
+            c->anchor_y = c->pos46;
+            c->state++;
+            c->timer_d = 0;
+        } else {
+            c->timer_d--;
+        }
+        break;
+    case 3:
+        if (c->idx65 == 0) {
+            if (c->timer_d & 1) {
+                int32_t j = (int32_t)(rng % 3) - 1;
+                c->pos42 = (int16_t)(c->pos42 - j);
+                c->pos46 = (int16_t)(c->pos46 - j);
+            } else {
+                c->pos42 = (int16_t)c->anchor_x;
+                c->pos46 = (int16_t)c->anchor_y;
+            }
+        }
+        if (c->timer_d++ > 0x50) {
+            c->pos42 = (int16_t)c->anchor_x;
+            c->pos46 = (int16_t)c->anchor_y;
+            c->timer_d = 0;
+            c->state++;
+        }
+        break;
+    case 4:
+        c->flags59 |= 0x80;
+        ring_decay(c, ring_period(c->idx65, false), true);
+        if (c->life <= 0)
+            c->state++;
+        break;
+    case 5:
+        c->flags58 |= 0x20;
+        break;
+    case 6:
+        if (record_state == 5)
+            c->state++;
+        break;
+    case 7:
+        if ((uint8_t)(c->timer_d - 1) == 0xFF) {
+            c->flags59 |= 0x10;
+            c->flags58 &= (uint8_t)~0x21;
+            c->timer_d = 0;
+        } else {
+            c->timer_d--;
+        }
+        break;
+    case 8:
+        c->flags59 |= 0x80;
+        ring_decay(c, ring_period(c->idx65, true), true);
+        if ((int16_t)c->acc20 == 0) {
+            c->state = 0;
+            c->record_inc = true;
+            c->flags_42c_clr41 = true;
+        }
+        break;
+    }
+}
+
+void aos_object1f_child_flank_update(AosObject1FChild *c,
+                                     uint8_t record_state,
+                                     bool probe_ok, bool poll_done) {
+    static const uint8_t anim_table[12] =
+        {4, 7, 5, 6, 5, 7, 4, 7, 6, 5, 6, 7}; /* 0x081185F8 */
+    child_outputs_reset(c);
+    if (c->state == 0) {
+        if (probe_ok && poll_done) {
+            c->anim_idx = 0;                /* +0x12 = poll result */
+            c->state = 1;
+        }
+        return;
+    }
+    if (c->state != 1)
+        return;
+    if (!probe_ok && record_state <= 2) {
+        /* Sprite reload (sub_0803C7B4 triple) then back to 0. */
+        c->anim_sets++;
+        c->state = 0;
+        return;
+    }
+    c->anim_sets++;
+    c->anim_id = anim_table[c->anim_idx & 0xB];
+    uint8_t old = c->timer_d;
+    c->timer_d = (uint8_t)(old + 1);
+    if (old % 8 == 0) {                       /* __modsi3(old,8) */
+        int8_t next = (int8_t)(c->anim_idx + 1);
+        c->anim_idx = next > 0xB ? 0 : next;
+    }
+}
+
+void aos_object1f_child_free_update(AosObject1FChild *c,
+                                    uint8_t record_state,
+                                    uint32_t rng) {
+    child_outputs_reset(c);
+    switch (c->state) {
+    case 0:
+        if (record_state != 0) {
+            c->timer_d = (uint8_t)((rng & 0xF) + 8);
+            c->state++;
+        }
+        break;
+    case 1:
+        if (c->timer_d != 0) {
+            c->timer_d--;
+            c->fine44 += -0x10000;          /* -1 px per tick */
+        } else {
+            c->timer_d = (uint8_t)((rng & 0xF) + 0x10);
+            c->state++;
+        }
+        break;
+    case 2:
+        c->fine40 += 0x400;
+        if ((uint8_t)(c->timer_d - 1) == 0) {
+            c->vel48 = -(c->fine40 >> 6);
+            c->vel4c = (int32_t)((int64_t)(c->fine40 - 0xA00000) >> 7);
+            c->state++;
+        } else {
+            c->timer_d--;
+        }
+        break;
+    case 3: {
+        /* Spring: +0x48/+0x4C chase zero with the +0x14 phase
+         * limiting acceleration; positions integrate and the
+         * +0x1C s32 lifetime burns 0x200 a tick into state
+         * 0x63. */
+        int32_t lim = 0x30000 - ((int32_t)c->life << 9);
+        if (lim < 0) lim = 0;
+        if (c->pos42 <= 0x7F) {
+            c->vel48 += 0x4000;
+            if (c->vel48 > lim) c->vel48 = lim;
+        } else {
+            c->vel48 -= 0x4000;
+            if (c->vel48 < -lim) c->vel48 = -lim;
+        }
+        if (c->pos46 <= 0x4F) {
+            c->vel4c += 0x3000;
+            if (c->vel4c > lim) c->vel4c = lim;
+        } else {
+            c->vel4c -= 0x3000;
+            if (c->vel4c < -lim) c->vel4c = -lim;
+        }
+        c->life = (c->life + 1) & 0xFFFF;  /* +0x14 strh */
+        c->fine40 += c->vel48;
+        c->fine44 += c->vel4c;
+        c->anchor_x -= 0x200;               /* +0x1C s32 low half */
+        if (c->anchor_x == 0) {
+            c->state = 0x63;
+        }
+        break;
+    }
+    case 0xA:
+        c->fine40 += 0x400;
+        c->timer_d++;
+        if (c->timer_d > 0x2F)
+            c->state++;
+        break;
+    case 0xB:
+        c->vel4c += 0x6000;
+        c->fine44 += c->vel4c;
+        if (c->pos46 > 0x83) {
+            if (c->aux37 == 0)
+                c->sound = 1;               /* sub_0800C5A8(1) */
+            c->pos46 = 0x84;
+            c->state = 0;
+        }
+        break;
+    case 0x63:
+        c->flags59 |= 0x8;
+        /* sub_0803E6BC(+0x17) then b _080564F0 — this case
+         * skips the common sub_0803E058 tail. */
+        c->affine_ops++;
+        return;
+    default:
+        break;
+    }
+    /* Common tail: sub_0803E058(+0x1C, +0x17, 0). */
+    c->affine_ops++;
+}

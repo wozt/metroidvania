@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-13T20:02:23+00:00",
+ "generated_at": "2026-11-13T20:09:36+00:00",
  "git": {
-  "commit": "b0850c2d",
+  "commit": "60a2da1d",
   "branch": "main",
   "dirty": true
  },
@@ -22595,10 +22595,14 @@
     "sub_0801D028",
     "sub_080115D4",
     "sub_08021304",
-    "sub_080235C8"
+    "sub_080235C8",
+    "sub_08055DF8",
+    "sub_08056130",
+    "sub_08055CB4",
+    "sub_0805632C"
    ],
-   "limitations": "The + 0 = sub_08055748 nine-state think is now ported as aos_object1f_think (cases 0-8 plus the shared input-lock/A074 tail) with the gEwramData flag words, the + 0x3F4 byte and the + 0x88/+ 0x3F8 compare as bundled inputs and the songs/flash/display writes as outputs; still NOT ported are the ten children's updates (sub_08055DF8/sub_08056130/sub_08055CB4/sub_0805632C) or the sub_08068AD4 probe geometry; the gEwramData + 0x14/+ 0x64/+ 0x42C/+ 0x60 globals are bundled inputs, the gDisplayRegisters + 0x4A blend and the player + 0x5A/+ 0x58 writes are outputs, the sprite attach stays under special_sprites and there is no emulator comparison. Object1FCreate (0x080564F8) chains sub_08056514 (palette descriptor 0x082052F0, opening-actor family, + 0 = sub_08055748), sub_08055BE0 (eight type-0x1B children, frames 0x08257BD8, + 0x65 = index) and sub_0805607C (two flank children at + 0x42 = 0x54/0x9C, + 0x46 = 0x80). Object1FUpdate (0x08056224) is the dispatch-side gate: state 0 waits on gEwramData + 0x14 bit 0x40, + 0x64 == 1 and the player probe, then plays sub_0800C5A8(0), sets player + 0x5A = (+ 0x5A & ~7) OR 2, display + 0x4A = 0x10, + 0x14 = 0x80 -> 1; state 1 sets + 0x42C bit 0 and SetPlayerInput(1, 0), counts + 0xD (s8) into the ((d >> 3) << 8) OR (0x10 - (d >> 3)) blend — the negative branch flags the player and its 0x808 store is overwritten as in the ROM — decrements + 0x14 and runs sub_08010978(gEwramData + 0x60) on the wrap -> 2. Unit-tested in test_aos_object1f. sub_08055748 itself now runs through aos_object1f_think: case 0 branches on + 0x42C bit 0x40 into the flash/+ 0x14 = 0x74 path to state 5 or the A074 bit-1 path to state 1; case 1 walks substate 0/1 (probe gate, then the sub_08021304 poll that plays 0xF3 and sets + 0x42C bit 0x20000); case 2 compares the + 0x3F4 byte and the + 0x88/+ 0x3F8 words (mismatch plays 0x1010 and 0xF9); case 3 toggles the player + 0x5A bit 0x20 window every four ticks; case 4 waits 0x3F ticks then sets + 0x42C bit 0x40 and runs the sub_08012048/sub_080109B8/DMA/player-position block; case 5 fades and clears + 0x5A bits 0x79; case 6 waits 0x40 ticks then clears + 0x42C bits 0x41 and runs sub_08013C5C; case 7 idles; case 8 sets A074 bit 1 and counts + 0x14 down every third tick, looping to state 0 under 0x24; the tail locks input in states 2-7, clears A074 bits 0-1 in states 3-5 and writes the display window in states 5+. The runtime calls it with every global clear so it parks in state 1 — the real + 0x42C arm is not modelled.",
-   "next_action": "Port the ten child updates (sub_08055DF8/sub_08056130/sub_08055CB4/sub_0805632C) and model the + 0x42C/+ 0xA074 event words so the think can leave its parked state.",
+   "limitations": "The + 0 = sub_08055748 nine-state think is now ported as aos_object1f_think (cases 0-8 plus the shared input-lock/A074 tail) with the gEwramData flag words, the + 0x3F4 byte and the + 0x88/+ 0x3F8 compare as bundled inputs and the songs/flash/display writes as outputs; still NOT ported are the ten children's updates (sub_08055DF8/sub_08056130/sub_08055CB4/sub_0805632C) or the sub_08068AD4 probe geometry; the gEwramData + 0x14/+ 0x64/+ 0x42C/+ 0x60 globals are bundled inputs, the gDisplayRegisters + 0x4A blend and the player + 0x5A/+ 0x58 writes are outputs, the sprite attach stays under special_sprites and there is no emulator comparison. Object1FCreate (0x080564F8) chains sub_08056514 (palette descriptor 0x082052F0, opening-actor family, + 0 = sub_08055748), sub_08055BE0 (eight type-0x1B children, frames 0x08257BD8, + 0x65 = index) and sub_0805607C (two flank children at + 0x42 = 0x54/0x9C, + 0x46 = 0x80). Object1FUpdate (0x08056224) is the dispatch-side gate: state 0 waits on gEwramData + 0x14 bit 0x40, + 0x64 == 1 and the player probe, then plays sub_0800C5A8(0), sets player + 0x5A = (+ 0x5A & ~7) OR 2, display + 0x4A = 0x10, + 0x14 = 0x80 -> 1; state 1 sets + 0x42C bit 0 and SetPlayerInput(1, 0), counts + 0xD (s8) into the ((d >> 3) << 8) OR (0x10 - (d >> 3)) blend — the negative branch flags the player and its 0x808 store is overwritten as in the ROM — decrements + 0x14 and runs sub_08010978(gEwramData + 0x60) on the wrap -> 2. Unit-tested in test_aos_object1f. sub_08055748 itself now runs through aos_object1f_think: case 0 branches on + 0x42C bit 0x40 into the flash/+ 0x14 = 0x74 path to state 5 or the A074 bit-1 path to state 1; case 1 walks substate 0/1 (probe gate, then the sub_08021304 poll that plays 0xF3 and sets + 0x42C bit 0x20000); case 2 compares the + 0x3F4 byte and the + 0x88/+ 0x3F8 words (mismatch plays 0x1010 and 0xF9); case 3 toggles the player + 0x5A bit 0x20 window every four ticks; case 4 waits 0x3F ticks then sets + 0x42C bit 0x40 and runs the sub_08012048/sub_080109B8/DMA/player-position block; case 5 fades and clears + 0x5A bits 0x79; case 6 waits 0x40 ticks then clears + 0x42C bits 0x41 and runs sub_08013C5C; case 7 idles; case 8 sets A074 bit 1 and counts + 0x14 down every third tick, looping to state 0 under 0x24; the tail locks input in states 2-7, clears A074 bits 0-1 in states 3-5 and writes the display window in states 5+. The runtime calls it with every global clear so it parks in state 1 — the real + 0x42C arm is not modelled. The child layer: sub_08055CB4 anchors a ring child at + 0x42 = 0x78/+ 0x46 = 0x48 with the aux61*5 (+0xF) timer, a 0xFFFF life decay and a negated rise half; sub_08055DF8 walks its nine states off the slot record + 0xA (init, record gates 3 and 5, RNG jitter, two decay halves and the acc20==0 reset that bumps the record and clears + 0x42C bits 0x41); sub_08056130 gates the two flank children on the same probe/poll pair, reloads their sprite triple when the probe drops under record state 2 and cycles the twelve ROM animation ids every eighth tick; sub_0805632C runs the free child through its wait/delay/launch/spring/land/despawn states with the + 0x40-derived velocities and the + 0x1C lifetime burn.",
+   "next_action": "Instantiate the ten children in the runtime (type-0x1B entities off the + 0x4E4 slot records) and model the + 0x42C/+ 0xA074 event words so the think and ring machines leave their parked states.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_object1f.c"
@@ -31779,6 +31783,12 @@
  },
  "timeline": [
   {
+   "commit": "60a2da1d",
+   "date": "2026-11-13",
+   "subject": "Port Aria Object1F nine-state think machine",
+   "scope": "project"
+  },
+  {
    "commit": "b0850c2d",
    "date": "2026-11-13",
    "subject": "Port Aria Object1F opening sequence gate",
@@ -32251,12 +32261,6 @@
    "date": "2026-11-11",
    "subject": "Port Graham Jones (Aria enemy 0x6F)",
    "scope": "project"
-  },
-  {
-   "commit": "1a247d20",
-   "date": "2026-11-11",
-   "subject": "Port Great Armor (id 60)",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -32317,9 +32321,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 2099,
-    "routines_attached_to_features": 2099,
-    "unassigned_routines": 1474,
+    "routines_cited_by_features": 2103,
+    "routines_attached_to_features": 2103,
+    "unassigned_routines": 1470,
     "call_edges": 14228
    }
   },

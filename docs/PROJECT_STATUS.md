@@ -1,3 +1,19 @@
+## Patch 1080 - Aria Object1F child updates ported
+
+- `AosObject1FChild` ports the ten opening-gate children:
+  sub_08055CB4 (ring init: fixed anchor, aux61*5 (+0xF)
+  timer, 0xFFFF life decay, negated rise), sub_08055DF8
+  (the nine-state ring dispatcher off the gEwramData + 0x4E4
+  slot records, RNG jitter, both decay halves and the
+  acc20==0 reset), sub_08056130 (the two flank children:
+  probe/poll gate, sprite reload and the twelve-entry
+  0x081185F8 animation cycle) and sub_0805632C (the free
+  child: wait/delay/launch/spring/land/despawn with the
+  +0x40-derived velocities).
+- The runtime still only counts the ten create-time spawns;
+  instantiating the children and modelling the + 0x42C/
+  + 0xA074 event words remain the next actions.
+
 ## Patch 1079 - Aria Object1F think machine ported
 
 - `aos_object1f_think` ports sub_08055748, the entity + 0

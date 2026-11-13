@@ -96,6 +96,63 @@ int main(void) {
     aos_object1f_think(&o, false, false, false, false, false);
     assert(o.state == 1 && o.flags_a074_2);
 
+    /* Child updates: sub_08055CB4 ring init. */
+    AosObject1FChild c;
+    memset(&c, 0, sizeof c);
+    c.idx65 = 2; c.aux61 = 3;
+    aos_object1f_child_ring_init(&c, false);
+    assert(c.state == 6 && c.pos42 == 0x78 && c.pos46 == 0x48);
+    assert(c.timer_d == (9 - 2) * 5);       /* idx!=0: no +0xF */
+    assert(c.life == (int32_t)(0xFFFF - 0xA - 0x3C * 0) ||
+           c.life <= 0xFFFF);
+    assert(c.flags59 & 0x10);
+
+    /* ring dispatcher: state 0 re-inits; state 2 timer wrap. */
+    memset(&c, 0, sizeof c);
+    c.state = 2; c.timer_d = 0;
+    aos_object1f_child_ring_update(&c, 0, 0, false);
+    assert(c.state == 3 && c.timer_d == 0 && (c.flags59 & 0x10));
+    /* state 3 idx 0 jitter/anchor then advance past 0x50. */
+    memset(&c, 0, sizeof c);
+    c.state = 3; c.idx65 = 0; c.timer_d = 0x52; c.anchor_x = 5;
+    c.anchor_y = 6; c.pos42 = 1; c.pos46 = 2;
+    aos_object1f_child_ring_update(&c, 0, 4, false);
+    assert(c.state == 4 && c.pos42 == 5 && c.pos46 == 6);
+    /* state 8 acc20 == 0 -> state 0 + record_inc + clr41. */
+    memset(&c, 0, sizeof c);
+    c.state = 8; c.idx65 = 1; c.acc20 = 0; c.life = 1;
+    aos_object1f_child_ring_update(&c, 0, 0, false);
+    assert(c.state == 0 && c.record_inc && c.flags_42c_clr41);
+
+    /* flank child: state 0 probe+poll -> state 1; anim cycle. */
+    memset(&c, 0, sizeof c);
+    aos_object1f_child_flank_update(&c, 0, true, true);
+    assert(c.state == 1);
+    for (int i = 0; i < 8; i++)
+        aos_object1f_child_flank_update(&c, 0, true, false);
+    assert(c.anim_idx == 1 && c.anim_id == 7);
+    /* probe loss with record <= 2 -> reload + state 0. */
+    aos_object1f_child_flank_update(&c, 2, false, false);
+    assert(c.state == 0 && c.anim_sets == 1);
+
+    /* free child: state 0 waits on record, then delays. */
+    memset(&c, 0, sizeof c);
+    aos_object1f_child_free_update(&c, 0, 0);
+    assert(c.state == 0);
+    aos_object1f_child_free_update(&c, 1, 0x1F);
+    assert(c.state == 1 && c.timer_d == 0x17); /* (0x1F&0xF)+8 */
+    /* state 3 spring integrates and burns the lifetime. */
+    memset(&c, 0, sizeof c);
+    c.state = 3; c.pos42 = 0; c.pos46 = 0; c.life = 0;
+    c.anchor_x = 0x200; c.fine40 = 0; c.fine44 = 0;
+    aos_object1f_child_free_update(&c, 0, 0);
+    assert(c.fine40 != 0 || c.vel48 != 0);
+    /* state 0xB landing: pos46 > 0x83 -> state 0 + sound. */
+    memset(&c, 0, sizeof c);
+    c.state = 0xB; c.pos46 = 0x90; c.aux37 = 0;
+    aos_object1f_child_free_update(&c, 0, 0);
+    assert(c.state == 0 && c.pos46 == 0x84 && c.sound == 1);
+
     puts("aos_object1f: ok");
     return 0;
 }

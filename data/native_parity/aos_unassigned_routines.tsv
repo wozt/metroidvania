@@ -242,10 +242,6 @@ aos:asm:asm/code/code_08050A3C.s:sub_08055414	sub_08055414	environment	referrers
 aos:asm:asm/code/code_08050A3C.s:sub_080554BC	sub_080554BC	environment	referrers			asm_function	0x080554BC	asm/code/code_08050A3C.s	9337	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_08055684	sub_08055684	unclassified				asm_function	0x08055684	asm/code/code_08050A3C.s	9573	0	3
 aos:asm:asm/code/code_08050A3C.s:sub_0805573C	sub_0805573C	unclassified				asm_function	0x0805573C	asm/code/code_08050A3C.s	9671	0	1
-aos:asm:asm/code/code_08050A3C.s:sub_08055CB4	sub_08055CB4	environment	referrers			asm_function	0x08055CB4	asm/code/code_08050A3C.s	10338	2	1
-aos:asm:asm/code/code_08050A3C.s:sub_08055DF8	sub_08055DF8	environment	referrers			asm_function	0x08055DF8	asm/code/code_08050A3C.s	10508	0	3
-aos:asm:asm/code/code_08050A3C.s:sub_08056130	sub_08056130	environment	referrers			asm_function	0x08056130	asm/code/code_08050A3C.s	10927	0	3
-aos:asm:asm/code/code_08050A3C.s:sub_0805632C	sub_0805632C	unclassified		technical	exclusive_callees	asm_function	0x0805632C	asm/code/code_08050A3C.s	11178	0	4
 aos:asm:asm/code/code_08050A3C.s:sub_08058B84	sub_08058B84	environment	referrers			asm_function	0x08058B84	asm/code/code_08050A3C.s	16410	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_08058B94	sub_08058B94	environment	referrers			asm_function	0x08058B94	asm/code/code_08050A3C.s	16420	1	5
 aos:asm:asm/code/code_08050A3C.s:sub_08059FB4	sub_08059FB4	environment	referrers			asm_function	0x08059FB4	asm/code/code_08050A3C.s	18946	0	6

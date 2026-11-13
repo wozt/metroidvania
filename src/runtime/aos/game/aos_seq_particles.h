@@ -63,3 +63,35 @@ AosSeqParticleSpawn aos_seq_particle_spawn(void *entity, bool has_arg,
                                            int variant_sign);
 
 #endif
+
+/* Runtime fields of the spawned particle for sub_08062C18. */
+typedef struct {
+    uint8_t state;      /* +0xA */
+    uint8_t ctr_b;      /* +0xB */
+    uint8_t ctr_c;      /* +0xC */
+    uint8_t timer;      /* +0xD */
+    uint8_t flags16;    /* +0x16 */
+    uint8_t flags58;    /* +0x58 (low 3 bits = palette nibble) */
+    uint8_t flags59;    /* +0x59 */
+    uint8_t anim5c;     /* +0x5C */
+    uint16_t field18;   /* +0x18 direction seed / wobble counter */
+    int32_t spin;       /* +0x38 */
+    int32_t x, y;       /* +0x40/+0x44 */
+    int32_t vx, vy;     /* +0x48/+0x4C */
+    int16_t spawn_x;    /* +0x42 */
+    int16_t spawn_y;    /* +0x46 */
+    bool child_spawned; /* state-0 one-shot ran */
+    bool pal_restored;  /* sub_0806BC call on the +0xD > 0x3F exit */
+} AosSeqParticleEnt;
+
+/* sub_08062C18: state 0 waits for +0xD to wrap to 0xFF then
+ * spawns the sub_08065834 child at +0x42/+0x46 (the spawn is
+ * injected through `spawn_child`, which reports the
+ * sub_0806E0D0 resource load: nonzero keeps the child); state 1
+ * flies the particle on a sine-derived velocity, wobbles +0x18
+ * and +0x38 every second tick and deletes through +0x59 bit 3
+ * after +0xD passes 0x3F. `sine` is the injected sub_080009E4. */
+void aos_seq_particle_update(AosSeqParticleEnt *e,
+                             bool (*spawn_child)(int16_t x,
+                                                 int16_t y),
+                             int32_t (*sine)(uint32_t angle));

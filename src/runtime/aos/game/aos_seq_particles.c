@@ -53,3 +53,50 @@ AosSeqParticleSpawn aos_seq_particle_spawn(void *entity, bool has_arg,
     o.anim5c = 0x11;
     return o;
 }
+
+void aos_seq_particle_update(AosSeqParticleEnt *e,
+                             bool (*spawn_child)(int16_t, int16_t),
+                             int32_t (*sine)(uint32_t)) {
+    if (e->state == 0) {
+        e->timer = (uint8_t)(e->timer - 1);
+        if (e->timer != 0xFF) return;
+        e->timer = 0;
+        e->spin = 0x10000;
+        e->state = 1;
+        e->ctr_b = 0;
+        e->ctr_c = 0;
+        e->flags58 &= (uint8_t)~0x21;
+        e->child_spawned = true;
+        if (spawn_child &&
+            spawn_child(e->spawn_x, e->spawn_y)) {
+            /* child keeps the parent's +0x42/+0x46, +0x16 = 0,
+             * sub_0803F2C8(e, 1, 0, 0) and sub_0803F17C(e) —
+             * engine-side, reported through the callback. */
+        }
+        return;
+    }
+    if (e->state != 1) return;
+    uint32_t base = (e->field18 & 0x1Fu) << 11;
+    int32_t angle = (int32_t)(base + 0x4000);
+    e->vx = sine ? (sine((uint32_t)angle) >> 8) << 10 : 0;
+    e->vy = sine ? (sine(base) >> 8) << 10 : 0;
+    e->x += e->vx;
+    e->y += e->vy;
+    e->timer = (uint8_t)(e->timer + 1);
+    e->anim5c = e->timer > 0x20 ? 0x11 : 3;
+    if ((e->timer & 1) == 0) {
+        if (e->flags16) {
+            e->field18 = (uint16_t)(e->field18 + 1);
+            e->spin += 0x200;
+        } else {
+            e->field18 = (uint16_t)(e->field18 - 1);
+            e->spin -= 0x200;
+        }
+    }
+    /* sub_0803E058(spin, 0x12000, 0x12000, 0, {0, nibble}) —
+     * draw-side request. */
+    if (e->timer > 0x3F) {
+        e->pal_restored = true;    /* sub_0803E6BC(+0x58 & 7) */
+        e->flags59 |= 0x8;
+    }
+}

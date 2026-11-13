@@ -1,3 +1,15 @@
+## Patch 1092 - Aria sequence particle update sub_08062C18
+
+- `aos_seq_particles` gains `aos_seq_particle_update`: the two-state
+  machine — state 0 counts +0xD down to the 0xFF wrap, arms
+  +0x38 = 0x10000 and spawns the sub_08065834 child at +0x42/+0x46
+  through the injected callback; state 1 derives +0x48/+0x4C from
+  the (field18 & 0x1F) sine pair, wobbles +0x18/+0x38 every second
+  tick, flips +0x5C at +0xD > 0x20 and exits through +0x59 bit 3
+  past 0x3F with the palette restore.
+- Unit-tested; sub_08062C18 added to the aos.events.opening_scene
+  annotation.
+
 ## Patch 1091 - Aria sequence particle spawn helpers
 
 - `src/runtime/aos/game/aos_seq_particles.c/.h` ports

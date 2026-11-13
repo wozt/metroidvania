@@ -33,3 +33,33 @@ void aos_npc_talk_18_update(AosNpcTalk *t, bool text_done);
 bool aos_npc_talk_arm_flag(void);
 
 #endif
+
+/* sub_08061FDC: sprite-variant gate — sub_0806E0D0 picks the
+ * 0x0811892C/0x08252748/0x0820C028 triple; a nonzero variant
+ * sets + 0x5C = 0x11 and keeps the entity, else it deletes.
+ * Returns the ROM's 1/0. */
+int aos_npc_talk_sprite_gate(uint8_t *anim5c, bool *deleted,
+                             bool sprite_variant);
+
+/* sub_08062020: loads frames 0x0811892C and releases the
+ * entity through sub_0805B66C(1). */
+void aos_npc_talk_release_frames(void);
+
+/* sub_08062040: + 0x42C bit-0 arm plus the sub_0803D270 /
+ * sub_0803CED4 fade pair. */
+void aos_npc_talk_arm_fade(void);
+
+/* sub_08062068: + 0x59 |= 8. */
+void aos_npc_talk_mark_done(uint8_t *flags59);
+
+/* sub_08062074: sub_0805B878(0x1020), sound 0x25 through
+ * sub_08013EEC and sub_0805B66C(1); returns 0. */
+int aos_npc_talk_sound_release(void);
+
+/* sub_08062098: the + 0xC/+ 0xD counter helper — first call
+ * writes gEwramData + 0x417 = 1 and stores arg into + 0xD,
+ * later calls count + 0xD down and advance + 0xC on wrap;
+ * returns whether the step ran. `wrote_417` reports the
+ * gEwramData write. */
+bool aos_npc_talk_counter_tick(uint8_t *ctr_c, uint8_t *ctr_d,
+                               uint8_t arg, bool *wrote_417);

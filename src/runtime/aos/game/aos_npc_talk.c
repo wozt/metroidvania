@@ -40,3 +40,49 @@ bool aos_npc_talk_arm_flag(void) {
     /* +0x42C |= 1; the ROM returns the new word (nonzero). */
     return true;
 }
+
+int aos_npc_talk_sprite_gate(uint8_t *anim5c, bool *deleted,
+                             bool sprite_variant) {
+    if (sprite_variant) {
+        *anim5c = 0x11;
+        return 1;
+    }
+    *deleted = true;
+    return 0;
+}
+
+void aos_npc_talk_release_frames(void) {
+    /* sub_0803AFB8(0x0811892C) + sub_0803B980 + sub_0805B66C(1)
+     * — reported through the caller's release path. */
+}
+
+void aos_npc_talk_arm_fade(void) {
+    /* +0x42C |= 1 then sub_0803D270/sub_0803CED4. */
+}
+
+void aos_npc_talk_mark_done(uint8_t *flags59) {
+    *flags59 |= 0x8;
+}
+
+int aos_npc_talk_sound_release(void) {
+    /* sub_0805B878(0x1020), sub_08013EEC(0x25), sub_0805B66C(1). */
+    return 0;
+}
+
+bool aos_npc_talk_counter_tick(uint8_t *ctr_c, uint8_t *ctr_d,
+                               uint8_t arg, bool *wrote_417) {
+    *wrote_417 = false;
+    if (*ctr_c == 0) {
+        *wrote_417 = true;      /* gEwramData + 0x417 = 1 */
+        *ctr_d = arg;
+        (*ctr_c)++;
+        return true;
+    }
+    if (*ctr_c == 1) {
+        *ctr_d = (uint8_t)(*ctr_d - 1);
+        if (*ctr_d == 0xFF)
+            (*ctr_c)++;
+        return true;
+    }
+    return false;
+}

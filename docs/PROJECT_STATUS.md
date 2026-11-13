@@ -1,3 +1,12 @@
+## Patch 1083 - Aria Object20 misc state callbacks ported
+
+- `aos_npc_talk` gains the small Object20 callbacks:
+  sub_08061FDC (sprite-variant gate, delete on null),
+  sub_08062020 (frames load + release), sub_08062040
+  (+ 0x42C arm + fade pair), sub_08062068 (+ 0x59 bit 3),
+  sub_08062074 (sound 0x25 + release) and sub_08062098
+  (the + 0xC/+ 0xD counter with the + 0x417 write).
+
 ## Patch 1082 - Aria Object20 talk-state callbacks ported
 
 - `src/runtime/aos/game/aos_npc_talk.c` ports the small

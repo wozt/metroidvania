@@ -312,15 +312,9 @@ aos:asm:asm/code/code_08060B98.s:sub_08061874	sub_08061874	unclassified				asm_f
 aos:asm:asm/code/code_08060B98.s:sub_08061890	sub_08061890	unclassified		technical	exclusive_callees	asm_function	0x08061890	asm/code/code_08060B98.s	1642	0	3
 aos:asm:asm/code/code_08060B98.s:sub_080618c8	sub_080618c8	unclassified				asm_function	0x080618C8	asm/code/code_08060B98.s	1673	0	0
 aos:asm:asm/code/code_08060B98.s:sub_080618e4	sub_080618e4	unclassified		technical	exclusive_callees	asm_function	0x080618E4	asm/code/code_08060B98.s	1688	0	3
-aos:asm:asm/code/code_08060B98.s:sub_08061FDC	sub_08061FDC	unclassified		technical	exclusive_callees	asm_function	0x08061FDC	asm/code/code_08060B98.s	2592	1	2
 aos:asm:asm/code/code_08060B98.s:sub_08061a00	sub_08061a00	unclassified		technical	exclusive_callees	asm_function	0x08061A00	asm/code/code_08060B98.s	1841	0	6
 aos:asm:asm/code/code_08060B98.s:sub_08061abc	sub_08061abc	unclassified		audio	exclusive_callees	asm_function	0x08061ABC	asm/code/code_08060B98.s	1931	0	11
 aos:asm:asm/code/code_08060B98.s:sub_08061d10	sub_08061d10	unclassified		technical	exclusive_callees	asm_function	0x08061D10	asm/code/code_08060B98.s	2225	0	7
-aos:asm:asm/code/code_08060B98.s:sub_08062020	sub_08062020	unclassified		technical	exclusive_callees	asm_function	0x08062020	asm/code/code_08060B98.s	2627	1	3
-aos:asm:asm/code/code_08060B98.s:sub_08062040	sub_08062040	unclassified				asm_function	0x08062040	asm/code/code_08060B98.s	2643	0	2
-aos:asm:asm/code/code_08060B98.s:sub_08062068	sub_08062068	unclassified				asm_function	0x08062068	asm/code/code_08060B98.s	2662	0	0
-aos:asm:asm/code/code_08060B98.s:sub_08062074	sub_08062074	unclassified		audio	exclusive_callees	asm_function	0x08062074	asm/code/code_08060B98.s	2671	0	3
-aos:asm:asm/code/code_08060B98.s:sub_08062098	sub_08062098	unclassified				asm_function	0x08062098	asm/code/code_08060B98.s	2689	1	0
 aos:asm:asm/code/code_08060B98.s:sub_080620e8	sub_080620e8	unclassified		audio	exclusive_callees	asm_function	0x080620E8	asm/code/code_08060B98.s	2734	0	13
 aos:asm:asm/code/code_08060B98.s:sub_08062244	sub_08062244	unclassified				asm_function	0x08062244	asm/code/code_08060B98.s	2910	0	0
 aos:asm:asm/code/code_08060B98.s:sub_08062260	sub_08062260	unclassified		technical	exclusive_callees	asm_function	0x08062260	asm/code/code_08060B98.s	2925	0	8

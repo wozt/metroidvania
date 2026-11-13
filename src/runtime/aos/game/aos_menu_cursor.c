@@ -397,3 +397,124 @@ uint32_t aos_menu_page_input_67488(AosMenuCursor *cur,
     }
     return ret;
 }
+
+static const uint8_t *menu_record_ptr(AosMenuDrawOps *ops,
+                                      uint8_t kind, uint8_t idx) {
+    if (!ops->record_at) return NULL;
+    return ops->record_at(kind, idx, ops->ctx);
+}
+
+static uint16_t rec_word0(const uint8_t *rec) {
+    uint16_t v = 0;
+    if (rec) memcpy(&v, rec, sizeof v);
+    return v;
+}
+
+static int32_t rec_word4(const uint8_t *rec) {
+    int32_t v = 0;
+    if (rec) memcpy(&v, rec + 4, sizeof v);
+    return v;
+}
+
+void aos_menu_render_66b70(AosMenuCursor *cur, uint8_t *ctr,
+                           const uint8_t *st, const uint8_t *list,
+                           const uint8_t *pairs, uint32_t npairs,
+                           uint32_t stack_arg,
+                           AosMenuKindSpanFn span_fn, void *sctx,
+                           AosMenuDrawOps *ops) {
+    /* sub_08066B70 */
+    uint8_t count = list[0];
+    /* clamp: s8 low > count-4 -> low = count-4; s8 low < 0 -> 0 */
+    if (cur->low > (int32_t)count - 4)
+        cur->low = (int8_t)(count - 4);
+    if (cur->low < 0) cur->low = 0;
+
+    for (uint8_t i = 0; i < 3; i++) {
+        int32_t row = (int32_t)cur->low + i;   /* r8 */
+        if (stack_arg <= 2) {
+            /* blank rows: dash marks only */
+            if (ops->dash) ops->dash(0xE, 0xB + i, 3, ops->ctx);
+            if (ops->qty_pos) ops->qty_pos(0x15, 0xB + i, ops->ctx);
+            continue;
+        }
+        if (ops->cell) ops->cell(0, (uint8_t)(0xC + i), 0xF, 1,
+                                 ops->ctx);
+        if (ops->row_clear) ops->row_clear(i, ops->ctx);
+        if (i >= count) {
+            if (ops->dash) ops->dash(0xE, 0xB + i, 3, ops->ctx);
+            if (ops->qty_pos) ops->qty_pos(0x15, 0xB + i, ops->ctx);
+            continue;
+        }
+        /* name */
+        uint8_t pidx = list[1 + row];
+        uint8_t pk = pidx < npairs ? pairs[pidx * 4] : 0;
+        uint8_t pi = pidx < npairs ? pairs[pidx * 4 + 1] : 0;
+        const uint8_t *rec = menu_record_ptr(ops, pk, pi);
+        uint16_t w0 = rec_word0(rec);
+        if (i == 0 && count == 0) {
+            if (ops->empty_name) ops->empty_name(ops->ctx);
+        } else if (ops->name && ops->name_id) {
+            ops->name(ops->name_id(w0, ops->ctx), ops->ctx);
+        }
+        /* quantity */
+        uint8_t amount = ctr[row];
+        int32_t w4 = rec_word4(rec);
+        if (cur->mode == 2) {
+            w4 = (int32_t)((uint32_t)w4 >> 1);   /* lsrs logical */
+        } else if (st[0xF] == 9) {
+            w4 = (w4 * 8) / 10;
+        }
+        uint16_t qty = (uint16_t)(w4 * (int32_t)amount);
+        if (ops->qty) ops->qty(qty, 0xB + i, ops->ctx);
+        if (ops->qty_pos) ops->qty_pos(0x15, 0xB + i, ops->ctx);
+    }
+
+    if (count == 0) {
+        /* empty page: blanks + icon entity delete + mark clears */
+        if (ops->blanks) ops->blanks(0xC, 6, 2, 0, ops->ctx);
+        if (ops->del_icon) ops->del_icon(ops->ctx);
+        if (ops->clear_icon) ops->clear_icon(ops->ctx);
+        for (int k = 0; k < 6; k++)
+            if (ops->arrow) ops->arrow(2, true, ops->ctx); /* 0x7FFF
+                                                            * marks —
+                                                            * folded */
+        return;
+    }
+
+    /* tail: cursor writes + selected column span */
+    cur->high = (uint8_t)(cur->low + cur->diff);
+    cur->count = count;
+    uint8_t sel = list[1 + cur->high];
+    uint8_t sk = sel < npairs ? pairs[sel * 4] : 0;
+    uint8_t si = sel < npairs ? pairs[sel * 4 + 1] : 0;
+    uint32_t span = span_fn ? span_fn(sk, si, sctx) : 0;
+    if (ops->qty) ops->qty((uint16_t)span, 6, ops->ctx);
+
+    if (stack_arg > 1) {
+        /* detail: description + icon + equip marks */
+        const uint8_t *drec = menu_record_ptr(ops, sk, si);
+        uint16_t w0 = rec_word0(drec);
+        if (ops->clear_icon) ops->clear_icon(ops->ctx);
+        if (ops->desc_text && ops->desc_id)
+            ops->desc_text(ops->desc_id(w0, ops->ctx), ops->ctx);
+        if (ops->icon_item) ops->icon_item(sk, si, ops->ctx);
+        if (sk == AOS_MENU_KIND_ITEM) {
+            for (int k = 0; k < 6; k++)
+                if (ops->arrow) ops->arrow(2, true, ops->ctx);
+        } else if (ops->icon_equip) {
+            ops->icon_equip(sk, si, ops->ctx);
+        }
+    }
+
+    /* arrow hints */
+    if (cur->low > 0) {
+        if (ops->arrow) ops->arrow(0, true, ops->ctx);
+    } else if (ops->arrow) {
+        ops->arrow(0, false, ops->ctx);
+    }
+    if ((int32_t)(int8_t)cur->count - 4 > (int32_t)cur->low) {
+        if (ops->arrow) ops->arrow(1, true, ops->ctx);
+    } else if (ops->arrow) {
+        ops->arrow(1, false, ops->ctx);
+    }
+}

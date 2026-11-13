@@ -204,3 +204,49 @@ uint32_t aos_menu_page_input_67488(AosMenuCursor *cur,
                                    void *ctx,
                                    uint8_t *menu_dirty,
                                    uint16_t *sys_flags);
+
+/* sub_08066B70: menu list renderer — clamps the signed +0x16
+ * window low against count-4 (floor 0), draws up to 3 visible
+ * rows from list[1 + low + i]: cell rect + clear, name through
+ * the 0x08506734 halfword table when the row is in range (text
+ * 0x34F on the empty first row), dash marks past the count,
+ * quantity right-aligned through 0x08506936/word4 with the
+ * mode-2 halving and mode-9 *8/10 rule. The tail writes
+ * +0x17 = low + diff, +0x14 = count, resolves the selected
+ * column's span and, for stack_arg > 1, the description text,
+ * the icon entity (sub_08048804 items / sub_08066A00 others)
+ * and the 0x7FFF equipment-mark clears; stack_arg <= 1 skips
+ * the detail. Finally the up/down arrow hints compare low
+ * against 0 and count-4. Every draw call is injected through
+ * AosMenuDrawOps; record bytes come from record_at (kind
+ * dispatch: <3 items 16B, 3 weapons 28B, 4 armor 20B). */
+typedef struct {
+    void *ctx;
+    void (*cell)(uint8_t x, uint8_t y, uint8_t w, uint8_t h,
+                 void *ctx);                    /* sub_08040970 */
+    void (*row_clear)(uint8_t slot, void *ctx); /* sub_08041204 */
+    void (*name)(uint16_t text, void *ctx);     /* 41434+41338 */
+    void (*empty_name)(void *ctx);              /* text 0x34F */
+    void (*qty)(uint16_t value, uint8_t slot, void *ctx); /* 46EF4 */
+    void (*qty_pos)(uint8_t x, uint8_t slot, void *ctx); /* 46E04 */
+    void (*dash)(uint8_t x, uint8_t slot, uint8_t n, void *ctx);
+    void (*blanks)(uint8_t x, uint8_t y, uint8_t w, uint8_t h,
+                   void *ctx);                  /* sub_08047098 */
+    void (*icon_item)(uint8_t kind, uint8_t idx, void *ctx); /* 48804 */
+    void (*icon_equip)(uint8_t kind, uint8_t idx, void *ctx);/* 66A00 */
+    void (*del_icon)(void *ctx);                /* EntityDelete */
+    void (*clear_icon)(void *ctx);              /* sub_08040FE0 */
+    void (*desc_text)(uint16_t word0, void *ctx);/* sub_08047390 */
+    void (*arrow)(uint8_t which, bool textured, void *ctx);
+    uint16_t (*name_id)(uint16_t word0, void *ctx);  /* 0x08506734 */
+    uint16_t (*desc_id)(uint16_t word0, void *ctx);  /* 0x08506936 */
+    const uint8_t *(*record_at)(uint8_t kind, uint8_t idx,
+                                void *ctx);
+} AosMenuDrawOps;
+
+void aos_menu_render_66b70(AosMenuCursor *cur, uint8_t *ctr,
+                           const uint8_t *st, const uint8_t *list,
+                           const uint8_t *pairs, uint32_t npairs,
+                           uint32_t stack_arg,
+                           AosMenuKindSpanFn span_fn, void *sctx,
+                           AosMenuDrawOps *ops);

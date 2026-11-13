@@ -43,6 +43,38 @@ static uint32_t span5(uint8_t kind, uint8_t idx, void *ctx) {
     (void)kind; (void)idx; (void)ctx; return 5;
 }
 
+static int n_cells, n_clears, n_names, n_qtys, n_dashes,
+           n_blanks, n_icons_i, n_icons_e, n_dels, n_cicons,
+           n_descs, n_arrow_t, n_arrow_f, n_empties;
+static void rd_cell(uint8_t x, uint8_t y, uint8_t w, uint8_t h,
+                    void *c) { (void)x;(void)y;(void)w;(void)h;(void)c; n_cells++; }
+static void rd_row_clear(uint8_t s, void *c) { (void)s;(void)c; n_clears++; }
+static void rd_name(uint16_t t, void *c) { (void)t;(void)c; n_names++; }
+static void rd_qty(uint16_t v, uint8_t s, void *c) { (void)v;(void)s;(void)c; n_qtys++; }
+static void rd_qty_pos(uint8_t x, uint8_t s, void *c) { (void)x;(void)s;(void)c; n_dashes++; }
+static void rd_dash(uint8_t x, uint8_t s, uint8_t n, void *c) { (void)x;(void)s;(void)n;(void)c; n_dashes++; }
+static void rd_blanks_fn(uint8_t x, uint8_t y, uint8_t w, uint8_t h, void *c) { (void)x;(void)y;(void)w;(void)h;(void)c; n_blanks++; }
+static void rd_icon_item(uint8_t k, uint8_t i, void *c) { (void)k;(void)i;(void)c; n_icons_i++; }
+static void rd_icon_equip(uint8_t k, uint8_t i, void *c) { (void)k;(void)i;(void)c; n_icons_e++; }
+static void rd_del_icon(void *c) { (void)c; n_dels++; }
+static void rd_clear_icon(void *c) { (void)c; n_cicons++; }
+static void rd_desc_text(uint16_t w, void *c) { (void)w;(void)c; n_descs++; }
+static void rd_arrow(uint8_t w, bool t, void *c) { (void)w;(void)c; if (t) n_arrow_t++; else n_arrow_f++; }
+static uint16_t rd_name_id(uint16_t w, void *c) { (void)w;(void)c; return w; }
+static uint16_t rd_desc_id(uint16_t w, void *c) { (void)w;(void)c; return w; }
+static uint8_t rd_recbuf[2][32];
+static const uint8_t *rd_record_at(uint8_t k, uint8_t i, void *c) {
+    (void)c;
+    if (k == 2 && i == 5) { uint16_t w0=0x11; int32_t w4=40; memcpy((void*)rd_recbuf[0], &w0, 2); memcpy(rd_recbuf[0]+4, &w4, 4); return rd_recbuf[0]; }
+    if (k == 3 && i == 2) { uint16_t w0=0x22; int32_t w4=80; memcpy(rd_recbuf[1], &w0, 2); memcpy(rd_recbuf[1]+4, &w4, 4); return rd_recbuf[1]; }
+    return NULL;
+}
+static void rd_reset(void) {
+    n_cells=n_clears=n_names=n_qtys=n_dashes=n_blanks=0;
+    n_icons_i=n_icons_e=n_dels=n_cicons=n_descs=0;
+    n_arrow_t=n_arrow_f=n_empties=0;
+}
+
 int main(void) {
     AosMenuCursor s; uint8_t ctr = 0, cols[8] = {0};
     bool song;
@@ -409,6 +441,54 @@ int main(void) {
             test_desc_ki, NULL, rec_song, rec_render, rec_popup,
             NULL, NULL, &dirty, &sysf);
         assert(c.high == 2 && n_renders == 1);
+    }
+
+    /* sub_08066B70 renderer — ops recorder. */
+    {
+        static const uint8_t rprs[] = {2, 5, 0, 0, 3, 2, 0, 0};
+        /* list: count 2, pair idx 0 (kind2/idx5) and 1 (kind3/idx2) */
+        static const uint8_t rlist[] = {2, 0, 1};
+        static uint8_t rctr[0x80]; static uint8_t rst[0xA0];
+        AosMenuCursor rc; AosMenuDrawOps ops;
+        memset(&ops, 0, sizeof ops);
+        ops.cell = rd_cell; ops.row_clear = rd_row_clear;
+        ops.name = rd_name; ops.qty = rd_qty;
+        ops.qty_pos = rd_qty_pos; ops.dash = rd_dash;
+        ops.blanks = rd_blanks_fn; ops.icon_item = rd_icon_item;
+        ops.icon_equip = rd_icon_equip; ops.del_icon = rd_del_icon;
+        ops.clear_icon = rd_clear_icon; ops.desc_text = rd_desc_text;
+        ops.arrow = rd_arrow; ops.name_id = rd_name_id;
+        ops.desc_id = rd_desc_id; ops.record_at = rd_record_at;
+        rd_reset();
+        /* records: kind2 idx5 -> word0 0x11 word4 40;
+         * kind3 idx2 -> word0 0x22 word4 80 */
+        memset(&rc, 0, sizeof rc); rc.mode = 0;
+        rc.count = 5; rc.diff = 1; rc.low = 0; rc.high = 4;
+        memset(rctr, 0, sizeof rctr); memset(rst, 0, sizeof rst);
+        rctr[0] = 2; rctr[1] = 3;
+        aos_menu_render_66b70(&rc, rctr, rst, rlist, rprs, 2, 3,
+                              span_small, NULL, &ops);
+        assert(n_cells == 3 && n_names == 2);
+        /* 48804 icon entity fires for every kind; kind3 also
+         * runs the 66A00 equip-icon path. */
+        assert(n_dels == 0 && n_icons_i == 1 &&
+               n_icons_e == 1);
+        assert(rc.count == 2 && rc.high == (uint8_t)(0 + 1));
+        /* empty list -> blanks + deletes + mark clears, no arrows
+         * body beyond hints (low=0,count=0 -> down arrow textured?) */
+        static const uint8_t elist[] = {0};
+        memset(&rc, 0, sizeof rc); rc.mode = 0;
+        rd_reset();
+        aos_menu_render_66b70(&rc, rctr, rst, elist, rprs, 2, 3,
+                              span_small, NULL, &ops);
+        assert(n_blanks == 1 && n_dels == 1 &&
+               n_cicons == 1);
+        /* stack_arg <= 1 skips detail: no icon/desc. */
+        memset(&rc, 0, sizeof rc); rc.mode = 0; rc.count = 5;
+        rd_reset();
+        aos_menu_render_66b70(&rc, rctr, rst, rlist, rprs, 2, 1,
+                              span_small, NULL, &ops);
+        assert(n_icons_i == 0 && n_descs == 0);
     }
 
     puts("aos_menu_cursor: ok");

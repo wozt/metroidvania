@@ -1,3 +1,19 @@
+## Patch 1106 - Aria menu row renderer sub_08066B70
+
+- `aos_menu_render_66b70` ports the ~400-line row renderer:
+  window-low clamp (count-4, floor 0), three visible rows with
+  cell rect/clear/name/dash/quantity (word4 with mode-2 halving
+  and mode-9 *8/10), the +0x17 = low+diff and +0x14 = count
+  writes, selected-column span, the stack_arg > 1 detail
+  (description via 0x08506936, 48804 icon entity for every
+  kind, 66A00 equip icons or 0x7FFF item marks) and the
+  up/down arrow hints.
+- Every draw call is injected through AosMenuDrawOps; record
+  bytes resolve through a kind-dispatched record_at callback
+  (items 16B, weapons 28B, armor 20B).
+- Unit-tested for populated, empty and detail-skipped paths;
+  sub_08066B70 added to aos.menus.equipment.
+
 ## Patch 1105 - Aria menu page input handler sub_08067488
 
 - `aos_menu_page_input_67488` ports the page handler: list

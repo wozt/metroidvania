@@ -86,3 +86,22 @@ bool aos_npc_talk_counter_tick(uint8_t *ctr_c, uint8_t *ctr_d,
     }
     return false;
 }
+
+void aos_npc_talk_657b4(uint8_t *flags59, uint32_t *flag42c,
+                        bool *called_0ef6c, uint16_t *song) {
+    if (!(*flag42c & 0x4000u)) {
+        *flags59 |= 0x8;
+        return;
+    }
+    *flag42c |= 0x20u | 0x10000u;
+    *called_0ef6c = true;   /* sub_0800EF6C */
+    *song = 0x1000;         /* PlaySong(0x80 << 5) */
+}
+
+uint32_t aos_npc_talk_65fe4(uint8_t state_a, int32_t field48,
+                            uint32_t field10) {
+    if (state_a != 0) return 1;
+    int32_t mag = field48 < 0 ? -(int32_t)field48 : field48;
+    if (mag > 0x8000) return 1;
+    return field10 & 0x30010000u;
+}

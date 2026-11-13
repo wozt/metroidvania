@@ -47,6 +47,22 @@ int main(void) {
     assert(aos_npc_talk_counter_tick(&cc, &cd, 0, &w417) && cc == 2);
     assert(!aos_npc_talk_counter_tick(&cc, &cd, 0, &w417));
 
+    /* sub_080657B4: flag gate then mark or arm+song. */
+    uint8_t f59b = 0; uint32_t fl = 0; bool c0 = false; uint16_t song = 0;
+    aos_npc_talk_657b4(&f59b, &fl, &c0, &song);
+    assert((f59b & 0x8) && fl == 0 && !c0 && song == 0);
+    f59b = 0; fl = 0x4000; c0 = false; song = 0;
+    aos_npc_talk_657b4(&f59b, &fl, &c0, &song);
+    assert(!(f59b & 0x8) && (fl & 0x10020u) == 0x10020u &&
+           c0 && song == 0x1000);
+
+    /* sub_08065FE4: entity-at-0x13110 predicate. */
+    assert(aos_npc_talk_65fe4(1, 0, 0) == 1);
+    assert(aos_npc_talk_65fe4(0, 0x8001, 0) == 1);
+    assert(aos_npc_talk_65fe4(0, -0x8000, 0) == 0);
+    assert(aos_npc_talk_65fe4(0, 0, 0x30010000u) == 0x30010000u);
+    assert(aos_npc_talk_65fe4(0, 0, 0x1000u) == 0);
+
     puts("aos_npc_talk: ok");
     return 0;
 }

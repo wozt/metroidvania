@@ -63,3 +63,15 @@ int aos_npc_talk_sound_release(void);
  * gEwramData write. */
 bool aos_npc_talk_counter_tick(uint8_t *ctr_c, uint8_t *ctr_d,
                                uint8_t arg, bool *wrote_417);
+
+/* sub_080657B4: without gEwramData + 0x42C bit 0x4000 the entity
+ * is marked + 0x59 bit 3; otherwise + 0x42C gains bits 0x20 and
+ * 0x10000, sub_0800EF6C runs and PlaySong(0x1000) plays. */
+void aos_npc_talk_657b4(uint8_t *flags59, uint32_t *flag42c,
+                        bool *called_0ef6c, uint16_t *song);
+
+/* sub_08065FE4: reads the entity at gEwramData + 0x13110 —
+ * returns 1 when its + 0xA byte is nonzero or |s16 + 0x48| exceeds
+ * 0x8000, else the + 0x10 & 0x30010000 mask. */
+uint32_t aos_npc_talk_65fe4(uint8_t state_a, int32_t field48,
+                            uint32_t field10);

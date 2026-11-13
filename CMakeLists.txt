@@ -768,6 +768,12 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_npc_talk_tests)
     add_test(NAME aos_npc_talk COMMAND fusion_aos_npc_talk_tests)
 
+    add_executable(fusion_aos_flyer_tests tests/test_aos_flyer.c
+                   src/runtime/aos/game/aos_flyer.c)
+    target_include_directories(fusion_aos_flyer_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_flyer_tests)
+    add_test(NAME aos_flyer COMMAND fusion_aos_flyer_tests)
+
     add_executable(fusion_aos_save_room_fx_tests tests/test_aos_save_room_fx.c
                    src/runtime/aos/game/aos_save_room_fx.c)
     target_include_directories(fusion_aos_save_room_fx_tests PRIVATE src/runtime)

@@ -1,3 +1,19 @@
+## Patch 1090 - Aria thrown-object updates and misc Object20 callbacks
+
+- `src/runtime/aos/game/aos_flyer.c/.h` ports the three shared
+  ballistic updates sub_08065858, sub_080658AC and sub_0806592C:
+  position += velocity, velocity += acceleration, the sub_08068AD4
+  box probe (-0x80, -0x40, 0x1F0, 0x120) marking + 0x59 bit 3 on a
+  miss; the latter two also spin + 0x38 by s16 + 0x26 and request
+  the sub_0803E058 affine, and sub_080658AC restores the palette
+  nibble through sub_0803E6BC on the failed probe.
+- `aos_npc_talk` gains sub_080657b4 (the + 0x42C bit-0x4000 gate:
+  mark + 0x59 bit 3 or arm bits 0x20/0x10000, call sub_0800EF6C
+  and PlaySong(0x1000)) and the sub_08065FE4 predicate over the
+  gEwramData + 0x13110 entity.
+- Unit-tested in test_aos_flyer and test_aos_npc_talk; routines
+  added to the aos.events.opening_scene annotation.
+
 ## Patch 1089 - Aria Final Guard and Shadow Knight wired as Great Armor variants
 
 - `AOS_ENEMY_FINAL_GUARD = 0x67` and `AOS_ENEMY_SHADOW_KNIGHT =

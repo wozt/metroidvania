@@ -1633,6 +1633,13 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_math_tests)
     add_test(NAME aos_math COMMAND fusion_aos_math_tests)
 
+    add_executable(fusion_aos_shop_tests tests/test_aos_shop.c
+                   src/runtime/aos/game/aos_shop.c)
+    target_include_directories(fusion_aos_shop_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_aos_shop_tests PRIVATE m)
+    fusion_enable_warnings(fusion_aos_shop_tests)
+    add_test(NAME aos_shop COMMAND fusion_aos_shop_tests)
+
     add_executable(fusion_aos_object24_tests tests/test_aos_object24.c
                    src/runtime/aos/game/aos_object24.c)
     target_include_directories(fusion_aos_object24_tests PRIVATE src/runtime)

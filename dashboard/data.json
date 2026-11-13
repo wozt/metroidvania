@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-13T20:55:43+00:00",
+ "generated_at": "2026-11-13T21:06:05+00:00",
  "git": {
-  "commit": "3eded38d",
+  "commit": "026c3890",
   "branch": "main",
   "dirty": true
  },
@@ -92,11 +92,11 @@
     "assets",
     "platform"
    ],
-   "total": 336,
+   "total": 337,
    "by_status": {
     "not_started": 7,
     "in_progress": 2,
-    "partial": 103,
+    "partial": 104,
     "functional": 223,
     "faithful": 0,
     "validated": 0,
@@ -104,8 +104,8 @@
     "unknown": 1
    },
    "functional_or_better": 223,
-   "functional_or_better_percent": 66.4,
-   "with_passing_tests": 323,
+   "functional_or_better_percent": 66.2,
+   "with_passing_tests": 324,
    "with_passing_tests_percent": 96.1,
    "unknown_or_blocked": 1,
    "features": [
@@ -365,6 +365,7 @@
     "aos.objects.screen_space_oscillator",
     "aos.objects.scripted_elevator",
     "aos.objects.sequence_actor",
+    "aos.objects.shop_sequences",
     "aos.objects.skull_eye_flames",
     "aos.objects.soul_carrier",
     "aos.objects.sparkle_emitter",
@@ -570,11 +571,11 @@
    "areas": [
     "aos"
    ],
-   "total": 191,
+   "total": 192,
    "by_status": {
     "not_started": 0,
     "in_progress": 0,
-    "partial": 75,
+    "partial": 76,
     "functional": 116,
     "faithful": 0,
     "validated": 0,
@@ -582,8 +583,8 @@
     "unknown": 0
    },
    "functional_or_better": 116,
-   "functional_or_better_percent": 60.7,
-   "with_passing_tests": 191,
+   "functional_or_better_percent": 60.4,
+   "with_passing_tests": 192,
    "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
@@ -751,6 +752,7 @@
     "aos.objects.screen_space_oscillator",
     "aos.objects.scripted_elevator",
     "aos.objects.sequence_actor",
+    "aos.objects.shop_sequences",
     "aos.objects.skull_eye_flames",
     "aos.objects.soul_carrier",
     "aos.objects.sparkle_emitter",
@@ -23579,6 +23581,60 @@
    }
   },
   {
+   "id": "aos.objects.shop_sequences",
+   "area": "aos",
+   "category": "events",
+   "title": "Object20 shop buy and sell sequences",
+   "status": "partial",
+   "fidelity": "partial",
+   "local_sources": [
+    "src/runtime/aos/game/aos_shop.c",
+    "src/runtime/aos/game/aos_shop.h"
+   ],
+   "tests": [
+    "tests/test_aos_shop.c"
+   ],
+   "dependencies": [
+    "aos.events.opening_scene",
+    "aos.menus.text_window"
+   ],
+   "native_routines": [
+    "sub_08061abc",
+    "sub_08061d10"
+   ],
+   "limitations": "The +0x42C/+0x427/+0x417 gEwramData words, the A094 room fields, the +0x13110 player entity, the +0x4E4 shop record slots (+0x53C/+0x58 side bytes), sub_08067A04's text state, sub_0800ED24's transaction, sub_0805B814's d-pad probe, sub_080212C8's input poll, sub_0803F2C8's animation presets, sub_0803F17C's step, sub_08062020's release and the sub_0805B878/sub_08013D60/sub_08013E18/sub_08012048/sub_08013CF0 sound calls are all injected inputs or output requests; the return codes 0x10/0x20 are exposed but their Object20 dispatcher consumer is not wired; and there is no emulator comparison. Unit-tested state machines; not yet dispatched from the Object20 runtime.",
+   "next_action": "Wire the shop callbacks into the Object20 NPC dispatch and the shop record model.",
+   "evidence": {
+    "unit_tests": [
+     "tests/test_aos_shop.c"
+    ],
+    "in_game_check": [],
+    "emulator_compared": false,
+    "played_through": false
+   },
+   "last_validated": null,
+   "source": "data/native_parity/annotations.tsv",
+   "verification": {
+    "sources_found": true,
+    "missing_sources": [],
+    "tests": [
+     {
+      "test": "tests/test_aos_shop.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_shop"
+      ],
+      "outcome": "passed",
+      "exists": true
+     }
+    ],
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-13"
+   }
+  },
+  {
    "id": "aos.objects.skull_eye_flames",
    "area": "aos",
    "category": "environment",
@@ -31622,6 +31678,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_shop",
+    "files": [
+     "tests/test_aos_shop.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aos_object24",
     "files": [
      "tests/test_aos_object24.c"
@@ -31910,12 +31973,18 @@
    }
   ],
   "summary": {
-   "passed": 212,
+   "passed": 213,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "026c3890",
+   "date": "2026-11-13",
+   "subject": "Add Aria weapon, item and equipment aspect registries to the dashboard",
+   "scope": "project"
+  },
   {
    "commit": "3eded38d",
    "date": "2026-11-13",
@@ -32389,12 +32458,6 @@
    "date": "2026-11-11",
    "subject": "aos: port red souls 43/44 (Demon Lord / Flame Demon)",
    "scope": "project"
-  },
-  {
-   "commit": "2e9848e8",
-   "date": "2026-11-11",
-   "subject": "aos: port red souls 35/36 (Werejaguar/Weretiger)",
-   "scope": "project"
   }
  ],
  "inventory": {
@@ -32455,9 +32518,9 @@
      "path": 136,
      "referrers": 1553
     },
-    "routines_cited_by_features": 2132,
-    "routines_attached_to_features": 2132,
-    "unassigned_routines": 1441,
+    "routines_cited_by_features": 2134,
+    "routines_attached_to_features": 2134,
+    "unassigned_routines": 1439,
     "call_edges": 14228
    }
   },

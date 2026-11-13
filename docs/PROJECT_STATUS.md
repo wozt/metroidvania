@@ -1,3 +1,20 @@
+## Patch 1086 - Aria Object20 shop sequences ported (own module)
+
+- `src/runtime/aos/game/aos_shop.c` ports the two Object20 shop
+  callbacks from code_08060B98.s in a dedicated module:
+  sub_08061ABC (the give/sell sequence — held-sound arm,
+  + 0x42C bit-0 proximity gate returning 0x20, text 0x1F,
+  the + 0xB/+ 0xC purchase UI with the sub_0800ED24
+  transactions, the 0x11F/0x127 slide bands and the
+  sub_08062020 release) and sub_08061D10 (the buy/menu
+  sequence — text 0x20, the d-pad menu returning the
+  0x10/0x20 action codes, the record side-bit writes and
+  the 0x40 close countdown).
+- Native globals are injected inputs; every engine effect is
+  an output request. Unit-tested in test_aos_shop; the
+  Object20 dispatcher consumer of the return codes is not
+  wired yet.
+
 ## Patch 1085 - Aria item aspect registries and dashboard tables
 
 - Three new parity registries in the monster-aspect format:

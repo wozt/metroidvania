@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 191 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 192 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2132 | 1441 |
+| Castlevania: Aria of Sorrow | 2134 | 1439 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2837,6 +2837,15 @@ Next action: Spawn the three particle children through the entity-create path on
 ### Events and scripts
 
 [?] **`aos.events.inventory-boundary` — source coverage.** The current classifier assigns 0 discovered routine(s) to this category. Category completeness has not been established.
+
+[~] **`aos.objects.shop_sequences` — Object20 shop buy and sell sequences.** Unit-tested state machines; not yet dispatched from the Object20 runtime.
+
+Native evidence: `aos:asm:asm/code/code_08060B98.s:sub_08061abc`, `aos:asm:asm/code/code_08060B98.s:sub_08061d10`.  
+Local implementation: [`src/runtime/aos/game/aos_shop.c`](../src/runtime/aos/game/aos_shop.c), [`src/runtime/aos/game/aos_shop.h`](../src/runtime/aos/game/aos_shop.h).  
+Tests: [`tests/test_aos_shop.c`](../tests/test_aos_shop.c).
+Dependencies: `aos.events.opening_scene`, `aos.menus.text_window`.  
+Known divergences: The +0x42C/+0x427/+0x417 gEwramData words, the A094 room fields, the +0x13110 player entity, the +0x4E4 shop record slots (+0x53C/+0x58 side bytes), sub_08067A04's text state, sub_0800ED24's transaction, sub_0805B814's d-pad probe, sub_080212C8's input poll, sub_0803F2C8's animation presets, sub_0803F17C's step, sub_08062020's release and the sub_0805B878/sub_08013D60/sub_08013E18/sub_08012048/sub_08013CF0 sound calls are all injected inputs or output requests; the return codes 0x10/0x20 are exposed but their Object20 dispatcher consumer is not wired; and there is no emulator comparison.  
+Next action: Wire the shop callbacks into the Object20 NPC dispatch and the shop record model.
 
 ### Cutscenes
 

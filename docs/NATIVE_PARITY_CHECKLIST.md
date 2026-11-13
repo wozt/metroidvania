@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 185 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 186 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2066 | 1507 |
+| Castlevania: Aria of Sorrow | 2072 | 1501 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2470,6 +2470,15 @@ Tests: [`tests/test_aos_object26.c`](../tests/test_aos_object26.c), [`tests/test
 Dependencies: `aos.objects.spinning_attack_orb`, `aos.objects.spinning_orb_sibling`, `aos.objects.special_sprites`, `aos.objects.swing_event_trigger`.  
 Known divergences: The sub_0806CFFC probe is approximated as a pixel-space player-in-box test (its exact target set is unverified), the + 0xB probe gate and the + 0x72/+ 0x5C/+ 0x59 marks are not modelled, EntityCreateInRange becomes a camera-window spawn of two real SPECIAL entities, and the children' attack presets and hurt callbacks stay under their own annotations.  
 Next action: Verify sub_0806CFFC's probe target set and observe the two-orb charge/release cycle in game.
+
+[~] **`aos.objects.cinematic_director` — Object32 stationary cinematic sequence director.** Object32Create (0x08059494) loads the two 0x08118684 collision boxes, attaches the sub_08059864 sprite (tiles 0x081CBF0C, palette sub_08068264(0x0820A350, 1), frames 0x08211F08, drawFunc sub_0803B9D0 — exported as special_50), installs the hurt slot and the param1-indexed box, sets + 0x72 bits 1-2, + 0x65 = (param1 == 0 ? 0 : 7), + 0x5C = 0x12, + 0xA = 0 and the shared origin fields, + 0x59 &= ~3 and + 0x20 = (+ 0x18 > + 0x1C). Object32Update (0x080597DC) runs sub_08059580 while + 0xA == 0 — a five-step cinematic: state 0 waits for + 0x13190 == self then PlaySong 0x153; states 1-3 count + 0xD past 9/0x13/9 (old-value compares) bumping + 0x65 and playing 0xA8/0x150 at states 2/3; state 4 counts past 5, sets + 0x59 bit 3 and fires the children; the tail mirrors + 0x10/+ 0x14 into + 0x40/+ 0x44 so the object stays stationary — then a 0x1FFFFF player-proximity gate calls sub_08021278(1) and the sub_080421AC slot read closes the frame. Unit-tested in test_aos_object32.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_080421AC`, `aos:asm:asm/code/code_08040A38.s:sub_0804277C`, `aos:asm:asm/code/code_08040A38.s:sub_08042848`, `aos:asm:asm/code/code_08040A38.s:sub_080428B4`, `aos:asm:asm/code/code_08050A3C.s:Object32Create`, `aos:asm:asm/code/code_08050A3C.s:Object32Update`, `aos:asm:asm/code/code_08050A3C.s:sub_08059580`, `aos:asm:asm/code/code_08050A3C.s:sub_080596E0`, `aos:asm:asm/code/code_08050A3C.s:sub_08059840`, `aos:asm:asm/code/code_08050A3C.s:sub_08059864`, `aos:asm:asm/code/code_08060B98.s:sub_08068264`, `aos:c:src/code/code_080211F0.c:sub_08021278`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803B9D0`, `aos:c:src/code/code_08039340.c:sub_0803F17C`, `aos:c:src/code/code_08039340.c:sub_0803F2C8`, `aos:c:src/code_080009A0.c:EntityCreateInRange`, `aos:c:src/code_080009A0.c:RandomNumberGenerator`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/game/aos_object32.c`](../src/runtime/aos/game/aos_object32.c), [`src/runtime/aos/game/aos_object32.h`](../src/runtime/aos/game/aos_object32.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c).  
+Tests: [`tests/test_aos_object32.c`](../tests/test_aos_object32.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The five sub_080596E0 children (type 0x49 slots (5,1),(6,2),(4,3) plus (4,0),(5,4) when param1 == 0) collapse to a counted sparkles burst — their per-slot offsets (r6 * 0x180000 - 0xC0000), velocities, RNG render bits and update sub_08059840 are not modelled; the + 0x13190 linked entity and the + 0x13110 player proximity checks are approximated by runtime inputs; the two 0x08118684 collision boxes and the sub_0804277C(8) hurt slot stay under special_sprites; and there is no emulator comparison.  
+Next action: Port the sub_080596E0 children as real type-0x49 entities with sub_08059840 once the particle path exists, and wire the + 0x13190/+ 0x13110 globals.
 
 [~] **`aos.objects.cinematic_trigger` — Object06 cinematic trigger.** Object06Create (0x0804EC3C) near branch fires on the 0x38 x 0x22 probe OR the + 0x37E bit 2, locking state 0xA with SetPlayerInput(1, 0); far seals the column and picks 0x14/0x63/0. Object06Update (0x0804ED30) keeps the + 0x58 off-screen bit (bit 0x40 = right half picks the forced direction), runs the state-0 particle idle and probe trigger (song 0x111, fades, snapshot), the state-1 forced walk with the + 0xD countdown, the state-2 column clear and + 0x42C release gated on the cinematic flag, and the state-3 unconditional force. Unit-tested in aos_object06.
 

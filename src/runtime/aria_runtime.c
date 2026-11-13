@@ -56,6 +56,7 @@
 #include "aos/game/aos_object33.h"
 #include "aos/game/aos_object22.h"
 #include "aos/game/aos_object29.h"
+#include "aos/game/aos_object32.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -484,6 +485,7 @@ typedef struct {
     AosObject33 object33;   /* object 0x33: dual-burst emitter */
     AosObject22 object22;   /* object 0x22: scripted elevator */
     AosObject29 object29;   /* object 0x29: ping-pong platform */
+    AosObject32 object32;   /* object 0x32: cinematic director */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
@@ -5333,6 +5335,42 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 continue;
             }
             aos_object29_update(&e->object29, 0, 0);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 50) {
+            /* Object32Create / Object32Update (sUnk_084F0DF8[50] /
+             * sUnk_084F0ED8[50]): the stationary cinematic
+             * director. The sprite triple exports as special_50;
+             * the + 0x13190 linked check and the + 0x13110 player
+             * proximity are approximated (linked false, player
+             * proximity from the soma distance) and the
+             * sub_080596E0 children become counted effects. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object32_create(&e->object32, (int16_t)e->param0,
+                                    (int16_t)e->param1, 0, 0,
+                                    e->x << 16, e->y << 16, true,
+                                    &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            int32_t psx = soma ? (int32_t)(soma->x >> 16) : 0x7FFFFFFF;
+            int32_t psy = soma ? (int32_t)(soma->y >> 16) : 0x7FFFFFFF;
+            int32_t ddx = psx - e->x, ddy = psy - e->y;
+            if (ddx < 0) ddx = -ddx;
+            if (ddy < 0) ddy = -ddy;
+            bool near = ddx <= 0x1F && ddy <= 0x1F;
+            aos_object32_update(&e->object32, false, near);
+            if (e->object32.song >= 0)
+                aos_audio_play_song((uint16_t)e->object32.song);
+            for (unsigned c = 0; c < e->object32.child_count &&
+                 room->effect_count < MAX_EFFECTS; ++c)
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = false,
+                    .x = e->x, .y = e->y};
+            if (e->object32.deactivate) e->spawned = false;
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 33) {

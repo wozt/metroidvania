@@ -1,3 +1,21 @@
+## Patch 1074 - Aria Object32 cinematic director ported
+
+- `src/runtime/aos/game/aos_object32.c` ports Object32Create
+  (0x08059494), Object32Update (0x080597DC), sub_08059580,
+  sub_080596E0, sub_08059840 and sub_08059864, dispatch index
+  50: the stationary cinematic sequence director.
+- The + 0xB machine runs a five-step sequence — linked-entity
+  wait with song 0x153, timed steps bumping the + 0x65 child
+  animation selector with songs 0xA8 and 0x150, then a finale
+  that marks + 0x59 bit 3 and fires five sub_080596E0 type-0x49
+  children (three always, two more when param1 == 0).
+- The sprite triple (tiles 0x081CBF0C, palette 0x0820A350 bank
+  1, frames 0x08211F08) exports as special_50; the + 0x13190
+  linked check and the + 0x13110 player proximity gate
+  (sub_08021278) are approximated by runtime inputs.
+- Registered as aos.objects.cinematic_director; unit-tested
+  in test_aos_object32.
+
 ## Patch 1073 - Aria Object29 ping-pong platform ported
 
 - `src/runtime/aos/game/aos_object29.c` ports Object29Create

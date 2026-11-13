@@ -44,7 +44,7 @@
 typedef struct {
     uint8_t state;          /* +0xA: 0 gate, 1 sequence, 2 done */
     uint8_t substate;       /* +0xB: think-machine substate */
-    int8_t timer;           /* +0xD: s8 sequence counter */
+    uint8_t timer;          /* +0xD: u8 counter; dispatch reads s8 */
     uint16_t frames_left;   /* +0x14: 0x80 countdown */
     uint8_t flags58;        /* +0x58 of the parent entity */
     bool deleted;           /* sprite load failure */
@@ -57,6 +57,17 @@ typedef struct {
     bool player_flag20;     /* player +0x58 bit 0x20 */
     bool seq_end;           /* sub_08010978(gEwramData + 0x60) */
     unsigned child_count;   /* create-time children (10) */
+    /* sub_08055748 think outputs, reset by think. */
+    int think_song;         /* PlaySong id, -1 none */
+    bool flash_2000;        /* gUnk_03002CB0 bit 0x2000 set/clear */
+    bool flags_42c_40;      /* +0x42C bit 0x40 request */
+    bool flags_42c_20000;   /* +0x42C bit 0x20000 request */
+    bool flags_42c_clr41;   /* +0x42C &= ~0x41 request */
+    bool flags_a074_2;      /* A074 bit 1 set request */
+    bool flags_a074_clr3;   /* A074 &= ~3 request */
+    bool player_5a_20;      /* player +0x5A bit 0x20 window */
+    bool player_5a_clr79;   /* player +0x5A &= ~0x79 window */
+    bool misc_ops;          /* sub_080115D4/12048/109B8/13C5C/1083C */
 } AosObject1F;
 
 /* Object1FCreate. `sprite_ok` is the sub_08056514 load result;
@@ -69,5 +80,17 @@ void aos_object1f_create(AosObject1F *o, bool sprite_ok,
  * sub_08068AD4 probe); the + 0xD sign picks the state-1
  * branch internally. */
 void aos_object1f_update(AosObject1F *o, bool gate_open);
+
+/* sub_08055748 — the entity + 0 think callback, a nine-state
+ * cinematic machine sharing + 0xA/+ 0xB/+ 0xD/+ 0x14 with the
+ * dispatch update. `flags_42c_40`/`flags_42c_20000`/
+ * `flags_a074_2` are the gEwramData flag bits the machine
+ * tests or writes, `s8_3f4` the + 0x3F4 signed byte (the -1
+ * compare), `words_differ` the + 0x88 vs + 0x3F8 word
+ * compare, `probe_ok` the sub_08021304() result and
+ * `player_probe` the sub_08068AD4 gate. */
+void aos_object1f_think(AosObject1F *o, bool flags_42c_40,
+                        bool probe_ok, bool think_done,
+                        bool s8_3f4_neg, bool words_differ);
 
 #endif

@@ -1,3 +1,31 @@
+## Patch 1079 - Aria Object1F think machine ported
+
+- `aos_object1f_think` ports sub_08055748, the entity + 0
+  callback of the opening gate: a nine-state cinematic
+  machine sharing + 0xA/+ 0xB/+ 0xD/+ 0x14 with the dispatch
+  update.
+- Case 0 branches on the + 0x42C bit-0x40 flag into the
+  flash/+ 0x14 = 0x74 path to state 5 or the A074 bit-1 path
+  to state 1; case 1 walks the probe-gated substate pair
+  that plays song 0xF3 and sets + 0x42C bit 0x20000; case 2
+  compares the + 0x3F4 byte and the + 0x88/+ 0x3F8 words
+  (a mismatch plays 0x1010 then 0xF9); case 3 toggles the
+  player + 0x5A bit-0x20 window every four ticks; case 4
+  waits 0x3F ticks then runs the flag/DMA/player-position
+  block; case 5 fades and clears + 0x5A bits 0x79; case 6
+  waits 0x40 ticks then clears + 0x42C bits 0x41; case 7
+  idles; case 8 sets A074 bit 1 and counts + 0x14 down every
+  third tick, looping to state 0 under 0x24.
+- The shared tail locks player input in states 2-7, clears
+  A074 bits 0-1 in states 3-5 and writes the display window
+  registers in states 5+. Songs, flash and flag writes are
+  outputs; the runtime calls the think with every global
+  clear so it parks in state 1 until the + 0x42C/+ 0xA074
+  event words get a model.
+- The ten children's update helpers (sub_08055DF8,
+  sub_08056130, sub_08055CB4, sub_0805632C) remain
+  unassigned referrers.
+
 ## Patch 1078 - Aria Object1F opening gate ported
 
 - `src/runtime/aos/game/aos_object1f.c` ports Object1FCreate

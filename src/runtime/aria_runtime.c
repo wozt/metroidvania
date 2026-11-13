@@ -5452,13 +5452,16 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 31) {
-            /* Object1FCreate / Object1FUpdate (sUnk_084F0F0C[31] /
-             * sUnk_084F108C[31]): the opening gate. The + 0 =
-             * sub_08055748 nine-state think is not ported; the
-             * state-0 gate globals and the sub_08068AD4 probe
-             * are approximated (gate closed until room flags
-             * exist), the children are counted and the
-             * gDisplayRegisters/global writes are outputs. */
+            /* Object1FCreate / Object1FUpdate / sub_08055748
+             * (sUnk_084F0F0C[31] / sUnk_084F108C[31] / entity
+             * + 0): the opening gate and its nine-state think.
+             * The state-0 gate globals, the sub_08068AD4 probe,
+             * the + 0x42C/+ 0xA074 event words, the + 0x3F4
+             * byte and the + 0x88/+ 0x3F8 word compare have no
+             * runtime model, so the think runs with them clear:
+             * it parks in state 1 substate 0 instead of locking
+             * the player in a loop. Display/global writes stay
+             * outputs. */
             if (!e->spawned) {
                 if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
                 e->spawned = true;
@@ -5468,6 +5471,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 continue;
             }
             aos_object1f_update(&e->object1f, false);
+            aos_object1f_think(&e->object1f, false, false, true,
+                               false, false);
+            if (e->object1f.think_song >= 0)
+                aos_audio_play_song((uint16_t)e->object1f.think_song);
             if (e->object1f.input_lock) {
                 /* SetPlayerInput(1, 0): lock player input. */
                 input->active = true;

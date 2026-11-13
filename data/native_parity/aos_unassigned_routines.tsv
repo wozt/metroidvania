@@ -242,7 +242,6 @@ aos:asm:asm/code/code_08050A3C.s:sub_08055414	sub_08055414	environment	referrers
 aos:asm:asm/code/code_08050A3C.s:sub_080554BC	sub_080554BC	environment	referrers			asm_function	0x080554BC	asm/code/code_08050A3C.s	9337	0	1
 aos:asm:asm/code/code_08050A3C.s:sub_08055684	sub_08055684	unclassified				asm_function	0x08055684	asm/code/code_08050A3C.s	9573	0	3
 aos:asm:asm/code/code_08050A3C.s:sub_0805573C	sub_0805573C	unclassified				asm_function	0x0805573C	asm/code/code_08050A3C.s	9671	0	1
-aos:asm:asm/code/code_08050A3C.s:sub_08055748	sub_08055748	environment	referrers			asm_function	0x08055748	asm/code/code_08050A3C.s	9679	0	17
 aos:asm:asm/code/code_08050A3C.s:sub_08055CB4	sub_08055CB4	environment	referrers			asm_function	0x08055CB4	asm/code/code_08050A3C.s	10338	2	1
 aos:asm:asm/code/code_08050A3C.s:sub_08055DF8	sub_08055DF8	environment	referrers			asm_function	0x08055DF8	asm/code/code_08050A3C.s	10508	0	3
 aos:asm:asm/code/code_08050A3C.s:sub_08056130	sub_08056130	environment	referrers			asm_function	0x08056130	asm/code/code_08050A3C.s	10927	0	3
@@ -942,7 +941,6 @@ aos:c:src/code/code_08039340.c:sub_0803CD08	sub_0803CD08	unclassified				c_funct
 aos:c:src/code/code_08039340.c:sub_0803CD74	sub_0803CD74	unclassified				c_function	0x0803CD74	src/code/code_08039340.c	2277	0	0
 aos:c:src/code/code_08039340.c:sub_0803CDDC	sub_0803CDDC	unclassified				c_function	0x0803CDDC	src/code/code_08039340.c	2297	1	3
 aos:c:src/code/code_08039340.c:sub_0803CE90	sub_0803CE90	unclassified				c_function	0x0803CE90	src/code/code_08039340.c	2338	0	0
-aos:c:src/code/code_08039340.c:sub_0803CED4	sub_0803CED4	unclassified				c_function	0x0803CED4	src/code/code_08039340.c	2355	29	0
 aos:c:src/code/code_08039340.c:sub_0803CF34	sub_0803CF34	unclassified				c_function	0x0803CF34	src/code/code_08039340.c	2384	2	1
 aos:c:src/code/code_08039340.c:sub_0803CFC0	sub_0803CFC0	unclassified				c_function	0x0803CFC0	src/code/code_08039340.c	2407	0	0
 aos:c:src/code/code_08039340.c:sub_0803D004	sub_0803D004	unclassified				c_function	0x0803D004	src/code/code_08039340.c	2424	1	0
@@ -950,7 +948,6 @@ aos:c:src/code/code_08039340.c:sub_0803D080	sub_0803D080	unclassified				c_funct
 aos:c:src/code/code_08039340.c:sub_0803D0E4	sub_0803D0E4	unclassified				c_function	0x0803D0E4	src/code/code_08039340.c	2478	0	0
 aos:c:src/code/code_08039340.c:sub_0803D148	sub_0803D148	unclassified				c_function	0x0803D148	src/code/code_08039340.c	2502	0	0
 aos:c:src/code/code_08039340.c:sub_0803D22C	sub_0803D22C	unclassified				c_function	0x0803D22C	src/code/code_08039340.c	2548	0	0
-aos:c:src/code/code_08039340.c:sub_0803D270	sub_0803D270	unclassified				c_function	0x0803D270	src/code/code_08039340.c	2564	30	0
 aos:c:src/code/code_08039340.c:sub_0803D35C	sub_0803D35C	unclassified				c_function	0x0803D53C	src/code/code_08039340.c	2616	0	0
 aos:c:src/code/code_08039340.c:sub_0803D3A0	sub_0803D3A0	unclassified				c_function	0x0803D3A0	src/code/code_08039340.c	2633	2	0
 aos:c:src/code/code_08039340.c:sub_0803D41C	sub_0803D41C	unclassified				c_function	0x0803D41C	src/code/code_08039340.c	2665	0	0
@@ -1189,7 +1186,6 @@ aos:c:src/code_0800CB00.c:sub_0800E40C	sub_0800E40C	unclassified				c_function	0
 aos:c:src/code_0800CB00.c:sub_0800E40C_inline_0	sub_0800E40C_inline_0	unclassified				c_function		src/code_0800CB00.c	1330	3	0
 aos:c:src/code_0800CB00.c:sub_0800E540	sub_0800E540	unclassified				c_function	0x08003540	src/code_0800CB00.c	1392	1	10
 aos:c:src/code_0800CB00.c:sub_0800EBE0	sub_0800EBE0	unclassified				c_function	0x0800EBE0	src/code_0800CB00.c	1714	1	5
-aos:c:src/code_0800CB00.c:sub_0800ECA0	sub_0800ECA0	unclassified		technical	exclusive_callees	c_function	0x0800ECA0	src/code_0800CB00.c	1745	3	4
 aos:c:src/code_0800CB00.c:sub_0800ED24	sub_0800ED24	unclassified		technical	exclusive_callees	c_function	0x0800ED24	src/code_0800CB00.c	1778	9	3
 aos:c:src/code_0800CB00.c:sub_0800ED5C	sub_0800ED5C	unclassified				c_function	0x0800ED5C	src/code_0800CB00.c	1798	2	0
 aos:c:src/code_0800CB00.c:sub_0800EE54	sub_0800EE54	unclassified				c_function	0x0800EE54	src/code_0800CB00.c	1878	2	0
@@ -1217,16 +1213,13 @@ aos:c:src/code_0800F1FC.c:sub_08010244_inline_1	sub_08010244_inline_1	unclassifi
 aos:c:src/code_0800F1FC.c:sub_08010350	sub_08010350	unclassified		technical	exclusive_callees	c_function	0x08010350	src/code_0800F1FC.c	1189	2	5
 aos:c:src/code_0800F1FC.c:sub_080104EC	sub_080104EC	unclassified		rooms	exclusive_callees	c_function	0x080104EC	src/code_0800F1FC.c	1291	7	12
 aos:c:src/code_0800F1FC.c:sub_080106DC	sub_080106DC	unclassified		input	exclusive_callees	c_function	0x080106DC	src/code_0800F1FC.c	1383	1	10
-aos:c:src/code_0800F1FC.c:sub_0801083C	sub_0801083C	unclassified		rooms	exclusive_callees	c_function	0x0801083C	src/code_0800F1FC.c	1460	4	4
 aos:c:src/code_0800F1FC.c:sub_080108DC	sub_080108DC	unclassified				c_function	0x080108DC	src/code_0800F1FC.c	1490	5	1
 aos:c:src/code_0800F1FC.c:sub_080108FC	sub_080108FC	unclassified				c_function	0x080108FC	src/code_0800F1FC.c	1508	5	2
 aos:c:src/code_0800F1FC.c:sub_0801093C	sub_0801093C	unclassified				c_function	0x0801093C	src/code_0800F1FC.c	1530	5	1
-aos:c:src/code_0800F1FC.c:sub_080109B8	sub_080109B8	unclassified		technical	exclusive_callees	c_function	0x080109B8	src/code_0800F1FC.c	1562	2	4
 aos:c:src/code_080109F4.c:Get_unk_13110	Get_unk_13110	unclassified				c_function		src/code_080109F4.c	340	2	0
 aos:c:src/code_080109F4.c:sub_080109F4_inline_0	sub_080109F4_inline_0	unclassified				c_function		src/code_080109F4.c	35	3	0
 aos:c:src/code_080109F4.c:sub_08010D60_inline_0	sub_08010D60_inline_0	unclassified				c_function		src/code_080109F4.c	345	1	0
 aos:c:src/code_080109F4.c:sub_080114FC	sub_080114FC	unclassified		audio	exclusive_callees	c_function	0x080114FC	src/code_080109F4.c	694	1	1
-aos:c:src/code_080109F4.c:sub_080115D4	sub_080115D4	environment	referrers			c_function	0x080115D4	src/code_080109F4.c	738	1	2
 aos:c:src/code_080109F4.c:sub_080116A8	sub_080116A8	unclassified				c_function	0x080116A8	src/code_080109F4.c	762	1	21
 aos:c:src/code_080109F4.c:sub_08011A44	sub_08011A44	unclassified				c_function	0x08011A44	src/code_080109F4.c	907	7	1
 aos:c:src/code_080109F4.c:sub_08011B2C	sub_08011B2C	unclassified		rooms	exclusive_callees	c_function	0x08011B2C	src/code_080109F4.c	974	1	5
@@ -1267,7 +1260,6 @@ aos:c:src/code_08013960.c:GameModeCreditsUpdate	GameModeCreditsUpdate	endings	na
 aos:c:src/code_08013960.c:sub_08013960_inline_0	sub_08013960_inline_0	unclassified		audio	exclusive_callees	c_function		src/code_08013960.c	39	3	1
 aos:c:src/code_08013960.c:sub_08013B44	sub_08013B44	unclassified		rooms	exclusive_callees	c_function	0x08013B44	src/code_08013960.c	155	3	3
 aos:c:src/code_08013960.c:sub_08013BCC	sub_08013BCC	unclassified		rooms	exclusive_callees	c_function	0x08013BCC	src/code_08013960.c	191	3	3
-aos:c:src/code_08013960.c:sub_08013C5C	sub_08013C5C	unclassified		rooms	exclusive_callees	c_function	0x08013C5C	src/code_08013960.c	228	2	3
 aos:c:src/code_08013960.c:sub_08013D30	sub_08013D30	unclassified		audio	exclusive_callees	c_function	0x08013D30	src/code_08013960.c	281	2	1
 aos:c:src/code_08013960.c:sub_08013E74	sub_08013E74	unclassified		audio	exclusive_callees	c_function	0x08013E74	src/code_08013960.c	419	2	1
 aos:c:src/code_08013960.c:sub_08013EAC	sub_08013EAC	unclassified		audio	exclusive_callees	c_function	0x08013EAC	src/code_08013960.c	442	0	1

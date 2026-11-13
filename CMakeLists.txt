@@ -764,6 +764,9 @@ if(BUILD_TESTING)
 
     add_executable(fusion_aos_npc_talk_tests tests/test_aos_npc_talk.c
                    src/runtime/aos/game/aos_npc_talk.c)
+    add_executable(fusion_aos_menu_cursor_tests tests/test_aos_menu_cursor.c
+                   src/runtime/aos/game/aos_menu_cursor.c)
+    add_test(NAME aos_menu_cursor COMMAND fusion_aos_menu_cursor_tests)
     target_include_directories(fusion_aos_npc_talk_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_npc_talk_tests)
     add_test(NAME aos_npc_talk COMMAND fusion_aos_npc_talk_tests)

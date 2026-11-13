@@ -1,3 +1,33 @@
+## Patch 1103 - Aria menu span resolver and quantity adjust
+
+- `aos_menu_span_67660` ports sub_08067660: kind 2/3/4 read the
+  inventory bytes at gEwramData+0x13294/+0x132B4/+0x132EF plus
+  the index; other kinds return the sub_08044E94 result.
+- `aos_menu_adjust_67000` ports the quantity adjuster: the
+  column counter byte decrements the per-kind count
+  (st+0x38/+0x58/+0x93 arrays), kinds 3/4 clamp to zero with the
+  selection byte reset to 0xFF and the sub_0804AD9C sound when
+  the selected column empties, st+0x34 gains
+  desc.word4/2 * span, the counter byte becomes (span != 0) and
+  the sub_08066EA4 list rebuild runs as an injected tail call.
+- Unit-tested; both routines added to aos.menus.equipment.
+
+## Patch 1102 - Aria menu list cursor sub_0806688C
+
+- New module `aos_menu_cursor`: ports the six priority-ordered
+  input bits of the menu cursor (counter +/- with the mode-2
+  span bound and the +8 column bound, cursor up/down with the
+  signed +0x16 window low, page down/up by 4 with the
+  count-4/count-1 clamp), the once-per-call span resolution
+  through the injected 0x085269FC pair table and
+  sub_08067660, the ROM tail rules (int8 diff >= int8 count ->
+  ret 3, low move -> ret 3) and PlaySong(0xF1) on nonzero.
+- Faithful quirks kept: only the counter bits fall through to
+  the next test; page-down can leave +0x17 above count-1 when
+  the low window does not overshoot.
+- Unit-tested; sub_0806688C added to aos.menus.equipment.
+  Caller sub_08067488 and siblings remain unported.
+
 ## Patch 1101 - Aria repeating dialogue and spawn gates
 
 - `aos_npc_talk_666d4` ports the three-state repeating NPC

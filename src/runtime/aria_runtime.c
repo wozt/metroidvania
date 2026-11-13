@@ -59,6 +59,7 @@
 #include "aos/game/aos_object32.h"
 #include "aos/game/aos_object35.h"
 #include "aos/game/aos_object37.h"
+#include "aos/game/aos_object1d.h"
 #include "aos/game/aos_object28.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
@@ -492,6 +493,7 @@ typedef struct {
     AosObject37 object37;   /* object 0x37: fade director */
     AosObject1A object1a;   /* object 0x1A: inert placeholder */
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
+    AosObject1D object1d;   /* object 0x1D: sum-indexed display */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
     AosObject2D object2d;   /* object 0x2D: proximity attack sprite */
     AosObject2E object2e;   /* object 0x2E: one-shot breakable prop */
@@ -5430,6 +5432,21 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             aos_object37_update(&e->object37, ddx > 0x2F, false);
             if (e->object37.song >= 0)
                 aos_audio_play_song((uint16_t)e->object37.song);
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 29) {
+            /* Object1DCreate (sUnk_084F0EA4[29]): the sum-indexed
+             * display. The gEwramData + 0x60 -> + 0x28 room
+             * record checksum has no runtime model, so sum is 0
+             * and the entity self-deletes exactly as the native
+             * empty-table path does; spawned stays set so the
+             * create is not retried every frame. */
+            if (!e->spawned) {
+                e->spawned = true;
+                bool deleted;
+                aos_object1d_create(&e->object1d, (int16_t)e->param0,
+                                    e->x, e->y, 0, &deleted);
+            }
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 33) {

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 188 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 189 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2084 | 1489 |
+| Castlevania: Aria of Sorrow | 2085 | 1488 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2587,6 +2587,15 @@ Tests: [`tests/test_aos_object36.c`](../tests/test_aos_object36.c).
 Dependencies: `aos.objects.special_sprites`.  
 Known divergences: The BgAffineSet block has no runtime consumer (like Object16's zoom), the + 0x1316C singleton slot and its five-function callback table at 0x0811868C are not modelled so nothing writes + 0x14/+ 0x1A after create, the + 0x42/+ 0x46 anchors keep their zero defaults, and the + 0x72/+ 0x58 marks are not modelled.  
 Next action: Port the + 0x1316C slot consumer and the 0x0811868C callback table (the button side) so + 0x14/+ 0x1A get driven, then wire the affine block to a BG layer.
+
+[~] **`aos.objects.multi_sprite_display` — Object1D sum-indexed sprite display.** Object1DCreate (0x080554F0) selects the param0 (+ 0x30) sprite set, sets + 0x5C = 0x11 and resolves the sum into + 0x65 (0xB or 0x14), + 0x14 facing, + 0x42/+ 0x46 offsets and + 0x58 flag bits, deleting on sum 0; Object1DUpdate is the shared sub_0803F17C animation step already covered by special_sprites. Unit-tested in test_aos_object1d.
+
+Native evidence: `aos:asm:asm/code/code_08050A3C.s:Object1DCreate`, `aos:c:src/code/code_08039340.c:sub_0803AFB8`, `aos:c:src/code/code_08039340.c:sub_0803B800`, `aos:c:src/code/code_08039340.c:sub_0803B924`, `aos:c:src/code/code_08039340.c:sub_0803C7B4`, `aos:c:src/code_08001194.c:sub_08002200`.  
+Local implementation: [`src/runtime/aos/game/aos_object1d.c`](../src/runtime/aos/game/aos_object1d.c), [`src/runtime/aos/game/aos_object1d.h`](../src/runtime/aos/game/aos_object1d.h), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_object1d.c`](../tests/test_aos_object1d.c).
+Dependencies: `aos.objects.special_sprites`.  
+Known divergences: The room-record checksum `sum` (s8 at +4 of the stride-0x10 array reached through gEwramData + 0x60 -> + 0x28) has no runtime model, so the runtime passes 0 and every placement takes the native self-delete path; the two sprite sets (descriptors 0x082052F0/0x082052E8, tables 0x08119E14/0x0820C384, frames 0x08257BD8/0x08257964, counts 0xC/0xA) stay under special_sprites because the sub_0803AFB8 palette-table lookup is dynamically resolved; the sub_0803C7B4/sub_0803B924 attach and the four sub_08002200 placements are output counts; and there is no emulator comparison.  
+Next action: Model the gEwramData + 0x60 -> + 0x28 room record array and the sub_0803AFB8 palette table, then export the two sprite sets.
 
 [~] **`aos.objects.one_shot_breakable` — Object2E one-shot breakable prop.** Object2ECreate (0x08058A70) resolves tiles 0x081CBECC, palette sub_08068264(0x0820A100, 5), frames 0x0821137C (exported as special_46), presets sub_0803F2C8(0, 0, 1), steps the animation, sets + 0x5C = 0x12 and marks + 0x58 bit 0x20. Object2EUpdate (0x08058AB8) runs sub_08058B1C while + 0xA == 0: the first probe hit latches + 0xB = 1, spawns three sub_080589A4 children at (-0x50000, 0), (0, -0x60000) and (0, 0x50000) and plays song 0x78. Unit-tested in test_aos_object2e.
 

@@ -1,3 +1,21 @@
+## Patch 1077 - Aria Object1D display create ported
+
+- `src/runtime/aos/game/aos_object1d.c` ports Object1DCreate
+  (0x080554F0), dispatch index 29: the sum-indexed sprite
+  display whose Object1DUpdate is already covered by
+  special_sprites.
+- Create selects the param0 sprite set (descriptors
+  0x082052F0/0x082052E8, frames 0x08257BD8/0x08257964,
+  counts 0xC/0xA), sets + 0x5C = 0x11, + 0x65 = 0xB/0x14 and
+  resolves the room-record checksum into facing, offsets and
+  + 0x58 flags, self-deleting on sum 0.
+- The gEwramData + 0x60 -> + 0x28 record array and the
+  sub_0803AFB8 palette table have no runtime model, so the
+  runtime passes sum 0 — the native empty-table path — and
+  the sprite sets stay under special_sprites.
+- Registered as aos.objects.multi_sprite_display; unit-tested
+  in test_aos_object1d.
+
 ## Patch 1076 - Aria Object37 fade director ported
 
 - `src/runtime/aos/game/aos_object37.c` ports Object37Create

@@ -593,9 +593,10 @@ static int update10(AosObject20Story *s, const AosObject20StoryIn *in,
 }
 
 /* ------------------------------------------------------------------
- * param0 21 — create sub_08062040 / update sub_08062074.
+ * param0 20 — create sub_08062040 (native create[20]; the
+ * param0-20 update is the shop buy routine, not this module).
  * ------------------------------------------------------------------ */
-static void create21(AosObject20Story *s, const AosObject20StoryIn *in,
+static void create20(AosObject20Story *s, const AosObject20StoryIn *in,
                      AosObject20StoryOut *out) {
     (void)s; (void)in;
     out->set_42c |= 1;
@@ -613,10 +614,10 @@ static int update21(AosObject20Story *s, const AosObject20StoryIn *in,
 }
 
 /* ------------------------------------------------------------------
- * param0 22 — create sub_08062068: unconditional +0x59 |= 8, so
- * the shared create tail always deletes the entity.
+ * param0 21 — create sub_08062068: unconditional +0x59 |= 8,
+ * so the shared create tail always deletes the entity.
  * ------------------------------------------------------------------ */
-static void create22(AosObject20Story *s, const AosObject20StoryIn *in,
+static void create21(AosObject20Story *s, const AosObject20StoryIn *in,
                      AosObject20StoryOut *out) {
     (void)in; (void)out;
     s->flags59 |= 0x8;
@@ -734,9 +735,9 @@ static int update22(AosObject20Story *s, const AosObject20StoryIn *in,
 }
 
 /* ------------------------------------------------------------------
- * param0 23 — create sub_08062244 / update sub_080623F0.
+ * param0 22 — create sub_08062244 / update sub_080623F0.
  * ------------------------------------------------------------------ */
-static void create23(AosObject20Story *s, const AosObject20StoryIn *in,
+static void create22(AosObject20Story *s, const AosObject20StoryIn *in,
                      AosObject20StoryOut *out) {
     (void)s; (void)in;
     out->set_42c |= 1;
@@ -823,9 +824,9 @@ static void helper62570(AosObject20Story *s,
 }
 
 /* ------------------------------------------------------------------
- * param0 24 — create sub_08062260 / update sub_08062664.
+ * param0 23 — create sub_08062260 / update sub_08062664.
  * ------------------------------------------------------------------ */
-static void create24(AosObject20Story *s, const AosObject20StoryIn *in,
+static void create23(AosObject20Story *s, const AosObject20StoryIn *in,
                      AosObject20StoryOut *out) {
     if ((in->flag42c & 0x2000) == 0) {      /* +0x42C bit 0x2000 */
         s->flags59 |= 0x8;
@@ -955,9 +956,10 @@ static int update24(AosObject20Story *s, const AosObject20StoryIn *in,
 }
 
 /* ------------------------------------------------------------------
- * param0 29 — create sub_0805C49C / update sub_0805C08C.
+ * param0 31 — create sub_0805C49C (native create[31]; the
+ * param0-29 update is sub_0805C08C, handled by update29).
  * ------------------------------------------------------------------ */
-static void create29(AosObject20Story *s, const AosObject20StoryIn *in,
+static void create31(AosObject20Story *s, const AosObject20StoryIn *in,
                      AosObject20StoryOut *out) {
     if (!in->keep_5b754) {
         s->flags59 |= 0x8;
@@ -1132,7 +1134,7 @@ bool aos_object20_story_create(AosObject20Story *s, uint8_t param0,
     if (in->flag1327a > 0) {
         gate_pass = true;
     } else {
-        gate_pass = (in->flag42c & 0x20000000u) != 0;
+        gate_pass = (in->flag42c & 0x00200000u) != 0; /* 0x80 << 0xE */
     }
     if (gate_pass) {
         if (in->byte8e & 0x80) {
@@ -1146,11 +1148,14 @@ bool aos_object20_story_create(AosObject20Story *s, uint8_t param0,
         switch (param0) {
         case 9:  create9(s, in, out); break;
         case 10: create10(s, in, out); break;
+        case 20: create20(s, in, out); break;
         case 21: create21(s, in, out); break;
         case 22: create22(s, in, out); break;
         case 23: create23(s, in, out); break;
-        case 24: create24(s, in, out); break;
-        case 29: create29(s, in, out); break;
+        case 31: create31(s, in, out); break;
+        /* create[24] = sub_080657B4 (aos_npc_talk) and
+         * create[29] = sub_0805BF4C (unported) are not this
+         * module's routines. */
         default: s->deleted = true; break;
         }
         if (s->flags59 & 0x8)

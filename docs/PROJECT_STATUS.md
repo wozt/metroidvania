@@ -1,3 +1,40 @@
+## Patch 1121 - Unified Object20 param0 dispatcher (`aos_object20`)
+
+- New module `src/runtime/aos/game/aos_object20.c/.h` is the single
+  Object20 (SPECIAL entity id 32, native object 0x20) dispatcher:
+  `aos_object20_create`/`aos_object20_update` route the entity +0x30
+  param0 through the dumped 0x08526658/0x085266D8 tables to the
+  already-ported variant modules — `aos_object20_dirs` (param0 4-8),
+  `aos_object20_story` (9, 10, 21-24, 29), `aos_shop` sell/buy
+  (19/20), and the `aos_npc_talk` spawn/update helpers (24 create via
+  sub_080657B4, 25-28). param0 3 reports `handled_externally` so the
+  host keeps the bespoke opening path; param0 30/31 and unknown
+  values run the shared create/update shell with an `unported`
+  report and stay inert.
+- One `AosObject20` state struct owns a union of the per-variant
+  state blocks plus the shared +0x42/+0x46/+0x59/+0x5C fields the
+  npc_talk/shop structs do not carry; `AosObject20In`/`AosObject20Out`
+  inject the gEwramData gates, player entity, room origin, RNG and
+  every audio/text/spawn effect, mirroring the variant modules'
+  conventions. The shared Object20Create gates/tail and
+  Object20Update prologue/tail are reproduced for the families that
+  do not fold them in.
+- **Known divergence found while dumping the tables**: the story
+  module's create dispatch is shifted — its case 21-24 implement
+  native create[20-23] and its case 29 implements create[31]
+  (sub_0805C49C), while its update dispatch is correct. The
+  dispatcher compensates on the create side only (documented in the
+  header, `story_create_param0()`); native create[29]
+  sub_0805BF4C and create[19] sub_08061A00 remain unported and are
+  reported. `aos_object20_story.c` needs the create-table fix.
+- `tests/test_aos_object20.c` covers create dispatch for every
+  param0 value (3, 4-10, 19-31, and out-of-range/negative), update
+  routing, and smoke runs of the dirs, story, shop and all four
+  npc_talk variants including the param0-28 composed sub_080667DC
+  text pick. **Not wired into `aria_runtime.c`** — the id-32
+  dispatch case is the next step; classified partial in
+  `data/native_parity/annotations.tsv`.
+
 ## Patch 1120 - Room-dialogue bridge for Object20 text windows
 
 - New module `src/runtime/aos/game/aos_room_dialogue.c/.h` ports

@@ -1,6 +1,8 @@
 /* Unit tests for src/runtime/aos/game/aos_object20_story.c —
- * the Object20 story-variant parity port (param0 9, 10, 21,
- * 22, 23, 24, 29). */
+ * the Object20 story-variant parity port. Create dispatch
+ * follows the native 0x08526658 indices (param0 9, 10, 20,
+ * 21, 22, 23, 31); update dispatch covers param0 9, 10, 21,
+ * 22, 23, 24, 29. */
 #include "../src/runtime/aos/game/aos_object20_story.h"
 #include <assert.h>
 #include <stdio.h>
@@ -31,10 +33,11 @@ int main(void) {
     AosObject20StoryOut out;
     AosObject20StoryIn in;
 
-    /* ---- param0 21: trivial create + fixed update. ---- */
+    /* ---- param0 20: trivial create (sub_08062040) + the
+     * param0-21 fixed update (sub_08062074). ---- */
     memset(&s, 0, sizeof s);
     in = base_in();
-    assert(aos_object20_story_create(&s, 21, &in, &out));
+    assert(aos_object20_story_create(&s, 20, &in, &out));
     assert(out.set_42c & 1);
     assert(out.fade_out);
     assert(out.call_6666c);
@@ -45,10 +48,11 @@ int main(void) {
     assert(out.eec == 0x25);
     assert(out.release_arg == 1);
 
-    /* ---- param0 22: create always deletes (+0x59 |= 8). ---- */
+    /* ---- param0 21: create always deletes (+0x59 |= 8,
+     * sub_08062068); the param0-22 update chain follows. ---- */
     memset(&s, 0, sizeof s);
     in = base_in();
-    assert(!aos_object20_story_create(&s, 22, &in, &out));
+    assert(!aos_object20_story_create(&s, 21, &in, &out));
     assert(s.flags59 & 0x8);
     /* update state 0: flag clear -> arm +0x42C, state 1. */
     memset(&s, 0, sizeof s);
@@ -83,10 +87,11 @@ int main(void) {
     assert(out.write_254cc && out.write_254cc_val == 0x2D);
     assert(out.song == 0x2D);
 
-    /* ---- param0 23: create arms +0x42C bit 0. ---- */
+    /* ---- param0 22: create arms +0x42C bit 0 (sub_08062244);
+     * the param0-23 update chain follows. ---- */
     memset(&s, 0, sizeof s);
     in = base_in();
-    assert(aos_object20_story_create(&s, 23, &in, &out));
+    assert(aos_object20_story_create(&s, 22, &in, &out));
     assert(out.set_42c & 1);
     /* update: +0x42C |= 1 and |= 0x20 every call; state 0 arms
      * +0xD = 0x80 on the first call then counts down — the wrap
@@ -120,11 +125,13 @@ int main(void) {
     assert(out.write_64_0a);
     assert(out.call_127f0_off == 0x428);
 
-    /* ---- param0 24: create gate + child spawn. ---- */
+    /* ---- param0 23: create gate + child spawn (sub_08062260);
+     * the param0-24 update chain follows. create(24) itself is
+     * sub_080657B4 in aos_npc_talk, not this module. ---- */
     memset(&s, 0, sizeof s);
     in = base_in();
     in.flag42c = 0x2000;        /* pass the +0x42C bit-0x2000 gate */
-    assert(aos_object20_story_create(&s, 24, &in, &out));
+    assert(aos_object20_story_create(&s, 23, &in, &out));
     assert(s.child14);
     assert(out.spawn_count == 1 && out.spawn_type[0] == 1);
     assert(out.cf0 == 0x19);
@@ -133,7 +140,12 @@ int main(void) {
     memset(&s, 0, sizeof s);
     in = base_in();
     in.flag42c = 0;
+    assert(!aos_object20_story_create(&s, 23, &in, &out));
+    /* param0 24/29 creates are not this module's routines. */
+    memset(&s, 0, sizeof s);
+    in = base_in();
     assert(!aos_object20_story_create(&s, 24, &in, &out));
+    assert(!aos_object20_story_create(&s, 29, &in, &out));
     /* update state 0: fade in, then sub_0803D408 -> helper. */
     memset(&s, 0, sizeof s);
     s.state = 0; s.sub_b = 1;
@@ -305,10 +317,11 @@ int main(void) {
     assert(out.call_13960);
     (void)r10;
 
-    /* ---- param0 29: create + update chain. ---- */
+    /* ---- param0 31: create (sub_0805C49C) + the param0-29
+     * update chain (sub_0805C08C). ---- */
     memset(&s, 0, sizeof s);
     in = base_in();
-    assert(aos_object20_story_create(&s, 29, &in, &out));
+    assert(aos_object20_story_create(&s, 31, &in, &out));
     assert(s.state == 1);
     assert(s.child14);
     assert(out.spawn_count == 1 && out.spawn_type[0] == 0xB);
@@ -319,7 +332,7 @@ int main(void) {
     memset(&s, 0, sizeof s);
     in = base_in();
     in.keep_5b754 = false;
-    assert(!aos_object20_story_create(&s, 29, &in, &out));
+    assert(!aos_object20_story_create(&s, 31, &in, &out));
     /* update state 1: +0xD wraps -> fades + jingle + state 2. */
     memset(&s, 0, sizeof s);
     s.state = 1; s.timer_d = 0;
@@ -399,19 +412,19 @@ int main(void) {
     memset(&s, 0, sizeof s);
     in = base_in();
     in.flag1327a = 0;
-    in.flag42c = 0;            /* no 0x20000000, no +0x1327A -> del */
-    assert(!aos_object20_story_create(&s, 21, &in, &out));
+    in.flag42c = 0;            /* no 0x00200000, no +0x1327A -> del */
+    assert(!aos_object20_story_create(&s, 20, &in, &out));
     /* +0x8E bit 0x80 kills even a passing gate. */
     in = base_in();
     in.byte8e = 0x80;
-    assert(!aos_object20_story_create(&s, 21, &in, &out));
+    assert(!aos_object20_story_create(&s, 20, &in, &out));
     /* +0x13266 set without +0x42C 0x8000 kills. */
     in = base_in();
     in.byte13266 = 1;
-    assert(!aos_object20_story_create(&s, 21, &in, &out));
+    assert(!aos_object20_story_create(&s, 20, &in, &out));
     in.flag42c = 0x8001;    /* 0x8000 passes the +0x13266 gate,
                              * bit 0 arms the SetPlayerInput tail */
-    assert(aos_object20_story_create(&s, 21, &in, &out));
+    assert(aos_object20_story_create(&s, 20, &in, &out));
     /* shared tail: flag42c bit0 -> SetPlayerInput(1,0). */
     assert(out.setplayerinput == 1 && out.setplayerinput_arg == 0);
 

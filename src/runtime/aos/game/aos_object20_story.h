@@ -3,15 +3,23 @@
  * dispatch tables at 0x08526658 (create) / 0x085266D8 (update):
  * param0 9  create sub_0805FFDC / update sub_08060248
  * param0 10 create sub_080606C8 / update sub_080607E4
- * param0 21 create sub_08062040 / update sub_08062074
- * param0 22 create sub_08062068 / update sub_080620E8
- * param0 23 create sub_08062244 / update sub_080623F0
- * param0 24 create sub_08062260 / update sub_08062664
- * param0 29 create sub_0805C49C / update sub_0805C08C
+ * param0 20 create sub_08062040 (create only; its update is
+ *           the shop buy routine in aos_shop)
+ * param0 21 create sub_08062068 / update sub_08062074
+ * param0 22 create sub_08062244 / update sub_080620E8
+ * param0 23 create sub_08062260 / update sub_080623F0
+ * param0 24            / update sub_08062664
+ *           (create sub_080657B4 lives in aos_npc_talk)
+ * param0 29            / update sub_0805C08C
+ *           (create sub_0805BF4C is unported)
+ * param0 31 create sub_0805C49C (create only; update
+ *           sub_0805C628 is unported)
  * These are the Chaotic Realm / Floating Garden story beats and
  * the area_11_room_023 boss-room sequences. The shared
  * Object20Create/Object20Update prologue (0x0805B42C/0x0805B510)
- * is folded into the entry points. */
+ * is folded into the entry points. The create dispatch follows
+ * the native 0x08526658 table indices; callers pass the entity
+ * param0 unchanged. */
 /* Integration status: faithful native-routine port kept as a
  * parity reference. It is unit-tested but NOT linked into
  * fusion_aria_runtime; classified partial in

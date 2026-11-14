@@ -14,7 +14,12 @@
  *   positions into the gDisplayRegisters bgOfs hOfs/vOfs shadow.
  *   Its four helpers sub_0803F3F8/sub_0803F4C8 (x, +/-) and
  *   sub_0803F580/sub_0803F650 (y, +/-) carry the clamp/integrate
- *   math; the tile-row rebuild itself is reported, not applied.
+ *   math; the tile-row rebuild (20/30 sub_08001994 lookups into
+ *   the gEwramData + 0x13414 staging buffer plus one
+ *   BgCmdBuffer_WriteData to 0x0600E000 + (bg<<11) + tile offset)
+ *   is reported as an AosScrollRebuild DMA descriptor — the tile
+ *   IDs need the room tilemap the host does not extract, so the
+ *   data write itself stays unported.
  * - sub_08000F60 (src/code_080009A0.c): adds -bgInfo[bg].xVel /
  *   yVel to the fine position (+0x524/+0x528) of every entityData
  *   record whose +0x59 bit 1 (unk_53D_1) is set — the
@@ -70,13 +75,16 @@ typedef struct {
 } AosScrollEntityRef;
 
 /* Native globals sub_0800D288 reads besides bgInfo: the
- * gEwramData unk_60.unk_33C[3] flag word (modes 10/19/21 gates)
- * and unk_60.unk_4CC_0 (mode 19's BG2 keep bit). entities is the
+ * gEwramData unk_60.unk_33C[3] flag word (modes 10/19/21 gates),
+ * unk_60.unk_4CC_0 (mode 19's BG2 keep bit) and unk_60.unk_4C8
+ * (the hblank/affine wave parameter modes 20/21/27/30/36 feed to
+ * the hBlankEffect buffer and BgAffineSet). entities is the
  * sub_08000F60 list (native loops the 0xD0 entityData slots);
  * NULL/0 means no flagged entities are bound. */
 typedef struct {
     uint32_t unk_33c3;
     bool unk_4cc_0;
+    uint32_t unk_4c8;
     AosScrollEntityRef *entities;
     size_t entity_count;
 } AosScrollWorld;
@@ -96,6 +104,35 @@ enum {
     AOS_SCROLL_FX_BG2_DISABLE = 1u << 7 /* dispCnt &= ~DCNT_BG2 (mode 19) */
 };
 
+/* The tile-row rebuild DMA sub_0803FBBC queues through
+ * BgCmdBuffer_WriteData when a scroll request crosses an 8-px
+ * tile boundary: 20 (x scroll) or 30 (y scroll) halfword lookups
+ * through sub_08001994 fill the gEwramData +0x13414 staging
+ * buffer, then one BgCmdBuffer_WriteData streams it to the BG
+ * tilemap in VRAM. The tile IDs themselves come from the room
+ * tilemap (sub_08001800's pBgMetadata->unk_C block lookup plus
+ * the per-BG tile arrays), which the host does not extract, so
+ * only the DMA descriptor — destination address, command byte,
+ * length, lookup origin and count — is reported here; the tile
+ * data write stays unported. */
+typedef struct {
+    bool queued;             /* a rebuild was armed this call */
+    int bg;                  /* bgInfo[] index the DMA targets */
+    uint32_t vram_addr;      /* 0x0600E000 + (bg<<11)
+                                + (tile_x&0x1F)<<1
+                                + (tile_y&0x1F)<<6 */
+    uint8_t bg_cmd;          /* BgCmdBuffer_WriteData arg:
+                                0x80 for the x-axis rebuilds
+                                (sub_0803F3F8/sub_0803F4C8),
+                                0x00 for the y-axis ones
+                                (sub_0803F580/sub_0803F650) */
+    uint8_t length;          /* 0x15 (x) / 0x1F (y) */
+    uint16_t tile_x, tile_y; /* sub_08001994 lookup origin:
+                                the fixed coordinate and the
+                                start of the iterated one */
+    uint16_t count;          /* 0x14 (x) / 0x1E (y) lookups */
+} AosScrollRebuild;
+
 typedef struct {
     uint32_t fx;               /* AOS_SCROLL_FX_* bits */
     int requests;              /* sub_0803FBBC calls that ran */
@@ -103,6 +140,11 @@ typedef struct {
     bool map_rebuild_x, map_rebuild_y; /* BG tile-row rewrite queued:
                                           sub_08001994 lookups +
                                           BgCmdBuffer_WriteData */
+    AosScrollRebuild rebuild_x, rebuild_y; /* the queued DMA
+                                          descriptors */
+    uint32_t unk_4c8_seen;     /* last unk_60.unk_4C8 value a mode
+                                  consumed (hblank/affine cases
+                                  20/21/27/30/36) */
 } AosScrollOut;
 
 /* sub_0803F8A8's binding half: attaches the layer's scroll gates

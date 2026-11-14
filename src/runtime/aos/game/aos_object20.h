@@ -74,7 +74,7 @@ enum {
 /* npc_talk-family injected probes that no variant In struct
  * already carries. The flag bytes the NPC routines consume are
  * sub_08012078/event-flag reads; `flag12078` packs them as a
- * bitmask (bit i = sub_08012078(i) result, i up to 0x32). */
+ * bitmask (bit i = sub_08012078(i) result, i up to 0x3F). */
 typedef struct {
     uint64_t flag12078;     /* bit i = sub_08012078(i) != 0 */
     bool probe_inside;      /* sub_08068AD4 proximity probe hit */
@@ -121,7 +121,7 @@ typedef struct {
      * global in the ROM; kept here as a single-consumer
      * approximation for the param0-28 text pick. */
     AosGuardSeq guard_seq;
-    /* gEwramData +0x33C flag bitfield + +0x1325C+0x18C cursor
+    /* gEwramData +0x344 event bitfield + +0x1325C+0x18C cursor
      * for the ported param0-27 text pickers (sub_08066308);
      * persistent across calls like the ROM globals. */
     AosGuardPickCtx guard_pick;
@@ -238,5 +238,16 @@ bool aos_object20_create(AosObject20 *o, int16_t param0,
  * ROM's r0 result (0 for void variants). */
 int aos_object20_update(AosObject20 *o, const AosObject20In *in,
                         AosObject20Out *out);
+
+/* sub_08067A04's early-out gate on the room-dialogue poll
+ * (asm/code_08060B98.s _08067A04): while gEwramData +0x417 != 0
+ * and (+0x414 & 0xF) <= 4 the native routine returns 0 before
+ * touching the display state machine, so the entity's
+ * text_done read reports not-done that frame. The runtime keeps
+ * the byte pair in session channels and evaluates this predicate
+ * when forwarding a window_poll; the routine's own VRAM/register/
+ * DMA work stays in the dialogue bridge — only the gate is
+ * modelled here. */
+bool aos_object20_text_poll_gate(uint8_t byte417, uint8_t byte414);
 
 #endif

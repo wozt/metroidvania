@@ -68,6 +68,13 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     int cam_x, int cam_y, AosForcedInput *input,
                     AriaCombat *combat, uint16_t new_input);
 
+/* The BG1 scroll offset accumulated by the ported sub_0800ED24
+ * transactions (aos/core/aos_scroll), as a delta in integer pixels
+ * from the camera position the layer was bound at — 0,0 before the
+ * room's first transaction. The draw path adds it to cam_x/cam_y
+ * for the BG1 source rect only; entities keep cam_x/cam_y. */
+void aria_scroll_bg1_offset(const AriaRoom *room, int32_t *x, int32_t *y);
+
 /* Helpers the entity pass borrows from aria_runtime.c (their state —
  * the homing list, the published save context, the shared room
  * dialogue — stays owned there). */

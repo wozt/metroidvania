@@ -210,8 +210,10 @@ static uint8_t object20_ewram_427;
  * approximation; transaction deltas then accumulate on it.
  * Still unmodelled and reported through AosScrollOut: the
  * per-frame camera-follow scroll (follow_camera recomputes
- * cam_x/cam_y statelessly, so nothing reads the offsets back
- * yet), the BG2/BG3 layer records (unk_18/unk_14/unk_16), the
+ * cam_x/cam_y statelessly; the draw path adds this layer's
+ * accumulated transaction delta on top through
+ * aria_scroll_bg1_offset), the BG2/BG3 layer records
+ * (unk_18/unk_14/unk_16), the
  * unk_60.unk_33C[3]/unk_4CC_0 flag word, the entityData +0x59
  * bit-1 scroll-compensation flag (entityData[] is mirrored but
  * +0x59 has no ported writer, so the sub_08000F60 pass shifts
@@ -221,6 +223,9 @@ static uint8_t object20_ewram_427;
 static AosScroll aria_scroll;
 static int aria_scroll_room_area = -1;
 static int aria_scroll_room_number = -1;
+/* The camera position (integer px) BG1 was bound at; the accessor
+ * below reports the accumulated transaction delta against it. */
+static int32_t aria_scroll_seed_x, aria_scroll_seed_y;
 /* gEwramData +0x414 byte: the Object20Update prologue's cleared-game
  * transform (word16&8 / word60&2 / !(+0x42C&0x10000)) rewrites it to
  * (b & ~0x10) | 5, and the param0-4/5/6 create paths and the
@@ -228,10 +233,29 @@ static int aria_scroll_room_number = -1;
  * decoded consumer is sub_08067A04's early-out — while +0x417 != 0
  * and (+0x414 & 0xF) <= 4 the room-dialogue poll reports not-done;
  * +0x417's own lifecycle (writers in the npc_talk/object20 families)
- * has no forwarded channel yet, so the gate stays approximated and
- * only the byte round-trips here, feeding back into
- * in->byte414. Session-scoped like the +0x427 channel. */
+ * round-trips through object20_ewram_417 below and feeds the same
+ * gate. The byte also feeds back into in->byte414.
+ * Session-scoped like the +0x427 channel. */
 static uint8_t object20_ewram_414;
+/* gEwramData +0x417 byte: the scene-display/window-transition
+ * state the Object20 families and the npc_talk paths write
+ * (0/1/timer bytes while a window sequence runs). Its only
+ * native reader is sub_08067A04 — the room-dialogue poll —
+ * whose early-out suppresses the whole display state machine
+ * while +0x417 != 0 and (+0x414 & 0xF) <= 4 (asm/code_08060B98.s
+ * _08067A04); the routine's own VRAM/register/DMA work stays in
+ * the dialogue bridge, so only the gate is forwarded here.
+ * sub_08067934 (window open, the window_text report) clears the
+ * byte and sub_08067898 (window close) writes 0xFF; the variant
+ * write_417 reports land between them in native store order.
+ * Session-scoped like the +0x414 channel. */
+static uint8_t object20_ewram_417;
+/* Set when the last forwarded sub_08067A04 poll was suppressed
+ * by the +0x417/+0x414 gate: the native call returned 0 that
+ * frame, so in->text_done reports not-done until a poll
+ * actually runs again (aos_room_dialogue_text_done would
+ * otherwise keep the pre-suppression result). */
+static bool object20_dialogue_gate;
 /* gEwramData +8 RNG state + +0x7864 byte for the ported
  * sub_08064518 whiteout renderer (param0 30). The RNG state
  * round-trips through the story Out; +0x7864 has no other
@@ -316,9 +340,11 @@ static bool spawn_special_boss_soul(AriaRoom *room, const AriaEntity *entity,
  *     kinds' state machines are not mirrored (stay 0).
  *   +0x58 flags — id-32 entities seed it from object20.flags58
  *     (the shared facing approximation) at activation; the shop's
- *     record58_val writes land on the bound record in
+ *     record58_val and the param0-15 slots rec_53c_val writes
+ *     land on the bound record in
  *     object20_apply_out and persist (the native +0x58 byte is
- *     shared mutable state).
+ *     shared mutable state; only bit 6 has ported consumers —
+ *     see AriaEntityDataRecord.flags58).
  *   player record — pos from soma, +0x58 the facing bit
  *     approximation shared with in->player_flags58 (resynced
  *     every frame, so the shop's player +0x58 stores persist
@@ -471,9 +497,9 @@ static int obj14_probe(void *ctx, int kind, int32_t a, int32_t b,
  *
  * Variant probes:
  *   dirs flag12078_21..25 / story flag12078_26/27/2b and npc
- *   cond_5b864: sub_08012078(i) reads the unk_33C bitfield, which the
- *   runtime stores as aria_events (aos_wall_event). cond_5b864 is
- *   sub_0805B864 = sub_08012078(0x3A).
+ *   cond_5b864: sub_08012078(i) reads the +0x344 event bitfield,
+ *   which the runtime stores as aria_events (aos_wall_event);
+ *   cond_5b864 is sub_0805B864 = sub_08012078(0x3A).
  *   story flags37e: gEwramData + 0x37E is aria_pickup_state.special.
  *   story unk2cb0: gUnk_03002CB0 has no runtime channel; 0.
  *   story spawn14_ok/spawn18_ok: the sub_0805B5E8 child-spawn probes,
@@ -486,7 +512,8 @@ static int obj14_probe(void *ctx, int kind, int32_t a, int32_t b,
  *   dirs probe_6e140: the sub_0806E140 collision probe is unmodelled;
  *   0. dirs table_852682c: the ROM byte table is not committed; NULL
  *   reads as the table-end sentinel, matching the module contract.
- *   npc flag12078: bits 0..0x32 of the same aria_events bitfield.
+ *   npc flag12078: bits 0..0x3F of the same aria_events bitfield
+ *   (the ported guard picker reads through 0x3D).
  *   npc probe_inside: sub_08068AD4's box test approximated by the
  *   player screen position inside a 0x40x0x40 box centred on the
  *   entity's screen position.
@@ -522,6 +549,14 @@ static bool object20_flag12078(int bit) {
     return aos_wall_event(aria_events, bit);
 }
 
+/* sub_08012048: set one gEwramData +0x344 event bit. The
+ * Object20 variant Outs name the call "jingle"; the npc_talk
+ * families carry the same write in their variant state. */
+static void object20_flag12048(int bit) {
+    if (bit >= 0 && bit < AOS_WALL_EVENT_WORDS * 32)
+        aria_events[bit >> 5] |= 1u << (bit & 31);
+}
+
 /* Build the shared + variant In block for one entity update. `pre`
  * carries the npc family's pre-update state byte so the window poll
  * approximation can read it (see the branch comment). */
@@ -547,7 +582,11 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
     in->byte414 = object20_ewram_414; /* gEwramData + 0x414 */
     in->flag1327a = soma ? soma->hp : 0;
     in->flag42c = aria_pickup_state.global_flags;
-    in->text_done = aos_room_dialogue_text_done(&room_dialogue);
+    /* sub_08067A04's return: the bridge's text_done, forced to
+     * not-done on the frame after a poll the +0x417/+0x414
+     * early-out suppressed (the native call returned 0). */
+    in->text_done = aos_room_dialogue_text_done(&room_dialogue) &&
+                    !object20_dialogue_gate;
     in->keep_5b754 = true;      /* sprite-variant probe approximation */
     in->a094_6 = (uint16_t)cam_x;
     in->a094_a = (uint16_t)cam_y;
@@ -624,8 +663,10 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
     in->shop.record_flags58 = bound->flags58;
     in->shop.player_flags58 = in->player_flags58;
     in->shop.byte_427 = object20_ewram_427;
-    /* npc probes (param0 25-28). */
-    for (int bit = 0; bit <= 0x32; ++bit)
+    /* npc probes (param0 25-28). The uint64 mask carries the
+     * picker-relevant low word of the 256-bit event field; the
+     * ported guard picker reads through bit 0x3D. */
+    for (int bit = 0; bit < 64; ++bit)
         if (object20_flag12078(bit))
             in->npc.flag12078 |= 1ull << bit;
     if (soma) {
@@ -659,6 +700,16 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
     in->slots.ret_roomx = soma ? (int)((soma->x >> 16) - cam_x) : 0;
     in->slots.probe_68ad4 = in->npc.probe_inside;
     in->slots.s16_4be = 0;
+    /* param0-15 update15 (sub_08060F98) case-0 record view: the
+     * +0x11-bound entityData record's +0x524 (fine X, record
+     * +0x40) and +0x53C (+0x58 flags) — the same bound record
+     * the shop probes read above; its store lands through
+     * out->slots.rec_53c_write in object20_apply_out. The ROM
+     * table word (0x081188E4), player +0x5A and the
+     * sub_080212C8/sub_08061824 probes have no runtime channel
+     * and stay 0. */
+    in->slots.rec_524 = bound->pos40;
+    in->slots.rec_53c = bound->flags58;
 }
 
 /* Forward one update's Out effects. The window triple goes through
@@ -682,6 +733,8 @@ static void object20_scroll_tx(AriaRoom *room, int cam_x, int cam_y,
                         (int32_t)cam_y << 16);
         aria_scroll_room_area = room->area;
         aria_scroll_room_number = room->number;
+        aria_scroll_seed_x = cam_x;
+        aria_scroll_seed_y = cam_y;
     }
     AosScrollOut sx;
     int ran = aos_scroll_transaction(&aria_scroll, object20_ewram_427,
@@ -692,6 +745,27 @@ static void object20_scroll_tx(AriaRoom *room, int cam_x, int cam_y,
            ran ? "" : " gated", b1->x_pos >> 16, b1->y_pos >> 16,
            b1->x_vel, b1->y_vel,
            sx.fx ? " (layer FX unported)" : "");
+}
+
+/* The BG1 scroll offset the ported sub_0800ED24 transactions have
+ * accumulated, as a delta in integer pixels from the camera
+ * position the layer was bound at. Native sub_0803FBBC writes
+ * bgInfo[1].xPos/yPos integer halves straight into
+ * gDisplayRegisters.bgOfs[1].hOfs/vOfs (gDisplayRegisters+0x8/+0xA),
+ * and the per-frame camera-follow request and every scripted
+ * transaction compose on that one accumulator — so the visible BG1
+ * offset is the camera position plus this delta. Entities keep
+ * cam_x/cam_y: only entityData records with +0x59 bit 1 shift
+ * (sub_08000F60) and no ported writer sets that flag yet. Returns
+ * 0,0 before the room's first transaction or for another room's
+ * stale state. */
+void aria_scroll_bg1_offset(const AriaRoom *room, int32_t *x, int32_t *y) {
+    *x = *y = 0;
+    if (!room || aria_scroll_room_area != room->area ||
+        aria_scroll_room_number != room->number)
+        return;
+    *x = (aria_scroll.bg[1].x_pos >> 16) - aria_scroll_seed_x;
+    *y = (aria_scroll.bg[1].y_pos >> 16) - aria_scroll_seed_y;
 }
 
 static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
@@ -764,6 +838,73 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     default:
         break;
     }
+    /* gEwramData +0x417/+0x414 stores land before the window
+     * triple runs: inside one native update the variant stores
+     * the bytes and then calls sub_08067934/sub_08067A04/
+     * sub_08067898 in order, and sub_08067934 itself clears
+     * +0x417 (strb r6 -> +0x417 in _08067934) while
+     * sub_08067898 writes 0xFF. So a same-call window open
+     * clears the byte first, the variant's write_417 reports
+     * land next (last write wins across a family's own double
+     * stores), then the poll's early-out gate reads the result.
+     * The +0x414 reports move up with them: the gate reads the
+     * low nibble. */
+    bool wrote_417 = false;
+    if (req.window_text >= 0) {
+        object20_ewram_417 = 0;      /* sub_08067934's +0x417 clear */
+        object20_dialogue_gate = false;
+    }
+    if (out->dirs.write_417) {
+        object20_ewram_417 = out->dirs.write_417_val;
+        wrote_417 = true;
+    }
+    if (out->story.write_417) {
+        object20_ewram_417 = out->story.write_417_val;
+        wrote_417 = true;
+    }
+    if (out->shop.write_417) {
+        object20_ewram_417 = out->shop.write_417_val;
+        wrote_417 = true;
+    }
+    if (out->slots.write_417) {
+        object20_ewram_417 = out->slots.write_417_val;
+        wrote_417 = true;
+    }
+    if (e->object20.family == AOS_OBJECT20_FAMILY_GUIDE) {
+        /* sub_08065A5C's +0x60 + 0x3B7 alias stores: set/clear
+         * are per-call reports reset by the variant each update;
+         * wrote_417 is the state-0 open's +0x417 = 1. */
+        const AosNpcGuide *gd = &e->object20.v.guide;
+        if (gd->wrote_417 || gd->flag_3b7_set) {
+            object20_ewram_417 = 1;
+            wrote_417 = true;
+        }
+        if (gd->flag_3b7_clear) {
+            object20_ewram_417 = 0;
+            wrote_417 = true;
+        }
+    }
+    /* gEwramData +0x414: every family's +0x414 report is the same
+     * (b & ~0x10) | 5 transform (or a plain write of its result);
+     * last write wins like the native byte. The story family
+     * reports it twice — write_414 (variant paths) and unk414_write
+     * (the shared prologue) — both land here. */
+    if (out->write_414) object20_ewram_414 = out->write_414_val;
+    if (out->dirs.write_414) object20_ewram_414 = out->dirs.write_414_val;
+    if (out->story.write_414) object20_ewram_414 = out->story.write_414_val;
+    if (out->story.unk414_write) object20_ewram_414 = out->story.unk414_val;
+    if (out->slots.write_414) object20_ewram_414 = out->slots.write_414_val;
+    /* sub_08067A04's early-out: while +0x417 != 0 and
+     * (+0x414 & 0xF) <= 4 the native poll returns 0 without
+     * running the display state machine — the host suppresses
+     * the bridge poll for that frame and the entity reads
+     * not-done through the gate flag. */
+    bool poll_suppressed = req.window_poll &&
+        aos_object20_text_poll_gate(object20_ewram_417,
+                                    object20_ewram_414);
+    AosRoomDialogueRequest poll_req = req;
+    if (poll_suppressed)
+        poll_req.window_poll = false;
     /* sub_08067A04's state-6 exit is the frame its return goes
      * nonzero: it runs sub_08067898 itself, so the native window
      * closes inside the poll that reports done. The dirs, shop,
@@ -776,21 +917,35 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
      * window_close paths still run first inside apply and make
      * this a no-op, and a same-frame re-open keeps its window. */
     bool dialogue_done_in = aos_room_dialogue_text_done(&room_dialogue);
-    aos_room_dialogue_apply(&room_dialogue, new_input, &req);
+    aos_room_dialogue_apply(&room_dialogue, new_input, &poll_req);
+    if (req.window_poll)
+        object20_dialogue_gate = poll_suppressed;
+    bool machine_close = false;
     if (req.window_text >= 0) {
         object20_dialogue_owner = e;
     } else if (dialogue_done_in && !req.window_close &&
                object20_dialogue_owner == e &&
                aos_room_dialogue_active(&room_dialogue)) {
         aos_room_dialogue_close(&room_dialogue);
+        machine_close = true;
     }
     if (!aos_room_dialogue_active(&room_dialogue))
         object20_dialogue_owner = NULL;
+    /* sub_08067898's tail writes +0x417 = 0xFF: it runs on the
+     * explicit window_close reports and inside sub_08067A04's
+     * state-6 exit (the machine-close above). A same-call
+     * write_417 store or window open wins — the variant's own
+     * stores land after the close natively. */
+    if (req.window_text < 0 && !wrote_417 &&
+        (req.window_close || machine_close))
+        object20_ewram_417 = 0xFF;
 
     /* gEwramData writes with runtime channels: +0x42C (shared and
      * per-family reports), +0x37E bit 0 and the +0x60 progress-flags
-     * word (object20_ewram_word60, below). The +0x417/+0x427/+0x414/
-     * +0x64/+0x254CC/+0xA094+4/gUnk_03002CB0 writes and the
+     * word (object20_ewram_word60, below). The +0x414/+0x417
+     * writes land above (object20_ewram_414/_417, feeding the
+     * sub_08067A04 poll gate); the +0x427 write lands below;
+     * the +0x64/+0x254CC/+0xA094+4/gUnk_03002CB0 writes and the
      * sub_0800EB04/sub_080235C8/sub_0802DFF0/sub_0806666C/
      * sub_0800EF6C/sub_08013960/sub_08013CF0/sub_08013D60/
      * sub_08013E18/sub_08013EEC/sub_080121E0/sub_0800ED24/
@@ -848,16 +1003,6 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     if (out->story.ed24_a >= 0)
         object20_scroll_tx(room, cam_x, cam_y, out->story.ed24_a,
                            out->story.ed24_b, "story", e->id);
-    /* gEwramData +0x414: every family's +0x414 report is the same
-     * (b & ~0x10) | 5 transform (or a plain write of its result);
-     * last write wins like the native byte. The story family
-     * reports it twice — write_414 (variant paths) and unk414_write
-     * (the shared prologue) — both land here. */
-    if (out->write_414) object20_ewram_414 = out->write_414_val;
-    if (out->dirs.write_414) object20_ewram_414 = out->dirs.write_414_val;
-    if (out->story.write_414) object20_ewram_414 = out->story.write_414_val;
-    if (out->story.unk414_write) object20_ewram_414 = out->story.unk414_val;
-    if (out->slots.write_414) object20_ewram_414 = out->slots.write_414_val;
     if (out->story.wo_rng >= 0) object20_wo_rng = (uint32_t)out->story.wo_rng;
     if (out->story.wo_bars_drawn || out->story.wo_spawn_count ||
         out->story.wo_particle_count || out->story.wo_purge_547 ||
@@ -990,6 +1135,45 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         aria_pickup_state.global_flags &= ~clear42c;
     }
 
+    /* sub_08012048 event-bit writes. The dirs/story/slots/shop
+     * variants report the call as `jingle`; the npc_talk variants
+     * carry the same write in their state (guide state 0x80 arms
+     * 0x2E, the loop's clear-partner text arms its partner bit,
+     * the guard picker mutates the shared +0x344 field through
+     * sub_080120AC/sub_08012048, and the talk loop marks 0x38). */
+    const int *event_fields[] = {
+        &out->dirs.jingle, &out->story.jingle,
+        &out->slots.jingle, &out->shop.jingle,
+    };
+    for (size_t f = 0; f < sizeof event_fields / sizeof event_fields[0]; ++f)
+        if (*event_fields[f] >= 0)
+            object20_flag12048(*event_fields[f]);
+    switch (e->object20.family) {
+    case AOS_OBJECT20_FAMILY_GUIDE:
+        if (e->object20.v.guide.state_80)
+            object20_flag12048(0x2E);
+        break;
+    case AOS_OBJECT20_FAMILY_LOOP:
+        if (e->object20.v.npc_loop.armed_flag >= 0)
+            object20_flag12048(e->object20.v.npc_loop.armed_flag);
+        break;
+    case AOS_OBJECT20_FAMILY_GUARD:
+        /* The picker ctx is the global +0x344 bitfield: publish
+         * every set bit back so a sub_080120AC read-and-set or
+         * sub_08012048 write by one guard is visible to the next
+         * Object20 reader. */
+        for (int bit = 0; bit < 64; ++bit)
+            if ((e->object20.guard_pick.unk33c >> bit) & 1)
+                object20_flag12048(bit);
+        break;
+    case AOS_OBJECT20_FAMILY_TALK_LOOP:
+        if (e->object20.v.talk_loop.mark_38)
+            object20_flag12048(0x38);
+        break;
+    default:
+        break;
+    }
+
     /* Songs: PlaySong arguments from every family's report — the
      * shared shell's song, the dirs/story song fields and the
      * sub_0805B878 helpers (which are PlaySong itself, confirmed
@@ -1016,14 +1200,14 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         const AosNpcGuide *g = &e->object20.v.guide;
         if (g->song_1040) { aos_audio_play_song(0x1040);
                             printf("Object20 %d: song 0x1040\n", e->id); }
-        if (g->player_x_clamped || g->player_facing_set ||
-            g->flag_3b7_set || g->flag_3b7_clear || g->wrote_417)
-            printf("Object20 %d: guide player/global write "
-                   "(clamp=%d facing=%d 3b7=%d/%d 417=%d)\n",
+        /* The flag_3b7/wrote_417 stores landed on
+         * object20_ewram_417 above; the player writes stay
+         * unforwarded. */
+        if (g->player_x_clamped || g->player_facing_set)
+            printf("Object20 %d: guide player write "
+                   "(clamp=%d facing=%d)\n",
                    e->id, g->player_x_clamped ? 1 : 0,
-                   g->player_facing_set ? 1 : 0,
-                   g->flag_3b7_set ? 1 : 0, g->flag_3b7_clear ? 1 : 0,
-                   g->wrote_417 ? 1 : 0);
+                   g->player_facing_set ? 1 : 0);
         break;
     }
     case AOS_OBJECT20_FAMILY_LOOP: {
@@ -1084,6 +1268,13 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         if (out->shop.andnot_ent58)
             rec->flags58 &= (uint8_t)~out->shop.andnot_ent58;
     }
+    /* param0-15 update15 (sub_08060F98) case 0: the +0x11-bound
+     * record's +0x53C byte store — the same bound record the
+     * shop writes above; the module already rebuilt bit 6 from
+     * the rec_524/player +0x40 compare and preserved the other
+     * bits, so the store lands verbatim. */
+    if (out->slots.rec_53c_write)
+        entity_data_bound(rec)->flags58 = out->slots.rec_53c_val;
     if (out->fade_out || out->story.fade_out || out->story.fade_3d18c ||
         out->story.fade_3cdf0 || out->slots.fade_count)
         printf("Object20 %d: fade request (unforwarded)\n", e->id);
@@ -1102,8 +1293,7 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         out->slots.call_2dff0 || out->slots.call_67804 ||
         out->slots.unk2cb0_feff || out->slots.unk2cb0_or100 ||
         out->slots.unk7864_or2 || out->slots.write_90 ||
-        out->slots.write_417 ||
-        out->slots.player5a_count || out->slots.rec_53c_write ||
+        out->slots.player5a_count ||
         out->slots.player_scr42_set || out->slots.player58_or_40 ||
         out->slots.player58_andnot_41 || out->slots.player_w48_zero ||
         out->slots.player_w50_zero || out->slots.player_w4c_min0)

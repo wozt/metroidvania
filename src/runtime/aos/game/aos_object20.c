@@ -164,6 +164,17 @@ static AosObject20SlotsIn slots_in(const AosObject20In *in) {
     s.ret_roomx = in->slots.ret_roomx;
     s.probe_68ad4 = in->slots.probe_68ad4;
     s.s16_4be = in->slots.s16_4be;
+    /* param0-15 update15 probe block (sub_08060F98): the +0x11-
+     * bound record's +0x524/+0x53C pair feeds case 0's facing
+     * store; the ROM table word, player +0x5A and the unmodelled
+     * sub_080212C8/sub_08061824 probes pass through as injected
+     * values (0 from the runtime fill). */
+    s.rec_524 = in->slots.rec_524;
+    s.rec_53c = in->slots.rec_53c;
+    s.tbl14 = in->slots.tbl14;
+    s.player_byte5a = in->slots.player_byte5a;
+    s.probe_212c8 = in->slots.probe_212c8;
+    s.probe_61824 = in->slots.probe_61824;
     /* sub_0806E140 floor probe — same native routine the story
      * family's ret_6e140 reports; share the channel. */
     s.probe_6e140 = in->story.ret_6e140;
@@ -744,4 +755,10 @@ int aos_object20_update(AosObject20 *o, const AosObject20In *in,
         out->return_code = 0;
         return 0;
     }
+}
+
+bool aos_object20_text_poll_gate(uint8_t byte417, uint8_t byte414) {
+    /* _08067A04: ldrb +0x417; when nonzero, (+0x414 & 0xF) <= 4
+     * returns 0 without running the display state machine. */
+    return byte417 != 0 && (byte414 & 0xF) <= 4;
 }

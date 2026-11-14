@@ -203,6 +203,7 @@ typedef struct {
     bool wrote_254cc;       /* +0x254CC pair writes */
     bool sfx_26;            /* sub_08013E18(0x26) */
     bool ev_1e;             /* sub_08013CF0(0x1E) */
+    int armed_flag;         /* sub_08012048 bit, -1 none */
     /* +0x18 companion child (param0-26 create sub_08065CD8 via
      * sub_0805B5E8(3)): nonzero = spawned. The child is a
      * separate entity whose update vector is sub_08065C2C;
@@ -366,7 +367,7 @@ uint32_t aos_guard_seq_tick(AosGuardSeq *g,
  * fallback is 7 and flag 0x3D re-picks while it is 9.
  *
  * `ctx` carries the injected engine state: `unk33c` is the
- * gEwramData +0x60 +0x33C flag bitfield in/out (bit i =
+ * gEwramData +0x344 event bitfield in/out (bit i =
  * sub_08012078(i); sub_080120AC sets a clear bit, sub_08012048
  * sets 0x3B), `flags37e` is gEwramData + 0x37E, `unk132ae` the
  * +0x132AE..+0x132B0 triplet, `unk133e8` the +0x133E8 byte,
@@ -380,7 +381,7 @@ uint32_t aos_guard_seq_tick(AosGuardSeq *g,
  * selects it (native behavior); a non-NULL pointer overrides
  * it (tests). */
 typedef struct {
-    uint64_t unk33c;        /* +0x60 +0x33C bitfield, in/out */
+    uint64_t unk33c;        /* +0x344 bitfield, in/out */
     uint16_t flags37e;      /* gEwramData + 0x37E */
     uint8_t unk132ae[3];    /* gEwramData + 0x132AE..+0x132B0 */
     uint8_t unk133e8;       /* gEwramData + 0x133E8 */

@@ -96,6 +96,110 @@ int main(void) {
     assert(s.bg[1].x_vel == 0 && s.bg[1].y_vel == 0);
     assert(s.bg[1].x_pos == ((int32_t)0x10 << 16) + 0x40000);
 
+    /* ---- tile-row rebuild DMA descriptor (sub_0803F3F8 block) ----
+     * A +8 px x request from 64 px crosses the (pos-0x10000)>>19
+     * probe; the native then runs 20 sub_08001994 lookups and one
+     * BgCmdBuffer_WriteData(0x80, 0x15) to the computed VRAM
+     * address. Tile coords come from the OLD integer position:
+     * tile_x = (xInt + 0xF7) >> 3 = (64+247)>>3 = 38,
+     * tile_y = yInt >> 3 = 48>>3 = 6. */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 4, 4, 0, 0, 0, 0x40 << 16, 0x30 << 16);
+    memset(&out, 0, sizeof out);
+    aos_scroll_request(&s, 1, 0x80000, 0, &out);
+    assert(out.map_rebuild_x && !out.map_rebuild_y);
+    assert(out.rebuild_x.queued && out.rebuild_x.bg == 1);
+    assert(out.rebuild_x.tile_x == 38 && out.rebuild_x.tile_y == 6);
+    assert(out.rebuild_x.count == 0x14);
+    assert(out.rebuild_x.bg_cmd == 0x80 && out.rebuild_x.length == 0x15);
+    /* 0x0600E000 + (1<<11) + (38&0x1F)<<1 + (6&0x1F)<<6
+     * = 0x0600E000 + 0x800 + 0xC + 0x180 = 0x0600E98C */
+    assert(out.rebuild_x.vram_addr == 0x0600E98Cu);
+    assert(!out.rebuild_y.queued);
+
+    /* No boundary crossing: from 65 px a +1 px request stays in
+     * the same (pos-0x10000)>>19 slot — no rebuild is queued. */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 4, 4, 0, 0, 0, 0x41 << 16, 0x30 << 16);
+    memset(&out, 0, sizeof out);
+    aos_scroll_request(&s, 1, 0x10000, 0, &out);
+    assert(!out.map_rebuild_x && !out.rebuild_x.queued);
+
+    /* Negative x (sub_0803F4C8): from 8 px a -8 px request lands
+     * on 0 and crosses x>>19 1 -> 0. tile_x = ((8-8)<<13)>>16 = 0;
+     * tile_y = 32>>3 = 4 on BG2: 0x0600E000 + (2<<11) + 0 + 0x100
+     * = 0x0600F100. */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 2, 4, 4, 0, 0, 0, 0x8 << 16, 0x20 << 16);
+    memset(&out, 0, sizeof out);
+    aos_scroll_request(&s, 2, (int32_t)0xFFF80000, 0, &out);
+    assert(out.map_rebuild_x);
+    assert(out.rebuild_x.bg == 2);
+    assert(out.rebuild_x.tile_x == 0 && out.rebuild_x.tile_y == 4);
+    assert(out.rebuild_x.vram_addr == 0x0600F100u);
+    assert(s.bg[2].x_pos == 0);
+
+    /* Negative x near the left edge wraps the tile coordinate the
+     * way the asm does: xInt = 4 -> t = -4 -> ((-4)<<13)>>16
+     * = 0xFFFF (the u16 lookup arg sub_08001994 receives). */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 4, 4, 0, 0, 0, 0x4 << 16, 0x10 << 16);
+    memset(&out, 0, sizeof out);
+    aos_scroll_request(&s, 1, (int32_t)0xFFF80000, 0, &out);
+    /* x + vx = 4px - 8px < 0 -> v = -x, lands on 0; x>>19 was 0
+     * already (4px < 8px tile), no crossing, no rebuild. */
+    assert(!out.rebuild_x.queued);
+    assert(s.bg[1].x_pos == 0);
+
+    /* Positive y (sub_0803F580): from 64 px a +8 px request
+     * crosses the y probe; 30 lookups, WriteData(0, 0x1F).
+     * tile_x = xInt>>3 = 0, tile_y = (64+0xA7)>>3 = 231>>3 = 28:
+     * 0x0600E000 + 0x800 + 0 + (28&0x1F)<<6 = 0x0600EF00. */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 4, 4, 0, 0, 0, 0, 0x40 << 16);
+    memset(&out, 0, sizeof out);
+    aos_scroll_request(&s, 1, 0, 0x80000, &out);
+    assert(out.map_rebuild_y && !out.map_rebuild_x);
+    assert(out.rebuild_y.queued && out.rebuild_y.bg == 1);
+    assert(out.rebuild_y.tile_x == 0 && out.rebuild_y.tile_y == 28);
+    assert(out.rebuild_y.count == 0x1E);
+    assert(out.rebuild_y.bg_cmd == 0x00 && out.rebuild_y.length == 0x1F);
+    assert(out.rebuild_y.vram_addr == 0x0600EF00u);
+
+    /* Negative y (sub_0803F650): from 72 px a -8 px request lands
+     * on 64 px and crosses y>>19 1 -> 0 (72px>>19... 0x480000>>19
+     * = 9, 0x400000>>19 = 8 — both slots differ? recompute: the
+     * unshifted probe compares y>>19 before/after: 9 vs 8). */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 4, 4, 0, 0, 0, 0x8 << 16, 0x48 << 16);
+    memset(&out, 0, sizeof out);
+    aos_scroll_request(&s, 1, 0, (int32_t)0xFFF80000, &out);
+    assert(out.map_rebuild_y);
+    /* tile_x = xInt>>3 = 8>>3 = 1 (iterated start); tile_y uses
+     * the neg helper's (yInt - 8) wrap: t = 72-8 = 64 ->
+     * (64<<13)>>16 = 8. vram = 0x0600E000 + (1<<11) + (1&0x1F)<<1
+     * + (8&0x1F)<<6 = 0x0600E000 + 0x800 + 2 + 0x200 = 0x0600EA02. */
+    assert(out.rebuild_y.tile_x == 1);
+    assert(out.rebuild_y.tile_y == 8);
+    assert(out.rebuild_y.vram_addr == 0x0600EA02u);
+
+    /* ---- unk_60.unk_4C8 reporting (modes 20/21/27/30/36) ---- */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 2, 2, 0, 0, 0, 0, 0);
+    aos_scroll_request(&s, 1, 0x40000, 0, &out);
+    aos_scroll_bind(&s, 2, 2, 2, 20, 0, 0, 0, 0);
+    aos_scroll_bind(&s, 3, 2, 2, 27, 0, 0, 0, 0);
+    AosScrollWorld w4 = { 0x02000000, false, 0x55, NULL, 0 };
+    memset(&out, 0, sizeof out);
+    aos_scroll_apply(&s, &w4, &out);
+    /* mode 20: hblank only; mode 21's flag is set but BG3 runs
+     * mode 27 — both consume unk_4C8, the last one wins. */
+    assert(out.fx & AOS_SCROLL_FX_HBLANK);
+    assert(out.fx & AOS_SCROLL_FX_AFFINE);
+    assert(out.unk_4c8_seen == 0x55);
+    /* With the flag clear mode 21 (if it ran) would disable BG2;
+     * here mode 20/27 ignore flags entirely. */
+
     /* ---- sub_08000F60 entity compensation ---- */
     memset(&s, 0, sizeof s);
     aos_scroll_bind(&s, 1, 2, 2, 0, 0, 0, 0, 0);
@@ -149,7 +253,7 @@ int main(void) {
     aos_scroll_apply(&s, NULL, &out);
     assert(s.disp_h[2] == 0x101);
     assert(s.disp_v[3] == 0x200);          /* flag clear: no -2 */
-    AosScrollWorld w = { 0x02000000, false, NULL, 0 };
+    AosScrollWorld w = { 0x02000000, false, 0, NULL, 0 };
     memset(&out, 0, sizeof out);
     s.disp_v[3] = 0x200;
     aos_scroll_apply(&s, &w, &out);

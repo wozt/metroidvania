@@ -43,6 +43,31 @@
   accumulation, +0x65 commits, loop wrap, once-end latch,
   pause/ended early-outs, +0x5B modes and the palette tail.
 
+## Patch 1137 - visible BG1 scroll, +0x417 gate, event-flag bridge
+
+- **BG1 scroll now visible**: `aria_scroll_bg1_offset` exposes the
+  transaction-accumulated delta and the BG1 draw `src` rect adds it
+  to `cam_x/cam_y` — native-faithful since camera-follow is itself a
+  `sub_0803FBBC(1,...)` request on the same accumulator. Entities
+  keep `cam_x/cam_y`.
+- **Scroll engine extended** (`aos.core.scroll`): tile-row rebuild
+  DMA descriptors (`AosScrollRebuild`: native tile-origin formulas,
+  VRAM address, BgCmdBuffer cmd/length/count) reported on probe
+  crossings; `unk_4C8` bound and reported in hblank/affine modes.
+  `sub_0803FC6C` transition-scroll sibling flagged unported.
+- **`+0x417`/`+0x414` gate closed**: `object20_ewram_417` round-trips
+  with native store order (open clears, close writes 0xFF) and
+  `aos_object20_text_poll_gate` suppresses the dialogue poll like
+  `sub_08067A04`'s early-out. entityData `+0x58` bits documented
+  (bit 6 facing, bits 0-4/5/7 unported sprite-effect consumers).
+- **Event-flag bridge**: `sub_08012048`/`12078`/`120AC` on the
+  `+0x344` bitfield wired through `aria_events` — Object20 variant
+  writes land, param0 3/9 dialogues produce bits `0x20`/`0x26`, and
+  the param0 25-28 create gates (`sub_08066024`/`66828`/`65CD8`)
+  now evaluate real flags. Guard picker reads through bit `0x3D`.
+- Registries synced (`aos.core.scroll` refresh, `text_window`,
+  `shop_sequences`).
+
 ## Patch 1136 - entityData table, BG1 scroll engine, word60 consumers
 
 - **entityData (+0x4E4) modelled**: `AriaEntityDataRecord` (native

@@ -31,13 +31,49 @@ static void scroll_out_reset(AosScrollOut *out) {
     if (out) memset(out, 0, sizeof *out);
 }
 
+/* Tile origin the native rebuild block derives from the layer's
+ * integer scroll position (bgInfo +6/+0xA, the high halves of
+ * xPos/yPos — read before the position integrates, so the old
+ * scroll offset names the tile row). x_pos/x_neg differ: the
+ * positive helper adds 0xF7 before the >>3, the negative one
+ * subtracts 8 tiles' worth through the (v<<13)>>16 wrap. */
+static uint16_t scroll_tile_x_pos(int32_t x_pos) {
+    return (uint16_t)((((uint32_t)(uint16_t)((uint32_t)x_pos >> 16)) +
+                       0xF7) >> 3);
+}
+static uint16_t scroll_tile_x_neg(int32_t x_pos) {
+    int32_t t = (int32_t)(uint16_t)((uint32_t)x_pos >> 16) - 8;
+    return (uint16_t)(((uint32_t)t << 13) >> 16);
+}
+static uint16_t scroll_tile_y_pos(int32_t y_pos) {
+    return (uint16_t)((((uint32_t)(uint16_t)((uint32_t)y_pos >> 16)) +
+                       0xA7) >> 3);
+}
+static uint16_t scroll_tile_y_neg(int32_t y_pos) {
+    int32_t t = (int32_t)(uint16_t)((uint32_t)y_pos >> 16) - 8;
+    return (uint16_t)(((uint32_t)t << 13) >> 16);
+}
+
+/* The VRAM destination the native computes for the rebuild DMA:
+ * 0x0600E000 + (bg << 11) + (tile_x & 0x1F) * 2
+ * + (tile_y & 0x1F) * 64 — the BG tilemap word address. */
+static uint32_t scroll_rebuild_vram(int bg, uint16_t tile_x,
+                                    uint16_t tile_y) {
+    return 0x0600E000u + ((uint32_t)bg << 11) +
+           (((uint32_t)tile_x & 0x1F) << 1) +
+           (((uint32_t)tile_y & 0x1F) << 6);
+}
+
 /* sub_0803F3F8: positive x velocity. Clamps the request against the
  * map edge ((meta_0 << 5) tile blocks of 8 px plus the 30-tile
  * screen), caps at +8 px, stores xVel, integrates xPos and queues
  * the tile-row rebuild when the (pos - 0x10000) >> 19 tile index
  * changes — the asm probes (x - 0x10000) >> 19 against
- * (x + v - 0x10000) >> 19 on both sides. */
-static void scroll_vel_x_pos(AosBgLayer *bg, int32_t vx, AosScrollOut *out) {
+ * (x + v - 0x10000) >> 19 on both sides. The rebuild streams 20
+ * tile lookups (BgCmdBuffer_WriteData(0x80, 0x15, ...)) down the
+ * screen's tile rows; the descriptor is reported through `out`. */
+static void scroll_vel_x_pos(AosBgLayer *bg, int bgnum, int32_t vx,
+                             AosScrollOut *out) {
     int32_t x = bg->x_pos;
     int32_t v = vx;
     if (!((((uint32_t)(x + vx)) >> 19) + 0x1E <
@@ -46,29 +82,61 @@ static void scroll_vel_x_pos(AosBgLayer *bg, int32_t vx, AosScrollOut *out) {
     if (v > AOS_SCROLL_VEL_CAP) v = AOS_SCROLL_VEL_CAP;
     bg->x_vel = v;
     if ((((uint32_t)(x - 0x10000)) >> 19) !=
-        (((uint32_t)(x + v - 0x10000)) >> 19) && out)
-        out->map_rebuild_x = true;
+        (((uint32_t)(x + v - 0x10000)) >> 19)) {
+        if (out) {
+            out->map_rebuild_x = true;
+            AosScrollRebuild *r = &out->rebuild_x;
+            r->queued = true;
+            r->bg = bgnum;
+            r->tile_x = scroll_tile_x_pos(x);
+            r->tile_y = (uint16_t)(((uint32_t)(uint16_t)
+                                    ((uint32_t)bg->y_pos >> 16)) >> 3);
+            r->count = 0x14;
+            r->bg_cmd = 0x80;
+            r->length = 0x15;
+            r->vram_addr = scroll_rebuild_vram(bgnum, r->tile_x,
+                                               r->tile_y);
+        }
+    }
     bg->x_pos = x + v;
 }
 
 /* sub_0803F4C8: negative x velocity. Stops at x = 0, caps at
  * -8 px, stores xVel, integrates xPos, rebuilds on a tile-index
  * change (the unshifted (x >> 19) vs ((x + v) >> 19) probe). */
-static void scroll_vel_x_neg(AosBgLayer *bg, int32_t vx, AosScrollOut *out) {
+static void scroll_vel_x_neg(AosBgLayer *bg, int bgnum, int32_t vx,
+                             AosScrollOut *out) {
     int32_t x = bg->x_pos;
     int32_t v = vx;
     if (x + vx < 0) v = -x;
     if (v < -AOS_SCROLL_VEL_CAP) v = -AOS_SCROLL_VEL_CAP;
     bg->x_vel = v;
-    if ((((uint32_t)x) >> 19) != (((uint32_t)(x + v)) >> 19) && out)
-        out->map_rebuild_x = true;
+    if ((((uint32_t)x) >> 19) != (((uint32_t)(x + v)) >> 19)) {
+        if (out) {
+            out->map_rebuild_x = true;
+            AosScrollRebuild *r = &out->rebuild_x;
+            r->queued = true;
+            r->bg = bgnum;
+            r->tile_x = scroll_tile_x_neg(x);
+            r->tile_y = (uint16_t)(((uint32_t)(uint16_t)
+                                    ((uint32_t)bg->y_pos >> 16)) >> 3);
+            r->count = 0x14;
+            r->bg_cmd = 0x80;
+            r->length = 0x15;
+            r->vram_addr = scroll_rebuild_vram(bgnum, r->tile_x,
+                                               r->tile_y);
+        }
+    }
     bg->x_pos = x + v;
 }
 
 /* sub_0803F580: positive y velocity — the x_pos mirror on y_pos
  * with meta_1, the +0x1A/+0xD00000 edge constants and the same
- * (pos - 0x10000) >> 19 rebuild probe on both sides. */
-static void scroll_vel_y_pos(AosBgLayer *bg, int32_t vy, AosScrollOut *out) {
+ * (pos - 0x10000) >> 19 rebuild probe on both sides. The rebuild
+ * streams 30 tile lookups across the screen's tile columns
+ * (BgCmdBuffer_WriteData(0, 0x1F, ...)). */
+static void scroll_vel_y_pos(AosBgLayer *bg, int bgnum, int32_t vy,
+                             AosScrollOut *out) {
     int32_t y = bg->y_pos;
     int32_t v = vy;
     if (!((((uint32_t)(y + vy)) >> 19) + 0x1A <
@@ -77,8 +145,22 @@ static void scroll_vel_y_pos(AosBgLayer *bg, int32_t vy, AosScrollOut *out) {
     if (v > AOS_SCROLL_VEL_CAP) v = AOS_SCROLL_VEL_CAP;
     bg->y_vel = v;
     if ((((uint32_t)(y - 0x10000)) >> 19) !=
-        (((uint32_t)(y + v - 0x10000)) >> 19) && out)
-        out->map_rebuild_y = true;
+        (((uint32_t)(y + v - 0x10000)) >> 19)) {
+        if (out) {
+            out->map_rebuild_y = true;
+            AosScrollRebuild *r = &out->rebuild_y;
+            r->queued = true;
+            r->bg = bgnum;
+            r->tile_x = (uint16_t)(((uint32_t)(uint16_t)
+                                    ((uint32_t)bg->x_pos >> 16)) >> 3);
+            r->tile_y = scroll_tile_y_pos(y);
+            r->count = 0x1E;
+            r->bg_cmd = 0x00;
+            r->length = 0x1F;
+            r->vram_addr = scroll_rebuild_vram(bgnum, r->tile_x,
+                                               r->tile_y);
+        }
+    }
     bg->y_pos = y + v;
 }
 
@@ -86,14 +168,29 @@ static void scroll_vel_y_pos(AosBgLayer *bg, int32_t vy, AosScrollOut *out) {
  * (0x300000 whole: a request that would cross it is replaced by
  * the distance back to it), caps at -8 px, integrates and rebuilds
  * on a tile-index change. */
-static void scroll_vel_y_neg(AosBgLayer *bg, int32_t vy, AosScrollOut *out) {
+static void scroll_vel_y_neg(AosBgLayer *bg, int bgnum, int32_t vy,
+                             AosScrollOut *out) {
     int32_t y = bg->y_pos;
     int32_t v = vy;
     if (y + vy <= 0x2FFFFF) v = 0x300000 - y;
     if (v < -AOS_SCROLL_VEL_CAP) v = -AOS_SCROLL_VEL_CAP;
     bg->y_vel = v;
-    if ((((uint32_t)y) >> 19) != (((uint32_t)(y + v)) >> 19) && out)
-        out->map_rebuild_y = true;
+    if ((((uint32_t)y) >> 19) != (((uint32_t)(y + v)) >> 19)) {
+        if (out) {
+            out->map_rebuild_y = true;
+            AosScrollRebuild *r = &out->rebuild_y;
+            r->queued = true;
+            r->bg = bgnum;
+            r->tile_x = (uint16_t)(((uint32_t)(uint16_t)
+                                    ((uint32_t)bg->x_pos >> 16)) >> 3);
+            r->tile_y = scroll_tile_y_neg(y);
+            r->count = 0x1E;
+            r->bg_cmd = 0x00;
+            r->length = 0x1F;
+            r->vram_addr = scroll_rebuild_vram(bgnum, r->tile_x,
+                                               r->tile_y);
+        }
+    }
     bg->y_pos = y + v;
 }
 
@@ -104,8 +201,8 @@ void aos_scroll_request(AosScroll *s, int bg, int32_t vx, int32_t vy,
     /* pBgMetadata->unk_0 > 1 gates the x axis; <= 1 pins xPos to 0
      * and clears xVel (the one-screen pin). */
     if (b->meta_0 > 1) {
-        if (vx > 0)      scroll_vel_x_pos(b, vx, out);
-        else if (vx < 0) scroll_vel_x_neg(b, vx, out);
+        if (vx > 0)      scroll_vel_x_pos(b, bg, vx, out);
+        else if (vx < 0) scroll_vel_x_neg(b, bg, vx, out);
         else             b->x_vel = 0;
     } else {
         b->x_vel = 0;
@@ -114,8 +211,8 @@ void aos_scroll_request(AosScroll *s, int bg, int32_t vx, int32_t vy,
     /* pBgMetadata->unk_1 > 1 gates the y axis; <= 1 pins yPos to
      * 0x30 << 16 and clears yVel. */
     if (b->meta_1 > 1) {
-        if (vy > 0)      scroll_vel_y_pos(b, vy, out);
-        else if (vy < 0) scroll_vel_y_neg(b, vy, out);
+        if (vy > 0)      scroll_vel_y_pos(b, bg, vy, out);
+        else if (vy < 0) scroll_vel_y_neg(b, bg, vy, out);
         else             b->y_vel = 0;
     } else {
         b->y_pos = 0x300000;
@@ -159,6 +256,7 @@ void aos_scroll_apply(AosScroll *s, const AosScrollWorld *world,
     int32_t sy = b1->y_vel;
     uint32_t flags = world ? world->unk_33c3 : 0;
     bool keep4cc = world && world->unk_4cc_0;
+    uint32_t p4c8 = world ? world->unk_4c8 : 0;
     if (b1->unk_18 == 0x1A && out) out->fx |= AOS_SCROLL_FX_CDAC;
     for (int bg = 2; bg < 4; ++bg) {
         AosBgLayer *b = &s->bg[bg];
@@ -208,13 +306,24 @@ void aos_scroll_apply(AosScroll *s, const AosScrollWorld *world,
                 out->fx |= AOS_SCROLL_FX_BG2_DISABLE;
             aos_scroll_request(s, bg, sx, sy, out);
             break;
-        case 20: if (out) out->fx |= AOS_SCROLL_FX_HBLANK; break;
+        case 20:
+            /* Fills the hBlankEffect buffer with the unk_4C8 wave
+             * (0x80 zeros, 8x v, 8x 3v/2, 0x14x 2v) and arms the
+             * hblank on REG_BG3HOFS; the buffer write stays
+             * unported, the consumed parameter is reported. */
+            if (out) { out->fx |= AOS_SCROLL_FX_HBLANK;
+                       out->unk_4c8_seen = p4c8; }
+            break;
         case 21:
             /* Flag-gated like the native: the affine setup runs
              * only while unk_33C[3] bit 0x02000000 is set, else
-             * BG2 is disabled outright. */
+             * BG2 is disabled outright. The affine parameters
+             * (texX/Y 0x8000, scr 0x70/0x38, sx/sy 0x80, alpha =
+             * -unk_4C8 << 9) need BgAffineSet state the host does
+             * not model; only the consumed parameter is reported. */
             if (flags & 0x02000000) {
-                if (out) out->fx |= AOS_SCROLL_FX_AFFINE;
+                if (out) { out->fx |= AOS_SCROLL_FX_AFFINE;
+                           out->unk_4c8_seen = p4c8; }
             } else if (out) {
                 out->fx |= AOS_SCROLL_FX_BG2_DISABLE;
             }
@@ -231,13 +340,24 @@ void aos_scroll_apply(AosScroll *s, const AosScrollWorld *world,
             break;
         case 25: if (out) out->fx |= AOS_SCROLL_FX_CC90; break;
         case 26: aos_scroll_request(s, bg, sx, sy, out); break;
-        case 27: if (out) out->fx |= AOS_SCROLL_FX_AFFINE; break;
+        case 27:
+            /* BgAffineSet on BG2 with scrX/scrY = 0x100 - BG1's
+             * integer position and sx/sy/alpha derived from
+             * unk_4C8 through sub_080009E4's sine table; neither
+             * the affine destination nor the sine table is
+             * modelled, so the parameter is only reported. */
+            if (out) { out->fx |= AOS_SCROLL_FX_AFFINE;
+                       out->unk_4c8_seen = p4c8; }
+            break;
         case 28:
         case 29: if (out) out->fx |= AOS_SCROLL_FX_SCANLINE; break;
         case 30:
             /* The scroll state lands (xPos += BG1 vel, hOfs write);
-             * the sine hblank wave over vOfs stays unported. */
-            if (out) out->fx |= AOS_SCROLL_FX_HBLANK;
+             * the sine hblank wave over vOfs
+             * ((sub_080009E4((v<<0xB) + (unk_4C8<<0xA)) >> 0xD) +
+             * vOfs per scanline) stays unported — reported. */
+            if (out) { out->fx |= AOS_SCROLL_FX_HBLANK;
+                       out->unk_4c8_seen = p4c8; }
             b->x_pos += sx;
             s->disp_h[bg] = (uint16_t)((uint32_t)b->x_pos >> 16);
             break;
@@ -247,8 +367,12 @@ void aos_scroll_apply(AosScroll *s, const AosScrollWorld *world,
             break;
         case 32: if (out) out->fx |= AOS_SCROLL_FX_SCANLINE; break;
         case 36:
+            /* Same hblank wave shape as case 30 over hOfs with a
+             * different phase step; only the parameter is
+             * reported. */
             aos_scroll_request(s, bg, sx, sy, out);
-            if (out) out->fx |= AOS_SCROLL_FX_HBLANK;
+            if (out) { out->fx |= AOS_SCROLL_FX_HBLANK;
+                       out->unk_4c8_seen = p4c8; }
             break;
         default: break;
         }

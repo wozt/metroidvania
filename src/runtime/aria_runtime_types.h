@@ -265,7 +265,19 @@ typedef struct {
     int32_t pos44;          /* +0x44 fine Y, 16.16 (unk_528) */
     uint8_t flags20;        /* +0x20 record flags byte
                              * (unk_504_8.unk_504) */
-    uint8_t flags58;        /* +0x58 flags byte (unk_53C) */
+    uint8_t flags58;        /* +0x58 flags byte (unk_53C):
+                             * bits 0-4 (unk_53C_0:5) are the
+                             * sub_0803E058/sub_0803E6BC effect
+                             * parameter, bit 5 (unk_53C_5) an
+                             * effect-active flag read by
+                             * sub_08039340, bit 6 (unk_53C_6) the
+                             * facing/horizontal-flip bit consumed
+                             * by the sub_08014A04-family collision
+                             * paths and the sprite-flip argument,
+                             * bit 7 (unk_53C_7) a gate in the same
+                             * routine family. Only bit 6 has
+                             * ported consumers so far; the other
+                             * bits round-trip untouched. */
     uint8_t flags59;        /* +0x59 flags byte (unk_53D): bit 1
                              * (unk_53D_1) marks the screen-locked
                              * entities sub_08000F60 compensates

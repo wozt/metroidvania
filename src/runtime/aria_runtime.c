@@ -2554,7 +2554,18 @@ int aria_runtime_main(int argc, char **argv) {
         int sx = soma.x >> 16, sy = soma.y >> 16;
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
-        SDL_FRect src = {(float)cam_x, (float)cam_y, VIEW_W, VIEW_H}, dst = {0, 0, VIEW_W, VIEW_H};
+        /* BG1's screen offset: the camera position plus the scroll
+         * transactions' accumulated delta. Native sub_0803FBBC writes
+         * bgInfo[1].xPos/yPos integer halves into
+         * gDisplayRegisters.bgOfs[1].hOfs/vOfs and the per-frame
+         * camera request and scripted sub_0800ED24 transactions
+         * compose on that one accumulator; entities keep cam_x/cam_y
+         * (only +0x59-bit-1 records shift, sub_08000F60). */
+        int32_t bg1_ox = 0, bg1_oy = 0;
+        aria_scroll_bg1_offset(&room, &bg1_ox, &bg1_oy);
+        SDL_FRect src = {(float)(cam_x + bg1_ox), (float)(cam_y + bg1_oy),
+                         VIEW_W, VIEW_H},
+                    dst = {0, 0, VIEW_W, VIEW_H};
         {
             /* The BG fade of sub_0800C8C8, relative to the OBJ veil. */
             float bg = announced_death && death.obj.weight > 0

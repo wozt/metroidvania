@@ -181,7 +181,7 @@ int main(void) {
     aos_npc_talk_65db8(&lp, 7, false, 0);
     assert(lp.froze_player && lp.armed_42c_0 && lp.window_text &&
            lp.state == 2 && lp.text_id == 0x2D && lp.sfx_26 &&
-           lp.ev_1e);
+           lp.ev_1e && lp.armed_flag == -1);
     /* text poll pending keeps state 2. */
     aos_npc_talk_65db8(&lp, 7, false, 0);
     assert(lp.state == 2 && !lp.window_close);
@@ -195,22 +195,22 @@ int main(void) {
     /* text picks: b864 + 0x32 clear -> 0x2C. */
     memset(&lp, 0, sizeof lp); lp.state = 1;
     aos_npc_talk_65db8(&lp, 7 | 8, false, 0);
-    assert(lp.text_id == 0x2C);
+    assert(lp.text_id == 0x2C && lp.armed_flag == 0x32);
     /* 0x26 set + 0x31 clear -> 0x2B. */
     memset(&lp, 0, sizeof lp); lp.state = 1;
     aos_npc_talk_65db8(&lp, 7 | 0x20, false, 0);
-    assert(lp.text_id == 0x2B);
+    assert(lp.text_id == 0x2B && lp.armed_flag == 0x31);
     /* 0x26+0x31 set -> stays 0x2D (elif consumed). */
     memset(&lp, 0, sizeof lp); lp.state = 1;
     aos_npc_talk_65db8(&lp, 7 | 0x20 | 0x40, false, 0);
-    assert(lp.text_id == 0x2D);
+    assert(lp.text_id == 0x2D && lp.armed_flag == -1);
     /* 0x25 set + 0x30 clear -> 0x2A; 0x2E set + 0x2F clear -> 0x29. */
     memset(&lp, 0, sizeof lp); lp.state = 1;
     aos_npc_talk_65db8(&lp, 7 | 0x80, false, 0);
-    assert(lp.text_id == 0x2A);
+    assert(lp.text_id == 0x2A && lp.armed_flag == 0x30);
     memset(&lp, 0, sizeof lp); lp.state = 1;
     aos_npc_talk_65db8(&lp, 7 | 0x200, false, 0);
-    assert(lp.text_id == 0x29);
+    assert(lp.text_id == 0x29 && lp.armed_flag == 0x2F);
     /* +0x6D variants: 2 -> f2c8_3 in state1, 3 -> f2c8_2 in state2. */
     memset(&lp, 0, sizeof lp); lp.state = 1; lp.flags6d = 2;
     aos_npc_talk_65db8(&lp, 7, false, 0);
@@ -387,7 +387,8 @@ int main(void) {
     aos_npc_talk_65cd8(&cp, true, true, true, 0, 3, spawn_ok);
     aos_npc_talk_65cd8_commit(&cp, &cl);
     assert(cl.child18 && cl.child18_scr42 == 3 &&
-           cl.child18_scr46 == 4 && cl.child18_anim5c == 5);
+           cl.child18_scr46 == 4 && cl.child18_anim5c == 5 &&
+           cl.armed_flag == -1);
     step_calls = 0;
     assert(aos_npc_talk_65c2c_child(&cl, 0x12, step_count, NULL,
                                     tg) == 3);
@@ -396,7 +397,7 @@ int main(void) {
     /* no child: commit clears the flag. */
     memset(&cp, 0, sizeof cp);
     aos_npc_talk_65cd8_commit(&cp, &cl);
-    assert(!cl.child18);
+    assert(!cl.child18 && cl.armed_flag == -1);
 
     /* sub_08066308: flag-chain picks. Table: slot i -> i, so
      * mode m slot s reads m*8+s. */

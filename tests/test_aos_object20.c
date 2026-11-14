@@ -254,6 +254,15 @@ int main(void) {
     assert(aos_object20_update(&o, &in, &out) == 0);
     assert(o.v.npc_loop.state == 1);
     assert(o.v.npc_loop.cleared_42c_200);
+    /* The clear-partner pick exposes the sub_08012048 bit for the
+     * host's event-field write (flag 0x26 set, partner 0x31 clear). */
+    in.npc.probe_inside = true;
+    in.word16 = 0x42;
+    in.npc.flag12078 = (1ull << 0x20) | (1ull << 0x2E) |
+                       (1ull << 0x26);
+    assert(aos_object20_update(&o, &in, &out) == 0);
+    assert(o.v.npc_loop.text_id == 0x2B &&
+           o.v.npc_loop.armed_flag == 0x31);
 
     /* param0 27: create sub_08066024 needs flag 0x20. */
     memset(&o, 0, sizeof o);
@@ -417,6 +426,58 @@ int main(void) {
     int guard_ret = aos_object20_update(&o, &in, &out);
     assert(guard_ret == 0 || guard_ret == 0x10);
     assert(o.v.guard.state != 2);
+
+    /* ---- sub_08067A04 early-out gate (+0x417/+0x414): the
+     * room-dialogue poll is suppressed while +0x417 != 0 and
+     * (+0x414 & 0xF) <= 4; any nonzero +0x417 with a high-nibble
+     * +0x414 lets the poll run, and +0x417 == 0 always passes. */
+    assert(!aos_object20_text_poll_gate(0, 0));
+    assert(!aos_object20_text_poll_gate(0, 0xF));
+    assert(!aos_object20_text_poll_gate(1, 5));
+    assert(!aos_object20_text_poll_gate(1, 0x15));
+    assert(!aos_object20_text_poll_gate(0xFF, 0xA));
+    assert(aos_object20_text_poll_gate(1, 0));
+    assert(aos_object20_text_poll_gate(1, 4));
+    assert(aos_object20_text_poll_gate(0x10, 0xF4)); /* nibble 4 */
+    assert(!aos_object20_text_poll_gate(0x10, 0xF5)); /* nibble 5 */
+
+    /* ---- param0 15 (slots, sub_08060F98) through the
+     * dispatcher: update15's case-0 record +0x53C store reads
+     * the +0x11-bound record's +0x524/+0x53C pair, fed through
+     * in->slots.rec_524/in->slots.rec_53c by the runtime. The
+     * slots_in pass-through must carry them into the variant
+     * Out. */
+    memset(&o, 0, sizeof o);
+    in = mk_in();
+    assert(create_ok(&o, 15, &in, &out));
+    assert(o.family == AOS_OBJECT20_FAMILY_SLOTS);
+    assert(aos_object20_update(&o, &in, &out) == 0);  /* state 0:
+        window 0x1C, +0x417 = 1, state -> 1 */
+    assert(out.slots.window_text == 0x1C);
+    assert(out.slots.write_417 && out.slots.write_417_val == 1);
+    assert(o.v.slots.state == 1);
+    /* state 1, +0xB == 0: the case-0 record write rebuilds bit 6
+     * of +0x53C from rec_524 < player_pos40 and preserves the
+     * other bits (0x43 keeps bit 0). */
+    in.slots.probe_212c8 = 0;
+    in.slots.rec_524 = 0;
+    in.slots.rec_53c = 0x43;
+    in.slots.probe_61824 = 1;
+    memset(&out, 0, sizeof out);
+    assert(aos_object20_update(&o, &in, &out) == 0);
+    assert(out.slots.window_poll);
+    assert(out.slots.rec_53c_write);
+    assert(out.slots.rec_53c_val == 0x43);   /* (0x43 & ~0x40)|0x40 */
+    assert(o.v.slots.sub_b == 2);
+    /* rec_524 >= player_pos40 clears bit 6 instead (case 0
+     * re-armed: the first drive advanced +0xB to 2). */
+    o.v.slots.sub_b = 0;
+    in.slots.rec_524 = 0x2000;               /* >= player_pos40 */
+    in.slots.probe_61824 = 0;
+    memset(&out, 0, sizeof out);
+    assert(aos_object20_update(&o, &in, &out) == 0);
+    assert(out.slots.rec_53c_val == 0x03);   /* 0x43 & ~0x40 */
+    assert(o.v.slots.sub_b == 3);
 
     printf("aos_object20 tests passed\n");
     return 0;

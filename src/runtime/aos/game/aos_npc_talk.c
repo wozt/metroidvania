@@ -279,6 +279,7 @@ void aos_npc_talk_65cd8(AosNpcCompanion *c, bool flag_12078_20,
 
 void aos_npc_talk_65cd8_commit(const AosNpcCompanion *c,
                                AosNpcLoop *g) {
+    g->armed_flag = -1;
     g->child18 = c->child != 0;
     if (!g->child18)
         return;
@@ -291,6 +292,7 @@ void aos_npc_talk_65cd8_commit(const AosNpcCompanion *c,
 }
 void aos_npc_talk_65db8(AosNpcLoop *g, uint32_t flags,
                         bool text_done, int32_t player_x) {
+    g->armed_flag = -1;
     g->cleared_42c_200 = g->froze_player = g->window_text =
         g->armed_42c_0 = g->facing_mirror = g->f2c8_3 =
         g->window_close = g->f2c8_2 = g->release_0 =
@@ -316,13 +318,23 @@ void aos_npc_talk_65db8(AosNpcLoop *g, uint32_t flags,
         if (flags & 8) {                        /* sub_0805B864 != 0 */
             if (!(flags & 0x10)) {              /* 0x32 clear */
                 g->text_id = 0x2C;
+                g->armed_flag = 0x32;
             }
         } else if (flags & 0x20) {              /* 0x26 set */
-            if (!(flags & 0x40)) g->text_id = 0x2B;   /* 0x31 clear */
+            if (!(flags & 0x40)) {
+                g->text_id = 0x2B;              /* 0x31 clear */
+                g->armed_flag = 0x31;
+            }
         } else if (flags & 0x80) {              /* 0x25 set */
-            if (!(flags & 0x100)) g->text_id = 0x2A;  /* 0x30 clear */
+            if (!(flags & 0x100)) {
+                g->text_id = 0x2A;              /* 0x30 clear */
+                g->armed_flag = 0x30;
+            }
         } else if (flags & 0x200) {             /* 0x2E set */
-            if (!(flags & 0x400)) g->text_id = 0x29;  /* 0x2F clear */
+            if (!(flags & 0x400)) {
+                g->text_id = 0x29;              /* 0x2F clear */
+                g->armed_flag = 0x2F;
+            }
         }
         g->armed_42c_0 = true;      /* +0x42C |= 1 */
         g->window_text = true;      /* sub_08067934(+0x14) */

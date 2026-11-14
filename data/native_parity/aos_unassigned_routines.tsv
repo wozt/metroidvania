@@ -902,7 +902,6 @@ aos:c:src/code/code_08039340.c:sub_0803FA10	sub_0803FA10	unclassified		technical
 aos:c:src/code/code_08039340.c:sub_0803FAE0	sub_0803FAE0	unclassified		technical	exclusive_callees	c_function	0x0803FAE0	src/code/code_08039340.c	5598	1	2
 aos:c:src/code/code_08039340.c:sub_0803FB98	sub_0803FB98	unclassified				c_function	0x0803FB98	src/code/code_08039340.c	5654	0	1
 aos:c:src/code/code_08039340.c:sub_0803FB98_inline_0	sub_0803FB98_inline_0	unclassified				c_function		src/code/code_08039340.c	5640	1	0
-aos:c:src/code/code_08039340.c:sub_0803FBBC	sub_0803FBBC	unclassified		technical	exclusive_callees	c_function	0x0803FBBC	src/code/code_08039340.c	5666	6	4
 aos:c:src/code/code_08039340.c:sub_0803FC6C	sub_0803FC6C	unclassified		technical	exclusive_callees	c_function	0x0803FC6C	src/code/code_08039340.c	5729	2	4
 aos:c:src/code/code_08039340.c:sub_0803FD1C	sub_0803FD1C	unclassified				c_function	0x0803FD1C	src/code/code_08039340.c	5790	2	0
 aos:c:src/code/code_08039340.c:sub_0803FE0C	sub_0803FE0C	unclassified				c_function	0x0803FE0C	src/code/code_08039340.c	5880	3	1
@@ -936,7 +935,6 @@ aos:c:src/code_080009A0.c:sub_08000B64	sub_08000B64	unclassified		technical	excl
 aos:c:src/code_080009A0.c:sub_08000C28	sub_08000C28	unclassified		technical	exclusive_callees	c_function	0x08000C28	src/code_080009A0.c	288	1	1
 aos:c:src/code_080009A0.c:sub_08000C94	sub_08000C94	unclassified		technical	exclusive_callees	c_function	0x08000C94	src/code_080009A0.c	319	1	2
 aos:c:src/code_080009A0.c:sub_08000E50	sub_08000E50	technical	referrers			c_function	0x08000E50	src/code_080009A0.c	433	2	2
-aos:c:src/code_080009A0.c:sub_08000F60	sub_08000F60	unclassified				c_function	0x08000F60	src/code_080009A0.c	506	7	0
 aos:c:src/code_080009A0.c:sub_08000FBC	sub_08000FBC	unclassified		technical	exclusive_callees	c_function	0x08000FBC	src/code_080009A0.c	533	1	1
 aos:c:src/code_08001004.c:SramCheckInitialized	SramCheckInitialized	saves	name			c_function	0x08001094	src/code_08001004.c	69	7	0
 aos:c:src/code_08001004.c:SramCheckSaveSlotUnlocked	SramCheckSaveSlotUnlocked	saves	name			c_function	0x08001164	src/code_08001004.c	134	6	0
@@ -1048,7 +1046,6 @@ aos:c:src/code_0800CB00.c:sub_0800D000	sub_0800D000	unclassified		technical	excl
 aos:c:src/code_0800CB00.c:sub_0800D0F8	sub_0800D0F8	unclassified		technical	exclusive_callees	c_function	0x0800D0F8	src/code_0800CB00.c	367	1	2
 aos:c:src/code_0800CB00.c:sub_0800D154	sub_0800D154	unclassified				c_function	0x0800D154	src/code_0800CB00.c	387	6	0
 aos:c:src/code_0800CB00.c:sub_0800D1F0	sub_0800D1F0	unclassified				c_function	0x0800D1F0	src/code_0800CB00.c	410	6	0
-aos:c:src/code_0800CB00.c:sub_0800D288	sub_0800D288	unclassified				c_function	0x0800D288	src/code_0800CB00.c	438	6	15
 aos:c:src/code_0800CB00.c:sub_0800D288_inline_0	sub_0800D288_inline_0	unclassified				c_function		src/code_0800CB00.c	429	1	0
 aos:c:src/code_0800CB00.c:sub_0800DC70_inline_0	sub_0800DC70_inline_0	unclassified		technical	exclusive_callees	c_function		src/code_0800CB00.c	860	1	1
 aos:c:src/code_0800CB00.c:sub_0800E380	sub_0800E380	unclassified				c_function	0x0800E380	src/code_0800CB00.c	1277	1	0
@@ -1056,7 +1053,6 @@ aos:c:src/code_0800CB00.c:sub_0800E40C	sub_0800E40C	unclassified				c_function	0
 aos:c:src/code_0800CB00.c:sub_0800E40C_inline_0	sub_0800E40C_inline_0	unclassified				c_function		src/code_0800CB00.c	1330	3	0
 aos:c:src/code_0800CB00.c:sub_0800E540	sub_0800E540	unclassified				c_function	0x08003540	src/code_0800CB00.c	1392	1	10
 aos:c:src/code_0800CB00.c:sub_0800EBE0	sub_0800EBE0	unclassified				c_function	0x0800EBE0	src/code_0800CB00.c	1714	1	5
-aos:c:src/code_0800CB00.c:sub_0800ED24	sub_0800ED24	unclassified		technical	exclusive_callees	c_function	0x0800ED24	src/code_0800CB00.c	1778	9	3
 aos:c:src/code_0800CB00.c:sub_0800ED5C	sub_0800ED5C	unclassified				c_function	0x0800ED5C	src/code_0800CB00.c	1798	2	0
 aos:c:src/code_0800CB00.c:sub_0800EE54	sub_0800EE54	unclassified				c_function	0x0800EE54	src/code_0800CB00.c	1878	2	0
 aos:c:src/code_0800CB00.c:sub_0800EF58	sub_0800EF58	environment	referrers			c_function	0x0800EF58	src/code_0800CB00.c	1959	1	2

@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v14"
+#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v15"
+#define AOS_SAVE_SCHEMA_V14 "metroidvania-aos-save-v14"
 #define AOS_SAVE_SCHEMA_V13 "metroidvania-aos-save-v13"
 #define AOS_SAVE_SCHEMA_V12 "metroidvania-aos-save-v12"
 #define AOS_SAVE_SCHEMA_V11 "metroidvania-aos-save-v11"
@@ -88,6 +89,15 @@ typedef struct {
     /* Schema v14: the thirteen sUnk_081183B0 secret-room discovery bits
      * (unk_60.unk_33C indices 0-12, sub_08012078). */
     uint16_t secret_rooms;
+    /* Schema v15: gEwramData + 0x60, EwramData_unk60.unk_60 — the
+     * progress-flags word the native game persists in SRAM save slot 6
+     * (sub_080137B8 loads it at boot, sub_08013788 writes it back and
+     * sub_080137FC does |= 3 plus a save-slot reload). Bit 1 selects
+     * the cleared-game variants (Object20 prologue +0x414 rewrite,
+     * sub_08013960 music tables, sub_080043CC entity variant); bit 0
+     * is read in menu/inventory paths. Older files load 0, the
+     * fresh-state value. */
+    uint32_t progress_flags;
 } AosSaveData;
 
 void aos_save_init_new(AosSaveData *save, unsigned slot);

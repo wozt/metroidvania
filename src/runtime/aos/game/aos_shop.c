@@ -11,6 +11,29 @@ static void out_reset(AosShopOut *out) {
     out->anim_a = -1;
 }
 
+/* The entityData[slot11] +0x58 store the buy menu runs in its
+ * init states (menu 0/3) and confirm state (menu 4, cursor 0):
+ * (old & ~0x41) | side<<6 with side = record +0x40 < player
+ * +0x40 (code_08060B98.s _08061DA2/_08061E64/_08061F02). */
+static uint8_t record58_store(const AosShopInput *in) {
+    int side = in->record_pos40 < in->player_pos40;
+    return (uint8_t)((in->record_flags58 & ~0x41) | (side << 6));
+}
+
+/* sub_0800ED24(1, arg1, 0) — the BG1 scroll transaction. The ROM
+ * gates on gEwramData +0x427 > param0 (param0 is always 1 here)
+ * and returns 0 with no effect; otherwise it requests the BG1
+ * scroll velocity (sub_0803FBBC), shifts every flagged entity by
+ * the scroll delta (sub_08000F60) and applies the scrolls
+ * (sub_0800D288). The callers discard the return value. */
+static void shop_ed24(AosShopOut *out, const AosShopInput *in,
+                      uint32_t arg1) {
+    if (in->byte_427 > 1)
+        return;
+    out->transaction = true;
+    out->transaction_arg1 = arg1;
+}
+
 /* sub_08061ABC — the give/sell sequence. State +0xA: 0 arms the
  * held sound and falls into the state-1 proximity gate; 1 sets
  * +0x42C bit 0 and advances when player +0x42 + A094[6] <= 0xBF
@@ -67,8 +90,9 @@ int aos_shop_sell_update(AosShop *s, const AosShopInput *in, AosShopOut *out) {
                 out->write_427_val = s->menu;
                 s->cursor = 1;
             } else if (s->cursor == 1) {
-                out->transaction = true;         /* sub_0800ED24(1, arg2, 0) */
-                out->transaction_arg2 = in->a094_6 > 0x70 ? 0 : 0x40000;
+                /* sub_0800ED24(1, A094[6] > 0x70 ? 0 : 0x40000, 0) */
+                shop_ed24(out, in,
+                          in->a094_6 > 0x70 ? 0 : 0x40000);
                 if (in->probe <= 0x11F) {
                     s->timer = 0x28;
                     s->cursor = 2;
@@ -85,8 +109,7 @@ int aos_shop_sell_update(AosShop *s, const AosShopInput *in, AosShopOut *out) {
                     s->pos40 += s->vel48;
                 }
             } else if (s->cursor == 2) {
-                out->transaction = true;
-                out->transaction_arg2 = 0;
+                shop_ed24(out, in, 0);       /* sub_0800ED24(1, 0, 0) */
                 s->timer = (uint8_t)(s->timer - 1);
                 if (s->timer == 0xFF) {           /* wrapped from 0 */
                     out->write_417 = true;
@@ -96,8 +119,7 @@ int aos_shop_sell_update(AosShop *s, const AosShopInput *in, AosShopOut *out) {
                 }
             }
         } else if (s->menu == 2) {
-            out->transaction = true;
-            out->transaction_arg2 = 0;
+            shop_ed24(out, in, 0);           /* sub_0800ED24(1, 0, 0) */
         }
         out->anim_step = true;               /* sub_0803F17C(e) tail */
         return ret;
@@ -135,7 +157,10 @@ int aos_shop_buy_update(AosShop *s, const AosShopInput *in, AosShopOut *out) {
             /* +0xB menu machine */
             if (s->menu == 0) {
                 if (!in->input_busy) {
-                    out->side_record_53c = true;   /* record +0x53C bit 6 */
+                    /* entityData[slot11] +0x58 = (old & ~0x41) |
+                     * side<<6 (gEwramData +0x53C + slot*0x84). */
+                    out->side_record_53c = true;
+                    out->record58_val = record58_store(in);
                     if (in->dir == 0) {
                         s->menu = 4;
                     } else if (in->dir == -1) {
@@ -152,6 +177,7 @@ int aos_shop_buy_update(AosShop *s, const AosShopInput *in, AosShopOut *out) {
                 }
             } else if (s->menu == 3) {
                 out->side_record_53c = true;
+                out->record58_val = record58_store(in);
                 if (in->dir == -1) {
                     int32_t limit = in->a094_0 == 1 ? 0x1E : (int32_t)in->a094_0 << 5;
                     ret = in->room_q3 > (limit >> 1) ? 0x20 : 0x10;
@@ -159,8 +185,20 @@ int aos_shop_buy_update(AosShop *s, const AosShopInput *in, AosShopOut *out) {
                     s->menu = 4;
                 }
             } else if (s->menu == 4 && s->cursor == 0) {
-                out->side_record_58 = true;       /* record +0x58 bit 6 */
-                out->side_player_58 = true;       /* player +0x58 bit 6 */
+                /* entityData[slot11] +0x58 store, then the
+                 * conditional player +0x58 sync: the ROM writes
+                 * the player byte only when the record side bit
+                 * differs, storing (old & ~0x41) | record bit6
+                 * (the toggle-when-different sequence at
+                 * _08061F30.._08061F72). */
+                out->side_record_58 = true;
+                out->record58_val = record58_store(in);
+                out->side_player_58 =
+                    ((in->player_flags58 ^ out->record58_val) & 0x40) != 0;
+                if (out->side_player_58)
+                    out->player58_val =
+                        (uint8_t)((in->player_flags58 & ~0x41) |
+                                  (out->record58_val & 0x40));
                 out->write_417 = true;
                 out->write_417_val = s->cursor;   /* ROM stores +0xC (0) */
                 s->cursor = 1;

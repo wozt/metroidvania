@@ -49,14 +49,14 @@ int main(void) {
     in0.a094_6 = 0x50;             /* <= 0x70 -> arg2 0x40000 */
     in0.probe = 0x100;
     r = aos_shop_sell_update(&s, &in0, &out);
-    assert(out.transaction && out.transaction_arg2 == 0x40000);
+    assert(out.transaction && out.transaction_arg1 == 0x40000);
     assert(s.cursor == 2 && s.timer == 0x28);
     assert(out.anim_a == 0 && out.anim_b == 1 && out.anim_c == 1);
 
     /* A094[6] > 0x70 flips arg2 to 0. */
     in0.a094_6 = 0x71;
     r = aos_shop_sell_update(&s, &(AosShopInput){.text_done=false,.a094_6=0x71,.probe=0x100}, &out);
-    assert(out.transaction_arg2 == 0);
+    assert(out.transaction_arg1 == 0);
 
     /* Middle band: flag6d == 2 suppresses the anim, the slide
      * velocity is armed and pos40 integrates once. */
@@ -83,7 +83,7 @@ int main(void) {
 
     /* Menu 2 keeps transacting. */
     r = aos_shop_sell_update(&s, &in0, &out);
-    assert(out.transaction && out.transaction_arg2 == 0);
+    assert(out.transaction && out.transaction_arg1 == 0);
 
     /* Window done: jingle, release held sound, clear +0x42C
      * bit 0x40000, song 0x14, state 0x80. */
@@ -137,13 +137,59 @@ int main(void) {
     r = aos_shop_buy_update(&s, &in0, &out);
     assert(r == 0x10);
 
-    /* Menu 4 cursor 0 writes both side bits and +0x417 = 0. */
-    s.menu = 4; s.cursor = 0;
+    /* Menu 4 cursor 0 writes the record byte and, with the
+     * player's bit6 set against a clear record side, the
+     * conditional player +0x58 sync. */
+    s.state = 1; s.menu = 4; s.cursor = 0;
     in0.dir = 0;
+    in0.player_flags58 = 0x40;   /* player bit6 set, record side 0 */
     r = aos_shop_buy_update(&s, &in0, &out);
     assert(s.cursor == 1);
-    assert(out.side_record_58 && out.side_player_58);
+    assert(out.side_record_58);
+    assert(out.record58_val == 0);        /* (0 & ~0x41) | 0<<6 */
+    assert(out.side_player_58);
+    assert(out.player58_val == 0);        /* (0x40 & ~0x41) | 0 */
     assert(out.write_417 && out.write_417_val == 0);
+
+    /* When the player bit6 already matches the record side bit
+     * the ROM skips the player +0x58 store entirely. */
+    s.state = 1; s.menu = 4; s.cursor = 0;
+    memset(&in0, 0, sizeof in0);          /* both bit6 clear */
+    in0.dir = 0;
+    r = aos_shop_buy_update(&s, &in0, &out);
+    assert(out.side_record_58 && !out.side_player_58);
+
+    /* Record side bit: record +0x40 left of player +0x40 sets
+     * bit6 and preserves the other flag bits. */
+    s.state = 1; s.menu = 0; s.cursor = 0;
+    memset(&in0, 0, sizeof in0);
+    in0.record_pos40 = -0x10000;          /* record left of player */
+    in0.player_pos40 = 0;
+    in0.record_flags58 = 0x83;            /* bits 0,1,7 set */
+    r = aos_shop_buy_update(&s, &in0, &out);
+    assert(out.side_record_53c);
+    assert(out.record58_val == ((0x83 & ~0x41) | 0x40));
+
+    /* Record right of the player clears bit6 (and bit0). */
+    s.state = 1; s.menu = 0; s.cursor = 0;
+    in0.record_pos40 = 0x10000;
+    in0.player_pos40 = 0;
+    r = aos_shop_buy_update(&s, &in0, &out);
+    assert(out.record58_val == (0x83 & ~0x41));
+
+    /* sub_0800ED24's +0x427 gate: byte > param0 (1) suppresses
+     * the transaction with no side effects. */
+    memset(&s, 0, sizeof s);
+    memset(&in0, 0, sizeof in0);
+    s.state = 3; s.menu = 1; s.cursor = 1;
+    in0.byte_427 = 2;
+    r = aos_shop_sell_update(&s, &in0, &out);
+    assert(!out.transaction);
+    s.cursor = 1;                        /* the gated call still
+                                             advanced the cursor */
+    in0.byte_427 = 1;
+    r = aos_shop_sell_update(&s, &in0, &out);
+    assert(out.transaction && out.transaction_arg1 == 0x40000);
 
     /* Input busy in menu 0 does nothing. */
     memset(&s, 0, sizeof s); s.state = 1; s.menu = 0;

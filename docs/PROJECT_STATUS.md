@@ -43,6 +43,25 @@
   accumulation, +0x65 commits, loop wrap, once-end latch,
   pause/ended early-outs, +0x5B modes and the palette tail.
 
+## Patch 1135 - save schema v15, shop records, ambient-NPC audit
+
+- **Save schema v15**: `progress_flags` persists the
+  gEwramData+0x60 word (native SRAM slot 6) — `or_60_word`/`call_137fc`
+  now survive save->store->load; v1-v14 files load it as 0.
+- **Object20 shop fidelity**: `sub_0800ED24` decoded as the gated
+  BG1 scroll transaction (+0x427 byte); the +0x4E4 entityData record
+  view (+0x40 fine-X, +0x58 side-bit6 sync, conditional player write)
+  ported in `aos_shop` with documented host approximations.
+- **Ambient-NPC audit resolved**: all standard text-window dialogue
+  funnels through Object20's 0x08526658/0x085266D8 tables — the
+  proximity trigger is `sub_08065DB8` (sub_08068AD4 box vs the player
+  entity, no button press), already wired. SPECIAL tables corrected
+  to 0x084F0DF8/0x084F0ED8. A second text UI (`sub_0805AFC0` via
+  engine dispatcher `func_0800C022`) remains unidentified.
+- **Object1C modes +0x5B 2/3**: proven dead for Object1C (every
+  sub_0803F2C8 site passes mode 0) — documented with asm evidence.
+- Registries synced (shop_sequences, portable_slots, text_window rows).
+
 ## Patch 1134 - aria_runtime decomposition wave 5, word60 channel, dialogue soft-lock fix
 
 - **aria_runtime.c: ~13.4k -> ~3.4k lines** after wave 5:

@@ -42,6 +42,22 @@ typedef struct {
     int32_t room_q3;        /* (GetEntityRoomXPositionInteger e, +7 if
                                negative) >> 3 */
     bool record_left;       /* record +0x40 < player +0x40 (side bit) */
+    /* entityData[s->slot11] record view (gEwramData + 0x4E4 +
+     * slot*0x84, stride 0x84): the buy menu reads the record's
+     * +0x40 fine-X (unk_524) against the player's +0x40 and
+     * rewrites the record's +0x58 flags (unk_53C) as
+     * (old & ~0x41) | side<<6. Entity +0x11's native source
+     * (spawn record / link propagation) is unmodelled, so the
+     * host binds the record view — typically the shopkeeper's
+     * own entity record. */
+    int32_t player_pos40;   /* player entity +0x40 fine X */
+    int32_t record_pos40;   /* record +0x40 fine X */
+    uint8_t record_flags58; /* record +0x58 flags byte */
+    uint8_t player_flags58; /* player entity +0x58 flags byte */
+    /* gEwramData +0x427 byte: sub_0800ED24's gate — the
+     * transaction is suppressed while it exceeds the call's
+     * param0 (always 1 from the shop routines). */
+    uint8_t byte_427;
 } AosShopInput;
 
 /* Outputs reset at the top of every call; they name the native
@@ -60,8 +76,16 @@ typedef struct {
     uint8_t write_417_val;
     bool write_427;         /* gEwramData + 0x427 byte write */
     uint8_t write_427_val;
-    bool transaction;       /* sub_0800ED24(1, arg2, 0) */
-    uint32_t transaction_arg2;
+    /* sub_0800ED24(1, arg1, 0) — the BG1 scroll transaction:
+     * gated on gEwramData +0x427 <= 1, it requests the BG1
+     * scroll velocity through sub_0803FBBC, the entity
+     * scroll-compensation pass sub_08000F60 and the scroll
+     * apply sub_0800D288. transaction_arg1 is param_1 (the
+     * 16.16 x velocity; param_2 is always 0). The native
+     * return (0 when gated, 1 when run) is discarded by the
+     * callers, so only the fired request is reported. */
+    bool transaction;
+    uint32_t transaction_arg1;
     int anim_a, anim_b, anim_c; /* sub_0803F2C8(e, a, b, c), -1 none */
     bool anim_step;         /* sub_0803F17C(e) */
     bool release;           /* sub_0805B66C(1) */
@@ -71,6 +95,16 @@ typedef struct {
     bool side_record_53c;
     bool side_record_58;
     bool side_player_58;
+    /* The entityData[slot11] +0x58 byte store behind
+     * side_record_53c/side_record_58: (old & ~0x41) | side<<6
+     * with side = record +0x40 < player +0x40. Valid whenever
+     * either record bool is set (both name the same byte —
+     * gEwramData +0x53C + slot*0x84 IS record +0x58). */
+    uint8_t record58_val;
+    /* The player +0x58 store behind side_player_58: fires only
+     * when the record side bit differs from the player's, and
+     * stores (old & ~0x41) | record_bit6. */
+    uint8_t player58_val;
     uint8_t andnot_player58;    /* player +0x58 &= ~mask */
     uint8_t andnot_ent58;       /* entity +0x58 &= ~mask */
     int return_code;        /* the ROM's r0 result */

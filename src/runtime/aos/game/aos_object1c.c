@@ -749,10 +749,52 @@ static int child_seq_step_pal(const AosObject1CAnimSeq *seq,
  * current sequence (+0x6C bit 3 ? +0x68 : the frame set's
  * +8[+0x6D] descriptors) and calls its step function directly;
  * 1 is sub_0803EE24 (step + palette tail); 2/3 are sub_0803EEFC/
- * sub_0803EFF0, the direct-sequence systems this module does not
- * model. The +0x6C-bit-3-clear descriptor path is likewise
+ * sub_0803EFF0. The +0x6C-bit-3-clear descriptor path is likewise
  * unported — no Object1C child reaches it (every spawn goes
- * through sub_0803F2C8/sub_0803F0E4, both of which set the bit). */
+ * through sub_0803F2C8/sub_0803F0E4, both of which set the bit).
+ *
+ * Modes 2/3 decode (code_08039340.s) — both run the SAME
+ * sequence step as mode 0 (the shared +0x6C-bit-3/+0x68-vs-
+ * +8[+0x6D] resolve plus the 0x080E2B34 step call, whose s16
+ * result they return) and add a palette/OBJ-row effect:
+ *
+ * - sub_0803EEFC (mode 2): after the step, if +0x65 changed it
+ *   re-resolves the frame-set record, picks the +0x65-th 16-byte
+ *   frame entry (entry 0 when +0x65 >= the record count), then
+ *   scans that entry's 12-byte palette-slot list (count u8 at
+ *   entry+5, list ptr at entry+0xC, byte +9 of each slot) for
+ *   the FIRST NONZERO palette index and applies it through
+ *   sub_0803B998/sub_0803B840/sub_0803AA20 when it differs from
+ *   the current row. No RNG.
+ * - sub_0803EFF0 (mode 3): before the step it resolves the
+ *   frame-set record, follows the +0x10174[record*20] ->
+ *   +0xFED4 object table and requires object byte 0 == 2; the
+ *   sequence's +0x6E-indexed 4-byte-stride byte at seq+4 selects
+ *   a palette row (byte >> 2 indexes a 4-byte table at object
+ *   +4) applied via sub_0803B998/sub_0803B66C, tracked by
+ *   entity +0x37 (last applied byte). Then it runs the same
+ *   sequence step and returns its result. No RNG either; both
+ *   return 0 early when their table lookups fail.
+ *
+ * Reachability verdict: DEAD for Object1C. +0x5B is only ever
+ * written by sub_0803F2C8 (arg2), sub_0803F0E4 (arg2) and a few
+ * literal strb sites in OTHER objects' routines (e.g.
+ * code_08040A38.s _08045A6C/_08045A84 write 2/1,
+ * code_080809C0.s _08083C8A, code_08090914.s _0809E7F2 and
+ * code_080A0A8C.s write 2). Inside the whole Object1C region
+ * (Object1CCreate 0x0805464C through sub_080554BC,
+ * code_08050A3C.s ~7619-9573) there is not one +0x5B reference
+ * and no sub_0803F0E4/sub_0803F348/sub_0803F39C call; all five
+ * sub_0803F2C8 call sites (sub_08054E38 sparkle spawn, the
+ * sub_08055070 state-1 frame sets 1/5, sub_080552C4 spark
+ * state 0 frame 3) pass arg2 = 0, so +0x5B is always 0. The
+ * marker child runs EntityUpdateNothing (never reaches
+ * sub_0803F17C) and the fade child sub_08054574 never calls it
+ * either. Modes 1-3 are therefore unreachable for this object;
+ * they stay counted through anim_modes rather than modeled —
+ * implementing them would need the frame record's palette-slot
+ * list and the +0x10174/+0xFED4 object tables, neither of which
+ * exists in AosObject1CChildrenIn. */
 static int child_anim_advance(unsigned idx, AosObject1CChild *c,
                               const AosObject1CChildrenIn *in,
                               AosObject1CChildrenOut *out) {
@@ -774,6 +816,7 @@ static int child_anim_advance(unsigned idx, AosObject1CChild *c,
         break;
     case 2:
     case 3:
+        /* Dead for Object1C (see above): counted, not played. */
         ++out->anim_modes;
         rc = 0;
         break;

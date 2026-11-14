@@ -681,14 +681,34 @@ int main(void) {
             assert(s->anim65 == 0x55);
         }
 
-        /* +0x5B modes: 2/3 count as unported; mode 1 runs the
-         * palette tail when frame_pal is supplied. */
+        /* +0x5B modes: 2/3 are dead for Object1C — every spawn and
+         * frame-set path passes sub_0803F2C8 arg2 = 0, so no child
+         * can hold mode5b 2/3 (modes 1-3 are all unreachable; only
+         * mode 1 is modeled, for completeness). They stay counted
+         * through anim_modes and touch no animation state. */
+        for (unsigned i = 0; i < o.child_count; ++i)
+            assert(o.children[i].mode5b == 0);
         {
             AosObject1CChild *s = &o.children[o.child_count - 1];
             s->flags6c = 0x9; s->mode5b = 2;
             s->anim6e = 0; s->anim6f = 0; s->anim6d = 2;
+            s->anim65 = 0x55;
             aos_object1c_children_update(&o, &cin, &cout);
             assert(cout.anim_modes >= 1);
+            /* Not modeled: +0x65 and the seq counters are untouched
+             * (native sub_0803EEFC would step the seq AND run its
+             * palette-slot scan — unreachable here). */
+            assert(s->anim65 == 0x55 && s->anim6e == 0 &&
+                   s->anim6f == 0);
+        }
+        {
+            /* mode 3 (sub_0803EFF0) likewise counts only; cout is
+             * cleared per update and only this child is in 2/3. */
+            AosObject1CChild *s = &o.children[o.child_count - 1];
+            s->mode5b = 3;
+            aos_object1c_children_update(&o, &cin, &cout);
+            assert(cout.anim_modes == 1);
+            s->mode5b = 0;
         }
         {
             /* mode 1 + frame_pal: seq2 entries frames 8,9. */

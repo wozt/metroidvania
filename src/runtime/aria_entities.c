@@ -182,11 +182,21 @@ static uint16_t object20_ewram_unk6;
  * sub_080043CC's entity variant 3; bit 0 is read at
  * code_08005894. The Object20 story family writes it: param0-31
  * state 0x80 ORs bit 0 (then calls sub_08013788) and param0-23's
- * sub_080137FC ORs bits 0-1. There is no runtime save-slot-6
- * channel yet, so the word lives here for the session — it does
- * not persist across save/load and starts at the fresh-state 0
- * (documented gap). */
+ * sub_080137FC ORs bits 0-1. The word is the native SRAM save
+ * slot 6, so it persists through the portable save's
+ * AosSaveData.progress_flags (schema v15): while a save is live
+ * (object1c_save_ctx) the save field is authoritative — the
+ * loaded value enters this channel in object20_fill_in and the
+ * story writes below store back through it. With no save
+ * context (e.g. --simulate) it stays session-scoped and starts
+ * at the fresh-state 0. */
 static uint32_t object20_ewram_word60;
+/* gEwramData +0x427 byte: sub_0800ED24's transaction gate — the
+ * shop sell sequence writes it (the +0xB menu value, then 0 at
+ * release) and every sub_0800ED24 call suppresses itself while
+ * the byte exceeds the call's param0 (1). Session-scoped like
+ * the word60 channel: no other ported writer feeds it. */
+static uint8_t object20_ewram_427;
 /* gEwramData +8 RNG state + +0x7864 byte for the ported
  * sub_08064518 whiteout renderer (param0 30). The RNG state
  * round-trips through the story Out; +0x7864 has no other
@@ -302,8 +312,9 @@ static int obj14_probe(void *ctx, int kind, int32_t a, int32_t b,
  *                cleared-game variants (prologue +0x414 rewrite,
  *                sub_08013960 music tables, sub_080043CC entity
  *                variant); bit 0 is read at code_08005894. Fed
- *                from object20_ewram_word60 — session-scoped until
- *                a save channel exists.
+ *                from object20_ewram_word60, which mirrors the
+ *                portable save's progress_flags (schema v15, the
+ *                native SRAM slot 6) while a save is live.
  *   word16        gEwramData + 0x16 is inputData.newInput — the GBA
  *                key mask newly pressed this frame (include/structs/
  *                ewram.h InputData). update_entities' new_input is
@@ -391,6 +402,14 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
                              uint16_t new_input, AosObject20In *in) {
     memset(in, 0, sizeof *in);
     in->word16 = new_input;    /* gEwramData + 0x16 inputData.newInput */
+    /* gEwramData + 0x60 is the native SRAM save slot 6: while a
+     * portable save is live its progress_flags field is
+     * authoritative, so the loaded value enters the session channel
+     * here (first entity update after a load/room restore) and the
+     * story writes below store back through it. With no save
+     * context the static keeps its session value. */
+    if (object1c_save_ctx)
+        object20_ewram_word60 = object1c_save_ctx->progress_flags;
     in->word60 = object20_ewram_word60; /* gEwramData + 0x60 flags */
     in->flag1327a = soma ? soma->hp : 0;
     in->flag42c = aria_pickup_state.global_flags;
@@ -453,6 +472,18 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
         in->shop.ent_left_of_player = esx < psx;
     }
     in->shop.room_q3 = e->x >> 3;
+    /* entityData[+0x11] record view (gEwramData + 0x4E4 +
+     * slot*0x84): entity +0x11's native source is unmodelled,
+     * so the shopkeeper's own record is bound — record +0x40 is
+     * its fine X (e->x) and +0x58 its flags byte, which has no
+     * Object20 consumer yet and stays 0 (the computed store
+     * value still reaches the Out). player +0x40 is soma->x;
+     * player +0x58 keeps the shared facing approximation. */
+    in->shop.player_pos40 = soma ? soma->x : 0;
+    in->shop.record_pos40 = e->x;
+    in->shop.record_flags58 = 0;
+    in->shop.player_flags58 = in->player_flags58;
+    in->shop.byte_427 = object20_ewram_427;
     /* npc probes (param0 25-28). */
     for (int bit = 0; bit <= 0x32; ++bit)
         if (object20_flag12078(bit))
@@ -609,17 +640,26 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     if (out->story.flags37e_clear1) aria_pickup_state.special &= ~1;
     /* gEwramData +0x60 progress-flags word writes: param0-31's
      * state-0x80 tail ORs bit 0 (or_60_word) then calls
-     * sub_08013788 — a pure SRAM slot-6 write of the unchanged
-     * word, no host channel needed. param0-23's sub_080137FC does
-     * |= 3 plus the same SRAM write and a save-slot reload through
-     * sub_080127F0(currentSaveSlot, 1) — the reload has no runtime
-     * save channel and stays unforwarded; only the bit-writes
-     * land here. write_64_0a (+0x64 = 0x0A) is the sibling scene
-     * byte, not this word. */
-    if (out->story.or_60_word) object20_ewram_word60 |= 1;
-    if (out->story.call_137fc) object20_ewram_word60 |= 3;
+     * sub_08013788 — natively a pure SRAM slot-6 write of the
+     * unchanged word; here it lands in the session channel and the
+     * live save's progress_flags so the next store persists it.
+     * param0-23's sub_080137FC does |= 3 plus the same SRAM write
+     * and a save-slot reload through sub_080127F0(currentSaveSlot,
+     * 1) — the reload re-reads the word just written, which the
+     * fill_in mirror already reflects; only the bit-writes land
+     * here. write_64_0a (+0x64 = 0x0A) is the sibling scene byte,
+     * not this word. */
+    if (out->story.or_60_word || out->story.call_137fc) {
+        object20_ewram_word60 |= out->story.call_137fc ? 3u : 1u;
+        if (object1c_save_ctx)
+            object1c_save_ctx->progress_flags = object20_ewram_word60;
+    }
     if (out->story.wo_unk4 >= 0) object20_ewram_unk4 = (uint16_t)out->story.wo_unk4;
     if (out->story.wo_unk6 >= 0) object20_ewram_unk6 = (uint16_t)out->story.wo_unk6;
+    /* gEwramData +0x427: the shop sell sequence's ED24 gate byte
+     * round-trips through object20_ewram_427 (filled into
+     * in->shop.byte_427 above). */
+    if (out->shop.write_427) object20_ewram_427 = out->shop.write_427_val;
     if (out->story.wo_rng >= 0) object20_wo_rng = (uint32_t)out->story.wo_rng;
     if (out->story.wo_bars_drawn || out->story.wo_spawn_count ||
         out->story.wo_particle_count || out->story.wo_purge_547 ||
@@ -830,9 +870,16 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     if (out->shop.release_sound_2b)
         printf("Object20 %d: release sound 0x2B\n", e->id);
     if (out->shop.transaction) {
-        printf("Object20 %d: shop transaction arg2 0x%X (unforwarded)\n",
-               e->id, (unsigned)out->shop.transaction_arg2);
+        printf("Object20 %d: shop transaction arg1 0x%X (unforwarded)\n",
+               e->id, (unsigned)out->shop.transaction_arg1);
     }
+    if (out->shop.side_record_53c || out->shop.side_record_58 ||
+        out->shop.side_player_58)
+        printf("Object20 %d: shop record flags write rec58=0x%02X "
+               "player58=%d val=0x%02X (unforwarded)\n",
+               e->id, out->shop.record58_val,
+               out->shop.side_player_58 ? 1 : 0,
+               out->shop.player58_val);
     if (out->story.ed24_a >= 0) {
         printf("Object20 %d: story transaction ed24(0x%X, 0x%X) "
                "(unforwarded)\n", e->id, out->story.ed24_a,

@@ -200,8 +200,12 @@ typedef struct {
     uint8_t anim6e;         /* +0x6E sub-frame index (< seq count) */
     uint8_t anim6f;         /* +0x6F sub-frame tick */
     uint8_t mode5b;         /* +0x5B animation mode (sub_0803F2C8
-                               arg2: 0 direct step, 1 sub_0803EE24,
-                               2/3 unported direct sequences) */
+                               arg2 / sub_0803F0E4 arg2: 0 direct
+                               step, 1 sub_0803EE24 step+palette,
+                               2 sub_0803EEFC / 3 sub_0803EFF0
+                               step+palette/OBJ-row — unreachable
+                               for Object1C, every child frame set
+                               passes arg2 = 0) */
     uint8_t flags6c;        /* +0x6C: bit 0 loop, bit 1 pause,
                                bit 2 ended, bit 3 play the +0x68
                                sequence (set with |8 by
@@ -336,7 +340,11 @@ typedef struct {
     unsigned anim_looped;   /* looping sequences wrapping
                                (+0x6E = 0, return 4) */
     unsigned anim_modes;    /* +0x5B 2/3 advances: sub_0803EEFC/
-                               sub_0803EFF0 direct sequences, not
+                               sub_0803EFF0 (sequence step plus a
+                               palette-slot scan / +0x6E-indexed
+                               OBJ-row effect). Dead for Object1C —
+                               no child path ever sets +0x5B to 2
+                               or 3 — so they are counted, not
                                modeled */
     unsigned pal_changes;   /* sub_0803EE24 +0x65-change palette
                                writes (mode +0x5B == 1 only) */

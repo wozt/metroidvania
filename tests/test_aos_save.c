@@ -82,6 +82,8 @@ int main(void) {
     source.map_explored[279] = 0x80;
     /* Schema v14: secret-room discovery bits 0, 2, 4, 6, 8, 10 and 12. */
     source.secret_rooms = 0x1555;
+    /* Schema v15: the gEwramData + 0x60 progress-flags word (SRAM slot 6). */
+    source.progress_flags = 3;
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};
@@ -100,7 +102,8 @@ int main(void) {
                strstr(all, "placed_items=00000002,00000000,04000000,00000000,20000000,"
                            "00000000\n") &&
                strstr(all, "special_souls=0042\n") &&
-               strstr(all, "secrets=1555\n"));
+               strstr(all, "secrets=1555\n") &&
+               strstr(all, "progress_flags=00000003\n"));
         /* Schema v11 keeps placed items but initializes special souls empty. */
         char v11[2048];
         int v11_size = snprintf(v11, sizeof v11, "%s\n", AOS_SAVE_SCHEMA_V11);
@@ -148,6 +151,23 @@ int main(void) {
         AosSaveData old = {0};
         assert(aos_save_load(path, &old, error, sizeof error));
         assert(old.events[1] == 0 && old.events[7] == 0 && old.dropped[1][2] == loaded.dropped[1][2]);
+
+        /* The same data as schema v14 (no progress-flags line) keeps its
+         * secret rooms and loads the fresh-state flags word 0. */
+        char v14[2048];
+        int v14_size = snprintf(v14, sizeof v14, "%s\n", AOS_SAVE_SCHEMA_V14);
+        const char *flags = strstr(all, "progress_flags=");
+        memcpy(v14 + v14_size, body, (size_t)(flags - body));
+        v14_size += (int)(flags - body);
+        v14_size += snprintf(v14 + v14_size, sizeof v14 - (size_t)v14_size,
+                             "checksum=%08x\n", test_checksum(v14, (size_t)v14_size));
+        FILE *v14_file = fopen(path, "wb");
+        assert(v14_file && fwrite(v14, 1, (size_t)v14_size, v14_file) == (size_t)v14_size);
+        assert(fclose(v14_file) == 0);
+        AosSaveData previous_v14 = {0};
+        assert(aos_save_load(path, &previous_v14, error, sizeof error));
+        assert(previous_v14.secret_rooms == source.secret_rooms &&
+               previous_v14.progress_flags == 0);
     }
 
     FILE *bad = fopen(bad_path, "wb");

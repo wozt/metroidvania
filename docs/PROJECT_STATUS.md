@@ -1,3 +1,72 @@
+## Patch 1144 - save-screen tiles, ambient audio channel, pause overlay fix, opening homing
+
+- **Save screen native frame**: `sub_08054280`'s seven BG0
+  screenblock-28 tilemap patch writes (tiles 0x2A0-0x2D7, BG
+  palette row 14 — the HUD tileset/palette resources) apply to
+  the shared HUD map through `aos_object1c_save_screen_apply` in
+  native DMA order; `in1c.save_slot` carries the active save's
+  `currentSaveSlot` even byte (Object1C has no slot-selection UI;
+  `sub_0805444C` hand cursor is unreferenced dead code natively).
+- **Ambient audio channel `+0x254CC` ported**: `sub_08013EEC`
+  (`aos_audio_ambient_set`: tracked-song reset to MUS_DUMMY, slot
+  store, PlaySong), raw stores (`aos_audio_ambient_store`),
+  `sub_08013F38` stop (`aos_audio_ambient_stop`) and
+  `sub_08013D30` held-sound release (`aos_audio_release_held`).
+  `aos_room_music_enter` runs the `sub_0806C354` teardown on every
+  room load; entity reports route through the ambient API;
+  `aos_room_music_change` re-arms on a stale tracker when the
+  song's player runs a foreign occupant. `sub_08013E74`/`13EAC`
+  stay unported.
+- **Dialogue jingle consumed**: `aos_room_dialogue_apply` plays
+  the state-1 A-edge `song` report (SE_132, player 5) through
+  `aos_audio_play_song` like the native inline PlaySong;
+  `palette_write` stays a documented report.
+- **Pause-menu overlay leak fixed**: the Object20 room-dialogue
+  window and the Object1C save prompt drew after the pause pages
+  with no `soul_menu.open` gate while `update_entities` is
+  skipped — an open window froze and composited over every page
+  (the user's "superimposed text"). Both draws are now gated;
+  verified `draw_soul_menu` never fires on the real-asset path.
+- **Opening homing verified native-exact**: soul orb
+  (`sub_0805EAFC`/`5EC20`/`5F0B0`), projectile homing on Arikado
+  (`+0x18` entity, `-0x100000` offset), emitted-children
+  disappearance on the parent `+0x20` attack-flag poll, Arikado
+  walk velocity `-0x6000` (~195 frames). Remaining approximations
+  documented (walk-on stop data table, `actor_animation_done`
+  proxy, 0x10px arrival box).
+- **Pause sub-page audit vs native PPM captures** (UP-tap
+  navigation solved): layouts confirmed; remaining gaps are OBJ
+  icon layers, title/frame strips, fade envelopes, enemy soul
+  message decorations, and the Sleep enter-path window
+  rectangles (native three-band layout proven; enter routine
+  unlocated).
+- Registries synced (`aos.audio.play_song`,
+  `aos.objects.room_dialogue`, `aos.saves.portable_slots`,
+  `aos.souls.equipment_menu`, `aos.events.opening_scene`).
+
+## Patch 1143 - Pause page native reference captures (diagnosis only)
+
+- Generated native PPM references for every pause page with
+  `aos_mgba_lab` from the same WRAM state: the hub only answers
+  discrete UP taps in scripted input (each ~10-frame press moves the
+  cursor one entry with wraparound; held DOWN produced no movement in
+  the capture harness, so all seven entries were reached by UP wraps
+  plus A). Steady-state captures exist for Soul Set is covered by the
+  hub entry, Equip, Item Use, Ability, Sleep, Config, the Enemy list
+  and (inconclusive) the Enemy detail.
+- The Sleep page capture disproves the Patch 0812 single-window
+  estimate: native draws the question text as a separate block in the
+  upper area (about pixel rows 64-86), a framed Yes/No window around
+  rows 90-112, and the shared bottom text band around rows 120-148 —
+  three bands, not one `sub_08040748(0,0,26,3)` window committed at
+  tile row 15. The window rectangles are set by the sleep state's
+  enter path (outside `sub_0804BD38`/`sub_0804BE0C`, which only print
+  text), so `aos_pause_graphics_render_sleep` stays partial until that
+  enter routine is ported; no guessed geometry was added.
+- `tests/test_aos_pause_graphics.c` gained an optional argv[5..10]
+  dump mode rendering the Item Use, Ability, Config, Sleep, Enemy
+  list and Enemy detail pages for side-by-side capture diffs.
+
 ## Patch 1142 - save prompt, pause graphics, room music, text fast-forward, opening spawn pass
 
 - **Opening duplicate Mina/Arikado fixed**: `update_entities` is
@@ -19,8 +88,15 @@
   native `SetPlayerInput` masks player words only — the earlier
   global mask deadlocked YES/NO). YES commits via
   `SaveData_SaveSlotToSram`; songs 0xEF/0xF0 cover
-  failure/decline. Slot selection, native tile/DMA visuals and
-  the hand cursor stay unported (`in1c.save_slot = 0`).
+  failure/decline. `sub_08054280`'s seven BG0 screenblock-28
+  tilemap patch writes (tiles 0x2A0-0x2D7, BG palette row 14 —
+  the HUD tileset/palette resources) now apply to the shared HUD
+  map through `aos_object1c_save_screen_apply` in native DMA
+  order, and `in1c.save_slot` carries the active save's
+  `currentSaveSlot` even byte (Object1C has no slot-selection UI;
+  the +0x16 cursor is Yes/No only). The hand cursor and the
+  remaining VRAM/window-register writes stay unported
+  (`sub_0805444C` is unreferenced in the disassembly dump).
 - **Pause graphics fixes**: `place_text` no longer rewrites BG0
   entries for glyph-empty cells and soul-ownership markers draw
   after the description window per `sub_0804D1DC`; a pre-existing

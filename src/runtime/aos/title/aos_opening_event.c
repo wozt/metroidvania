@@ -266,21 +266,20 @@ static void append_emission(AosOpeningActors *actors,
     }
 }
 
-static void begin_emitted_disappearance(AosOpeningActors *actors) {
-    for (unsigned i = 0; i < actors->emitted_count; ++i) {
-        AosOpeningEntity *entity = &actors->emitted[i];
-        if (!entity->active) continue;
-        entity->disappearing = true;
-        entity->state = entity->entity_type == 8 ? 4 : 3;
-        entity->step = 0;
-        entity->timer = 0;
-        entity->hidden = false;
-    }
+/* sub_0805D410 +0xB==5 at +0xD==0xD0 calls sub_0805EAFC with the
+ * skeleton's +0x42/+0x46, so the orb spawns exactly on the entity —
+ * there is no vertical offset (the -0x100000 belongs to the homing
+ * target only). Parent +0x20 bit 1 is raised here too: it is the flag
+ * the emitted children poll for their disappearance tails. Children
+ * still short of their poll state keep rising or hovering until they
+ * reach it, matching sub_0805E5D4/sub_0805E2D8. */
+static void raise_emitted_attack_flag(AosOpeningActors *actors) {
+    actors->attack_flag = true;
 }
 
 static void begin_opening_soul(AosOpeningActors *actors) {
     actors->soul_x = actors->x[2];
-    actors->soul_y = actors->y[2] - (16 << 16);
+    actors->soul_y = actors->y[2];
     actors->soul_vx = 0;
     actors->soul_vy = 0;
     actors->soul_speed = 0x30000;
@@ -288,9 +287,14 @@ static void begin_opening_soul(AosOpeningActors *actors) {
     actors->soul_age = 0;
     actors->soul_active = true;
     actors->soul_absorbed = false;
+    actors->soul_arrived = false;
+    actors->soul_events = 0;
     if (actors->angle) {
+        /* sub_0805EAFC aims sub_0802D344 at the player's +0x40/+0x44
+         * minus 0x80000 (the update's homing target uses -0x100000),
+         * then stores heading+0x8000 masked to 16 bits. */
         int16_t dx = (int16_t)(AOS_OPENING_SOMA_X - (actors->soul_x >> 16));
-        int16_t dy = (int16_t)((AOS_OPENING_SOMA_Y - 16) -
+        int16_t dy = (int16_t)((AOS_OPENING_SOMA_Y - 8) -
                                (actors->soul_y >> 16));
         actors->soul_heading =
             (uint32_t)(actors->angle(dx, dy, actors->motion_context) + 0x8000u) &
@@ -298,43 +302,65 @@ static void begin_opening_soul(AosOpeningActors *actors) {
     }
 }
 
-/* sub_0802D408's red-soul homing path. The opening owns a private instance
- * because the scripted reward is committed only when Object20 completes. */
+/* sub_0805EC20's homing, identical in structure to sub_0805EE88 and
+ * the red-soul path: sub_0802D408 turns the stored heading toward the
+ * player by at most +0x1C (growing 0x2A/frame to 0x4000) while +0x20
+ * accelerates 0x1800/frame to 0x80000. sub_0805EC20 then adds its own
+ * lifetime the projectile does not share: +0xD=0xC8 in +0xA==0 and
+ * +0xD=0x40 in +0xA==1, after which +0x59 bit 8 removes the orb —
+ * 0x108 frames of flight maximum. sub_0805F0B0 is the early-out: the
+ * player-touch callback plays SE 0xBC and removes the orb, which the
+ * port approximates with a 0x10-pixel box on the absorption target
+ * (the native check is the entity collision callback, not decoded
+ * further here). */
 static void update_opening_soul(AosOpeningActors *actors) {
     if (!actors->soul_active) return;
     ++actors->soul_age;
+    if (actors->soul_age >= 0xC8 + 0x40) {
+        actors->soul_active = false;
+        return;
+    }
     int32_t target_x = AOS_OPENING_SOMA_X << 16;
     int32_t target_y = (AOS_OPENING_SOMA_Y - 16) << 16;
     if (!actors->angle || !actors->sine) {
         actors->soul_x += (target_x - actors->soul_x) / 8;
         actors->soul_y += (target_y - actors->soul_y) / 8;
-        return;
+    } else {
+        int16_t dx = (int16_t)(AOS_OPENING_SOMA_X - (actors->soul_x >> 16));
+        int16_t dy = (int16_t)((AOS_OPENING_SOMA_Y - 16) -
+                               (actors->soul_y >> 16));
+        int32_t difference =
+            (int32_t)actors->angle(dx, dy, actors->motion_context) -
+            (int32_t)actors->soul_heading;
+        bool turn_up = difference > 0 ? difference <= 0x7FFF
+                                      : difference < -0x8000;
+        actors->soul_heading =
+            (uint32_t)((int32_t)actors->soul_heading +
+                       (turn_up ? actors->soul_turn : -actors->soul_turn)) &
+            0xFFFFu;
+        actors->soul_turn += 0x2A;
+        if (actors->soul_turn > 0x4000) actors->soul_turn = 0x4000;
+        actors->soul_speed += 0x1800;
+        if (actors->soul_speed > 0x80000) actors->soul_speed = 0x80000;
+        actors->soul_vx =
+            (actors->sine(actors->soul_heading + 0x4000u,
+                          actors->motion_context) >> 8) *
+            (actors->soul_speed >> 8);
+        actors->soul_vy =
+            (actors->sine(actors->soul_heading, actors->motion_context) >> 8) *
+            (actors->soul_speed >> 8);
+        actors->soul_x += actors->soul_vx;
+        actors->soul_y += actors->soul_vy;
     }
-    int16_t dx = (int16_t)(AOS_OPENING_SOMA_X - (actors->soul_x >> 16));
-    int16_t dy = (int16_t)((AOS_OPENING_SOMA_Y - 16) -
-                           (actors->soul_y >> 16));
-    int32_t difference =
-        (int32_t)actors->angle(dx, dy, actors->motion_context) -
-        (int32_t)actors->soul_heading;
-    bool turn_up = difference > 0 ? difference <= 0x7FFF
-                                  : difference < -0x8000;
-    actors->soul_heading =
-        (uint32_t)((int32_t)actors->soul_heading +
-                   (turn_up ? actors->soul_turn : -actors->soul_turn)) &
-        0xFFFFu;
-    actors->soul_turn += 0x2A;
-    if (actors->soul_turn > 0x4000) actors->soul_turn = 0x4000;
-    actors->soul_speed += 0x1800;
-    if (actors->soul_speed > 0x80000) actors->soul_speed = 0x80000;
-    actors->soul_vx =
-        (actors->sine(actors->soul_heading + 0x4000u,
-                      actors->motion_context) >> 8) *
-        (actors->soul_speed >> 8);
-    actors->soul_vy =
-        (actors->sine(actors->soul_heading, actors->motion_context) >> 8) *
-        (actors->soul_speed >> 8);
-    actors->soul_x += actors->soul_vx;
-    actors->soul_y += actors->soul_vy;
+    /* sub_0805F0B0's touch check, approximated by the same 0x10-pixel
+     * box the bolt's sub_0805EE88 margin uses on its target. */
+    int32_t dx = (actors->soul_x >> 16) - AOS_OPENING_SOMA_X;
+    int32_t dy = (actors->soul_y >> 16) - (AOS_OPENING_SOMA_Y - 16);
+    if (dx >= -0x10 && dx <= 0x10 && dy >= -0x10 && dy <= 0x10) {
+        actors->soul_active = false;
+        actors->soul_arrived = true;
+        actors->soul_events |= AOS_OPENING_ENTITY_EVENT_SOUND_0XBC;
+    }
 }
 
 static bool point_in_impact_margin(const AosOpeningActors *actors,
@@ -430,10 +456,12 @@ static void append_projectile(AosOpeningActors *actors,
     int32_t y = entity->y - 0x200000;
     uint32_t random = actors->random
                           ? actors->random(actors->motion_context) : 0;
-    int32_t target_y = actors->y[2] - 0x80000 -
+    /* sub_0805ED80 aims sub_0802D344 at Arikado's +0x40 and his +0x44
+     * minus 0x80000 plus a random 0..0x7F << 12 offset. */
+    int32_t target_y = actors->y[1] - 0x80000 -
                        (int32_t)(random & 0x7F) * 0x1000;
     uint16_t heading = (uint16_t)(angle_to(
-        actors, entity->x, y, actors->x[2], target_y) + 0x8000);
+        actors, entity->x, y, actors->x[1], target_y) + 0x8000);
     actors->projectiles[actors->projectile_count++] = (AosOpeningProjectile){
         .x = entity->x,
         .y = y,
@@ -523,8 +551,11 @@ static void update_skeleton_death(AosOpeningActors *actors) {
 
 static uint16_t turn_projectile(AosOpeningActors *actors,
                                 const AosOpeningProjectile *projectile) {
+    /* sub_0805EE88 homes on Object20's +0x18 entity — Arikado — at his
+     * +0x40/+0x44 with the same -0x100000 vertical offset the soul orb
+     * uses on the player. */
     uint16_t wanted = angle_to(actors, projectile->x, projectile->y,
-                               actors->x[2], actors->y[2] - 0x100000);
+                               actors->x[1], actors->y[1] - 0x100000);
     int32_t difference = (int32_t)wanted - projectile->heading;
     bool up = difference > 0 ? difference <= 0x7FFF : difference < -0x8000;
     return (uint16_t)(projectile->heading +
@@ -555,8 +586,12 @@ static void update_projectiles(AosOpeningActors *actors) {
             projectile->x += projectile->vx;
             projectile->y += projectile->vy;
         }
-        int32_t dx = (actors->x[2] >> 16) - (projectile->x >> 16);
-        int32_t dy = (actors->y[2] >> 16) - (projectile->y >> 16);
+        /* sub_0805EE88's arrival margin: Arikado's screen position inside
+         * a 0x20x0x20 box centered on the bolt's, i.e. within 0x10 pixels
+         * on each axis; screen-space differences equal world differences
+         * because both subtract the same camera origin. */
+        int32_t dx = (actors->x[1] >> 16) - (projectile->x >> 16);
+        int32_t dy = (actors->y[1] >> 16) - (projectile->y >> 16);
         if (dx >= -0x10 && dx <= 0x10 && dy >= -0x10 && dy <= 0x10) {
             projectile->events = AOS_OPENING_ENTITY_EVENT_SOUND_0XBC;
             projectile->active = false;
@@ -603,19 +638,25 @@ static void update_emitted_tail(AosOpeningActors *actors,
         entity->step = 1;
         break;
     case 1:
-        /* Both callbacks select the alternate OBJ attribute on odd timer
-         * values. Hidden is the portable renderer's approximation until the
-         * native palette/attribute path is available. */
+        /* Both callbacks toggle the alternate OBJ attribute on odd +0xD
+         * values and exit when +0xD reaches 0 — exactly 0x20 frames for
+         * the 0x20 reload — then restore the visible attribute. Hidden
+         * is the portable renderer's approximation until the native
+         * palette/attribute path is available. */
         entity->hidden = (entity->timer & 1) != 0;
-        if (--entity->timer == UINT8_MAX) {
+        if (entity->timer == 1) {
             entity->hidden = false;
             entity->step = 2;
             if (entity->entity_type == 8) entity->timer = 0x10;
+        } else {
+            --entity->timer;
         }
         break;
     case 2:
         if (entity->entity_type == 8) {
-            if (--entity->timer == UINT8_MAX) entity->step = 3;
+            /* sub_0805E2D8's +0xB==2 is a plain +0xD=0x10 countdown:
+             * 0x10 frames, exiting when the decrement reaches 0. */
+            if (!entity->timer || --entity->timer == 0) entity->step = 3;
         } else if (emitted_selector(actors, entity)) {
             entity->step = 3;
         }
@@ -674,7 +715,10 @@ static void update_emitted(AosOpeningActors *actors) {
         if (entity->animation_age < UINT16_MAX) ++entity->animation_age;
         if (!entity->disappearing && entity->entity_type == 8) {
             /* sub_0805E2D8 states 0-2: a phase-randomized quarter-amplitude
-             * sine bob, followed by the parent-bit-8 state handoff. */
+             * sine bob, followed by the parent-bit-8 state handoff. The
+             * state2 tail polls parent +0x20 bit 1 every frame; children
+             * still in states 0-2 when the attack lands keep bobbing
+             * until they arrive at state 2. */
             if (entity->state <= 2 && actors->sine) {
                 int32_t dy = actors->sine((uint16_t)(entity->phase + 0x4000),
                                           actors->motion_context);
@@ -684,6 +728,13 @@ static void update_emitted(AosOpeningActors *actors) {
             }
             if (entity->state == 0) entity->state = 1;
             else if (entity->state == 1) entity->state = 2;
+            else if (entity->state == 2 && actors->attack_flag) {
+                entity->state = 4;
+                entity->disappearing = true;
+                entity->step = 0;
+                entity->timer = 0;
+                entity->hidden = false;
+            }
         } else if (!entity->disappearing && entity->entity_type == 10 &&
                    actors->random) {
             uint8_t initial_state = entity->state;
@@ -716,6 +767,18 @@ static void update_emitted(AosOpeningActors *actors) {
                     entity->animation = 2;
                     if (entity->step == 0) entity->step = 1;
                 }
+            }
+            /* sub_0805E5D4's case-2 tail polls parent +0x20 bit 1 after
+             * the flight/animation work each frame; entities still in
+             * states 0-1 when the attack lands keep rising until they
+             * reach state 2. */
+            if (initial_state == 2 && entity->state == 2 &&
+                actors->attack_flag) {
+                entity->state = 3;
+                entity->disappearing = true;
+                entity->step = 0;
+                entity->timer = 0;
+                entity->hidden = false;
             }
         }
         if (entity->disappearing) update_emitted_tail(actors, entity);
@@ -972,6 +1035,9 @@ AosOpeningCue aos_opening_actors_update(
     actors->camera_y = camera_y;
     AosOpeningCue output = actors->pending_cue;
     actors->pending_cue = AOS_OPENING_CUE_NONE;
+    /* Edge-triggered like the emitted entities' events field: the host
+     * reads soul_events once per frame after this update returns. */
+    actors->soul_events = 0;
     ++actors->frame;
     for (unsigned actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor)
         if (actors->animation_age[actor] < UINT16_MAX)
@@ -1003,18 +1069,78 @@ AosOpeningCue aos_opening_actors_update(
         }
         goto scene;
     }
-    /* sub_0805D198 gives Arikado -0xA000 fixed-point velocity. The native
-     * callback eventually stops him when the scene's proximity condition is
-     * met; the source-position guard keeps this partial controller bounded
+    /* sub_0805D198 stores 0xFFFFA000 (-0x6000, about 0.37 pixel per
+     * frame) into entity+0x48, Arikado's x velocity. The native stop
+     * condition lives in entity type 1's data-driven behavior (resource
+     * table 0x081186DC record 1), which is not decoded here; the
+     * source-position guard keeps this partial controller bounded
      * until that condition is ported. */
     if (actors->state == 1) {
         const int32_t stop_x = 0xD0 << 16;
         if (actors->x[1] > stop_x) {
-            actors->x[1] -= 0xA000;
+            actors->x[1] -= 0x6000;
             if (actors->x[1] < stop_x) actors->x[1] = stop_x;
         } else {
             actors->state = 2;
             actors->step = 0;
+        }
+    }
+
+    /* sub_0805DAA0, the scripted Winged Skeleton's own callback:
+     * +0xA==0 waits on parent +0x20 bit 8 (the distant batch), +0xA==1
+     * runs the same phase-sine vertical bob the emitted Winged
+     * Skeletons use while polling bit 0x10 (Arikado's attack animation
+     * under +0xB==4), and +0xA==2 walks him left through sub_0806E140
+     * until his screen position reaches the 0xCA threshold. */
+    if (actors->skeleton_state == 0 &&
+        (actors->emitted_batches & AOS_OPENING_EMISSION_DISTANT)) {
+        actors->skeleton_state = 1;
+    }
+    if (actors->skeleton_state == 1) {
+        if (actors->scene_state == 4 && actors->scene_step >= 2) {
+            actors->skeleton_state = 2;
+            actors->skeleton_step = 1;
+            actors->skeleton_timer = 0x60;
+            actor_animation(actors, 2, 5);
+        } else if (actors->sine) {
+            int32_t dy = actors->sine(
+                (uint16_t)(actors->skeleton_phase + 0x4000),
+                actors->motion_context);
+            if (dy < 0) dy += 3;
+            actors->y[2] += dy >> 2;
+            actors->skeleton_phase = (uint16_t)(actors->skeleton_phase + 0x200);
+        }
+    } else if (actors->skeleton_state == 2) {
+        if (actors->skeleton_step == 1) {
+            /* +0xB==1's +0xD=0x60 countdown before the approach. */
+            if (actors->skeleton_timer && --actors->skeleton_timer == 0)
+                actors->skeleton_step = 2;
+        } else {
+            /* +0xB==2 approach: sub_0806E140(entity, 0x30000, 0x200000,
+             * 0x14000, 1) stores +0x48=-0x30000 (facing away from the
+             * player puts the sign negative) and +0x4C=0x14000, then
+             * the callback adds both velocities. The stop test compares
+             * +0x42 against 0xCA minus the camera word; with +0x42
+             * already screen-relative that reduces to a world X of
+             * 0xCA, which is the proxy used here. Without a floor probe
+             * the entity simply falls at +0x4C per frame. */
+            if (actors->skeleton_death) {
+                /* generic_death owns the body from +0xD==0xD0 on. */
+            } else if ((actors->x[2] >> 16) > 0xCA) {
+                int32_t next_x = actors->x[2] - 0x30000;
+                int32_t next_y = actors->y[2] + 0x14000;
+                int depth = actors->floor_depth
+                                ? actors->floor_depth(next_x >> 16,
+                                                      next_y >> 16,
+                                                      actors->motion_context)
+                                : 0;
+                actors->x[2] = next_x;
+                actors->y[2] = depth ? ((next_y >> 16) + depth) * 0x10000
+                                     : next_y;
+            } else {
+                actor_animation(actors, 2, 2);
+                actors->skeleton_state = 3;
+            }
         }
     }
 
@@ -1102,9 +1228,8 @@ scene:
             if (actor_animation_done(actors, animation_durations, 1)) {
                 /* Native sub-state 3 ORs parent +0x20 with 2 here; the
                  * emitted children poll that flag for their attack and
-                 * despawn sequence, approximated by the disappearance
-                 * pass the old scene_state 4 model already used. */
-                begin_emitted_disappearance(actors);
+                 * despawn sequence. */
+                raise_emitted_attack_flag(actors);
                 actors->scene_step = 3;
                 actors->scene_timer = 0x11;
             }
@@ -1152,11 +1277,12 @@ scene:
                 due = AOS_OPENING_CUE_ENEMY_DEFEATED;
             } else if (actors->scene_timer == 0x8F) {
                 due = AOS_OPENING_CUE_SOUL_ABSORBED;
-                actors->soul_active = false;
+                /* sub_0805D410 does not touch the orb here: sub_0805F0B0's
+                 * touch callback or sub_0805EC20's own +0xD lifetime owns
+                 * its removal, so the soul keeps homing through the
+                 * obtained-soul window exactly like the native entity. */
                 actors->soul_absorbed = true;
                 actors->soul_notice = 1;
-                actors->soul_x = AOS_OPENING_SOMA_X << 16;
-                actors->soul_y = (AOS_OPENING_SOMA_Y - 16) << 16;
                 actors->soma_animation = 0x52;
                 actors->soma_hidden = false;
                 actors->scene_step = 2;

@@ -2,6 +2,7 @@
  * Object20 room-dialogue bridge (sub_08067934 open / sub_08067A04
  * poll / sub_08067898 close) with a mock host context. */
 #include "../src/runtime/aos/game/aos_room_dialogue.h"
+#include "../src/runtime/aos/core/aos_audio.h"
 #include "../src/runtime/aos/core/aos_input.h"
 #include <assert.h>
 #include <stdio.h>
@@ -369,6 +370,22 @@ int main(void) {
     assert(aos_room_dialogue_poll(&dlg, AOS_KEY_A));
     assert(aos_room_dialogue_text_done(&dlg));
     assert(dlg.song == 0x132 && dlg.palette_write);
+    aos_room_dialogue_close(&dlg);
+
+    /* _08068076's state-1 A-edge branch calls PlaySong(0x132)
+     * inline; aos_room_dialogue_apply consumes the report through
+     * aos_audio_play_song. Drive the same script through apply so
+     * the A-edge lands on the wait frame. */
+    aos_audio_reset();
+    aos_audio_clear();
+    req.window_text = 0x14;
+    req.window_poll = true;
+    aos_room_dialogue_apply(&dlg, 0, &req);       /* open + first poll */
+    assert(aos_room_dialogue_active(&dlg));
+    req.window_text = -1;
+    aos_room_dialogue_apply(&dlg, AOS_KEY_A, &req); /* disarm typewriter */
+    aos_room_dialogue_apply(&dlg, AOS_KEY_A, &req); /* wait + tail: 0x132 */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x132) == 1);
     aos_room_dialogue_close(&dlg);
 
     /* Missing host / missing resolver are handled, not crashed. */

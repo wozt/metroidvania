@@ -103,6 +103,25 @@ bool aos_audio_hold(uint16_t song);
 bool aos_audio_release(uint16_t song);
 /* The held list, slot 0 first (0 for an empty slot). */
 uint16_t aos_audio_held(int slot);
+/* sub_08013D30: release every held sound — sub_08013E18 on each
+ * nonzero unk_254C4 slot, highest index first. Runs inside the
+ * room-transition teardown (sub_0806C354) before sub_08013F38. */
+void aos_audio_release_held(void);
+
+/* gEwramData +0x254CC: the ambient/temporary song slot. Entity
+ * sequences plant a song here (the opening guard's 0x26) and the
+ * room-transition teardown stops it; the slot survives until then. */
+uint16_t aos_audio_ambient(void);
+/* Raw +0x254CC word store: the story/npc sequences that write the
+ * slot directly without sub_08013EEC's tracker reset or PlaySong. */
+void aos_audio_ambient_store(uint16_t song);
+/* sub_08013EEC(song): sub_08013960_inline_0(0) resets the tracked
+ * current song to MUS_DUMMY (a playing song is stopped and song 0
+ * takes its place), then +0x254CC = song and PlaySong(song). */
+void aos_audio_ambient_set(uint16_t song);
+/* sub_08013F38: PlaySong(+0x254CC | STOP_SONG) and clear the slot
+ * when one is held. Runs on room transitions (sub_0806C354). */
+void aos_audio_ambient_stop(void);
 
 void aos_audio_clear(void);
 int aos_audio_count(void);

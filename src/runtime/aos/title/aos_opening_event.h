@@ -297,6 +297,29 @@ typedef struct {
     uint8_t soul_notice;
     uint8_t soul_notice_timer;
     uint16_t notice_input;
+    /* sub_0805DAA0, the scripted Winged Skeleton's own callback:
+     * skeleton_state mirrors entity +0xA (0 waits parent +0x20 bit 8,
+     * 1 bobs until bit 0x10, 2 runs the +0xB attack sub-states, 3 is
+     * the post-walk idle), skeleton_step its +0xB, skeleton_timer its
+     * +0xD and skeleton_phase its +0x26 bob phase. */
+    uint8_t skeleton_state;
+    uint8_t skeleton_step;
+    uint8_t skeleton_timer;
+    uint16_t skeleton_phase;
+    /* Parent +0x20 bit 1 (value 2): +0xB==4 sub-state 3 sets it when
+     * child18's +0x59 animation-finished flag arrives. Emitted
+     * children poll it every frame and only then enter their
+     * disappearance tails, so children still rising or waiting on
+     * their selector are not cut short. */
+    bool attack_flag;
+    /* sub_0805F0B0's player-touch callback on sub_0805EAFC's soul orb:
+     * SE 0xBC plus +0x59 bit 8 removal. The port approximates the
+     * touch margin with a 0x10-pixel box on the absorption target;
+     * soul_events carries the sound request (AOS_OPENING_ENTITY_EVENT_
+     * SOUND_0XBC) until a host consumes it, and soul_arrived latches
+     * the arrival itself. */
+    bool soul_arrived;
+    uint8_t soul_events;
 } AosOpeningActors;
 
 bool aos_opening_event_should_start(uint8_t area, uint16_t room,

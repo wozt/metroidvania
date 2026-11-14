@@ -443,6 +443,67 @@ int main(int argc, char **argv) {
             assert(graphics.bg0_map[0xE * 32 + 3] == 0x1200);
             assert(graphics.bg0_map[0x10 * 32 + 3] == 0x1280);
         }
+        /* Page dumps for visual comparison: argv[5..10] receive the
+         * Item Use, Ability, Config, Sleep, Enemy list and Enemy detail
+         * renders with a moderately populated state. */
+        if (argc >= 11) {
+            {
+                AosPauseItemUseValues items = {.selected = 0, .top = 0};
+                static const unsigned owned[] = {0, 3, 5, 9, 12, 16, 20, 24};
+                for (unsigned i = 0; i < sizeof owned / sizeof owned[0]; ++i) {
+                    items.counts[owned[i]] = (uint8_t)(1 + i);
+                    items.icons[owned[i]] = (uint8_t)(owned[i] + 1);
+                }
+                assert(aos_pause_graphics_render_item_use(
+                    &graphics, &items, rgba, 240 * 160 * 4));
+                write_ppm(argv[5], rgba);
+            }
+            {
+                AosPauseAbilityValues ability = {.cursor = 0};
+                for (unsigned i = 0; i < AOS_PAUSE_ABILITY_COUNT; ++i) {
+                    ability.owned[i] = 1;
+                    ability.enabled[i] = (i & 1) != 0;
+                }
+                assert(aos_pause_graphics_render_ability(
+                    &graphics, &ability, rgba, 240 * 160 * 4));
+                write_ppm(argv[6], rgba);
+            }
+            {
+                uint8_t config[AOS_BUTTON_ACTIONS] = {1, 0, 3, 2};
+                assert(aos_pause_graphics_render_config(
+                    &graphics, config, 1, rgba, 240 * 160 * 4));
+                write_ppm(argv[7], rgba);
+            }
+            assert(aos_pause_graphics_render_sleep(&graphics, true,
+                                                   rgba, 240 * 160 * 4));
+            write_ppm(argv[8], rgba);
+            {
+                AosPauseEnemyValues enemy = {.top = 0, .cursor = 0,
+                                             .intro_phase = 2};
+                for (unsigned e = 0; e < AOS_PAUSE_ENEMY_RECORDS; ++e)
+                    if (e % 3) enemy.defeated[e >> 5] |= 1u << (e & 31);
+                assert(aos_pause_graphics_render_enemy(
+                    &graphics, &enemy, rgba, 240 * 160 * 4));
+                write_ppm(argv[9], rgba);
+                enemy.detail = 1;
+                enemy.cursor = 1;
+                enemy.defeated[0] |= 1u << 1;
+                enemy.dropped[0][0] = 1u << 1;
+                enemy.hp = 18;
+                enemy.experience = 12;
+                enemy.weak = 0x04;
+                enemy.resist = 0x01;
+                enemy.common_item = 1;
+                enemy.rare_item = 0;
+                enemy.soul_type = 1;
+                enemy.soul_index = 2;
+                enemy.soul_owned = 1;
+                enemy.soul_view = 1;
+                assert(aos_pause_graphics_render_enemy_detail(
+                    &graphics, &enemy, rgba, 240 * 160 * 4));
+                write_ppm(argv[10], rgba);
+            }
+        }
         free(rgba);
         aos_pause_graphics_free(&graphics);
         fusion_rom_close(&local);

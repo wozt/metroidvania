@@ -1886,6 +1886,7 @@ if(BUILD_TESTING)
     add_executable(fusion_aos_room_dialogue_tests tests/test_aos_room_dialogue.c
                    src/runtime/aos/game/aos_room_dialogue.c
                    src/runtime/aos/title/aos_opening_event.c
+                   src/runtime/aos/core/aos_audio.c
                    src/runtime/aos/core/aos_stats.c)
     target_include_directories(fusion_aos_room_dialogue_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_room_dialogue_tests PRIVATE m)

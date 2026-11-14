@@ -127,9 +127,12 @@ struct AosRoomDialogue {
     uint8_t ewram_415;
     uint8_t ewram_416;
     /* _08068076 tail reports for the state-1 A-edge branch: it
-     * plays song 0x132 and writes the OBJ palette pair. The audio
-     * and palette consumers are unported, so the poll reports them
-     * here (-1 / false on polls where the branch did not fire). */
+     * plays song 0x132 (SE_132, a jingle on player 5) and writes
+     * the OBJ palette pair at 0x0600E4B6. aos_room_dialogue_apply
+     * consumes song through aos_audio_play_song like the native
+     * inline PlaySong; palette_write stays a report because the
+     * OBJ palette VRAM upload has no portable primitive (-1 /
+     * false on polls where the branch did not fire). */
     int song;
     bool palette_write;
 };

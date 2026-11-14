@@ -3694,8 +3694,11 @@ int aria_runtime_main(int argc, char **argv) {
          * callback only refreshes the tile canvas while dirty, and
          * the draw reuses draw_opening_text's pixel pass — both
          * no-op without a ready ROM in --simulate (which never
-         * reaches this path anyway). */
-        if (aos_room_dialogue_shown(&room_dialogue)) {
+         * reaches this path anyway). The pause hub owns the whole
+         * screen while it is open (the entity loop is suspended, so
+         * a shown window would otherwise stay frozen on top of the
+         * native pages); it resumes when the menu closes. */
+        if (!soul_menu.open && aos_room_dialogue_shown(&room_dialogue)) {
             aos_room_dialogue_render(&room_dialogue, (uint32_t)step);
             const AosOpeningEvent *rd_event =
                 aos_room_dialogue_event(&room_dialogue);
@@ -3707,8 +3710,11 @@ int aria_runtime_main(int argc, char **argv) {
                                   (uint32_t)step);
         }
         /* Object1C's save YES/NO prompt (sub_08054280): same window
-         * stack, no-op while no save statue is mid-sequence. */
-        draw_object1c_save_prompt(renderer, &room, (uint32_t)step);
+         * stack, no-op while no save statue is mid-sequence — and
+         * suppressed while the pause menu owns the screen, like the
+         * room-dialogue window above. */
+        if (!soul_menu.open)
+            draw_object1c_save_prompt(renderer, &room, (uint32_t)step);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);

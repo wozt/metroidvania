@@ -165,11 +165,83 @@ static void loader_tests(void) {
     assert(aos_audio_song_count() == 2);
 }
 
+static void ambient_tests(void) {
+    /* +0x254CC lifecycle: sub_08013EEC plants the ambient song after
+     * resetting the tracked current song to MUS_DUMMY, sub_08013F38
+     * stops it on transitions, and sub_08013D30 releases held sounds. */
+    AosAudioSongInfo songs[64] = {0};
+    songs[0] = (AosAudioSongInfo){0, 0, 0};
+    songs[2] = (AosAudioSongInfo){0, 50, 0};
+    songs[38] = (AosAudioSongInfo){0, 100, 0};
+    songs[0x9C] = (AosAudioSongInfo){4, 50, 0};
+
+    aos_audio_reset();
+    assert(aos_audio_set_song_table(songs, 64));
+    assert(aos_audio_ambient() == 0);
+
+    /* sub_08013EEC(38): stop the tracked song, MUS_DUMMY takes its
+     * player, then the ambient song plays and the slot records it. */
+    aos_audio_play_song(2);
+    assert(aos_audio_state()->current_song == 2);
+    aos_audio_clear();
+    aos_audio_ambient_set(38);
+    assert(aos_audio_ambient() == 38);
+    assert(aos_audio_requested(AOS_AUDIO_STOP_SONG, 2) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 38) == 1);
+    assert(aos_audio_state()->players[0].song == 38 &&
+           !aos_audio_state()->players[0].paused);
+    /* The dummy reset leaves the tracker on song 0's slot only until
+     * the ambient start rewrites it to the ambient song. */
+    assert(aos_audio_state()->current_song == 38);
+
+    /* With nothing tracked, sub_08013EEC skips the dummy reset. */
+    aos_audio_reset();
+    assert(aos_audio_set_song_table(songs, 64));
+    aos_audio_clear();
+    aos_audio_ambient_set(38);
+    assert(!aos_audio_requested(AOS_AUDIO_START_SONG, 0));
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 38) == 1);
+
+    /* sub_08013F38: the transition teardown stops the ambient song
+     * and clears the slot; a second call is a no-op. */
+    aos_audio_clear();
+    aos_audio_ambient_stop();
+    assert(aos_audio_ambient() == 0);
+    assert(aos_audio_requested(AOS_AUDIO_STOP_SONG, 38) == 1);
+    assert(aos_audio_state()->players[0].paused);
+    aos_audio_clear();
+    aos_audio_ambient_stop();
+    assert(aos_audio_count() == 0);
+
+    /* The raw +0x254CC word store records without playing. */
+    aos_audio_clear();
+    aos_audio_ambient_store(7);
+    assert(aos_audio_ambient() == 7 && aos_audio_count() == 0);
+    aos_audio_ambient_stop();
+    assert(aos_audio_requested(AOS_AUDIO_STOP_SONG, 7) == 1);
+
+    /* sub_08013D30 releases every held sound, index 3 down to 0. */
+    aos_audio_reset();
+    assert(aos_audio_set_song_table(songs, 64));
+    assert(!aos_audio_hold(0x9C));
+    assert(!aos_audio_hold(0x75));
+    assert(aos_audio_hold(0x9C));   /* already listed */
+    assert(aos_audio_held(3) == 0x9C && aos_audio_held(2) == 0x75);
+    aos_audio_clear();
+    aos_audio_release_held();
+    assert(aos_audio_held(0) == 0 && aos_audio_held(2) == 0 &&
+           aos_audio_held(3) == 0);
+    assert(aos_audio_requested(AOS_AUDIO_STOP_SONG, 0x9C) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_STOP_SONG, 0x75) == 1);
+}
+
 int main(void) {
     routing_tests();
     controller_tests();
     accepted_start_sink_test();
     loader_tests();
+    ambient_tests();
     puts("aos audio tests passed");
     return 0;
 }

@@ -1146,3 +1146,47 @@ void aos_object1c_children_draw(AosObject1C *o,
         }
     }
 }
+
+/* ---- sub_08054280 save-screen BG0 patches --------------------------
+ * Decoded from the seven DmaQueue_DirectCopy calls in
+ * code_08050A3C.s:7134-7280. Each entry below is one queued write:
+ * `row`/`col` the screenblock-28 cell (32 cells/row, matching the
+ * AosHud.map layout), `count` the halfword count copied and
+ * `first_tile` the first tile index; the written entry is
+ * 0xE200 | tile (BG palette row 14, tiles from the HUD tileset
+ * 0x0827B208's 0x200-0x2FF range). The queue runs in order, so the
+ * later row-8/row-9 col-10 patches overwrite the earlier col-8/20
+ * edge tiles exactly like the native DMA order. The seventh write
+ * re-sends the previous buffer's first twelve entries (tiles
+ * 0x2C0-0x2CB) to row 6 col 10. */
+typedef struct {
+    uint8_t row, col, count;
+    uint16_t first_tile;
+} AosObject1CSavePatch;
+
+static const AosObject1CSavePatch object1c_save_patches[] = {
+    {8, 8, 5, 0x2AC},    /* size 0x0A -> VRAM 0x0600E210 */
+    {9, 8, 5, 0x2CC},    /* size 0x0A -> VRAM 0x0600E250 */
+    {8, 20, 5, 0x2B2},   /* size 0x0A -> VRAM 0x0600E228 */
+    {9, 20, 5, 0x2D2},   /* size 0x0A -> VRAM 0x0600E268 */
+    {8, 10, 12, 0x2A0},  /* size 0x18 -> VRAM 0x0600E214 */
+    {9, 10, 12, 0x2C0},  /* size 0x18 -> VRAM 0x0600E254 */
+    {6, 10, 12, 0x2C0},  /* size 0x18 -> VRAM 0x0600E194 */
+};
+
+unsigned aos_object1c_save_screen_apply(uint16_t map[1024]) {
+    if (!map) return 0;
+    unsigned written = 0;
+    for (unsigned p = 0;
+         p < sizeof object1c_save_patches / sizeof object1c_save_patches[0];
+         ++p) {
+        const AosObject1CSavePatch *pt = &object1c_save_patches[p];
+        for (unsigned i = 0; i < pt->count; ++i) {
+            unsigned cell = (unsigned)pt->row * 32u + pt->col + i;
+            if (cell >= 1024u) continue;
+            map[cell] = (uint16_t)(0xE200u | (pt->first_tile + i));
+            ++written;
+        }
+    }
+    return written;
+}

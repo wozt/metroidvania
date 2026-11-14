@@ -144,10 +144,15 @@ static void test_emitted_attack_tails(void) {
     assert(!entity->hidden && entity->timer == 0x1F);
     aos_opening_actors_update(&actors, NULL, NULL, 0x230);
     assert(entity->hidden && entity->timer == 0x1E);
-    for (unsigned frame = 0; frame < 31; ++frame)
+    /* +0xB==1's blink runs exactly 0x20 frames (+0xD 0x20..1); the
+     * Winged Skeleton then reloads +0xD=0x10 for +0xB==2's countdown
+     * before +0xB==3's selector gate fires the margin-checked death. */
+    unsigned tail_guard = 0;
+    while (entity->step < 2 && tail_guard++ < 64)
         aos_opening_actors_update(&actors, NULL, NULL, 0x230);
     assert(entity->step == 2 && entity->timer == 0x10 && !entity->hidden);
-    for (unsigned frame = 0; frame < 17; ++frame)
+    tail_guard = 0;
+    while (entity->step < 3 && tail_guard++ < 64)
         aos_opening_actors_update(&actors, NULL, NULL, 0x230);
     assert(entity->step == 3 && entity->active);
     aos_opening_actors_update(&actors, NULL, NULL, 0x230);
@@ -176,7 +181,9 @@ static void test_emitted_attack_tails(void) {
     };
     entity = &actors.emitted[0];
     aos_opening_actors_update(&actors, NULL, NULL, 0x230);
-    for (unsigned frame = 0; frame < 33; ++frame)
+    /* The Skeleton Knight shares the 0x20-frame +0xB==1 blink, but its
+     * +0xB==2 is a single selector gate with no second countdown. */
+    for (unsigned frame = 0; frame < 32; ++frame)
         aos_opening_actors_update(&actors, NULL, NULL, 0x230);
     assert(entity->step == 2 && entity->active);
     aos_opening_actors_update(&actors, NULL, NULL, 0x230);
@@ -218,8 +225,10 @@ static void test_emitted_attack_tails(void) {
            actors.projectile_count == 2);
 
     actors.projectile_count = 1;
+    /* sub_0805EE88's margin is on Arikado (Object20's +0x18 entity),
+     * not the scripted skeleton. */
     actors.projectiles[0] = (AosOpeningProjectile){
-        .x = actors.x[2], .y = actors.y[2], .state = 2, .active = true};
+        .x = actors.x[1], .y = actors.y[1], .state = 2, .active = true};
     aos_opening_actors_update(&actors, NULL, NULL, 0x230);
     assert(!actors.projectiles[0].active &&
            actors.projectiles[0].events ==
@@ -237,6 +246,11 @@ static void test_trigger(void) {
     assert(AOS_OPENING_SKELETON_X == 0x16F && AOS_OPENING_SKELETON_Y == 0x268);
     AosOpeningActors actors;
     aos_opening_actors_init(&actors);
+    /* The emitted Skeleton Knights' state machine needs the native RNG;
+     * sine/angle/floor stay NULL so the soul orb uses its fallback
+     * lerp and the scripted skeleton simply falls while walking. */
+    aos_opening_actors_set_motion(&actors, zero_random, NULL, NULL,
+                                  NULL, NULL, NULL);
     assert(actors.active && actors.state == 0 && actors.timer == 0x40);
     assert(actors.x[0] == (AOS_OPENING_MINA_X << 16));
     assert(actors.x[1] == (AOS_OPENING_ARIKADO_X << 16));
@@ -246,7 +260,11 @@ static void test_trigger(void) {
     assert(actors.state == 1 && actors.timer == 0 && actors.x[1] == (0x119 << 16));
     aos_opening_actors_update(&actors, NULL, NULL, 0);
     assert(actors.x[1] < (0x119 << 16));
-    for (unsigned frame = 0; frame < 128; ++frame)
+    /* sub_0805D198's +0x48 velocity is -0x6000 (~0.37 px/frame); the
+     * 0x119->0xD0 walk-on takes about 195 frames. The 0xD0 guard is a
+     * documented approximation of type 1's undecoded stop condition. */
+    unsigned walk_guard = 0;
+    while (actors.state == 1 && walk_guard++ < 400)
         aos_opening_actors_update(&actors, NULL, NULL, 0);
     assert(actors.state == 2 && actors.x[1] == (0xD0 << 16));
     assert(actors.visible[0] && actors.visible[1] && actors.visible[2]);
@@ -320,20 +338,25 @@ static void test_trigger(void) {
     assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
            AOS_OPENING_CUE_ENEMY_ATTACKS);
     assert(actors.animation[1] == 2 && actors.scene_step == 2);
-    /* child18's +0x59 animation-finished flag: animation_age reaches the
-     * exported duration (3 frames), then parent +0x20 bit 1's
-     * disappearance pass begins. */
-    for (unsigned frame = 0; frame < 3; ++frame)
+    /* child18's +0x59 animation-finished flag raises parent +0x20 bit
+     * 1; emitted children poll it only from their own state 2, so the
+     * disappearance tail begins a frame after the flag, not at the
+     * flag itself. */
+    guard = 0;
+    while (!actors.emitted[0].disappearing && guard++ < 200)
         aos_opening_actors_update(&actors, durations, &camera_x, 0);
     assert(actors.emitted[0].disappearing && actors.emitted[0].state == 3 &&
-           actors.emitted[0].step == 0 && actors.scene_step == 3);
+           actors.scene_step == 3);
     /* sub-state 4's 0x10->0xFF tail is 0x11 frames, then SE 0x1E0 and
-     * animation 3. */
-    for (unsigned frame = 0; frame < 0x10; ++frame)
-        assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
-               AOS_OPENING_CUE_NONE);
-    assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
-           AOS_OPENING_CUE_ENEMY_ATTACKS_AGAIN);
+     * animation 3; the flag-poll wait above already consumed a frame
+     * of that tail, so wait on the step boundary instead of a fixed
+     * count. */
+    guard = 0;
+    int tail_cue = AOS_OPENING_CUE_NONE;
+    while (actors.scene_step == 3 && guard++ < 64)
+        tail_cue = aos_opening_actors_update(&actors, durations,
+                                             &camera_x, 0);
+    assert(tail_cue == AOS_OPENING_CUE_ENEMY_ATTACKS_AGAIN);
     assert(actors.animation[1] == 3 && actors.animation_age[1] == 0 &&
            actors.scene_step == 4);
     for (unsigned frame = 0; frame < 3; ++frame)
@@ -375,12 +398,13 @@ static void test_trigger(void) {
         assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) == AOS_OPENING_CUE_NONE);
     assert(!actors.visible[2] && actors.skeleton_death == 0);
     assert(actors.soul_x != soul_start_x || actors.soul_y != soul_start_y);
+    /* sub_0805F0B0's touch callback removes the orb on arrival — well
+     * before the parent's +0xD==0x8F absorption beat — so by now the
+     * soul has landed on Soma under its own lifetime, not a snap. */
+    assert(actors.soul_arrived && !actors.soul_active);
     assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
            AOS_OPENING_CUE_SOUL_ABSORBED);
-    assert(!actors.soul_active && actors.soul_absorbed &&
-           actors.soul_x == (AOS_OPENING_SOMA_X << 16) &&
-           actors.soul_y == ((AOS_OPENING_SOMA_Y - 16) << 16) &&
-           actors.soma_animation == 0x52);
+    assert(actors.soul_absorbed && actors.soma_animation == 0x52);
     /* The script stays blocked only while the window is open or waiting;
      * native state 5 resumes as soon as sub_0800F0AC starts the close. */
     assert(aos_opening_actors_blocks_script(&actors));

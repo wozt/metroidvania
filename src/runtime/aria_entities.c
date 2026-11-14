@@ -338,15 +338,12 @@ static uint16_t object20_disp_cnt = 0x1F00;
  * unk_64 = unk_65 = 0) and documents both pending consumers.
  * Session-scoped. */
 static uint8_t object20_ewram_64;
-/* gEwramData +0x254CC u16: the ambient-song slot the music
- * helpers stash — sub_08013EEC(arg) stores arg then
- * PlaySong(arg), the npc/story sequences store the song id
- * directly, and the unported mode-transition paths
- * (sub_08013E74/sub_08013F38 family, the code_080211F0
- * transition PlaySong reads of +0x254CC/+0x254CE) consume it
- * as the resume song. No ported reader exists yet; the
- * channel preserves the writes. Session-scoped. */
-static uint16_t object20_unk254cc;
+/* gEwramData +0x254CC u16: the ambient-song slot lives in
+ * aos_audio's ambient channel (aos_audio_ambient/_store/_set/
+ * _stop — sub_08013EEC/sub_08013F38/sub_08013D30 ported); the
+ * unported resume-side readers (sub_08013E74/sub_08013EAC,
+ * the code_080211F0 transition PlaySong reads of
+ * +0x254CC/+0x254CE) will consume it there. */
 /* Player entity (gEwramData + 0x13110) +0x5A attribute byte:
  * the param0-15 update15 cases 4-7 rewrite it every frame
  * with the (b & 0x87) | 0x20 flicker pattern and the 0x80
@@ -1395,11 +1392,13 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
      * above), +0x37E bit 0 and the +0x60 progress-flags
      * word (object20_ewram_word60, below). The +0x414/+0x416/
      * +0x417 window-state bytes land above
-     * (object20_ewram_414/_416/_417, feeding the sub_08067A04
-     * poll gate); the +0x427 write lands below; +0x64, +0x254CC,
-     * +0xA094+4 and gUnk_03002CB0 keep session channels
-     * (object20_ewram_64, object20_unk254cc, the BG1 scroll
-     * accumulator, object20_disp_cnt) applied below; the
+     * (object20_ewram_414/_417 plus AosRoomDialogue's +0x415/
+     * +0x416, feeding the sub_08067A04
+     * poll gate); the +0x427 write lands below; +0x64,
+     * +0x254CC, +0xA094+4 and gUnk_03002CB0 keep their owners
+     * (object20_ewram_64, the aos_audio ambient channel, the
+     * BG1 scroll accumulator, object20_disp_cnt) applied
+     * below; the
      * sub_0800EB04/sub_080235C8/sub_0802DFF0/sub_0806666C/
      * sub_0800EF6C/sub_08013960/sub_08013CF0/sub_08013D60/
      * sub_08013E18/sub_080121E0/sub_0800C5A8/sub_0800C778/
@@ -1618,26 +1617,28 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         printf("Object20 %d: +0x64 = 0x0A (credits-mode byte)\n",
                e->id);
     }
-    /* gEwramData +0x254CC ambient-song slot: the direct word
-     * stores (story write_254cc, npc wrote_254cc) set it, and
-     * the sub_08013EEC(arg) calls (story eec, slots sfx_13eec,
-     * guard sfx_26_entry) both store arg here AND PlaySong(arg)
-     * natively — the play goes through the shared channel like
-     * the module's other song reports. */
+    /* gEwramData +0x254CC ambient-song slot, owned by
+     * aos_audio's ambient channel: the direct word stores
+     * (story write_254cc, npc wrote_254cc) land through
+     * aos_audio_ambient_store, and the sub_08013EEC(arg) calls
+     * (story eec, slots sfx_13eec, guard sfx_26_entry) run the
+     * full native sequence — tracked-song reset to MUS_DUMMY,
+     * slot store and PlaySong(arg) — through
+     * aos_audio_ambient_set. aos_room_music_enter's
+     * sub_0806C354 teardown stops the slot via
+     * aos_audio_ambient_stop (sub_08013F38). */
     if (out->story.write_254cc) {
-        object20_unk254cc = out->story.write_254cc_val;
+        aos_audio_ambient_store(out->story.write_254cc_val);
         printf("Object20 %d: +0x254CC = 0x%X\n", e->id,
                out->story.write_254cc_val);
     }
     if (out->story.eec >= 0) {
-        object20_unk254cc = (uint16_t)out->story.eec;
-        aos_audio_play_song((uint16_t)out->story.eec);
+        aos_audio_ambient_set((uint16_t)out->story.eec);
         printf("Object20 %d: 13EEC song 0x%X (+0x254CC)\n",
                e->id, out->story.eec);
     }
     if (out->slots.sfx_13eec >= 0) {
-        object20_unk254cc = (uint16_t)out->slots.sfx_13eec;
-        aos_audio_play_song((uint16_t)out->slots.sfx_13eec);
+        aos_audio_ambient_set((uint16_t)out->slots.sfx_13eec);
         printf("Object20 %d: 13EEC song 0x%X (+0x254CC)\n",
                e->id, out->slots.sfx_13eec);
     }
@@ -1744,7 +1745,7 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         if (g->armed_42c_0)
             aria_pickup_state.global_flags |= 1u;
         if (g->wrote_254cc) {
-            object20_unk254cc = 0x26;
+            aos_audio_ambient_store(0x26);
             printf("Object20 %d: +0x254CC = 0x26\n", e->id);
         }
         if (g->sfx_26 || g->ev_1e || g->froze_player ||
@@ -1767,12 +1768,10 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         if (g->armed_42c_200)
             aria_pickup_state.global_flags |= 0x200u;
         /* sub_08013EEC(0x26) stores the song slot AND plays. */
-        if (g->sfx_26_entry) {
-            object20_unk254cc = 0x26;
-            aos_audio_play_song(0x26);
-        }
+        if (g->sfx_26_entry)
+            aos_audio_ambient_set(0x26);
         if (g->wrote_254cc) {
-            object20_unk254cc = 0x26;
+            aos_audio_ambient_store(0x26);
             printf("Object20 %d: +0x254CC = 0x26\n", e->id);
         }
         if (g->ev_1d || g->froze_player || g->facing_mirror ||
@@ -3603,8 +3602,16 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                              * sequence) */
             in1c.buttons_14 = new_input;    /* +0x14 newInput edge */
             in1c.player_busy = false;   /* sub_08021304 ~ done */
-            in1c.save_slot = 0;         /* +0x428: slot 0 until a
-                                         * slot-select UI exists */
+            /* + 0x428 is gEwramData.currentSaveSlot (ewram.h:
+             * "0: File 1, 1: Quicksave 1, 2: File 2, 3: Quicksave 2,
+             * 4: File 3, 5: Quicksave 3"): the regular file slots are
+             * the even bytes, so the active save's 0-based slot maps
+             * to slot * 2. Object1C has no slot-selection UI — state
+             * 2's +0x16 only toggles Yes/No — the byte is chosen by
+             * the (unported) menu save screen. */
+            in1c.save_slot = object1c_save_ctx
+                                 ? (uint8_t)(object1c_save_ctx->slot * 2)
+                                 : 0;
             in1c.save_result = e->object1c_save_result;
             aos_object1c_update(&e->object1c, &in1c, &out1c);
             if (out1c.song >= 0) {
@@ -3633,13 +3640,24 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                        out1c.save_mode_set ? "set " : "clear ",
                        out1c.save_mode_set | out1c.save_mode_clear);
             }
-            if (out1c.save_setup)
-                /* sub_08054280's tile/text upload is unported; the
-                 * host draws the same "Save the game? / Yes / No"
-                 * prompt through the room-dialogue window stack
-                 * (draw_object1c_save_prompt in aria_runtime.c). */
+            if (out1c.save_setup) {
+                /* sub_08054280's palette upload (0x0820C428 records
+                 * 0-1 -> BG palette rows 13-14) is already covered by
+                 * the HUD asset's palette block, and its three text
+                 * strings render through the room-dialogue window
+                 * stack (draw_object1c_save_prompt). Its seven
+                 * DmaQueue_DirectCopy writes patch BG0's screenblock
+                 * — the same 32x32 map the HUD owns — with the
+                 * decoded save-frame tiles; apply them so the HUD
+                 * pixel path draws the native frame from the real
+                 * 0x0827B208 tile graphics. */
+                if (combat->hud) {
+                    aos_object1c_save_screen_apply(combat->hud->map);
+                    combat->hud->revision++;
+                }
                 printf("Object1C %zu: save screen setup "
                        "(sub_08054280) — host prompt shown\n", i);
+            }
             if (out1c.save_block_refresh)
                 printf("Object1C %zu: +0x60 save block refresh "
                        "(sub_08012688/0x080135C0)\n", i);

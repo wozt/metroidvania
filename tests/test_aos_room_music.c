@@ -95,6 +95,44 @@ int main(void) {
     assert(aos_room_music_enter(&stale, 0, 4, &plain));
     assert(aos_audio_count() == 1 &&
            aos_audio_requested(AOS_AUDIO_COMMAND, 0x1011));
+
+    /* sub_08013EEC's tracker reset, ported as aos_audio_ambient_set:
+     * the ambient song plants +0x254CC and the room enter's
+     * sub_08013F38 teardown stops it before the area song resumes. */
+    aos_audio_reset();
+    assert(aos_audio_set_song_table(ambient_table, 39));
+    AosRoomMusic ambient_music = {0};
+    assert(!aos_room_music_change(&ambient_music, 2));
+    aos_audio_ambient_set(38);
+    assert(aos_audio_ambient() == 38);
+    assert(aos_audio_state()->players[0].song == 38);
+    aos_audio_clear();
+    assert(!aos_room_music_enter(&ambient_music, 0, 3, &plain));
+    assert(aos_audio_ambient() == 0);
+    assert(aos_audio_requested(AOS_AUDIO_STOP_SONG, 38) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 2) == 1);
+    assert(ambient_music.current_song == 2);
+    assert(aos_audio_state()->players[0].song == 2);
+
+    /* A stale tracker word is re-armed by aos_room_music_change itself:
+     * current_song claims the incoming song while its player runs a
+     * foreign song — the change stops the occupant and restarts. */
+    aos_audio_reset();
+    assert(aos_audio_set_song_table(ambient_table, 39));
+    AosRoomMusic tracked = {0};
+    assert(!aos_room_music_change(&tracked, 2));
+    aos_audio_play_song(38);           /* foreign PlaySong bypasses the tracker */
+    aos_audio_clear();
+    assert(!aos_room_music_change(&tracked, 2));
+    assert(aos_audio_requested(AOS_AUDIO_STOP_SONG, 38) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 2) == 1);
+    assert(tracked.current_song == 2);
+    assert(aos_audio_state()->players[0].song == 2);
+
+    /* A genuinely playing tracked song still early-outs. */
+    aos_audio_clear();
+    assert(aos_room_music_change(&tracked, 2));
+    assert(aos_audio_count() == 0);
     puts("aos room music tests passed");
     return 0;
 }

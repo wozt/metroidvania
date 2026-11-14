@@ -590,4 +590,46 @@ void aos_object1c_children_update(AosObject1C *o,
 void aos_object1c_children_draw(AosObject1C *o,
                                 AosObject1CChildrenOut *out);
 
+/* ---- sub_08054280 save-screen setup --------------------------------
+ * The native routine does four things on top of the text prompt:
+ *
+ *  1. sub_0803C918(0x0820C428, 0, 2, 0xD) uploads palette-descriptor
+ *     records 0-1 into BG palette staging rows 13-14 — the same
+ *     0x0820C428/0x0827B208 pair the HUD asset already carries
+ *     (aos_hud's rows 13-14 and tiles 0x200-0x2FF).
+ *  2. sub_08040748(0, 0, 0x29, 2) + sub_08040FE0 position/reset the
+ *     text window; sub_0804066C(0/0x10/0x18, 1) and the three
+ *     sub_08041434 message calls place "Save the game?" (0x34A),
+ *     "Yes" (0x34B) and "No" (0x34D) — the host prompt reproduces
+ *     this through the room-dialogue window stack.
+ *  3. Seven DmaQueue_DirectCopy writes patch BG0's screenblock
+ *     (VRAM 0x0600E000 = screenbase block 28, the shared HUD /
+ *     dialogue tilemap) with entries 0xE2A0-0xE2D7 — BG palette
+ *     row 14 over HUD-tileset tiles 0x2A0-0x2D7 — in queue order
+ *     (later writes win): five tiles at row 8 col 8, five at row 9
+ *     col 8, five at row 8 col 20, five at row 9 col 20, twelve at
+ *     row 8 col 10, twelve at row 9 col 10 and twelve at row 6
+ *     col 10 reusing the previous buffer. The host applies the same
+ *     patch list to the HUD's 32x32 map through
+ *     aos_object1c_save_screen_apply, so the existing HUD pixel path
+ *     draws the native frame tiles with the real ROM graphics.
+ *  4. The + 0x428 slot byte is gEwramData.currentSaveSlot
+ *     (ewram.h: "0: File 1, 1: Quicksave 1, 2: File 2, ..."), read
+ *     at commit — Object1C itself has NO slot-selection UI: state
+ *     2's + 0x16 cursor only toggles Yes/No. The host feeds the
+ *     active save's slot * 2 (regular files are the even bytes;
+ *     odd bytes are the unported quicksave records).
+ *
+ * sub_0805444C (a tile-row writer over the 0x786C staging buffers,
+ * unreferenced anywhere in the disassembly dump — dead code or a
+ * non-matching caller) is the likely hand-cursor routine; the host
+ * keeps its chevron approximation. */
+
+/* Applies sub_08054280's seven BG0 tilemap patch writes to `map`, a
+ * 32x32 u16 screenblock in AosHud.map layout, in native DMA-queue
+ * order. Returns the number of patch writes applied (56 across the
+ * 7 patches, covering 46 distinct cells — overlapping cells are
+ * overwritten by later patches like the real queue). NULL map -> 0. */
+unsigned aos_object1c_save_screen_apply(uint16_t map[1024]);
+
 #endif

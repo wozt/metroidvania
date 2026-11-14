@@ -60,6 +60,48 @@ bool aos_audio_release(uint16_t song) {
 
 uint16_t aos_audio_held(int slot) { return slot >= 0 && slot < 4 ? g_held[slot] : 0; }
 
+void aos_audio_release_held(void) {
+    /* sub_08013D30: sub_08013E18 on each nonzero slot, index 3 down
+     * to 0; release already clears the slot and issues the stop. */
+    for (int slot = 3; slot >= 0; --slot) {
+        uint16_t song = g_held[slot];
+        if (song) aos_audio_release(song);
+    }
+}
+
+/* gEwramData +0x254CC ambient-song slot (sub_08013EEC/sub_08013F38). */
+static uint16_t g_ambient_song;
+
+uint16_t aos_audio_ambient(void) { return g_ambient_song; }
+
+void aos_audio_ambient_store(uint16_t song) { g_ambient_song = song; }
+
+void aos_audio_ambient_set(uint16_t song) {
+    /* sub_08013EEC's first half is sub_08013960_inline_0(0): the
+     * tracked current song is reset to MUS_DUMMY. inline_0 early-outs
+     * when currentSong is already 0; the port's -1 sentinel is the
+     * same "nothing tracked" state. */
+    if (g_state.current_song > 0) {
+        aos_audio_play_song(
+            (uint16_t)(g_state.current_song | AOS_STOP_SONG_FLAG));
+        /* inline_0 stores 0 then PlaySong(0): MUS_DUMMY takes the
+         * freed player slot so the ambient song's priority check
+         * sees the native occupancy. */
+        g_state.current_song = 0;
+        aos_audio_play_song(0);
+    }
+    g_ambient_song = song;
+    aos_audio_play_song(song);
+}
+
+void aos_audio_ambient_stop(void) {
+    /* sub_08013F38. */
+    if (g_ambient_song) {
+        aos_audio_play_song((uint16_t)(g_ambient_song | AOS_STOP_SONG_FLAG));
+        g_ambient_song = 0;
+    }
+}
+
 void aos_audio_set_start_sink(AosAudioStartSink sink, void *context) {
     g_start_sink = sink;
     g_start_context = context;
@@ -146,6 +188,7 @@ bool aos_audio_song_info(size_t song, AosAudioSongInfo *info) {
 void aos_audio_reset(void) {
     memset(&g_state, 0, sizeof g_state);
     memset(g_held, 0, sizeof g_held);
+    g_ambient_song = 0;
     g_state.current_song = -1;
     g_state.sound_mode = AOS_DEFAULT_SOUND_MODE;
     g_song_count = 0;

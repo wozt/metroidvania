@@ -40,7 +40,10 @@ void aos_room_music_set_progress(uint32_t progress_flags);
 bool aos_room_music_change(AosRoomMusic *music, uint16_t song);
 
 /* sub_08013960 for the room at (area, room), sending its PlaySong requests
- * through aos_audio_play_song: save and warp rooms only quiet the music,
+ * through aos_audio_play_song. Every call first runs the sub_0806C354
+ * transition teardown the native room load precedes it with: sub_08013D30
+ * releases the held sounds and sub_08013F38 stops the +0x254CC ambient
+ * song. Save and warp rooms only quiet the music,
  * transition rooms mute player 0 once (0x1040) and forget the song, others
  * set it loud and play the area's song (sUnk_084F106C, or sUnk_084F1086
  * when julius is set and the published progress word has bit 1) or a

@@ -3,6 +3,8 @@
 
 #include <string.h>
 
+#include "../core/aos_audio.h"
+
 /* AosOpeningEvent's resolver slot is typed for the opening scene's
  * uint8_t sub-entry ids; room-dialogue text ids are uint16_t, so the
  * bridge adapts through this trampoline. Nested control-1 ids are
@@ -225,8 +227,18 @@ void aos_room_dialogue_apply(AosRoomDialogue *dlg, uint16_t new_input,
     if (!dlg || !request) return;
     if (request->window_text >= 0)
         aos_room_dialogue_open(dlg, (uint16_t)request->window_text);
-    if (request->window_poll)
+    if (request->window_poll) {
         (void)aos_room_dialogue_poll(dlg, new_input);
+        /* _08068076's state-1 A-edge branch calls PlaySong(0x132)
+         * inline; the poll reports it on dlg->song, so the apply
+         * path plays it here like the native routine does. The OBJ
+         * palette upload (palette_write) has no portable primitive
+         * and stays a report. Gate on the window still being open:
+         * a poll that early-returned on a closed window leaves a
+         * stale song value. */
+        if (dlg->song >= 0 && aos_room_dialogue_active(dlg))
+            aos_audio_play_song((uint16_t)dlg->song);
+    }
     if (request->window_close)
         aos_room_dialogue_close(dlg);
 }

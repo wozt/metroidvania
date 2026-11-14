@@ -766,6 +766,34 @@ int main(void) {
         }
     }
 
+    /* ---- sub_08054280 save-screen BG0 patches ---- */
+    {
+        uint16_t map[1024];
+        memset(map, 0, sizeof map);
+        map[0] = 0x1234;                    /* sentinel: untouched */
+        unsigned n = aos_object1c_save_screen_apply(map);
+        assert(n == 56);                    /* 7 patches, 46 cells */
+        assert(map[0] == 0x1234);
+        /* Row 6 cols 10-21: the resent 0x2C0-0x2CB row. */
+        for (int i = 0; i < 12; ++i)
+            assert(map[(6 * 32 + 10 + i)] == (uint16_t)(0xE200 | (0x2C0 + i)));
+        /* Row 8: edge tiles survive only at cols 8-9 and 22-24;
+         * cols 10-21 are the later 0x2A0 patch (queue order). */
+        assert(map[8 * 32 + 8] == 0xE2AC && map[8 * 32 + 9] == 0xE2AD);
+        assert(map[8 * 32 + 10] == 0xE2A0 && map[8 * 32 + 21] == 0xE2AB);
+        assert(map[8 * 32 + 22] == 0xE2B4 && map[8 * 32 + 24] == 0xE2B6);
+        /* Row 9 mirrors it with the 0x2CC/0x2D2 edges and 0x2C0 body. */
+        assert(map[9 * 32 + 8] == 0xE2CC && map[9 * 32 + 9] == 0xE2CD);
+        assert(map[9 * 32 + 10] == 0xE2C0 && map[9 * 32 + 21] == 0xE2CB);
+        assert(map[9 * 32 + 22] == 0xE2D4 && map[9 * 32 + 24] == 0xE2D6);
+        /* Cells outside the patches stay clear. */
+        assert(map[7 * 32 + 10] == 0 && map[8 * 32 + 25] == 0 &&
+               map[10 * 32 + 10] == 0);
+        /* Idempotent and NULL-safe. */
+        assert(aos_object1c_save_screen_apply(NULL) == 0);
+        assert(aos_object1c_save_screen_apply(map) == 56);
+    }
+
     puts("aos_object1c: ok");
     return 0;
 }

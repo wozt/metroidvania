@@ -12417,9 +12417,9 @@ int aria_runtime_main(int argc, char **argv) {
                     ? &objects.skills[SKILL_ART_DRYAD].frames[0][0]
                 : skill->kind == SKILL_ARACHNE || skill->kind == SKILL_MUDMAN
                     ? &((skill->kind == SKILL_ARACHNE
-                             ? objects.skills[SKILL_ART_ARACHNE]
-                             : objects.skills[SKILL_ART_FISH_HEAD])
-                           .frames[skill->anim.id][skill->anim.frame])
+                             ? &objects.skills[SKILL_ART_ARACHNE]
+                             : &objects.skills[SKILL_ART_FISH_HEAD])
+                           ->frames[skill->anim.id][skill->anim.frame])
                 : skill->kind == SKILL_ARACHNE_SHARD
                     ? &objects.skills[SKILL_ART_FISH_HEAD].frames[1][0]
                 : skill->kind == SKILL_RED_MINOTAUR

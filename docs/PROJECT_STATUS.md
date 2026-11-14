@@ -1,3 +1,28 @@
+## Patch 1113 - Object14 (SPECIAL id 20) identified
+
+- The 20 dead records are native **Object14** (entity id 0x14):
+  `Object14Create` @ 0x08052870 loads sprite triple
+  {0x081CBEA4, 0x0820A0DC, frames 0x08210B60} — already exported
+  as `special_20` — and `Object14Update` @ 0x080528C4 dispatches
+  through the function table at 0x08526408 indexed by the
+  entity's +0x30 (param0): three variants.
+- Variant handlers: `sub_08051E60` (param0 0, ~340 asm lines,
+  5-state machine with RNG variant roll, contact callback
+  sub_0804277C, attack params 0x103000E8, song 0xAC, fixed-point
+  sin/cos aim at the player and affine sprite transform),
+  `sub_08052340` (param0 1, ~340 lines, 4-state machine) and
+  `sub_0805262C` (param0 2, ~340 lines, probe-gated spawner with
+  RNG spin). Room records use param0 2 (7x), 0 (3x) and 1 (1x),
+  all in area_07 rooms 001/017/025/033 — six param0-2 records
+  spaced ~300 px apart on one horizontal line per room.
+- Supporting natives to port with it: `sub_08051BF8`,
+  `sub_08051CC4`, `sub_080527E4`, `sub_08021278`,
+  `sub_0802138C`, `sub_08068AD4` (probe), `sub_080009E4`
+  (fixed-point trig), `sub_0806E3F8`, `sub_080428F0`,
+  `sub_0804277C`, `sub_0803E058`. Total roughly 700 asm lines —
+  a dedicated `aos_object14` module plus dispatch wiring, scoped
+  as the next object-integration feature alongside Object20.
+
 ## Patch 1112 - Multi-room `--simulate` sweep: dead SPECIAL ids confirmed
 
 - Ran `--simulate 400 --simulate-hold` (RIGHT then LEFT) on all 293

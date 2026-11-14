@@ -1,3 +1,27 @@
+## Patch 1120 - Room-dialogue bridge for Object20 text windows
+
+- New module `src/runtime/aos/game/aos_room_dialogue.c/.h` ports
+  the open/poll/close contract the Object20 story/dirs/shop and
+  npc-talk Out structs emit (`window_text` = sub_08067934 arg,
+  `window_poll` = sub_08067A04 frame, `window_close` = sub_08067898)
+  into a host-injected state machine: `aos_room_dialogue_open` /
+  `_poll` / `_close` / `_apply` / `_render`, with the script engine
+  reusing `AosOpeningEvent` and every window/font/resource primitive
+  left as a callback (`resolve_text`, `open_window`, `render`,
+  `close_window`, `set_input_lock`).
+- `aos_room_dialogue_host.h` is a compile-checked adapter sketch
+  showing the exact existing functions the future `aria_runtime.c`
+  section calls (`aos_intro_resources_entry`, `aos_intro_font_*`,
+  `aos_window_frame_*`, `aos_opening_event_speaker_name`) plus the
+  documented gaps: sub_08067934/sub_08067898 register effects have
+  no standalone primitive and the input lock is a new bool.
+- `tests/test_aos_room_dialogue.c` covers the open->poll->advance
+  ->close lifecycle, resolution and open_window failures, sequential
+  dialogues, malformed scripts and lock acquire/release pairing.
+  **Not wired**: the Object20 SPECIAL id-32 dispatch case and the
+  adapter hookup are the next step; classified partial in
+  `data/native_parity/annotations.tsv` (`aos.objects.room_dialogue`).
+
 ## Patch 1119 - Object13 strike tail ported; id-19 event path reachable
 
 - Native audit showed `Object13Create` never writes the parent's

@@ -1,3 +1,24 @@
+## Patch 1116 - Object20 story variants ported as `aos_object20_story`
+
+- New parity-reference module
+  `src/runtime/aos/game/aos_object20_story.c/.h` ports the seven
+  room-used Object20 variants whose update/create addresses were
+  resolved by dumping the 0x08526658/0x085266D8 param0 tables from
+  the ROM: param0 9, 10, 21, 22, 23, 24 and 29 (Chaotic Realm and
+  early-area story beats, including the param0-29 child machine
+  sub_0805C39C). The shared Object20Create/Object20Update
+  gate/prologue/epilogue logic is ported with them.
+- Text window calls (sub_08067934/67A04/67898), audio
+  (sub_08013D60/13E18/13EEC/13CF0/121E0, PlaySong), entity spawn
+  and fade globals are reported through an in/out struct; engine
+  record writes and EntityDelete timing are approximations
+  marked in the header. **Not wired into `aria_runtime.c`** —
+  the id-32 dispatch and dialogue bridge are the next step.
+- `tests/test_aos_object20_story.c` covers every variant's
+  create gates, state transitions, window_text outputs and the
+  child29 machine; registered as `aos_object20_story` CTest and
+  linked into the runtime sources for the future dispatch.
+
 ## Patch 1115 - `--simulate-script`: per-frame input for headless runs
 
 - `fusion_aria_runtime --simulate N --simulate-script FILE` replaces

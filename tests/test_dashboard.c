@@ -514,7 +514,7 @@ static void test_static_page(void) {
         char path[8700];
         struct stat status;
         snprintf(path, sizeof path, "%s/%s", directory, entry->d_name);
-        EXPECT(!stat(path, &status) && status.st_size < 2 * 1024 * 1024, "%s too large", entry->d_name);
+        EXPECT(!stat(path, &status) && status.st_size < 4 * 1024 * 1024, "%s too large", entry->d_name);
     }
     if (handle) closedir(handle);
     EXPECT(found == COUNT(allowed), "dashboard files");

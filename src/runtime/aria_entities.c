@@ -224,9 +224,10 @@ static uint8_t object20_ewram_427;
  * (sub_0800F1FC's unconditional spawn-time set, mirrored in
  * entity_data_sync, plus sub_0801487C's player record), and
  * object20_scroll_tx binds the record table as sub_08000F60's
- * scan list — but the records are per-frame mirrors of e->x/e->y,
- * so a shift lasts only until the record's next sync (native
- * +0x524/+0x528 are authoritative and accumulate). The BG map
+ * scan list; the shift lands on each record's scroll_dx/scroll_dy
+ * accumulator and entity_data_sync composes it into pos40/pos44,
+ * so the compensation accumulates across the scroll sequence like
+ * the native authoritative +0x524/+0x528 position. The BG map
  * tile-row rebuild's sub_08001994 lookups resolve to real tile
  * words through the room tilemap below when a ROM is bound via
  * aria_scroll_tilemap_bind; the BgCmdBuffer_WriteData VRAM write
@@ -519,12 +520,17 @@ static void entity_data_sync(const AriaEntity *e, size_t i) {
          * bit too, though a few (sub_080355D0) do not. */
         rec->flags59 |= 0x02;
     }
+    /* pos40/pos44 compose the entity's current fine position with
+     * the record's accumulated sub_08000F60 scroll compensation
+     * (scroll_dx/scroll_dy): native keeps one authoritative
+     * +0x40/+0x44 position that both entity logic and the scroll
+     * pass mutate, so the compensation persists across syncs. */
     if (e->kind == ARIA_KIND_ENEMY) {
-        rec->pos40 = e->enemy.x;
-        rec->pos44 = e->enemy.y;
+        rec->pos40 = e->enemy.x + rec->scroll_dx;
+        rec->pos44 = e->enemy.y + rec->scroll_dy;
     } else {
-        rec->pos40 = (int32_t)e->x << 16;
-        rec->pos44 = (int32_t)e->y << 16;
+        rec->pos40 = ((int32_t)e->x << 16) + rec->scroll_dx;
+        rec->pos44 = ((int32_t)e->y << 16) + rec->scroll_dy;
     }
     if (e->kind == ARIA_KIND_SPECIAL && e->id == 32)
         rec->state = object20_state_byte(e);
@@ -1079,18 +1085,25 @@ static void object20_scroll_ensure(AriaRoom *room, int cam_x,
 }
 
 /* sub_08000F60's scan list over the entityData mirror: the refs'
- * fine_x/fine_y point into the static record table, so they are
- * bound once; flagged is refreshed from each record's +0x59 bit 1
- * before every transaction (unspawnled records are memset, so a
- * zero flags59 already reads unflagged). */
+ * fine_x/fine_y point at each record's scroll_dx/scroll_dy
+ * accumulators (16.16 fine), so aos_scroll_shift_entities adds
+ * -bg[1].xVel/yVel into them and entity_data_sync composes the
+ * shift into pos40/pos44 on top of the entity's live position —
+ * the same net position native keeps in the single +0x40/+0x44
+ * fields, persisting across frames instead of being overwritten
+ * by the next sync. flagged is refreshed from each record's +0x59
+ * bit 1 before every transaction (unspawnled records are memset,
+ * so a zero flags59 already reads unflagged). */
 static AosScrollEntityRef aria_scroll_entities[ARIA_ENTITY_DATA_RECORDS];
 static bool aria_scroll_entities_ready;
 
 static void object20_scroll_entities_refresh(void) {
     if (!aria_scroll_entities_ready) {
         for (size_t i = 0; i < ARIA_ENTITY_DATA_RECORDS; ++i) {
-            aria_scroll_entities[i].fine_x = &aria_entity_data[i].pos40;
-            aria_scroll_entities[i].fine_y = &aria_entity_data[i].pos44;
+            aria_scroll_entities[i].fine_x =
+                &aria_entity_data[i].scroll_dx;
+            aria_scroll_entities[i].fine_y =
+                &aria_entity_data[i].scroll_dy;
             aria_scroll_entities[i].flagged = false;
         }
         aria_scroll_entities_ready = true;
@@ -1113,14 +1126,12 @@ static void object20_scroll_tx(AriaRoom *room, int cam_x, int cam_y,
      * real sub_08001994 words. Cheap no-op once resolved. */
     aria_scroll_tilemap_refresh(room);
     /* The sub_08000F60 entity pass: every +0x59-bit-1 record's
-     * +0x40/+0x44 shifts by -bgInfo[1].xVel/yVel. Caveat: the host
-     * records are per-frame mirrors — entity_data_sync rewrites
-     * pos40/pos44 from e->x/e->y (and the player record from soma)
-     * at the top of each entity's update, so a shift persists only
-     * until that record's next sync. Native +0x524/+0x528 are the
-     * authoritative positions and the compensation accumulates over
-     * the scroll sequence; keeping that accumulation would need the
-     * record positions to be authoritative, which they are not. */
+     * accumulated scroll_dx/scroll_dy shifts by -bgInfo[1].
+     * xVel/yVel, and entity_data_sync composes it into pos40/
+     * pos44 — the compensation accumulates across the scroll
+     * sequence like the native single +0x40/+0x44 position does
+     * (previously the refs targeted pos40/pos44 directly and the
+     * next per-frame sync overwrote the shift). */
     object20_scroll_entities_refresh();
     AosScrollWorld sw = { 0, false, 0,
                           aria_scroll_entities, ARIA_ENTITY_DATA_RECORDS };
@@ -1148,12 +1159,12 @@ static void object20_scroll_tx(AriaRoom *room, int cam_x, int cam_y,
  * and the per-frame camera-follow request and every scripted
  * transaction compose on that one accumulator — so the visible BG1
  * offset is the camera position plus this delta. Entities keep
- * cam_x/cam_y: only entityData records with +0x59 bit 1 shift
- * (sub_08000F60 — the flag is seeded at spawn now, but the host
- * records resync from e->x/e->y every frame so the shift does not
- * accumulate into the drawn positions). Returns
- * 0,0 before the room's first transaction or for another room's
- * stale state. */
+ * cam_x/cam_y for draw and gameplay; only the entityData records
+ * with +0x59 bit 1 carry the sub_08000F60 compensation, accumulated
+ * in their scroll_dx/scroll_dy and composed into pos40/pos44
+ * (native shifts the authoritative +0x40/+0x44 position itself).
+ * Returns 0,0 before the room's first transaction or for another
+ * room's stale state. */
 void aria_scroll_bg1_offset(const AriaRoom *room, int32_t *x, int32_t *y) {
     *x = *y = 0;
     if (!room || aria_scroll_room_area != room->area ||
@@ -2035,17 +2046,43 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     const bool entities_frozen = aos_levelup_frozen(&combat->levelup);
     /* entityData[0] is the player record natively (slot 0):
      * pos40/pos44 are the +0x40/+0x44 fine words and +0x58 the
-     * facing-bit approximation shared with player_flags58. */
+     * facing-bit approximation shared with player_flags58. The
+     * record is rewritten every frame, but its scroll_dx/scroll_dy
+     * accumulators persist like the native position they mirror —
+     * saved across the memset and composed into pos40/pos44 below.
+     * A room change re-creates the native records, so the
+     * accumulators reset with it. */
+    static int entity_data_room_area = -1;
+    static int entity_data_room_number = -1;
+    if (room->area != entity_data_room_area ||
+        room->number != entity_data_room_number) {
+        for (size_t i = 0; i < ARIA_ENTITY_DATA_RECORDS; ++i) {
+            aria_entity_data[i].scroll_dx = 0;
+            aria_entity_data[i].scroll_dy = 0;
+        }
+        entity_data_room_area = room->area;
+        entity_data_room_number = room->number;
+    }
+    int32_t player_scroll_dx = aria_entity_data[0].scroll_dx;
+    int32_t player_scroll_dy = aria_entity_data[0].scroll_dy;
     memset(&aria_entity_data[0], 0, sizeof aria_entity_data[0]);
+    aria_entity_data[0].scroll_dx = player_scroll_dx;
+    aria_entity_data[0].scroll_dy = player_scroll_dy;
     aria_entity_data[0].active = soma != NULL;
     /* +0x59 bit 1: sub_0801487C sets unk_53D_1 on the player record
      * (entityData[0]) right after EntityCreateInRange(0,0). */
     aria_entity_data[0].flags59 = 0x02;
     if (soma) {
-        aria_entity_data[0].pos40 = soma->x;
-        aria_entity_data[0].pos44 = soma->y;
+        aria_entity_data[0].pos40 = soma->x + player_scroll_dx;
+        aria_entity_data[0].pos44 = soma->y + player_scroll_dy;
         aria_entity_data[0].flags58 = soma->facing_left ? 0x40 : 0;
     }
+    /* Records past the live entity list have no native slot:
+     * clear them so a removed child or a shorter room's tail
+     * cannot keep a stale flagged record accumulating shifts. */
+    for (size_t i = room->entity_count; i < ARIA_ENTITY_DATA_RECORDS - 1; ++i)
+        memset(&aria_entity_data[i + 1], 0,
+               sizeof aria_entity_data[i + 1]);
     for (size_t i = 0; !entities_frozen && i < room->entity_count; ++i) {
         AriaEntity *e = &room->entities[i];
         entity_data_sync(e, i);

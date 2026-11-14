@@ -1143,6 +1143,20 @@ int aria_runtime_main(int argc, char **argv) {
     bool opening_window_ready = false;
     bool opening_epilogue = false;
     bool dialogue_trace_was_open = false;   /* --dialogue-trace edge state */
+    /* Epilogue room-dialogue open delay: sub_08067934 writes the
+     * empty WIN0V bounds (0xC0C1) on the trigger frame, but the
+     * window only becomes visible after sub_08067A04's open states
+     * run sub_08067804(+3) per poll — gEwramData +0x41B climbing
+     * 0->0x24, AOS_ROOM_DIALOGUE_OPEN_FRAMES polls (the same delay
+     * aos_room_dialogue models for the Object20 path). The epilogue
+     * reuses the opening draw path whose window_shown latched during
+     * the story, so the hold is counted locally: opening stays
+     * active (the native +0x42C input lock and frozen player apply
+     * from the trigger frame) while the chrome, glyphs and the
+     * script machine wait out the animation. */
+    unsigned epilogue_window_hold = 0;
+    bool epilogue_window_trace = false;   /* pending "open" trace line */
+    uint16_t epilogue_window_text = 0;
     bool opening_soul_text_ready = false;
     SDL_Texture *opening_portrait_texture = NULL;
     uint8_t opening_portrait_id = 0xFF;
@@ -1773,6 +1787,19 @@ int aria_runtime_main(int argc, char **argv) {
              * the script's end command; the branch stays open until the
              * camera finishes recentring on Soma. */
             if (opening.active || opening_actors.camera_active) {
+                /* The epilogue WIN0V open hold ticks once per frame
+                 * the dialogue branch owns; when it expires the
+                 * window chrome may draw and the trace reports the
+                 * visible-open frame (native: ~10-30 frames after
+                 * the pulse edge, not the trigger frame). */
+                if (epilogue_window_hold &&
+                    --epilogue_window_hold == 0 &&
+                    epilogue_window_trace) {
+                    epilogue_window_trace = false;
+                    if (dialogue_trace)
+                        printf("DialogueTrace open frame=%ld text=0x%04X\n",
+                               step, epilogue_window_text);
+                }
                 /* The scene owns Soma's pose until Object20 commits. */
                 soma.anim.id = AOS_SOMA_ANIM_OPENING_LYING;
                 soma.anim.frame = 0;
@@ -1786,6 +1813,7 @@ int aria_runtime_main(int argc, char **argv) {
                  * and +0xA==2 only starts sub_08067A04 — once window_open
                  * latches. */
                 if (opening_actors.window_open &&
+                    !epilogue_window_hold &&
                     !aos_opening_actors_blocks_script(&opening_actors)) {
                     aos_opening_event_update(&opening, aria_input.new_input);
                     if (opening.advanced) aos_audio_play_song(0x132);
@@ -2054,6 +2082,17 @@ int aria_runtime_main(int argc, char **argv) {
                         aos_opening_event_set_resolver(
                             &opening, resolve_opening_text, &opening_resources);
                         opening_actors.soma_animation = AOS_SOMA_ANIM_IDLE;
+                        /* sub_08067934's synchronous half ran on
+                         * this frame (window registers + the
+                         * +0x42C input lock the frozen-player skip
+                         * above already models); the WIN0V open
+                         * animation still has
+                         * AOS_ROOM_DIALOGUE_OPEN_FRAMES polls to
+                         * run inside sub_08067A04 before the
+                         * window covers the dialogue band. */
+                        epilogue_window_hold = AOS_ROOM_DIALOGUE_OPEN_FRAMES;
+                        epilogue_window_trace = dialogue_trace;
+                        epilogue_window_text = (uint16_t)talk;
                     }
                 }
                 if (opening.active) {
@@ -2517,7 +2556,11 @@ int aria_runtime_main(int argc, char **argv) {
              * pulse->window latency without pixel probing. Debug
              * diagnostics only; no gameplay effect. */
             if (dialogue_trace) {
-                bool rd_open = aos_room_dialogue_active(&room_dialogue);
+                /* The visible-open edge: sub_08067934's chrome lands
+                 * on the request frame but WIN0V stays empty until
+                 * the +0x41B animation completes, so the trace keys
+                 * on aos_room_dialogue_shown, not the session flag. */
+                bool rd_open = aos_room_dialogue_shown(&room_dialogue);
                 bool rd_edge = rd_open != dialogue_trace_was_open;
                 dialogue_trace_was_open = rd_open;
                 if (rd_edge || step % 1000 == 0) {
@@ -2655,9 +2698,30 @@ int aria_runtime_main(int argc, char **argv) {
          * (only +0x59-bit-1 records shift, sub_08000F60). */
         int32_t bg1_ox = 0, bg1_oy = 0;
         aria_scroll_bg1_offset(&room, &bg1_ox, &bg1_oy);
-        SDL_FRect src = {(float)(cam_x + bg1_ox), (float)(cam_y + bg1_oy),
-                         VIEW_W, VIEW_H},
-                    dst = {0, 0, VIEW_W, VIEW_H};
+        /* The bitmap covers the whole room map: the exporter writes
+         * width_screens x height_screens screen blocks of 256 px
+         * (verified against every exported background.bmp). The GBA
+         * tilemap wraps at the map edges, so the composed offset is
+         * taken modulo the map size — an out-of-range offset (a
+         * scroll transaction's accumulated delta, or a scripted
+         * bgInfo[1].xPos write past the meta gates) shows the
+         * wrapped side like the hardware tilemap instead of being
+         * clipped at the texture edge. A 240x160 window can
+         * straddle the wrap, so up to four source/destination
+         * pairs are drawn. */
+        const int bg_map_w = room.width_screens << 8;
+        const int bg_map_h = room.height_screens << 8;
+        const bool bg_wrap_ok = bg_map_w > 0 && bg_map_h > 0;
+        const int32_t bg_raw_x = (int32_t)cam_x + bg1_ox;
+        const int32_t bg_raw_y = (int32_t)cam_y + bg1_oy;
+        const int bg_sx = bg_wrap_ok
+            ? (int)(((bg_raw_x % bg_map_w) + bg_map_w) % bg_map_w)
+            : (int)bg_raw_x;
+        const int bg_sy = bg_wrap_ok
+            ? (int)(((bg_raw_y % bg_map_h) + bg_map_h) % bg_map_h)
+            : (int)bg_raw_y;
+        const bool bg_x_wrap = bg_wrap_ok && bg_sx + VIEW_W > bg_map_w;
+        const bool bg_y_wrap = bg_wrap_ok && bg_sy + VIEW_H > bg_map_h;
         {
             /* The BG fade of sub_0800C8C8, relative to the OBJ veil. */
             float bg = announced_death && death.obj.weight > 0
@@ -2666,7 +2730,23 @@ int aria_runtime_main(int argc, char **argv) {
             SDL_SetTextureColorMod(background, mod, mod, mod);
             if (hud_texture) SDL_SetTextureColorMod(hud_texture, mod, mod, mod);
         }
-        SDL_RenderTexture(renderer, background, &src, &dst);
+        for (int seg_y = 0; seg_y < (bg_y_wrap ? 2 : 1); ++seg_y) {
+            const int src_y = seg_y ? 0 : bg_sy;
+            const int seg_h = seg_y ? bg_sy + VIEW_H - bg_map_h
+                                    : (bg_y_wrap ? bg_map_h - bg_sy : VIEW_H);
+            for (int seg_x = 0; seg_x < (bg_x_wrap ? 2 : 1); ++seg_x) {
+                const int src_x = seg_x ? 0 : bg_sx;
+                const int seg_w = seg_x ? bg_sx + VIEW_W - bg_map_w
+                                         : (bg_x_wrap ? bg_map_w - bg_sx
+                                                      : VIEW_W);
+                SDL_FRect src = {(float)src_x, (float)src_y,
+                                 (float)seg_w, (float)seg_h};
+                SDL_FRect dst = {(float)(seg_x ? VIEW_W - seg_w : 0),
+                                 (float)(seg_y ? VIEW_H - seg_h : 0),
+                                 (float)seg_w, (float)seg_h};
+                SDL_RenderTexture(renderer, background, &src, &dst);
+            }
+        }
         /* The save point draws through its SPECIAL id-28 entity
          * (Object1C marker child art) in draw_special_objects —
          * the old fixed-position placeholder is retired. */
@@ -3464,7 +3544,7 @@ int aria_runtime_main(int argc, char **argv) {
          * +0xB==0 suspend hold delays by 0x40 frames. window_shown is
          * that visible-window point. */
         if (opening.active && opening_actors.soul_notice == 0 &&
-            opening_actors.window_shown)
+            opening_actors.window_shown && !epilogue_window_hold)
             draw_opening_backdrop(renderer, &opening, &opening_rom,
                                   &opening_portrait_texture,
                                   &opening_portrait_id);
@@ -3476,7 +3556,7 @@ int aria_runtime_main(int argc, char **argv) {
          * end command lands; the backdrop gate above already hides it, so
          * the glyph pass must not linger through the return pan. */
         else if (opening.active && opening_text_ready &&
-                 opening_actors.window_shown)
+                 opening_actors.window_shown && !epilogue_window_hold)
             draw_opening_text(renderer, &opening, &opening_tiles,
                               opening_window_ready ? &opening_window : NULL,
                               (uint32_t)step);
@@ -3486,7 +3566,7 @@ int aria_runtime_main(int argc, char **argv) {
          * the draw reuses draw_opening_text's pixel pass — both
          * no-op without a ready ROM in --simulate (which never
          * reaches this path anyway). */
-        if (aos_room_dialogue_active(&room_dialogue)) {
+        if (aos_room_dialogue_shown(&room_dialogue)) {
             aos_room_dialogue_render(&room_dialogue, (uint32_t)step);
             const AosOpeningEvent *rd_event =
                 aos_room_dialogue_event(&room_dialogue);

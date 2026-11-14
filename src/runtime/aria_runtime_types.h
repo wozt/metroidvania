@@ -124,9 +124,11 @@
 /* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold
  * Medusa head (parameter 1 bit 0) and the Ghost Dancer (parameter 0). */
 #define VARIANT_ARTS 5
-/* Object/special_NN_vP records: the export currently emits 31 distinct
- * (id, param0) pairs; 40 leaves headroom. */
-#define SPECIAL_VARIANTS 40
+/* Object/special_NN_vP records: the export currently emits 42 distinct
+ * (id, param0) pairs — ids 14/16/18/28/29/31/42 and the id-7/15 rows —
+ * after the Object1F flank re-bank banks _v6/_v7 joined id 31.
+ * 48 leaves headroom. */
+#define SPECIAL_VARIANTS 48
 
 /* metadata room_music.tsv: sub_08013960's flags per (area, room). */
 #define MUSIC_AREAS 16
@@ -286,6 +288,19 @@ typedef struct {
                              * sub_0801487C for the player record) */
     uint8_t slot10;         /* +0x10 own slot index */
     uint8_t slot11;         /* +0x11 bound-record slot index */
+    /* Host-side accumulation of sub_08000F60's scroll
+     * compensation, 16.16 fine pixels. Native shifts +0x40/+0x44
+     * (pos40/pos44) directly, so the shift is part of the one
+     * authoritative position and persists across frames; the host
+     * splits that position into the entity's gameplay position
+     * (AriaEntity.x/y, AosEnemy.x/y, AosSoma.x/y) plus this record
+     * mirror, so the compensation accumulates here and pos40/pos44
+     * compose base + scroll offset at every sync. aos_scroll_
+     * shift_entities adds -bg[1].xVel/yVel per transaction; the
+     * fields reset when the record's slot is (re)initialized
+     * (spawn memsets the record, a room change clears the table). */
+    int32_t scroll_dx;
+    int32_t scroll_dy;
 } AriaEntityDataRecord;
 
 #define ARIA_ENTITY_DATA_RECORDS (MAX_ENTITIES + 1)

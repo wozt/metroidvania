@@ -70,6 +70,34 @@
 - Registries synced (`aos.core.scroll`/`aos.core.tilemap` rows,
   `text_window`).
 
+## Patch 1141 - OBJ-layer load fix, scroll wrap, window-open delay, scroll accumulation
+
+- **Critical fix — whole OBJ layer was blank**: `SPECIAL_VARIANTS`
+  was 40 while the sprite export now emits 42 `(id,param0)` pairs
+  (`special_31_v6/v7` added in the wave-3 split), so
+  `aria_load_objects` failed and every sprite draw (opening actors,
+  monsters, doors, soul orb) was gated off. Raised to 48; verified
+  by captures — the full opening beat chain runs and the Winged
+  Skeleton soul is granted.
+- **BG1 scroll wraps like hardware**: the composed camera+scroll
+  offset is reduced modulo the room map pixel size (all 342
+  `background.bmp` exports verified to match
+  `width_screens*256 × height_screens*256`) with up to 4 SDL draws
+  for boundary-straddling windows — the GBA tilemap wrap, not SDL's
+  texture-edge clip.
+- **Window-open delay ported**: `sub_08067934` writes empty WIN0V
+  bounds synchronously and `sub_08067A04` case-2's
+  `sub_08067804(+3)` ramps `+0x41B` to 0x24 over 12 polls. Modelled
+  as `open_anim`/`window_shown` in `aos_room_dialogue` plus a
+  12-frame epilogue hold — room-dialogue windows now open ~+12
+  frames post-pulse, inside the native 10-30 range (was ~1).
+- **Scroll compensation accumulates**: entityData records carry
+  `scroll_dx/dy` (16.16) composed into `pos40/pos44` at sync —
+  the `sub_08000F60` shift now persists across a scroll sequence
+  like native `+0x524/+0x528`, reset per room/spawn.
+- Registries synced (`aos.core.scroll`, `aos.events.opening_scene`,
+  `aos.objects.room_dialogue`).
+
 ## Patch 1140 - scroll layer records, flags59 writer, intro scroll port, Object20 comparison
 
 - **BG2/BG3 layer records bound per room**: `aria_scroll_layers_refresh`

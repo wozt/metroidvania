@@ -40,6 +40,10 @@ bool aos_room_dialogue_active(const AosRoomDialogue *dlg) {
     return dlg && dlg->window_open;
 }
 
+bool aos_room_dialogue_shown(const AosRoomDialogue *dlg) {
+    return dlg && dlg->window_open && dlg->window_shown;
+}
+
 const AosOpeningEvent *aos_room_dialogue_event(const AosRoomDialogue *dlg) {
     return dlg && dlg->window_open ? &dlg->event : NULL;
 }
@@ -79,6 +83,12 @@ bool aos_room_dialogue_open(AosRoomDialogue *dlg, uint16_t text_id) {
     }
     dlg->text_id = text_id;
     dlg->window_open = true;
+    /* sub_08067934 writes WIN0V=0xC0C1 (empty): the window is not
+     * visible yet. sub_08067A04's open states advance +0x41B by 3
+     * per poll until it saturates at 0x24 — window_shown latches
+     * when that animation completes (aos_room_dialogue_poll). */
+    dlg->open_anim = 0;
+    dlg->window_shown = false;
     dlg->text_done = false;
     dlg->failed = false;
     if (dlg->host->set_input_lock)
@@ -89,6 +99,17 @@ bool aos_room_dialogue_open(AosRoomDialogue *dlg, uint16_t text_id) {
 
 bool aos_room_dialogue_poll(AosRoomDialogue *dlg, uint16_t new_input) {
     if (!dlg || !dlg->window_open) return false;
+    /* sub_08067A04's window-open states call sub_08067804(+3) once
+     * per poll: +0x41B climbs 0->0x24 and WIN0V grows from the empty
+     * bounds sub_08067934 wrote. The script machine keeps running
+     * alongside (the native print states are not gated on the
+     * animation either); only the visible-window latch waits for
+     * saturation — AOS_ROOM_DIALOGUE_OPEN_FRAMES polls. */
+    if (!dlg->window_shown) {
+        unsigned anim = (unsigned)dlg->open_anim + 3;
+        dlg->open_anim = anim > 0x24 ? 0x24 : (uint8_t)anim;
+        if (dlg->open_anim >= 0x24) dlg->window_shown = true;
+    }
     if (!dlg->event.active) {
         /* The script ran to its end command; keep reporting done so a
          * frame that skipped the poll cannot strand the entity. */
@@ -112,6 +133,8 @@ void aos_room_dialogue_close(AosRoomDialogue *dlg) {
     if (!dlg) return;
     if (dlg->window_open) {
         dlg->window_open = false;
+        dlg->window_shown = false;
+        dlg->open_anim = 0;
         if (dlg->host && dlg->host->close_window)
             dlg->host->close_window(dlg->host->context);
     }

@@ -80,6 +80,15 @@ typedef struct {
     AosRoomDialogueInputLock set_input_lock;
 } AosRoomDialogueHost;
 
+/* sub_08067804's WIN0V open animation, run inside sub_08067A04's
+ * poll states: gEwramData +0x41B climbs 0->0x24 in +3 steps, one
+ * step per poll, so the empty WIN0V bounds (0xC0C1) that
+ * sub_08067934 writes synchronously take 12 polls to reach the
+ * full window. Hosts modelling the same trigger->visible delay
+ * on a path that bypasses this bridge (the epilogue's direct
+ * opening-event reuse) count the same number of frames. */
+#define AOS_ROOM_DIALOGUE_OPEN_FRAMES 12
+
 /* Normalized view of one entity update's text-window outputs, shared
  * by aos_object20_story/dirs, aos_npc_talk and aos_shop Out structs. */
 typedef struct {
@@ -93,7 +102,9 @@ struct AosRoomDialogue {
     const AosRoomDialogueHost *host;
     uint16_t text_id;           /* id passed to the last open */
     uint32_t frame;             /* render frame counter */
+    uint8_t open_anim;          /* gEwramData +0x41B WIN0V counter */
     bool window_open;           /* chrome currently shown */
+    bool window_shown;          /* WIN0V open animation complete */
     bool input_locked;          /* set_input_lock(true) outstanding */
     bool text_done;             /* last sub_08067A04-style result */
     bool failed;                /* resolve/open/render failure seen */
@@ -103,6 +114,13 @@ void aos_room_dialogue_init(AosRoomDialogue *dlg);
 void aos_room_dialogue_set_host(AosRoomDialogue *dlg,
                                 const AosRoomDialogueHost *host);
 bool aos_room_dialogue_active(const AosRoomDialogue *dlg);
+/* Window-visible predicate: sub_08067934's register writes land on
+ * the open frame, but WIN0V stays at the empty 0xC0C1 bounds until
+ * sub_08067A04's open states finish the +0x41B animation
+ * (AOS_ROOM_DIALOGUE_OPEN_FRAMES polls). Presentation and open-frame
+ * diagnostics must use this; the session lifecycle (poll/close/input
+ * lock) stays on aos_room_dialogue_active. */
+bool aos_room_dialogue_shown(const AosRoomDialogue *dlg);
 /* The live script machine while the window is open (glyphs, line,
  * speaker, waiting, complete, malformed, dirty, cue). NULL when
  * closed; the pointer stays valid until the next open/close. */

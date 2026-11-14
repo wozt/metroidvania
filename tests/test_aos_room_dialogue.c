@@ -234,6 +234,27 @@ int main(void) {
     aos_room_dialogue_close(&dlg);
     assert(mock.lock_releases == 6);
 
+    /* WIN0V open delay: sub_08067934 leaves the window invisible
+     * (empty 0xC0C1 bounds); window_shown latches only after
+     * AOS_ROOM_DIALOGUE_OPEN_FRAMES polls of the +0x41B animation.
+     * The session stays active and the script keeps polling. */
+    req.window_text = 0x14;
+    req.window_poll = false;
+    req.window_close = false;
+    aos_room_dialogue_apply(&dlg, 0, &req);
+    assert(aos_room_dialogue_active(&dlg));
+    assert(!aos_room_dialogue_shown(&dlg));
+    for (unsigned i = 1; i < AOS_ROOM_DIALOGUE_OPEN_FRAMES; ++i) {
+        aos_room_dialogue_poll(&dlg, 0);
+        assert(!aos_room_dialogue_shown(&dlg));
+        assert(aos_room_dialogue_active(&dlg));
+    }
+    aos_room_dialogue_poll(&dlg, 0);
+    assert(aos_room_dialogue_shown(&dlg));
+    run_dialogue_to_done(&dlg);
+    aos_room_dialogue_close(&dlg);
+    assert(!aos_room_dialogue_shown(&dlg));
+
     /* Missing host / missing resolver are handled, not crashed. */
     aos_room_dialogue_init(&dlg);
     req.window_text = 0x14;

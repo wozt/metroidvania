@@ -63,11 +63,12 @@
  * RandomNumberGenerator values at state 0 (+ 0x24 = 0x8000 on
  * odd, + 0x26 = (roll & 0x3F) + 0x40), integrates + 0x24 +=
  * + 0x26 and + 0x40 += sub_080009E4(+ 0x24) / 3 in state 1,
- * then in state 2 aims a lead point (A094 + screen + 0x4A,
- * +/- 0x18/0x60 by + 0x48 sign) through the sub_080020A0/
- * sub_08001F3C wall pair — a confirmed wall halves and flips
- * + 0x48 — before the sub_0806D490(0x50)/sub_0806D3D8(0x20000)
- * drag and the |+ 0x48| <= 0x7FF restart into state 1.
+ * then in state 2 aims a lead point (A094 + screen +
+ * u16(+ 0x48 >> 16), +/- 0x18 by + 0x48 sign) through the
+ * sub_080020A0/sub_08001F3C wall pair — a confirmed wall halves
+ * and flips + 0x48 — before the sub_0806D490(0x50)/
+ * sub_0806D3D8(0x800000) drag and the |+ 0x48| <= 0x7FF
+ * restart into state 1.
  *
  * sub_080527E4 (the + 4 child callback) re-anchors + 0x42/+ 0x46
  * from + 0x1C/+ 0x1E minus A094, runs the sub_0803B9D0 draw
@@ -102,8 +103,7 @@ typedef struct {
     int32_t pos_y;          /* +0x44 */
     int16_t scr_x;          /* +0x42: screen pos */
     int16_t scr_y;          /* +0x46 */
-    uint16_t lead_x;        /* +0x4A: v2 horizontal lead */
-    uint16_t probe_off;     /* +0x4E: v0 probe y offset src */
+    uint16_t probe_off;     /* +0x4E: v1 probe y offset src */
     int32_t vel_x;          /* +0x48 */
     int32_t vel_y;          /* +0x4C */
     int32_t acc_x;          /* +0x50: sub_0806D3D8 x accel */
@@ -125,8 +125,8 @@ typedef struct {
     unsigned release_calls; /* sub_080220B4 count */
     unsigned cb_installs;   /* + 4 callback installs (sub_080527E4) */
     unsigned affine_calls;  /* sub_0803E058 count */
-    int32_t affine_a;       /* last sub_0803E058 r1 arg */
-    int32_t affine_b;       /* last sub_0803E058 r2 arg */
+    int32_t affine_a;       /* last sub_0803E058 r0 (angle) */
+    int32_t affine_b;       /* last sub_0803E058 r1/r2 (scale) */
     uint32_t preset_arg;    /* last sub_080428F0 arg */
     unsigned child_count;   /* sub_08051CC4 children fired */
     unsigned palette_frees; /* sub_0803E6BC count */

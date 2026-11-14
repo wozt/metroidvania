@@ -4984,8 +4984,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* Object13Update (sUnk_084F0ED8[19]; Object13Create's
              * sprite attach and eleven chain-link children are the
              * special_sprites coverage): the swing phase/amplitude
-             * machine and its + 0x344 event trigger. The link
-             * physics of sub_080515F0/sub_0805170C is not ported. */
+             * machine and its + 0x344 event trigger. The head
+             * child's sub_0805170C strike tail is ported as
+             * aos_object13_strike; the link physics of
+             * sub_080515F0/sub_0805170C stays approximated. */
             if (!e->spawned) {
                 if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
                 e->spawned = true;
@@ -4996,6 +4998,23 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (e->object13.deleted) continue;   /* native EntityDelete */
             aos_object13_update(&e->object13,
                                 aos_wall_event(aria_events, e->param1));
+            /* sub_0805170C's strike tail: a weapon hit on the bob
+             * while the player is not above it pumps the parent
+             * swing amplitude. The + 0x68AD4 box and the
+             * sub_080421AC attack-slot match collapse to the
+             * shared weapon hitbox overlap; player_left uses the
+             * entity x as the bob anchor. */
+            int swx, swy, sww, swh;
+            if (combat->weapon && combat->weapon_frames &&
+                aos_weapon_hitbox(combat->weapon, soma,
+                                  combat->weapon_frames,
+                                  &swx, &swy, &sww, &swh) &&
+                sww > 1 && swh > 1 &&
+                !(swx + sww - 1 < e->x - 8 || e->x + 8 < swx ||
+                  swy + swh - 1 < e->y - 16 || e->y < swy) &&
+                (int32_t)(soma->y >> 16) >= e->y - 16)
+                aos_object13_strike(&e->object13,
+                                    (int32_t)(soma->x >> 16) < e->x);
             if (e->object13.event_fired) {
                 int word = (int16_t)e->param1 >> 5;
                 if (word >= 0 && word < AOS_WALL_EVENT_WORDS)

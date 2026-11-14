@@ -1,3 +1,45 @@
+## Patch 1119 - Object13 strike tail ported; id-19 event path reachable
+
+- Native audit showed `Object13Create` never writes the parent's
+  + 0x48/+ 0x50 — the zero-init in the dispatch was already
+  faithful; the sole writer is the head child's strike tail in
+  `sub_0805170C` (weapon hit inside its proximity box, player
+  below the bob): settled always + 0x300 with + 0x48 = 0x8000 on
+  the left, the [0x4001,0xBFFF] phase window pumps/brakes by
+  side and facing bit.
+- `aos_object13_strike` ports that tail (sl==0/1/2 windows,
+  + 0x300 pump, - 0x60 brake, phase rewind, + 0xA==0xFF guard);
+  the `e->id == 19` dispatch now calls it on a weapon-hitbox
+  overlap after the update. The `aria_events` write is reachable
+  in gameplay — id-19 records can arm the id-11 event-gated
+  spawners. Remaining approximations: the + 0x68AD4 box and
+  sub_080421AC attack-slot match collapse to the shared hitbox
+  test, the head + 0x58 bit6 latch is taken clear, and the link
+  children stay under special_sprites.
+
+## Patch 1118 - Object14 test repair and asm re-audit fixes
+
+- `tests/test_aos_object14.c` was rewritten against the actual
+  `AosObject14`/`AosObject14Env` API — the committed file still
+  referenced an earlier draft interface and did not compile
+  (`fusion_aos_object14_tests` was broken). The new test covers
+  create success/failure, all three variants' state-0 init and
+  flag writes, palette-failure deletes, mid-state transitions,
+  probe hit/miss branches, the RNG rolls, song outputs, the
+  singleton claim/release, the player snap and the child
+  callback re-anchor; `ctest -R aos_object14` is green.
+- Re-audit of `code_08050A3C.s` against the port fixed five
+  fidelity slips: `sub_08051BF8`'s probe y-offset is the
+  constant pair {0, 8} (not + 0x4E, which only `sub_08052208`
+  reads), its `sub_080686CC` steer step is 0x80 (0x400 in
+  `sub_08052208`), variant 2's state-2 lead point adds
+  u16(+ 0x48 >> 16) and offsets +/- 0x18 by velocity sign (was
+  + 0x60), the `sub_0806D3D8` clamp argument is 0x800000 (was
+  0x20000), and the variant-0 tail's `sub_0803E058` arguments
+  were reordered to (angle, + 0x24 word). `annotations.tsv`
+  updated for the corrected limit. Still unit-tested only —
+  no new emulator comparison.
+
 ## Patch 1117 - Object32 proximity churn fixed
 
 - The dispatch treated `AosObject32.deactivate` as a despawn, but

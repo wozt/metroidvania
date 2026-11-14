@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-14T00:43:59+00:00",
+ "generated_at": "2026-11-14T00:52:19+00:00",
  "git": {
-  "commit": "31939192",
+  "commit": "995b85c1",
   "branch": "main",
   "dirty": true
  },
@@ -23557,7 +23557,7 @@
     "GetEntityRoomXPositionInteger",
     "GetEntityRoomYPositionInteger"
    ],
-   "limitations": "The six sub_08051CC4 children (two flanking plus four RNG-placed type-0x49 sparkles) collapse to a counted burst — their EntityCreateInRange spawn detail, per-child RNG velocities, sprite setup and the sub_08052834/sub_08052868/sub_0805286C child callbacks stay unported; GetEntityRoomX/YPositionInteger is approximated as the + 0x40/+ 0x44 whole-pixel position; the sub_08001E58 tile-distance probe, the sub_080020D8 point test and the sub_080020A0/sub_08001F3C wall pair are injected probe kinds; the + 0x14 collision bits, the + 0x4BE gate, the + 0x13190 self-link, the RNG rolls and the sub_0803E654 palette slot arrive as env inputs; sub_0803E058 affine transforms are counted with raw arguments; sub_08022088/sub_080220B4 collapse to call counts; the module is wired into the aria_runtime SPECIAL dispatch (e->id == 20) with the + 0x4BE/+ 0x14/+ 0x13190 gates approximated clear and the palette slot fixed; and there is no emulator comparison. Object14Create (0x08052870) runs the sub_0806E0D0 sprite attach (tiles 0x081CBEA4, palette 0x0820A0DC, frames 0x08210B60, bank 0 — exported as special_20), deletes on load failure, then sets + 0x58 = (+ 0x58 & ~0x41) or 0x20 and + 0x59 or-assign 2. Object14Update (0x080528C4) indexes the three-entry table at 0x08526408 by + 0x30: variant 0 (sub_08051E60) is the gEwramData + 0x4BE-gated five-state pulsing emitter — the sub_0803E654 palette roll with EntityDelete on -1, the sub_080527E4 frame callback, hurt slot 8, the 0x103000E8 preset, the sub_08051BF8/sub_08051CC4 probe movers steering + 0x20 through ArcTan2 + sub_080686CC, the screen-box child bursts with PlaySong 0xAC and the shared sub_0806E3F8 player-distance attack tail; variant 1 (sub_08052340) is the four-state charge/release with the sub_08022088 singleton claim, the + 0x14-bit0 song pair 0x136 and the sub_080020D8-armed delete; variant 2 (sub_0805262C) is the probe-gated spinner rolling two RNG values into the + 0x24/+ 0x26 angle/speed pair, integrating + 0x40 += sub_080009E4(angle)/3 and bouncing off the sub_080020A0/sub_08001F3C wall pair through sub_0806D490(0x50)/sub_0806D3D8(0x20000). Unit-tested in test_aos_object14.",
+   "limitations": "The six sub_08051CC4 children (two flanking plus four RNG-placed type-0x49 sparkles) collapse to a counted burst — their EntityCreateInRange spawn detail, per-child RNG velocities, sprite setup and the sub_08052834/sub_08052868/sub_0805286C child callbacks stay unported; GetEntityRoomX/YPositionInteger is approximated as the + 0x40/+ 0x44 whole-pixel position; the sub_08001E58 tile-distance probe, the sub_080020D8 point test and the sub_080020A0/sub_08001F3C wall pair are injected probe kinds; the + 0x14 collision bits, the + 0x4BE gate, the + 0x13190 self-link, the RNG rolls and the sub_0803E654 palette slot arrive as env inputs; sub_0803E058 affine transforms are counted with raw arguments; sub_08022088/sub_080220B4 collapse to call counts; the module is wired into the aria_runtime SPECIAL dispatch (e->id == 20) with the + 0x4BE/+ 0x14/+ 0x13190 gates approximated clear and the palette slot fixed; and there is no emulator comparison. Object14Create (0x08052870) runs the sub_0806E0D0 sprite attach (tiles 0x081CBEA4, palette 0x0820A0DC, frames 0x08210B60, bank 0 — exported as special_20), deletes on load failure, then sets + 0x58 = (+ 0x58 & ~0x41) or 0x20 and + 0x59 or-assign 2. Object14Update (0x080528C4) indexes the three-entry table at 0x08526408 by + 0x30: variant 0 (sub_08051E60) is the gEwramData + 0x4BE-gated five-state pulsing emitter — the sub_0803E654 palette roll with EntityDelete on -1, the sub_080527E4 frame callback, hurt slot 8, the 0x103000E8 preset, the sub_08051BF8/sub_08051CC4 probe movers steering + 0x20 through ArcTan2 + sub_080686CC, the screen-box child bursts with PlaySong 0xAC and the shared sub_0806E3F8 player-distance attack tail; variant 1 (sub_08052340) is the four-state charge/release with the sub_08022088 singleton claim, the + 0x14-bit0 song pair 0x136 and the sub_080020D8-armed delete; variant 2 (sub_0805262C) is the probe-gated spinner rolling two RNG values into the + 0x24/+ 0x26 angle/speed pair, integrating + 0x40 += sub_080009E4(angle)/3 and bouncing off the sub_080020A0/sub_08001F3C wall pair through sub_0806D490(0x50)/sub_0806D3D8(0x800000). Unit-tested in test_aos_object14.",
    "next_action": "Port the type-0x49 children (sub_08051CC4 spawn detail and the sub_08052834 update with its sub_0806D490/sub_0806D3D8/sub_0806D128 physics) once the particle path exists, export the param0-driven sprite records, and wire the SPECIAL dispatch entry.",
    "evidence": {
     "unit_tests": [
@@ -24682,7 +24682,7 @@
     "sub_080009E4",
     "sub_08021278"
    ],
-   "limitations": "The eleven chain-link children (sub_080515F0 link physics, sub_0805170C head, the sub_08001E58 terrain probe and the gEwramData + 0x4E4 partner-slot read) are not ported — only the parent's swing math and event trigger are; the children's draw offsets are absent so the chain renders as the single special_19 sprite; the + 0xA == 0xFF spawn-failure delete countdown is kept but no create path sets it (child allocation failure is not modelled); the initial + 0x48/+ 0x50/+ 0xA values come from the unverified entity init and are passed as zeros; and there is no emulator comparison. Object13Create (0x08051A2C, covered by special_sprites) loads tiles 0x081CBE7C/palette 0x08209FD8/frames 0x08210264 and spawns eleven type-0x49 chain links (sub_080515F0 for links 0-9, sub_0805170C for the head) linked through + 0x18, marking the parent + 0xA = 0xFF on allocation failure. Object13Update (0x08051B0C) runs the + 0xA == 0xFF three-tick delete, clamps + 0x50 to 0x2300, fires the + 0x344[param1] event bit once when the amplitude beats the param0 threshold (0x2100/0x1200) inside the phase window [0xAC01,0xB3FF] (phase -= 0x40, amplitude -= 0x100), decays the amplitude by 4 while advancing the u16 phase by 0x200 and exposes the sub_080009E4(phase) * amplitude >> 16 sway. Unit-tested in test_aos_object13.",
+   "limitations": "The eleven chain-link children stay unported except the head's sub_0805170C strike tail, which is ported as aos_object13_strike and wired into the dispatch on a weapon-hitbox overlap with the player-not-above gate (the + 0x68AD4 box and the sub_080421AC attack-slot match collapse to the shared hitbox test, and the head's + 0x58 bit6 facing latch is taken clear); the children's draw offsets are absent so the chain renders as the single special_19 sprite; the + 0xA == 0xFF spawn-failure delete countdown is kept but no create path sets it; the fresh-spawn amplitude/phase zeros are faithful (Object13Create writes neither — only the strike tail pumps + 0x50/+ 0x48); and there is no emulator comparison. Object13Create (0x08051A2C, covered by special_sprites) loads tiles 0x081CBE7C/palette 0x08209FD8/frames 0x08210264 and spawns eleven type-0x49 chain links (sub_080515F0 for links 0-9, sub_0805170C for the head) linked through + 0x18, marking the parent + 0xA = 0xFF on allocation failure. Object13Update (0x08051B0C) runs the + 0xA == 0xFF three-tick delete, clamps + 0x50 to 0x2300, fires the + 0x344[param1] event bit once when the amplitude beats the param0 threshold (0x2100/0x1200) inside the phase window [0xAC01,0xB3FF] (phase -= 0x40, amplitude -= 0x100), decays the amplitude by 4 while advancing the u16 phase by 0x200 and exposes the sub_080009E4(phase) * amplitude >> 16 sway. Unit-tested in test_aos_object13. The head child's strike tail (sub_0805170C, lines 1851-2004) rewrites the parent's + 0x50 amplitude and + 0x48 phase on a weapon hit inside its proximity box with the player below the bob: settled state always + 0x300 with + 0x48 = 0x8000 when the player is left, the phase window [0x4001,0xBFFF] pumps + 0x300 or brakes - 0x60 by side and facing bit, and outside it brakes - 0x60 unless player-right with the bit set. Ported as aos_object13_strike and called from the e->id == 19 dispatch after the update.",
    "next_action": "Port the chain-link children and their draw offsets, then trace the initial swing state.",
    "evidence": {
     "unit_tests": [
@@ -32431,6 +32431,12 @@
  },
  "timeline": [
   {
+   "commit": "995b85c1",
+   "date": "2026-11-14",
+   "subject": "Stop Object32 spawn churn on player proximity",
+   "scope": "project"
+  },
+  {
    "commit": "31939192",
    "date": "2026-11-14",
    "subject": "Port Object20 story variants (param0 9,10,21-24,29) as parity module",
@@ -32902,12 +32908,6 @@
    "commit": "014cfcdb",
    "date": "2026-11-12",
    "subject": "Port Aria Object03 escort director",
-   "scope": "project"
-  },
-  {
-   "commit": "b1d76022",
-   "date": "2026-11-12",
-   "subject": "Port Aria Object06 cinematic trigger",
    "scope": "project"
   }
  ],

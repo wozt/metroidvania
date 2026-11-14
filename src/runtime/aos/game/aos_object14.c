@@ -32,12 +32,13 @@ static void preset_428f0(AosObject14 *o, uint32_t arg) {
     o->preset_arg = arg;
 }
 
-static void affine_3e058(AosObject14 *o, int32_t a, int32_t b) {
-    /* sub_0803E058(ent, a, b, + 0x58 bit6, {0, + 0x58 & 0x1F}):
-     * the affine transform request; counted with raw args. */
+static void affine_3e058(AosObject14 *o, int32_t angle, int32_t scale) {
+    /* sub_0803E058(angle, scale, scale, + 0x58 bit 6,
+     * {0, + 0x58 & 0x3F}): the affine transform request into
+     * gUnk_03001458; counted with the raw r0/r1 args. */
     o->affine_calls++;
-    o->affine_a = a;
-    o->affine_b = b;
+    o->affine_a = angle;
+    o->affine_b = scale;
 }
 
 static void child_install(AosObject14 *o) {
@@ -141,7 +142,9 @@ static int32_t probe_move_51bf8(AosObject14 *o, int32_t mode,
 
     int32_t rx = room_px_x(o);
     int32_t ry = room_px_y(o);
-    int32_t yoff = o->vel_y == 0 ? 8 : (int16_t)o->probe_off;
+    /* yoff is the constant pair {0, 8}: 8 only while + 0x4C
+     * (post-acceleration) is zero; + 0x4E is not read here. */
+    int32_t yoff = o->vel_y == 0 ? 8 : 0;
     int32_t hit = env->probe
         ? (int16_t)env->probe(env->probe_ctx, AOS_OBJ14_PROBE_TILE,
                               (int16_t)rx,
@@ -159,7 +162,8 @@ static int32_t probe_move_51bf8(AosObject14 *o, int32_t mode,
     if (hit2 != 0) {
         int16_t steer = aos_arctan2(xstep,
                                     (int16_t)(yoff + hit2));
-        angle_approach(&o->angle, 0x400, steer);
+        /* sub_080686CC step is 0x80 here (0x400 in sub_08052208). */
+        angle_approach(&o->angle, 0x80, steer);
     }
     return hit;
 }
@@ -192,6 +196,9 @@ static int32_t probe_move_52208(AosObject14 *o, int32_t mode,
     }
 
     int16_t xstep = o->vel_x < 0 ? (int16_t)-8 : (int16_t)8;
+    /* The ROM re-reads GetEntityRoomYPositionInteger here, after
+     * the + 0x44 bump; the x base stays the first read. */
+    int32_t ry2 = room_px_y(o);
     int32_t hit2 = 0;
     for (int iter = 0; iter < 2; ++iter) {
         int32_t dy = iter * 8;
@@ -199,7 +206,7 @@ static int32_t probe_move_52208(AosObject14 *o, int32_t mode,
             ? (int16_t)env->probe(env->probe_ctx,
                                   AOS_OBJ14_PROBE_TILE,
                                   (int16_t)(rx + xstep),
-                                  (int16_t)(ry + 8 + dy), mode)
+                                  (int16_t)(ry2 + 8 + dy), mode)
             : 0;
         if (hit2 != 0) {
             hit2 = (int16_t)(uint16_t)(hit2 + dy);
@@ -238,7 +245,7 @@ static void variant0_tail(AosObject14 *o, const AosObject14Env *env) {
     lo &= 0xFF;
     int32_t hi = (trunc16(sy) & 0xFF) << 8;
     preset_428f0(o, (uint32_t)(lo + hi + (range << 17) + 0x14000000));
-    affine_3e058(o, o->f24, o->angle);
+    affine_3e058(o, o->angle, o->f24);
 }
 
 /* Variant 1 tail (_08052548): clear + 0x14, affine, then the
@@ -463,17 +470,20 @@ static bool variant2(AosObject14 *o, const AosObject14Env *env) {
         o->pos_x += o->vel_x;
         break;
     case 2: {
-        /* Lead point: A094 + screen + 0x4A on x, A094 + screen
-         * on y, plus -0x18/+ 0x60 px by the + 0x48 sign. */
+        /* Lead point (_08052730): x = A094 room origin +
+         * + 0x42 screen + u16(+ 0x48 >> 16) (the velocity's
+         * whole-pixel part), then -0x18/+ 0x18 px by the +
+         * 0x48 sign; y = A094 + + 0x46. */
+        uint16_t lead = (uint16_t)((uint32_t)o->vel_x >> 16);
         uint16_t sum_x = (uint16_t)(env->room_ox +
-                                    (uint16_t)o->scr_x + o->lead_x);
+                                    (uint16_t)o->scr_x + lead);
         uint16_t sum_y = (uint16_t)(env->room_oy +
                                     (uint16_t)o->scr_y);
         int32_t tx, ty;
         if (o->vel_x < 0) {
             tx = (int16_t)(uint16_t)(sum_x - 0x18);
         } else {
-            tx = (int16_t)(uint16_t)(sum_x + 0x60);
+            tx = (int16_t)(uint16_t)(sum_x + 0x18);
         }
         ty = (int16_t)sum_y;
         bool wall = env->probe &&
@@ -484,7 +494,7 @@ static bool variant2(AosObject14 *o, const AosObject14Env *env) {
         if (wall)
             o->vel_x = -o->vel_x / 2;
         drag_x(o, 0x50);
-        phys_step(o, 0x20000);
+        phys_step(o, 0x800000);
         int32_t av = o->vel_x < 0 ? -o->vel_x : o->vel_x;
         if (av <= 0x7FF)
             o->state = 1;

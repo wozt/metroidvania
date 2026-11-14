@@ -37,4 +37,17 @@ void aos_object13_create(AosObject13 *o, int param0, int param1,
 /* Object13Update. `event_set` is the current + 0x344 bit state of
  * param1 (aos_wall_event on aria_events). */
 void aos_object13_update(AosObject13 *o, bool event_set);
+
+/* sub_0805170C state 1 (code_08050A3C.s ~lines 1851-2004): the head
+ * child's player-strike tail rewrites the parent's +0x48/+0x50 —
+ * this is the only incrementer of the swing amplitude; Object13Create
+ * never writes +0x48/+0x50 and Object13Update only decays them, so a
+ * fresh spawn swings only after the head is struck. `player_left` is
+ * the sign of player_x - head_bob_x (native `player+0x42 < child+0x42`).
+ * The native gates (the sub_08068AD4 proximity box, the sub_080421AC
+ * attack-slot flag & 2, the player_y >= head+0x46 check, the RNG
+ * nudge and PlaySong(0x69)) belong to the caller; the head's +0x58
+ * bit 6 latch is unported and taken clear. No-op while +0xA == 0xFF
+ * (the head self-deletes when the parent enters the countdown). */
+void aos_object13_strike(AosObject13 *o, bool player_left);
 #endif

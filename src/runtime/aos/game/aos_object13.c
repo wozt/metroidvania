@@ -51,3 +51,30 @@ void aos_object13_update(AosObject13 *o, bool event_set) {
     if (sway < 0) sway += 0xFFFF;
     o->sway = (int32_t)(sway >> 16);
 }
+
+void aos_object13_strike(AosObject13 *o, bool player_left) {
+    if (o->state == 0xFF)
+        return;             /* the head deletes itself on +0xA == 0xFF */
+    /* sl (r6/sl in sub_0805170C): 1 while (u32)(phase - 0x4001) <=
+     * 0x7FFE, i.e. phase in [0x4001, 0xBFFF]; else 2 while the
+     * amplitude lives; else 0 (settled). */
+    if ((uint32_t)o->phase - 0x4001u <= 0x7FFE) {
+        /* _08051998/_080519C8: a left-side strike pumps +0x300
+         * (_080519F8); a right-side strike falls through to
+         * _08051A0C and brakes -0x60. */
+        o->amplitude += player_left ? 0x300 : -0x60;
+        return;
+    }
+    if (o->amplitude != 0) {
+        /* sl == 2 (_0805195C): only a right-side strike with the
+         * head's +0x58 bit 6 set pumps; bit 6 is unported (clear),
+         * so every strike takes the _08051A0C -0x60 brake. */
+        o->amplitude -= 0x60;
+        return;
+    }
+    /* sl == 0 (_08051928-_080519F8): a settled strike always pumps
+     * +0x300; from the left it also rewinds the phase to 0x8000. */
+    if (player_left)
+        o->phase = 0x8000;
+    o->amplitude += 0x300;
+}

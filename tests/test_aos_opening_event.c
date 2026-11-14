@@ -387,6 +387,48 @@ static void test_trigger(void) {
     assert(!aos_opening_event_should_start(0, 0, 0, events, true));
 }
 
+static void test_intro_transition(void) {
+    /* sub_0805CED0: once case 0's reveal pan reports done, case 1 runs
+     * sub_0805CB74's six-stage MOSAIC transition once per frame; only
+     * the frame after it returns 0 does sub_08067934 open the WIN0
+     * window (+0xA==2). The stage timers make that exactly 110
+     * transition frames plus the +0xC handoff frame. */
+    AosOpeningActors actors;
+    aos_opening_actors_init(&actors);
+    int32_t camera_x = 0;
+    unsigned frame = 0;
+    while (!actors.reveal_done && frame < 64) {
+        aos_opening_actors_update(&actors, NULL, &camera_x, 0);
+        ++frame;
+    }
+    /* Fresh spawn: camera word 0 remaps mode 5 to mode 0, which pans
+     * right 8 pixels per frame until it passes 0x1F. */
+    assert(actors.reveal_done && !actors.window_open && camera_x == 32);
+    for (unsigned i = 0; i < 110; ++i) {
+        aos_opening_actors_update(&actors, NULL, &camera_x, 0);
+        assert(!actors.window_open);
+        if (i == 50) assert(actors.mosaic != 0);
+    }
+    assert(actors.transition_step == 6 && actors.mosaic == 0 &&
+           actors.transition_wait_open);
+    aos_opening_actors_update(&actors, NULL, &camera_x, 0);
+    assert(actors.window_open);
+    /* +0xA==2's first frame raises D410 +0xB==0's suspend flag with a
+     * 0x40-frame timer; the script stays blocked and the window chrome
+     * stays hidden until sub_08067A04's state 2 can run. */
+    assert(actors.text_hold == 0x40 && !actors.window_shown);
+    unsigned held = 0;
+    while (aos_opening_actors_blocks_script(&actors) && held < 80) {
+        assert(!actors.window_shown);
+        aos_opening_actors_update(&actors, NULL, &camera_x, 0);
+        ++held;
+    }
+    assert(held == 64 && actors.text_hold == 0 && actors.window_shown);
+    assert(!aos_opening_actors_blocks_script(&actors));
+    aos_opening_actors_update(&actors, NULL, &camera_x, 0);
+    assert(actors.mosaic == 0 && actors.window_open);
+}
+
 static void test_script_and_commit(void) {
     static const uint8_t script[] = {
         0, 0, 3, 4, 7, 2, 'A', 'B', 6, 'C', 5,
@@ -475,6 +517,7 @@ int main(int argc, char **argv) {
     test_skeleton_collision_flight();
     test_emitted_attack_tails();
     test_trigger();
+    test_intro_transition();
     test_script_and_commit();
     test_insert_and_malformed();
     if (argc == 2) {

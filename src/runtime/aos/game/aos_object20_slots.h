@@ -226,6 +226,12 @@ typedef struct {
                                  * call */
 } AosObject20SlotsOut;
 
+/* The decoded ten-word table at ROM 0x081188E4 that
+ * sub_08060F98 copies to the stack: update15 cases 5/6 index it
+ * with the entity +0x14 byte (valid 0..9) as the modsi3 divisor.
+ * Exported so the runtime fill can bind in->tbl14. */
+extern const int32_t aos_object20_slots_table_1188e4[10];
+
 /* Shared Object20Create (0x0805B42C): the +0x1327A/+0x42C/
  * +0x8E/+0x13266 gates, the variant create dispatch and the
  * common tail (+0x42C |= 0x200, engine init calls, +0x41C

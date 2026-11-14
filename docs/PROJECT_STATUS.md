@@ -43,6 +43,33 @@
   accumulation, +0x65 commits, loop wrap, once-end latch,
   pause/ended early-outs, +0x5B modes and the palette tail.
 
+## Patch 1138 - transition scroll, room tilemaps, Object20 channels, opening fixes
+
+- **`sub_0803FC6C` ported** (`aos_scroll_transition_request`): same
+  skeleton as `sub_0803FBBC`, y-axis diverges (edge `+0x14`/`0xA00000`,
+  negative-y pin 0). Rebuild `count` corrected to native 0x15/0x1F.
+- **`aos.core.tilemap`**: `aos_tilemap_lookup` is a real `sub_08001994`
+  port over the existing room-descriptor loaders (raw + LZ77, flips,
+  palette XOR); column/row span helpers match the rebuild loops.
+  Affine layers documented unsupported.
+- **Object20 channels closed**: `+0x416` latch, `+0x414` bit-4 stores,
+  `+0x64`/`+0x254CC`/`+0xA094` view fed from the scroll accumulator,
+  `DISPCTL` shadow (`object20_disp_cnt` init 0x1F00), table
+  `0x081188E4` verified against the ROM, player `+0x5A` round-trip,
+  `sub_080212C8`/`61824`/`6E140` probe semantics.
+- **Opening-scene pacing fixed** (first mGBA comparison): three
+  stacked native gates decoded — spawn camera wait, the
+  `sub_0805CB74` six-stage MOSAIC transition (~115 frames), and the
+  `sub_0805D410` `+0xB==0` 0x40-frame text-suspend hold. Ported as
+  `intro_transition_*`/`text_hold`/`window_shown`/`beat1_step`.
+  Measured: runtime window frame 177 vs native 210 (latency delta
+  ~−6 frames, was ~200 early). Camera mode-1 velocity corrected to
+  `0x10000`; spawn `camera_mode` remap (5 only when camera > 0x1F).
+  `tests/compare_aos_opening_dialogue.py` reproduces the protocol.
+  Residual: D410 `+0xB` substate serialization only approximated.
+- Registries synced (`aos.core.scroll`/`aos.core.tilemap` rows,
+  `text_window`).
+
 ## Patch 1137 - visible BG1 scroll, +0x417 gate, event-flag bridge
 
 - **BG1 scroll now visible**: `aria_scroll_bg1_offset` exposes the

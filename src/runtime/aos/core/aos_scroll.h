@@ -20,6 +20,13 @@
  *   is reported as an AosScrollRebuild DMA descriptor — the tile
  *   IDs need the room tilemap the host does not extract, so the
  *   data write itself stays unported.
+ * - sub_0803FC6C (same asm block): the room-transition sibling
+ *   of sub_0803FBBC — identical skeleton and x axis, but the y
+ *   axis runs sub_0803FA10/sub_0803FAE0: edge constants
+ *   +0x14/+0xA00000 (a 0xA0-px screen vs 0xD0), negative y pins
+ *   at 0 instead of 0x30 << 16, and a gated y axis pins yPos to
+ *   0 instead of 0x300000. Called by the transition paths
+ *   sub_08013960/sub_08008750.
  * - sub_08000F60 (src/code_080009A0.c): adds -bgInfo[bg].xVel /
  *   yVel to the fine position (+0x524/+0x528) of every entityData
  *   record whose +0x59 bit 1 (unk_53D_1) is set — the
@@ -130,7 +137,7 @@ typedef struct {
     uint16_t tile_x, tile_y; /* sub_08001994 lookup origin:
                                 the fixed coordinate and the
                                 start of the iterated one */
-    uint16_t count;          /* 0x14 (x) / 0x1E (y) lookups */
+    uint16_t count;          /* 0x15 (x) / 0x1F (y) lookups */
 } AosScrollRebuild;
 
 typedef struct {
@@ -159,6 +166,12 @@ void aos_scroll_bind(AosScroll *s, int bg, uint8_t meta_0, uint8_t meta_1,
 /* sub_0803FBBC(bg, vx, vy): the scroll-velocity request. */
 void aos_scroll_request(AosScroll *s, int bg, int32_t vx, int32_t vy,
                         AosScrollOut *out);
+
+/* sub_0803FC6C(bg, vx, vy): the room-transition sibling — same
+ * gates and x axis, but the y helpers carry the transition edge
+ * constants and pin y at 0. */
+void aos_scroll_transition_request(AosScroll *s, int bg, int32_t vx,
+                                   int32_t vy, AosScrollOut *out);
 
 /* sub_08000F60(bg): shifts every flagged entity by
  * -bgInfo[bg].xVel/-yVel; returns the shifted count. */

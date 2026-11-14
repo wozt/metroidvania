@@ -219,6 +219,31 @@ typedef struct {
     /* sub_0805CED0 case 0 waits on the spawn camera phase before the text
      * window opens; mode 5 is that initial reveal pan. */
     bool reveal_done;
+    /* sub_0805CED0 case 1 runs sub_0805CB74's six-stage MOSAIC
+     * transition after the reveal pan and before sub_08067934 opens the
+     * WIN0 window. transition_step mirrors entity +0xB (0..5, 6 done),
+     * transition_timer entity +0xD, mosaic the MOSAIC register value the
+     * native routine writes each frame (0 once it clears). window_open
+     * latches one frame after the transition reports done, matching the
+     * native +0xC handoff into +0xA==2. */
+    uint8_t transition_step;
+    uint8_t transition_timer;
+    uint16_t mosaic;
+    bool transition_started;
+    bool transition_wait_open;
+    bool window_open;
+    /* sub_0805D410 case +0xB==0: on the first +0xA==2 frame it raises the
+     * text engine's suspend flag and holds it for a 0x40-frame timer.
+     * sub_08067A04 returns early while suspended, so WIN0V keeps the
+     * empty 0xC0C1 written by sub_08067934 and the window chrome only
+     * becomes visible when sub_08067804 runs after the hold. text_hold
+     * mirrors that timer; window_shown latches when it expires. */
+    uint8_t text_hold;
+    bool window_shown;
+    /* sub_0805D410 case +0xB==1 (first script beat): entity+0x38=1's
+     * camera pan runs under the suspend flag, then a 0x10-frame tail;
+     * scene_step 2 marks the released idle sub-state. */
+    uint8_t beat1_step;
     AosOpeningEntity emitted[AOS_OPENING_EMITTED_CAPACITY];
     AosOpeningDebris debris[AOS_OPENING_DEBRIS_CAPACITY];
     AosOpeningProjectile projectiles[AOS_OPENING_PROJECTILE_CAPACITY];

@@ -961,6 +961,18 @@ int main(void) {
     aos_object20_slots_update(&s, 99, &in, &out);
     assert(out.unported);
 
+    /* The committed 0x081188E4 table the runtime fill binds into
+     * in->tbl14 for update15 cases 5/6: ten words decoded from
+     * the ROM image, indexed by entity +0x14 (0..9). */
+    {
+        static const int32_t want[10] = {
+            0x80, 0x80, 0x20, 0x20, 0x40, 0x40,
+            0x80, 0x60, 0x40, 0x30,
+        };
+        assert(memcmp(aos_object20_slots_table_1188e4, want,
+                      sizeof want) == 0);
+    }
+
     puts("aos_object20_slots tests passed");
     return 0;
 }

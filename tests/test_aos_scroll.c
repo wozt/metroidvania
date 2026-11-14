@@ -110,7 +110,7 @@ int main(void) {
     assert(out.map_rebuild_x && !out.map_rebuild_y);
     assert(out.rebuild_x.queued && out.rebuild_x.bg == 1);
     assert(out.rebuild_x.tile_x == 38 && out.rebuild_x.tile_y == 6);
-    assert(out.rebuild_x.count == 0x14);
+    assert(out.rebuild_x.count == 0x15);
     assert(out.rebuild_x.bg_cmd == 0x80 && out.rebuild_x.length == 0x15);
     /* 0x0600E000 + (1<<11) + (38&0x1F)<<1 + (6&0x1F)<<6
      * = 0x0600E000 + 0x800 + 0xC + 0x180 = 0x0600E98C */
@@ -162,7 +162,7 @@ int main(void) {
     assert(out.map_rebuild_y && !out.map_rebuild_x);
     assert(out.rebuild_y.queued && out.rebuild_y.bg == 1);
     assert(out.rebuild_y.tile_x == 0 && out.rebuild_y.tile_y == 28);
-    assert(out.rebuild_y.count == 0x1E);
+    assert(out.rebuild_y.count == 0x1F);
     assert(out.rebuild_y.bg_cmd == 0x00 && out.rebuild_y.length == 0x1F);
     assert(out.rebuild_y.vram_addr == 0x0600EF00u);
 
@@ -318,6 +318,105 @@ int main(void) {
      * settle call uses param0 0). */
     ran = aos_scroll_transaction(&s, 1, 0, 0x40000, 0, NULL, &out);
     assert(ran == 0);
+
+    /* ---- sub_0803FC6C (aos_scroll_transition_request) ----
+     * Same skeleton as sub_0803FBBC; the y axis runs
+     * sub_0803FA10/sub_0803FAE0: edge constants +0x14/+0xA00000
+     * and a 0 pin instead of 0x30 << 16. */
+
+    /* Positive y, no edge clamp: y = 64 px, vy = +2 px on a
+     * 4-screen-tall map. (y+vy)>>19 = 8, +0x14 = 28 < 4<<5 = 128,
+     * so v = vy. */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 2, 4, 0, 0, 0, 0x10 << 16, 0x40 << 16);
+    memset(&out, 0, sizeof out);
+    aos_scroll_transition_request(&s, 1, 0x40000, 0x20000, &out);
+    assert(s.bg[1].x_vel == 0x40000);          /* x axis identical */
+    assert(s.bg[1].y_vel == 0x20000);
+    assert(s.bg[1].y_pos == ((int32_t)0x40 << 16) + 0x20000);
+    assert(s.disp_v[1] == 0x42);
+    assert(out.requests == 1);
+
+    /* Upper edge: meta_1 = 2 -> map 512 px, screen 0xA0 = 160 px,
+     * so y clamps so y + 160 <= 512, i.e. y <= 352 px = 0x1600000.
+     * From y = 0x1580000 (344 px) a +8 px request:
+     * (y+vy)>>19 = 0x1600000>>19 = 44, +0x14 = 64 >= 2<<5 = 64 ->
+     * v = (2<<24) - (0x1580000 + 0xA00000) = 0x2000000 - 0x1F80000
+     *   = 0x80000 (exactly the cap); y lands on 0x1600000. */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 2, 2, 0, 0, 0, 0, 0x158 << 16);
+    memset(&out, 0, sizeof out);
+    aos_scroll_transition_request(&s, 1, 0, 0x80000, &out);
+    assert(s.bg[1].y_vel == 0x80000);
+    assert(s.bg[1].y_pos == (int32_t)0x160 << 16);
+    assert(s.disp_v[1] == 0x160);
+
+    /* The same request through sub_0803FBBC would clamp against
+     * the 0xD0 edge instead — divergence proof: at y = 0x1580000
+     * the FBBC formula gives (2<<24) - (0x1580000 + 0xD00000)
+     * = -0x280000, so yVel would be negative. Skip: just assert
+     * the transition helper did NOT use the 0xD0 constant. */
+
+    /* Negative y pins at 0, not 0x300000: from 32 px, -8 px steps
+     * land on 0; a further request stores v = -y = 0. */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 2, 4, 0, 0, 0, 0, 0x20 << 16);
+    memset(&out, 0, sizeof out);
+    for (int i = 0; i < 4; ++i)
+        aos_scroll_transition_request(&s, 1, 0, (int32_t)0xFFF80000,
+                                      &out);
+    assert(s.bg[1].y_pos == 0);
+    assert(s.bg[1].y_vel == -0x80000);   /* last step: -8 px -> 0 */
+    aos_scroll_transition_request(&s, 1, 0, (int32_t)0xFFF80000, &out);
+    assert(s.bg[1].y_pos == 0 && s.bg[1].y_vel == 0);
+    /* Contrast: sub_0803FBBC on the same state would pin at
+     * 0x300000 — drive it there and confirm the difference. */
+    aos_scroll_bind(&s, 1, 2, 4, 0, 0, 0, 0, 0x20 << 16);
+    for (int i = 0; i < 6; ++i)
+        aos_scroll_request(&s, 1, 0, (int32_t)0xFFF80000, NULL);
+    assert(s.bg[1].y_pos == (int32_t)0x30 << 16);
+
+    /* Gated axis: meta_1 <= 1 pins yPos to 0 (not 0x300000) and
+     * clears yVel; meta_0 <= 1 still pins x to 0. */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 1, 1, 0, 0, 0, 0x55 << 16, 0x40 << 16);
+    memset(&out, 0, sizeof out);
+    aos_scroll_transition_request(&s, 1, 0x40000, 0x40000, &out);
+    assert(s.bg[1].x_pos == 0 && s.bg[1].x_vel == 0);
+    assert(s.bg[1].y_pos == 0 && s.bg[1].y_vel == 0);
+    assert(s.disp_h[1] == 0 && s.disp_v[1] == 0);
+
+    /* Tile-row rebuild: the transition y helpers queue the same
+     * 30-lookup / WriteData(0, 0x1F) descriptor as sub_0803F580.
+     * From y = 64 px a +8 px request crosses the probe; on BG1:
+     * tile_y = (64 + 0xA7) >> 3 = 28, vram 0x0600EF00. */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 4, 4, 0, 0, 0, 0, 0x40 << 16);
+    memset(&out, 0, sizeof out);
+    aos_scroll_transition_request(&s, 1, 0, 0x80000, &out);
+    assert(out.map_rebuild_y && !out.map_rebuild_x);
+    assert(out.rebuild_y.queued && out.rebuild_y.bg == 1);
+    assert(out.rebuild_y.tile_x == 0 && out.rebuild_y.tile_y == 28);
+    assert(out.rebuild_y.count == 0x1F);
+    assert(out.rebuild_y.bg_cmd == 0x00 && out.rebuild_y.length == 0x1F);
+    assert(out.rebuild_y.vram_addr == 0x0600EF00u);
+
+    /* Negative-y rebuild uses the same (yInt - 8) wrap tile row:
+     * from y = 72 px a -8 px request on BG2 lands on 64 px;
+     * y>>19 goes 9 -> 8, so a rebuild queues with
+     * tile_y = ((72-8)<<13)>>16 = 8 and
+     * vram = 0x0600E000 + (2<<11) + (1&0x1F)<<1 + (8&0x1F)<<6
+     *      = 0x0600E000 + 0x1000 + 2 + 0x200 = 0x0600F202
+     * (tile_x = 8>>3 = 1). */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 2, 4, 4, 0, 0, 0, 0x8 << 16, 0x48 << 16);
+    memset(&out, 0, sizeof out);
+    aos_scroll_transition_request(&s, 2, 0, (int32_t)0xFFF80000, &out);
+    assert(out.map_rebuild_y);
+    assert(out.rebuild_y.bg == 2);
+    assert(out.rebuild_y.tile_x == 1 && out.rebuild_y.tile_y == 8);
+    assert(out.rebuild_y.vram_addr == 0x0600F202u);
+    assert(s.bg[2].y_pos == ((int32_t)0x48 << 16) - 0x80000);
 
     puts("aos_scroll: ok");
     return 0;

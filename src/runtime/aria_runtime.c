@@ -1753,10 +1753,12 @@ int aria_runtime_main(int argc, char **argv) {
                  * they must not also advance the blocked text script. */
                 aos_opening_actors_input(&opening_actors, aria_input.new_input);
                 AosOpeningCue script_cue = AOS_OPENING_CUE_NONE;
-                /* sub_0805CED0 case 0 holds the script until the spawn
-                 * camera phase (mode 5) finishes its reveal pan; the text
-                 * window only opens at case 1. */
-                if (opening_actors.reveal_done &&
+                /* sub_0805CED0 holds the script through case 0's spawn
+                 * camera phase and case 1's sub_0805CB74 MOSAIC
+                 * transition; sub_08067934 only opens the WIN0 window —
+                 * and +0xA==2 only starts sub_08067A04 — once window_open
+                 * latches. */
+                if (opening_actors.window_open &&
                     !aos_opening_actors_blocks_script(&opening_actors)) {
                     aos_opening_event_update(&opening, aria_input.new_input);
                     if (opening.advanced) aos_audio_play_song(0x132);
@@ -3367,8 +3369,12 @@ int aria_runtime_main(int argc, char **argv) {
                            have_item_use ? item_use : NULL, &soma, &objects);
         /* Object20's dialogue effect is applied after every targeted scene
          * layer. BG0's portrait and glyphs are then composed above it. */
+        /* sub_08067934 writes WIN0V=0xC0C1 (empty) and the real bounds
+         * only land when sub_08067A04's state 2 runs — which the
+         * +0xB==0 suspend hold delays by 0x40 frames. window_shown is
+         * that visible-window point. */
         if (opening.active && opening_actors.soul_notice == 0 &&
-            opening_actors.reveal_done)
+            opening_actors.window_shown)
             draw_opening_backdrop(renderer, &opening, &opening_rom,
                                   &opening_portrait_texture,
                                   &opening_portrait_id);
@@ -3380,7 +3386,7 @@ int aria_runtime_main(int argc, char **argv) {
          * end command lands; the backdrop gate above already hides it, so
          * the glyph pass must not linger through the return pan. */
         else if (opening.active && opening_text_ready &&
-                 opening_actors.reveal_done)
+                 opening_actors.window_shown)
             draw_opening_text(renderer, &opening, &opening_tiles,
                               opening_window_ready ? &opening_window : NULL,
                               (uint32_t)step);

@@ -9,6 +9,18 @@
  * sub_0805CB70 and the shared Object20Create/Update shells)
  * and code_08060B98.s (sub_08060B98..sub_08061994). */
 
+/* The ten-word table sub_08060F98 (param0-15 update15) memcpy's
+ * from ROM 0x081188E4 onto its stack (asm/code_08060B98.s
+ * _08060FE4): cases 5/6 index it with the entity +0x14 byte
+ * (valid 0..9) as the hit-test divisor — tbl14 raw for case 6,
+ * tbl14*3/2 for case 5. Values decoded from the ROM image;
+ * same committed-table convention as
+ * aos_guard_pick_table_118c85. */
+const int32_t aos_object20_slots_table_1188e4[10] = {
+    0x80, 0x80, 0x20, 0x20, 0x40, 0x40,
+    0x80, 0x60, 0x40, 0x30,
+};
+
 static void out_reset(AosObject20SlotsOut *out) {
     memset(out, 0, sizeof *out);
     out->window_text = -1;

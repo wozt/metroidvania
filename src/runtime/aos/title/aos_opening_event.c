@@ -721,6 +721,7 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
         actors->camera_active = true;
         actors->camera_initialized = false;
         actors->scene_state = 1;
+        actors->beat1_step = 0;
         actors->pending_cue = cue;
         break;
     case AOS_OPENING_CUE_CONFRONTATION:
@@ -778,7 +779,11 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
 
 bool aos_opening_actors_blocks_script(const AosOpeningActors *actors) {
     if (!actors || !actors->active) return false;
+    /* D410 +0xB==0's 0x40-frame suspend and +0xB==1's pan+tail hold the
+     * text engine through the same flag native sub_08067A04 checks. */
+    if (actors->text_hold) return true;
     switch (actors->scene_state) {
+    case 1: return actors->beat1_step < 2;
     case 3: return actors->scene_step < 3;
     case 4: return actors->scene_step < 2;
     case 5: return !actors->soul_absorbed || actors->soul_notice == 1 ||
@@ -788,14 +793,25 @@ bool aos_opening_actors_blocks_script(const AosOpeningActors *actors) {
 }
 
 static bool camera_update(AosOpeningActors *actors, int32_t *camera_x) {
+    /* sub_0805CCE4's per-mode sub_0800ED24 velocity args: case 0
+     * 0x80<<12, case 1 0x80<<9 (1 px/frame — not 4), case 2
+     * 0xE0<<10, case 3 0xFFFC0000, case 4 0xFFFF0000, case 5
+     * 0xFFF80000. */
     static const int32_t velocity[] = {
-        0x80000, 0x40000, 0x38000, -0x40000, -0x10000, -0x80000,
+        0x80000, 0x10000, 0x38000, -0x40000, -0x10000, -0x80000,
     };
     if (!actors->camera_active || !camera_x || actors->camera_mode >= 6)
         return false;
     if (!actors->camera_initialized) {
         actors->camera_x = *camera_x << 16;
         actors->camera_initialized = true;
+        /* sub_0805CE28's spawn write is conditional: entity+0x38 = 5
+         * only while the camera word (+0xA094+6) is already past
+         * 0x1F; otherwise it stores the sub_08012078(0x20) bit — 0
+         * on a fresh game, i.e. mode 0's opening rightward pan. The
+         * bit-0x20-set continue case (mode 1) is not plumbed. */
+        if (actors->camera_mode == 5 && *camera_x <= 0x1F)
+            actors->camera_mode = 0;
     }
     actors->camera_x += velocity[actors->camera_mode];
     *camera_x = actors->camera_x >> 16;
@@ -811,8 +827,103 @@ static bool camera_update(AosOpeningActors *actors, int32_t *camera_x) {
     case 5: done = *camera_x <= 0x20; break;
     default: done = false; break;
     }
-    if (actors->camera_mode == 5 && done) actors->reveal_done = true;
+    /* sub_0805CED0 case 0 waits on sub_0805CCE4's return — done for
+     * whichever spawn pan is active (mode 5 reveal, or mode 0/1 on a
+     * fresh spawn). Cue-driven pans only start after the script
+     * advances, which itself waits on reveal_done, so the first done
+     * while scene_state is still 0 is the spawn pan's completion. */
+    if (done && actors->scene_state == 0) actors->reveal_done = true;
     return done;
+}
+
+/* sub_0805CB74's MOSAIC pattern: the timer's high six bits replicated
+ * into both mosaic nibbles of each byte pair, truncated to the register
+ * width exactly like the native strh. */
+static uint16_t intro_mosaic_value(uint8_t timer) {
+    uint32_t level = timer >> 2;
+    return (uint16_t)((level << 4) | level | (level << 8) | (level << 12));
+}
+
+/* One sub_0805CB74 call; returns false on the frame the native routine
+ * reports completion (mosaic and BLDCNT cleared). */
+static bool intro_transition_step(AosOpeningActors *actors) {
+    switch (actors->transition_step) {
+    case 0:
+        actors->mosaic = 0xFFFF;
+        actors->transition_timer = 0x40;
+        ++actors->transition_step;
+        return true;
+    case 1:
+        actors->mosaic = intro_mosaic_value(actors->transition_timer);
+        if (actors->transition_timer == 0x20)
+            ++actors->transition_step;
+        else
+            --actors->transition_timer;
+        return true;
+    case 2:
+        actors->mosaic = intro_mosaic_value(actors->transition_timer);
+        if (actors->transition_timer == 0x30)
+            ++actors->transition_step;
+        else
+            ++actors->transition_timer;
+        return true;
+    case 3:
+        actors->mosaic = intro_mosaic_value(actors->transition_timer);
+        if (actors->transition_timer == 0x10)
+            ++actors->transition_step;
+        else
+            --actors->transition_timer;
+        return true;
+    case 4:
+        actors->mosaic = intro_mosaic_value(actors->transition_timer);
+        if (actors->transition_timer == 0x20)
+            ++actors->transition_step;
+        else
+            actors->transition_timer = (uint8_t)(actors->transition_timer + 2);
+        return true;
+    default:
+        /* Stage 5 decrements +0xD twice per call (the odd/even branch
+         * then the shared tail), so the timer walks down by two. Entry
+         * values 0 and 1 both wrap the tail's byte to 0xFF, which is the
+         * native completion test. */
+        actors->mosaic = intro_mosaic_value(actors->transition_timer);
+        if (actors->transition_timer != 0)
+            --actors->transition_timer;
+        else
+            ++actors->transition_step;
+        actors->transition_timer = (uint8_t)(actors->transition_timer - 1);
+        if (actors->transition_timer != 0xFF) return true;
+        actors->mosaic = 0;
+        /* The native tail also clears BLDCNT; the portable scene owns no
+         * blend state, so only the MOSAIC output needs clearing. */
+        actors->transition_step = 6;
+        return false;
+    }
+}
+
+/* sub_0805CED0's +0xA==0 -> +0xA==1 -> +0xA==2 handoff: the frame the
+ * reveal pan reports done stores +0xA=1 without running the transition;
+ * sub_0805CB74 then runs once per frame, and sub_08067934 opens the WIN0
+ * window on the first frame after it returns 0. */
+static void intro_transition_update(AosOpeningActors *actors) {
+    if (actors->window_open || !actors->reveal_done ||
+        actors->scene_state != 0)
+        return;
+    if (!actors->transition_started) {
+        actors->transition_started = true;
+        return;
+    }
+    if (actors->transition_step < 6 &&
+        !intro_transition_step(actors))
+        actors->transition_wait_open = true;
+    else if (actors->transition_wait_open) {
+        actors->window_open = true;
+        actors->transition_wait_open = false;
+        /* +0xA==2's first frame runs sub_0805D410 case +0xB==0: the
+         * suspend flag rises with a 0x40-frame timer before the text
+         * engine may resume. */
+        actors->text_hold = 0x40;
+    }
 }
 
 AosOpeningCue aos_opening_actors_update(
@@ -838,6 +949,13 @@ AosOpeningCue aos_opening_actors_update(
     bool camera_done = camera_update(actors, camera_x);
     if (camera_done && actors->scene_state != 3)
         actors->camera_active = false;
+    /* +0xA==1's MOSAIC transition sits between the reveal pan and the
+     * text window; it advances on the same per-frame callback. The
+     * +0xB==0 suspend timer starts the frame window_open latches, so it
+     * is decremented before the transition update can raise it. */
+    if (actors->text_hold && actors->scene_state == 0) --actors->text_hold;
+    if (actors->window_open && !actors->text_hold) actors->window_shown = true;
+    intro_transition_update(actors);
     /* sub_0805D410 state 0: its entry timer is 0x40 frames. */
     if (actors->state == 0) {
         if (actors->timer) --actors->timer;
@@ -864,6 +982,23 @@ AosOpeningCue aos_opening_actors_update(
 
 scene:
     switch (actors->scene_state) {
+    case 1:
+        /* D410 +0xB==1: sub-state 0 already ran at the cue (entity flag,
+         * suspend, entity+0x38=1); sub-state 1 waits on sub_0805CCE4's
+         * mode-1 pan, sub-state 2 counts 0x10 frames, and sub-state 3
+         * clears the suspend while +0xB stays 1 until the script's next
+         * beat command. */
+        if (actors->beat1_step == 0) {
+            if (camera_done) {
+                actors->camera_active = false;
+                actors->scene_timer = 0x10;
+                actors->beat1_step = 1;
+            }
+        } else if (actors->beat1_step == 1 && actors->scene_timer &&
+                   --actors->scene_timer == 0) {
+            actors->beat1_step = 2;
+        }
+        break;
     case 3:
         /* State 3 emits sub_0805D2C8's distant group, pans at 3.5 pixels per
          * frame until the camera passes 0xDD, then waits 0x20 frames before

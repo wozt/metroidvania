@@ -555,8 +555,10 @@ modules: `aria_runtime_types.h` (shared Aria*/entity types and
 constants), `aria_wav.c` (WAV recording), `aria_sim.c` (the
 `--simulate-script` parser), `aria_assets.c` (`aria_load_*` asset/data
 loaders and the save converters), `aria_tables.c` (shared name tables)
-and `aria_draw.c` (the world draw cluster, including the SPECIAL-object
-draw branches).
+`aria_draw.c` (the world draw cluster, including the SPECIAL-object
+draw branches), `aria_entities.c` (the `update_entities` SPECIAL/kind
+dispatch, spawn/probe helpers and Object20 host glue) and
+`aria_skills.c` (skills, soul attacks and the guardian).
 
 Responsibilities inside `src/runtime/aos/`:
 

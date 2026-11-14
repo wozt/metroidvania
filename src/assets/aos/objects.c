@@ -906,6 +906,29 @@ static const EntitySpec special29_variants[] = {
  * descriptor through the u32 table at 0x081185F8 (+ 0x12 indexes it,
  * capped at 0xB). The _vN suffix is the palette bank, not a param0;
  * bank 0 is not used by this object. */
+/* Id 28 (Object1CCreate 0x0805464C, the save point): the parent draws
+ * nothing itself — every visible sprite is a type-0x1B/type-0x49 child.
+ * Every child's sub_0803B924 call resolves the same graphics descriptor
+ * 0x082052E8 through sub_0803AFB8 and the same frame descriptor
+ * 0x08257964 that special_29_v1 exports; what differs per child kind is
+ * the OBJ palette row selected by the sub_0803B924 palette argument
+ * (stored in child +0x5A bits 3-6). Object1CCreate banks palette
+ * descriptor 0x0820C384 rows 0-3 onto OBJ rows 0xA-0xD and, on the
+ * state-1 entry, row 4 onto 0xE, so OBJ row 0xA+N is descriptor bank N.
+ * Per kind: the marker child (draw sub_080544E8) passes 0xE -> bank 4;
+ * the two live sub_08054E38 sparkle records pass +0x1A+2 = 0xC -> bank 2
+ * and +0x1A+1 = 0xB -> bank 1 (+0x1A is 0xA); the eight sub_08054F74
+ * beam children pass +0x1A+3 = 0xD -> bank 3, and the type-0x49 sparks
+ * they spawn inherit the beam's +0x5A nibble -> bank 3 as well. The
+ * _vN suffix is the palette bank, matching the id-31 convention; bank 0
+ * is already covered by special_29_v1 for id 29 and unused by id 28. */
+static const EntitySpec special28_variants[] = {
+    ENTITY("special_28_v1", 0x082052E8, 0x0820C384, 1, 0x08257964),
+    ENTITY("special_28_v2", 0x082052E8, 0x0820C384, 2, 0x08257964),
+    ENTITY("special_28_v3", 0x082052E8, 0x0820C384, 3, 0x08257964),
+    ENTITY("special_28_v4", 0x082052E8, 0x0820C384, 4, 0x08257964),
+};
+
 static const EntitySpec special31_variants[] = {
     ENTITY("special_31_v2", 0x082052F0, 0x08119E14, 2, 0x08257BD8),
     ENTITY("special_31_v4", 0x082052F0, 0x08119E14, 4, 0x08257BD8),
@@ -2250,6 +2273,11 @@ bool fusion_aos_export_objects(const FusionRom *rom,
          success && index < sizeof special29_variants / sizeof special29_variants[0];
          ++index)
         success = export_entity(rom, &library, &special29_variants[index],
+                                "Object", &object_rows, error, error_size);
+    for (size_t index = 0;
+         success && index < sizeof special28_variants / sizeof special28_variants[0];
+         ++index)
+        success = export_entity(rom, &library, &special28_variants[index],
                                 "Object", &object_rows, error, error_size);
     for (size_t index = 0;
          success && index < sizeof special31_variants / sizeof special31_variants[0];

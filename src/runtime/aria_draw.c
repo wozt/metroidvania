@@ -547,15 +547,18 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (e->id == 28) {
             /* Object1C children drawFunc pass: sub_080544E8 (marker)
              * commits three sprite positions per frame, sparkle/beam
-             * sub_0803B9D0 one, spark sub_080554BC two. The marker's
-             * frames are the same 0x08257964 set Object1D's param0-1
-             * variant exports as special_29_v1; commit.frame is the
-             * child's +0x65 frame-record index walked flat across
-             * the anims like id 29. commit x/y are the native
-             * +0x42/+0x46 screen positions — no camera offset. The
-             * sparkle/beam/spark children use different frame
-             * records whose exports are unverified, so only marker
-             * commits draw (documented gap). */
+             * sub_0803B9D0 one, spark sub_080554BC two. Every kind
+             * shares frame records 0x08257964 / graphics 0x082052E8;
+             * the palette bank is what differs, exported as
+             * special_28_v<bank> (OBJ row 0xA+N = bank N):
+             * marker -> bank 4 (v4, +0x65 is a flat record index
+             * 21-25 walked across the anims), sparkle anim6d 0 ->
+             * bank 2 (v2), sparkle anim6d 4 -> bank 1 (v1), beam and
+             * spark -> bank 3 (v3, frame = +0x65 within anim6d).
+             * commit x/y are the native +0x42/+0x46 screen positions
+             * — no camera offset. anim65 does not advance yet
+             * (sub_0803F17C unported), so non-marker children sit on
+             * frame 0 of their anim — documented gap. */
             if (e->object1c.deleted) continue;
             /* children_draw recomputes the draw-side position
              * fields like the native drawFunc does; the writes
@@ -565,30 +568,49 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
             aos_object1c_children_draw(
                 (AosObject1C *)&e->object1c, &dout);
             if (!dout.commits) continue;
-            const __typeof__(objects->special_objects[0]) *art28 = NULL;
-            for (int v = 0; v < SPECIAL_VARIANTS; ++v)
-                if (objects->special_variants[v].id == 29 &&
-                    objects->special_variants[v].param0 == 1 &&
-                    objects->special_variants[v].loaded) {
-                    art28 = &objects->special_variants[v];
-                    break;
-                }
-            if (!art28) continue;
             for (unsigned c = 0; c < dout.commits; ++c) {
                 const AosObject1CCommit *cm = &dout.commit[c];
-                if (cm->child >= e->object1c.child_count ||
-                    e->object1c.children[cm->child].kind !=
-                        AOS_O1C_CHILD_MARKER)
-                    continue;
-                unsigned want = cm->frame, seen = 0;
+                if (cm->child >= e->object1c.child_count) continue;
+                const AosObject1CChild *ch =
+                    &e->object1c.children[cm->child];
+                int bank;
+                switch (ch->kind) {
+                case AOS_O1C_CHILD_MARKER: bank = 4; break;
+                case AOS_O1C_CHILD_SPARKLE:
+                    bank = ch->anim6d == 0 ? 2
+                         : ch->anim6d == 4 ? 1 : -1;
+                    break;
+                case AOS_O1C_CHILD_BEAM:
+                case AOS_O1C_CHILD_SPARK: bank = 3; break;
+                default: bank = -1; break;
+                }
+                if (bank < 0) continue;
+                const __typeof__(objects->special_objects[0]) *art28 =
+                    NULL;
+                for (int v = 0; v < SPECIAL_VARIANTS; ++v)
+                    if (objects->special_variants[v].id == 28 &&
+                        objects->special_variants[v].param0 == bank &&
+                        objects->special_variants[v].loaded) {
+                        art28 = &objects->special_variants[v];
+                        break;
+                    }
+                if (!art28) continue;
                 const AriaFrame *frame28 = NULL;
-                for (unsigned a = 0; a < OBJECT_MAX_ANIMS && !frame28; ++a)
-                    for (unsigned f = 0;
-                         f < art28->defs[a].count; ++f, ++seen)
-                        if (seen == want) {
-                            frame28 = &art28->frames[a][f];
-                            break;
-                        }
+                if (ch->kind == AOS_O1C_CHILD_MARKER) {
+                    unsigned want = cm->frame, seen = 0;
+                    for (unsigned a = 0;
+                         a < OBJECT_MAX_ANIMS && !frame28; ++a)
+                        for (unsigned f = 0;
+                             f < art28->defs[a].count; ++f, ++seen)
+                            if (seen == want) {
+                                frame28 = &art28->frames[a][f];
+                                break;
+                            }
+                } else if (ch->anim6d < OBJECT_MAX_ANIMS &&
+                           cm->frame <
+                               art28->defs[ch->anim6d].count) {
+                    frame28 = &art28->frames[ch->anim6d][cm->frame];
+                }
                 if (!frame28 || !frame28->texture) continue;
                 SDL_FRect rect28 = {
                     (float)(cm->x + frame28->offset_x),

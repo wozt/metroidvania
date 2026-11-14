@@ -196,6 +196,14 @@ typedef struct {
      * draws share the object20_wo_rng gEwramData+8 channel. */
     AosWoSpawnChild wo_children[AOS_WO_MAX_EVENTS];
     uint8_t  wo_child_count;
+    /* Burst pool for the spawn children's carrier/burst events:
+     * sub_08063168/sub_080632B0 (carrier + sub_080630E8
+     * particles) and the child machine's direct carrier_spawn.
+     * Draw side is unported (frames 0x08267EE4 / graphics
+     * 0x08260390 are not exported); the state machines and RNG
+     * draws still run natively. */
+    AosWoBurst wo_bursts[AOS_WO_MAX_EVENTS];
+    uint8_t  wo_burst_count;
     AosObject19 object19;   /* object 0x19: rectangular patrol mover */
     AosObject1b object1b;   /* object 0x1B: spin-synced object */
     AosObject15 object15;   /* object 0x15: story cutscene director */

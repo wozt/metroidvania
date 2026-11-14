@@ -740,3 +740,196 @@ void aos_wo_render_update(AosWoRender *s,
 
     out->rng = rng;
 }
+
+/* ------------------------------------------------------------------
+ * Whiteout burst callees — sub_080630E8 (particle update),
+ * sub_08063168 / sub_080632B0 (carrier + particle burst spawners)
+ * and sub_08065834 (carrier update; Thumb pointer 0x08065835).
+ * Decoded literally from third_party/cvaos/asm/code/code_08060B98.s:
+ *   sub_080630E8  :4720-4786
+ *   sub_08063168  :4788-4938
+ *   sub_080632B0  :4940-5107
+ *   sub_08065834  :9678-9698
+ * sub_0806E0D0 (the carrier resource gate, :27568-27607) is engine
+ * code — its low-byte result is injected through AosWoBurstIn.
+ * ------------------------------------------------------------------ */
+
+/* Committed ROM tables.
+ *
+ * 0x081189AC: the first three u32 words {0x0000000C, 0x0000000B,
+ * 0x0000000C}. Each burst particle draws RNG % 3 and stores the
+ * chosen word's LOW BYTE into the particle's +0x65. The next five
+ * words at 0x081189B8 {0,2,3,2,3} are sub_080632B0's carrier
+ * variant table (sub_0803F2C8 arg1, s16). Both tables sit
+ * contiguously ahead of the 0x081189CC child table. */
+static const uint8_t wo_burst_field65_1189ac[3] = {0x0c, 0x0b, 0x0c};
+static const int16_t wo_burst_variant_1189b8[5] = {0, 2, 3, 2, 3};
+
+/* The particle prologue shared by the sub_08063168/_080632B0
+ * loops (code_08060B98.s:4850-4924 and :5017-5092). Per particle:
+ *   sub_08062B60(0) — EntityCreateInRange(0x1B,0x48,
+ *     EntityUpdateNothing) + graphics 0x08260390 load + frames
+ *     0x08267EE4 anim 0xE + draw sub_0803B9D0 + +0x2C = 0xE +
+ *     +0x5C = 0x11. NULL (pool or graphics failure) skips the
+ *     particle BEFORE any RNG draw — modelled by
+ *     AosWoBurstIn::particle_alloc_fail. The engine writes are
+ *     host-side; the port starts from the zeroed entity block
+ *     (documented approximation — the native entity pool provides
+ *     the cleared state).
+ *   updateFunc (+0) = sub_080630E8 (implicit: this struct IS that
+ *     update), then six RNG draws:
+ *     +0x42 = (u16)(x + 4 - (rng & 7)),  +0x46 likewise for y
+ *     +0x4C = trunc-div-8 of (0x14000 - (rng & 0x7FFF))
+ *     +0x54 = ((rng & 0x7FF) + 0x800) >> 3
+ *     +0x5C = 3,  +0x65 = table1189AC[rng % 3] low byte,
+ *     +0x63 = 0x80,  +0x58 |= 0x20
+ *     +0xD  = delay_kind 0: (rng % 0x14) + 0x20  (sub_08063168)
+ *             delay_kind 1: rng & 7            (sub_080632B0)
+ *   +0xA stays 0 (fresh entity) so the first sub_080630E8 call
+ *   enters the delay-countdown phase. */
+static void wo_burst_particle_init(AosWoBurstParticle *p,
+                                   int16_t x, int16_t y,
+                                   uint32_t *rng, int delay_kind) {
+    memset(p, 0, sizeof *p);
+    p->scr_42 = (int16_t)(uint16_t)((uint32_t)(uint16_t)x + 4 -
+                                    (wo_rng(rng) & 7));
+    p->scr_46 = (int16_t)(uint16_t)((uint32_t)(uint16_t)y + 4 -
+                                    (wo_rng(rng) & 7));
+    int32_t vy = 0x14000 - (int32_t)(wo_rng(rng) & 0x7fffu);
+    int32_t ay = (int32_t)(wo_rng(rng) & 0x7ffu) + 0x800;
+    /* Native fixup: negative +0x4C adds 7 before the arithmetic
+     * >>3 (C-style truncation toward zero). vy is always positive
+     * here (0xC001..0x14000) but the sequence is kept literal. */
+    if (vy < 0)
+        vy += 7;
+    p->field_4c = vy >> 3;
+    p->field_54 = ay >> 3;
+    p->field_5c = 3;
+    p->field_65 = wo_burst_field65_1189ac[wo_rng(rng) % 3];
+    p->field_63 = 0x80;
+    p->field_58 = (uint8_t)(p->field_58 | 0x20);
+    p->field_d = delay_kind == 0
+        ? (uint8_t)((wo_rng(rng) % 0x14) + 0x20)
+        : (uint8_t)(wo_rng(rng) & 7);
+}
+
+bool aos_wo_carrier_spawn(AosWoBurstCarrier *c, int16_t x,
+                          int16_t y, int16_t variant,
+                          const AosWoBurstIn *in,
+                          AosWoBurstOut *out) {
+    memset(out, 0, sizeof *out);
+    out->rng = in->rng;         /* the creation sequence draws no
+                                 * RNG of its own */
+    if (!in->carrier_alloc_ok)
+        return false;           /* EntityCreateInRange -> NULL:
+                                 * native skips setup, particles
+                                 * still spawn */
+    if (!in->gate_6e0d0_ok) {
+        out->carrier_deleted = true;    /* EntityDelete(entity) */
+        return false;
+    }
+    memset(c, 0, sizeof *c);
+    c->scr_42 = x;              /* strh +0x42 / +0x46 */
+    c->scr_46 = y;
+    c->field_5c = 0;            /* strb +0x5C = 0 */
+    c->variant = variant;       /* sub_0803F2C8 arg1 (s16) */
+    out->carrier_spawned = true;
+    out->carrier_f2c8 = true;   /* sub_0803F2C8(entity, variant,0,0) */
+    out->carrier_f17c = true;   /* sub_0803F17C(entity) */
+    return true;
+}
+
+void aos_wo_burst_63168(AosWoBurst *b, int16_t x, int16_t y,
+                        const AosWoBurstIn *in,
+                        AosWoBurstOut *out) {
+    uint32_t rng = in->rng;
+    memset(out, 0, sizeof *out);
+    memset(b, 0, sizeof *b);
+    /* Carrier first (code_08060B98.s:4794-4846): sub_0803F2C8
+     * arg1 = 0, no RNG inside the routine itself. */
+    if (aos_wo_carrier_spawn(&b->carrier, x, y, 0, in, out))
+        b->carrier_valid = true;
+    /* r5 = 2..0: three particles, six RNG draws each. */
+    for (unsigned i = 0; i < AOS_WO_BURST_MAX_PARTICLES; ++i) {
+        if (in->particle_alloc_fail & (1u << i))
+            continue;                    /* sub_08062B60 -> NULL:
+                                          * skip before any draw */
+        wo_burst_particle_init(&b->particles[b->particle_count],
+                               x, y, &rng, 0);
+        b->particle_count++;
+    }
+    out->rng = rng;
+}
+
+void aos_wo_burst_632b0(AosWoBurst *b, int16_t x, int16_t y,
+                        const AosWoBurstIn *in,
+                        AosWoBurstOut *out) {
+    uint32_t rng = in->rng;
+    memset(out, 0, sizeof *out);
+    memset(b, 0, sizeof *b);
+    /* RNG % 5 over the 0x081189B8 word table picks the carrier's
+     * sub_0803F2C8 variant — drawn BEFORE EntityCreateInRange
+     * (code_08060B98.s:4966-4971), so it is consumed even when
+     * the alloc or the sub_0806E0D0 gate fails. */
+    int16_t variant = wo_burst_variant_1189b8[wo_rng(&rng) % 5];
+    if (aos_wo_carrier_spawn(&b->carrier, x, y, variant, in, out))
+        b->carrier_valid = true;
+    /* r6 = 1..0: two particles, six RNG draws each; the +0xD
+     * delay is rng & 7 (no +0x20 bias, no modulo). */
+    for (unsigned i = 0; i < 2; ++i) {
+        if (in->particle_alloc_fail & (1u << i))
+            continue;
+        wo_burst_particle_init(&b->particles[b->particle_count],
+                               x, y, &rng, 1);
+        b->particle_count++;
+    }
+    out->rng = rng;
+}
+
+void aos_wo_carrier_update(AosWoBurstCarrier *c,
+                           AosWoBurstCarrierOut *out) {
+    /* sub_08065834 (code_08060B98.s:9678-9698): +0x59 bit0 set
+     * marks bit3 for deletion; otherwise the sub_0803F17C
+     * animation step runs. */
+    memset(out, 0, sizeof *out);
+    if (c->flags59 & 1) {
+        c->flags59 = (uint8_t)(c->flags59 | 8);
+        out->done = true;
+    } else {
+        out->anim_step = true;
+    }
+}
+
+void aos_wo_particle_update(AosWoBurstParticle *p,
+                            const AosWoBurstParticleIn *in,
+                            AosWoBurstParticleOut *out) {
+    /* sub_080630E8 (code_08060B98.s:4720-4786). */
+    memset(out, 0, sizeof *out);
+    if (p->field_a == 0) {
+        /* Delay countdown: store +0xD-1; only the u8 wrap to
+         * 0xFF (old +0xD == 0) advances — it also clears +0x58
+         * bit5 (the spawn-held flag) and sets +0xA = 1. */
+        uint8_t nd = (uint8_t)(p->field_d - 1);
+        p->field_d = nd;
+        if (nd == 0xff) {
+            p->field_58 = (uint8_t)(p->field_58 & (uint8_t)~0x20);
+            p->field_a = 1;
+        }
+    } else if (p->field_a == 1) {
+        /* Integrate: position uses the OLD velocity, then the
+         * velocity picks up the acceleration (s32 wrap). */
+        p->field_40 += p->field_48;
+        p->field_44 += p->field_4c;
+        p->field_48 += p->field_50;
+        p->field_4c += p->field_54;
+        out->probe_ran = true;
+        /* sub_08068AD4(entity, -0x80, -0x40, 0x1F0, 0x120):
+         * nonzero keeps the particle; zero sets +0x59 bit3. */
+        if (!in->probe_inside) {
+            p->field_59 = (uint8_t)(p->field_59 | 8);
+            out->probe_missed = true;
+        }
+    }
+    /* +0xA >= 2: native falls straight to the epilogue. */
+    out->done = (p->field_59 & 8) != 0;
+}

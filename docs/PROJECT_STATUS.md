@@ -1,3 +1,31 @@
+## Patch 1132 - aria_runtime decomposition wave 3, Object1C child draw, whiteout bursts
+
+- **aria_runtime.c: ~13.4k -> ~4.9k lines.** Wave 3 extracted the two
+  largest remaining clusters verbatim: `aria_entities.c/.h` (the
+  ~2900-line `update_entities` SPECIAL/kind dispatch, spawn/probe
+  helpers and the Object20 host glue `object20_fill_in`/
+  `object20_apply_out`, plus `AriaPlayerStats`/`AriaCombat`) and
+  `aria_skills.c/.h` (`update_skills`, soul attacks, `spawn_child`,
+  guardian). The room-dialogue bridge and homing list stay in the
+  runtime as shared state. Room 0/1 `--simulate` unchanged.
+- **Object1C children all draw.** The "unverified frame records" gap
+  was a palette gap: every child kind shares frame records
+  0x08257964 / graphics 0x082052E8 and differs only in OBJ palette
+  row. Exported `special_28_v1-v4` (pipeline v75) and the
+  `aria_draw.c` id-28 branch now selects bank by kind+anim6d
+  (marker v4 flat walk, sparkle anim0->v2 / anim4->v1, beam/spark
+  v3). Non-marker children still sit on frame 0 — the
+  sub_0803F17C/sub_0803EE24 advance is being ported.
+- **Whiteout burst callees ported and driven.** sub_08063168,
+  sub_080632B0, sub_08065834 (carrier) and sub_080630E8 (particle)
+  run on the new `wo_bursts` host pool; spawn-child Out events are
+  consumed the same frame, RNG draws share `object20_wo_rng`, and
+  the sub_08068AD4 probe is evaluated natively. ROM tables
+  0x081189AC/0x081189B8 committed. Draw art (0x08267EE4/0x08260390)
+  not yet exported.
+- Registries synced (`annotations.tsv` opening_scene + save rows,
+  `features.tsv` aria_objects v75 + save-room note).
+
 ## Patch 1131 - aria_runtime decomposition wave 1+2, Object1C/1F children, whiteout spawn children
 
 - **`aria_runtime.c` decomposition (AGENTS.md rule 8)**: the ~13.4k-line
@@ -49,8 +77,14 @@
   fn_addr bug is fixed (0x08063699). The host owns an
   `AosWoSpawnChild[8]` pool on `AriaEntity` (`wo_children`), fed by
   `object20_apply_out` and sharing the `object20_wo_rng` gEwramData+8
-  channel. The carrier/burst callees sub_08063168/sub_080632B0/
-  sub_08065835 remain unforwarded Out events.
+  channel. The carrier/burst callees are now ported too:
+  sub_08063168/sub_080632B0 spawn an `AosWoBurst` (carrier +
+  sub_080630E8 particles) on a second host pool (`wo_bursts`), the
+  child machine's direct carrier_spawn goes through
+  `aos_wo_carrier_spawn`, and the particle sub_08068AD4 probe is
+  computed natively as the screen-rect containment test it is. Burst
+  draw records (frames 0x08267EE4 / graphics 0x08260390) stay
+  unexported — state and RNG run, nothing draws yet.
 - **Object1D (id 29) draw** still frames by the +0x65 index through
   `special_29_v0/v1`, now in the `aria_draw.c` id-29 branch.
 - Misc: `aos_object0e.c` >=14 delete-path comment corrected (the

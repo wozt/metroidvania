@@ -264,9 +264,13 @@ void aos_wo_render_update(AosWoRender *s,
  *
  * sub_08063168 (carrier + 3x sub_080630E8 particles) and
  * sub_080632B0 (carrier + 2x particles, variant table
- * 0x081189B8) are engine effects reported as Out events; their
- * internal RNG draws belong to the unported callees and are NOT
- * consumed here. Once +0xC reaches the entry count the native
+ * 0x081189B8 = {0,2,3,2,3}) are now ported below as the burst
+ * API: the child machine still only REPORTS the burst/carrier
+ * events (it does not consume the callees' internal RNG draws),
+ * and the host drives aos_wo_burst_63168/aos_wo_burst_632b0/
+ * aos_wo_carrier_spawn when it consumes each event — calling
+ * them in the same frame preserves the native RNG order. Once
+ * +0xC reaches the entry count the native
  * routine keeps reading past the copied stack table until the
  * host deletes the entity on +0x59 bit3; the port reports done
  * and stops touching table state (documented approximation).
@@ -340,5 +344,184 @@ bool aos_wo_spawn_child_init(AosWoSpawnChild *c,
 void aos_wo_spawn_child_update(AosWoSpawnChild *c,
                                const AosWoSpawnChildIn *in,
                                AosWoSpawnChildOut *out);
+
+/* ------------------------------------------------------------------
+ * Whiteout burst callees — the entity effects the spawn-child
+ * machine reports but does not itself advance. Decoded from
+ * third_party/cvaos/asm/code/code_08060B98.s:4720-5107 and
+ * :9678-9698:
+ *
+ *   sub_080630E8  particle update (the updateFunc the burst
+ *                 loops store at entity +0). +0xA == 0 counts
+ *                 +0xD down; on the u8 wrap to 0xFF it clears
+ *                 +0x58 bit5 and sets +0xA = 1. +0xA == 1 runs
+ *                 one integration step — +0x40 += +0x48,
+ *                 +0x44 += +0x4C, then +0x48 += +0x50,
+ *                 +0x4C += +0x54 (position uses the OLD
+ *                 velocity) — followed by the sub_08068AD4 box
+ *                 probe (-0x80, -0x40, 0x1F0, 0x120); a zero
+ *                 result sets +0x59 bit3. +0xA >= 2 idles.
+ *                 No RNG.
+ *
+ *   sub_08063168(x, y)  burst: EntityCreateInRange(0x1B, 0x48,
+ *                 sub_08065834) carrier gated by sub_0806E0D0,
+ *                 then THREE sub_08062B60(0) particles, six RNG
+ *                 draws each (scr pos +/- jitter, +0x4C/+0x54
+ *                 velocity/accel, +0x65 table pick, +0xD delay).
+ *
+ *   sub_080632B0(x, y)  same shape with TWO particles; first
+ *                 draws RNG % 5 over the committed 0x081189B8
+ *                 word table {0,2,3,2,3} for the carrier's
+ *                 sub_0803F2C8 variant BEFORE creating it.
+ *
+ *   sub_08065834  carrier update (Thumb pointer 0x08065835 —
+ *                 the "sub_08065835" of the spawn-child events):
+ *                 +0x59 bit0 set -> +0x59 |= 8, else
+ *                 sub_0803F17C animation step.
+ *
+ * Entity fields the port tracks mirror the native bytes; the
+ * sub_08062B60 engine writes (+0x2C = 0xE, frames 0x08267EE4
+ * animation 0xE, draw sub_0803B9D0, graphics 0x08260390) and
+ * the sub_0803F2C8/sub_0803F17C/sub_0806E0D0/sub_08068AD4
+ * engine calls are injected or reported, matching the module's
+ * Out-event convention. Fresh-entity bytes the native relies on
+ * the entity pool to clear (+0x40..+0x54 accumulators, +0x59)
+ * are zeroed by the port — documented approximation.
+ * ------------------------------------------------------------------ */
+
+/* Carrier entity spawned by sub_08063168/sub_080632B0 (and
+ * directly by the child machine's even +0xA fire). */
+typedef struct {
+    int16_t  scr_42;    /* +0x42 screen X (strh) */
+    int16_t  scr_46;    /* +0x46 screen Y (strh) */
+    uint8_t  field_5c;  /* +0x5C = 0 written at spawn */
+    int16_t  variant;   /* sub_0803F2C8 arg1 (s16): 0 for
+                         * sub_08063168 carriers, the 0x081189B8
+                         * pick for sub_080632B0, RNG & 3 for the
+                         * child machine's direct carrier_spawn */
+    uint8_t  flags59;   /* +0x59: bit0 arms deletion, bit3 = the
+                         * host deletes the carrier */
+} AosWoBurstCarrier;
+
+typedef struct {
+    bool anim_step;     /* sub_0803F17C ran this call */
+    bool done;          /* +0x59 bit3 set after this call —
+                         * the host should delete the carrier */
+} AosWoBurstCarrierOut;
+
+/* sub_080630E8 particle entity state — every byte/word the
+ * update routine and the two burst spawn loops touch. */
+typedef struct {
+    uint8_t  field_a;    /* +0xA phase: 0 delay / 1 integrate /
+                          * >=2 idle */
+    uint8_t  field_d;    /* +0xD delay counter */
+    int16_t  scr_42;     /* +0x42 screen X (strh at spawn) */
+    int16_t  scr_46;     /* +0x46 screen Y */
+    int32_t  field_40;   /* +0x40 position X accumulator */
+    int32_t  field_44;   /* +0x44 position Y accumulator */
+    int32_t  field_48;   /* +0x48 velocity X (stays 0 — the spawn
+                          * loops never write it) */
+    int32_t  field_4c;   /* +0x4C velocity Y */
+    int32_t  field_50;   /* +0x50 accel X (stays 0) */
+    int32_t  field_54;   /* +0x54 accel Y */
+    uint8_t  field_58;   /* +0x58 flags: bit5 set at spawn, cleared
+                          * when the +0xD delay wraps */
+    uint8_t  field_59;   /* +0x59 flags: bit3 = delete */
+    uint8_t  field_5c;   /* +0x5C = 3 at spawn (overwrites the
+                          * sub_08062B60 0x11) */
+    uint8_t  field_63;   /* +0x63 = 0x80 at spawn */
+    uint8_t  field_65;   /* +0x65 = low byte of the RNG % 3 pick
+                          * from the 0x081189AC word table
+                          * {0xC,0xB,0xC} */
+} AosWoBurstParticle;
+
+#define AOS_WO_BURST_MAX_PARTICLES 3  /* sub_08063168 spawns 3,
+                                       * sub_080632B0 spawns 2 */
+
+/* One burst call's products: the carrier (when it survived
+ * allocation and the sub_0806E0D0 gate) plus its particles. */
+typedef struct {
+    AosWoBurstCarrier carrier;
+    bool carrier_valid;                     /* carrier kept */
+    AosWoBurstParticle particles[AOS_WO_BURST_MAX_PARTICLES];
+    uint8_t particle_count;                 /* 0..3 */
+} AosWoBurst;
+
+/* Injected native reads for the burst spawners. */
+typedef struct {
+    uint32_t rng;               /* gEwramData+8 LCG state
+                                 * (read AND written via Out) */
+    bool carrier_alloc_ok;      /* EntityCreateInRange(0x1B,0x48,
+                                 * sub_08065834) returned non-NULL */
+    bool gate_6e0d0_ok;         /* sub_0806E0D0(entity,
+                                 * 0x08260390, 0x08266544,
+                                 * 0x08267EE4, 0, same) low byte
+                                 * nonzero — a zero result makes
+                                 * the native EntityDelete the
+                                 * carrier (particles still spawn) */
+    uint8_t particle_alloc_fail;/* bit i: particle i's
+                                 * sub_08062B60(0) returned NULL
+                                 * (entity pool or the 0x08260390
+                                 * graphics load failed) — that
+                                 * particle is skipped and consumes
+                                 * NO RNG draws */
+} AosWoBurstIn;
+
+typedef struct {
+    uint32_t rng;           /* gEwramData+8 after this call's draws */
+    bool carrier_spawned;   /* carrier survived alloc + gate */
+    bool carrier_deleted;   /* alloc ok but the sub_0806E0D0 gate
+                             * failed -> EntityDelete ran */
+    bool carrier_f2c8;      /* sub_0803F2C8(entity, variant,0,0) */
+    bool carrier_f17c;      /* sub_0803F17C(entity) */
+} AosWoBurstOut;
+
+/* Injected reads for the sub_080630E8 particle update. */
+typedef struct {
+    bool probe_inside;  /* sub_08068AD4(entity, -0x80, -0x40,
+                     * 0x1F0, 0x120) result — nonzero keeps the
+                     * particle, zero sets +0x59 bit3 */
+} AosWoBurstParticleIn;
+
+typedef struct {
+    bool probe_ran;     /* the +0xA == 1 integrate/probe phase ran */
+    bool probe_missed;  /* probe returned 0 -> +0x59 |= 8 */
+    bool done;          /* +0x59 bit3 after this call */
+} AosWoBurstParticleOut;
+
+/* sub_08063168's carrier creation, exposed for the child
+ * machine's direct carrier_spawn events (identical native
+ * sequence: EntityCreateInRange + sub_0806E0D0 gate +
+ * +0x42/+0x46/+0x5C writes + sub_0803F2C8/sub_0803F17C).
+ * `variant` is the sub_0803F2C8 arg1 — RNG & 3 for the child
+ * path, 0 inside sub_08063168, the 0x081189B8 pick inside
+ * sub_080632B0. Returns true when the carrier was kept;
+ * out->carrier_deleted reports the gate-failure EntityDelete.
+ * Draws no RNG (out->rng == in->rng). */
+bool aos_wo_carrier_spawn(AosWoBurstCarrier *c, int16_t x,
+                          int16_t y, int16_t variant,
+                          const AosWoBurstIn *in,
+                          AosWoBurstOut *out);
+
+/* sub_08063168(x, y): carrier + 3 particles, 18 RNG draws when
+ * every sub_08062B60 succeeds. Resets *b. */
+void aos_wo_burst_63168(AosWoBurst *b, int16_t x, int16_t y,
+                        const AosWoBurstIn *in,
+                        AosWoBurstOut *out);
+
+/* sub_080632B0(x, y): RNG % 5 carrier-variant draw, carrier +
+ * 2 particles — 13 RNG draws when every alloc succeeds. */
+void aos_wo_burst_632b0(AosWoBurst *b, int16_t x, int16_t y,
+                        const AosWoBurstIn *in,
+                        AosWoBurstOut *out);
+
+/* sub_08065834: the carrier's per-frame update. */
+void aos_wo_carrier_update(AosWoBurstCarrier *c,
+                           AosWoBurstCarrierOut *out);
+
+/* sub_080630E8: the particle's per-frame update. */
+void aos_wo_particle_update(AosWoBurstParticle *p,
+                            const AosWoBurstParticleIn *in,
+                            AosWoBurstParticleOut *out);
 
 #endif /* AOS_OBJECT20_WHITEOUT_RENDER_H */

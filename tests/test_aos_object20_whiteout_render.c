@@ -23,6 +23,10 @@ static void step(AosWoRender *s, AosWoRenderIn *in, AosWoRenderOut *out) {
     in->ewram_7864 |= out->tail_7864_or1 ? 1 : 0;
 }
 
+static uint32_t lcg_next(uint32_t s) {
+    return (s >> 8) * 0x3243F6ADu + 0x1B0CB175u;
+}
+
 int main(void) {
     AosWoRender s;
     AosWoRenderIn in;
@@ -532,6 +536,217 @@ int main(void) {
         aos_wo_spawn_child_update(&ch, &cin, &cout);
         assert(cout.done);                   /* still reported */
         assert(cout.rng == cin.rng);
+    }
+
+    /* ---- whiteout burst callees: sub_08063168 / sub_080632B0 /
+     * sub_080630E8 / sub_08065834. ---- */
+    {
+        AosWoBurstIn bin;
+        AosWoBurstOut bout;
+        AosWoBurst b;
+        static const uint8_t f65[3] = {0x0c, 0x0b, 0x0c};
+        static const int16_t var5[5] = {0, 2, 3, 2, 3};
+
+        /* sub_08063168(x=200,y=100): carrier (variant 0) + 3
+         * particles, 6 RNG draws each = 18 total. */
+        memset(&bin, 0, sizeof bin);
+        bin.rng = 0x12345678;
+        bin.carrier_alloc_ok = true;
+        bin.gate_6e0d0_ok = true;
+        aos_wo_burst_63168(&b, 200, 100, &bin, &bout);
+        assert(bout.carrier_spawned && !bout.carrier_deleted);
+        assert(b.carrier_valid);
+        assert(b.carrier.scr_42 == 200 && b.carrier.scr_46 == 100);
+        assert(b.carrier.field_5c == 0 && b.carrier.variant == 0);
+        assert(bout.carrier_f2c8 && bout.carrier_f17c);
+        assert(b.particle_count == 3);
+        uint32_t r = 0x12345678;
+        for (int i = 0; i < 18; ++i)
+            r = lcg_next(r);
+        assert(bout.rng == r);               /* exactly 18 draws */
+        /* Particle 0 consumes draws 1..6. */
+        uint32_t d[6];
+        r = 0x12345678;
+        for (int i = 0; i < 6; ++i) {
+            r = lcg_next(r);
+            d[i] = r;
+        }
+        const AosWoBurstParticle *p0 = &b.particles[0];
+        assert(p0->field_a == 0);
+        assert(p0->scr_42 == (int16_t)(uint16_t)(204 - (d[0] & 7)));
+        assert(p0->scr_46 == (int16_t)(uint16_t)(104 - (d[1] & 7)));
+        assert(p0->field_4c ==
+               (0x14000 - (int32_t)(d[2] & 0x7fff)) >> 3);
+        assert(p0->field_54 ==
+               ((int32_t)(d[3] & 0x7ff) + 0x800) >> 3);
+        assert(p0->field_65 == f65[d[4] % 3]);
+        assert(p0->field_d == (uint8_t)((d[5] % 0x14) + 0x20));
+        assert(p0->field_5c == 3 && p0->field_63 == 0x80);
+        assert(p0->field_58 & 0x20);
+        assert(p0->field_40 == 0 && p0->field_48 == 0 &&
+               p0->field_50 == 0);
+        /* Particle 2's delay uses draws 13..18, last = draw 18. */
+        r = 0x12345678;
+        for (int i = 0; i < 17; ++i)
+            r = lcg_next(r);
+        r = lcg_next(r);                      /* draw 18 */
+        assert(b.particles[2].field_d ==
+               (uint8_t)((r % 0x14) + 0x20));
+
+        /* particle_alloc_fail skips particles AND their draws:
+         * bits 0 and 2 fail -> only particle 1 spawns (6 draws). */
+        memset(&bin, 0, sizeof bin);
+        bin.rng = 0x12345678;
+        bin.carrier_alloc_ok = true;
+        bin.gate_6e0d0_ok = true;
+        bin.particle_alloc_fail = 0x5;
+        aos_wo_burst_63168(&b, 200, 100, &bin, &bout);
+        assert(b.particle_count == 1);
+        r = 0x12345678;
+        for (int i = 0; i < 6; ++i)
+            r = lcg_next(r);
+        assert(bout.rng == r);
+
+        /* sub_0806E0D0 gate failure: EntityDelete — no carrier,
+         * particles still spawn and still draw. */
+        memset(&bin, 0, sizeof bin);
+        bin.rng = 0x12345678;
+        bin.carrier_alloc_ok = true;
+        bin.gate_6e0d0_ok = false;
+        aos_wo_burst_63168(&b, 200, 100, &bin, &bout);
+        assert(!bout.carrier_spawned && bout.carrier_deleted);
+        assert(!b.carrier_valid);
+        assert(!bout.carrier_f2c8 && !bout.carrier_f17c);
+        assert(b.particle_count == 3);
+        r = 0x12345678;
+        for (int i = 0; i < 18; ++i)
+            r = lcg_next(r);
+        assert(bout.rng == r);
+
+        /* EntityCreateInRange NULL: no carrier, no delete flag,
+         * particles still spawn. */
+        memset(&bin, 0, sizeof bin);
+        bin.rng = 0x12345678;
+        bin.carrier_alloc_ok = false;
+        bin.gate_6e0d0_ok = true;
+        aos_wo_burst_63168(&b, 200, 100, &bin, &bout);
+        assert(!bout.carrier_spawned && !bout.carrier_deleted);
+        assert(b.particle_count == 3);
+
+        /* sub_080632B0(x=50,y=60): RNG % 5 variant draw first,
+         * carrier + 2 particles = 13 draws total. */
+        memset(&bin, 0, sizeof bin);
+        bin.rng = 0x12345678;
+        bin.carrier_alloc_ok = true;
+        bin.gate_6e0d0_ok = true;
+        aos_wo_burst_632b0(&b, 50, 60, &bin, &bout);
+        r = lcg_next(0x12345678);            /* draw 1: variant */
+        assert(b.carrier.variant == var5[r % 5]);
+        assert(b.carrier.scr_42 == 50 && b.carrier.scr_46 == 60);
+        assert(b.particle_count == 2);
+        r = 0x12345678;
+        for (int i = 0; i < 13; ++i)
+            r = lcg_next(r);
+        assert(bout.rng == r);
+        /* Particle delays are rng & 7 (draws 7 and 13: draw 1 is
+         * the variant pick, then 6 draws per particle). */
+        {
+            uint32_t rr = 0x12345678;
+            for (int i = 0; i < 7; ++i)
+                rr = lcg_next(rr);
+            assert(b.particles[0].field_d == (uint8_t)(rr & 7));
+            for (int i = 0; i < 6; ++i)
+                rr = lcg_next(rr);
+            assert(b.particles[1].field_d == (uint8_t)(rr & 7));
+        }
+        /* alloc_fail bit1 -> only particle 0 (7 draws total). */
+        memset(&bin, 0, sizeof bin);
+        bin.rng = 0x12345678;
+        bin.carrier_alloc_ok = true;
+        bin.gate_6e0d0_ok = true;
+        bin.particle_alloc_fail = 0x2;
+        aos_wo_burst_632b0(&b, 50, 60, &bin, &bout);
+        assert(b.particle_count == 1);
+        r = 0x12345678;
+        for (int i = 0; i < 7; ++i)
+            r = lcg_next(r);
+        assert(bout.rng == r);
+
+        /* aos_wo_carrier_spawn standalone (the child machine's
+         * direct carrier_spawn path): variant passthrough, no
+         * RNG consumed. */
+        AosWoBurstCarrier car;
+        memset(&bin, 0, sizeof bin);
+        bin.rng = 0x12345678;
+        bin.carrier_alloc_ok = true;
+        bin.gate_6e0d0_ok = true;
+        assert(aos_wo_carrier_spawn(&car, 7, 8, 3, &bin, &bout));
+        assert(car.scr_42 == 7 && car.scr_46 == 8 &&
+               car.variant == 3);
+        assert(bout.rng == bin.rng);
+        /* gate fail -> deleted, returns false. */
+        bin.gate_6e0d0_ok = false;
+        assert(!aos_wo_carrier_spawn(&car, 7, 8, 3, &bin, &bout));
+        assert(bout.carrier_deleted && !bout.carrier_spawned);
+        /* alloc fail -> false, neither flag. */
+        bin.carrier_alloc_ok = false;
+        bin.gate_6e0d0_ok = true;
+        assert(!aos_wo_carrier_spawn(&car, 7, 8, 3, &bin, &bout));
+        assert(!bout.carrier_deleted && !bout.carrier_spawned);
+
+        /* sub_08065834 carrier update: bit0 -> bit3; else
+         * sub_0803F17C step. */
+        AosWoBurstCarrierOut cout2;
+        memset(&car, 0, sizeof car);
+        car.flags59 = 0;
+        aos_wo_carrier_update(&car, &cout2);
+        assert(cout2.anim_step && !cout2.done);
+        car.flags59 = 1;
+        aos_wo_carrier_update(&car, &cout2);
+        assert(!cout2.anim_step && cout2.done);
+        assert(car.flags59 & 8);
+        car.flags59 = 2;                    /* bit1 only: bit0 clear */
+        aos_wo_carrier_update(&car, &cout2);
+        assert(cout2.anim_step && !cout2.done);
+
+        /* sub_080630E8 particle update: delay wrap, integrate,
+         * probe delete, idle. */
+        AosWoBurstParticle pt;
+        AosWoBurstParticleIn pin;
+        AosWoBurstParticleOut pout;
+        memset(&pt, 0, sizeof pt);
+        pt.field_d = 0;
+        pt.field_58 = 0x20;
+        memset(&pin, 0, sizeof pin);
+        pin.probe_inside = true;
+        aos_wo_particle_update(&pt, &pin, &pout);
+        assert(pt.field_d == 0xff && pt.field_a == 1);
+        assert(!(pt.field_58 & 0x20));      /* bit5 cleared */
+        assert(!pout.probe_ran && !pout.done);
+        /* Integrate: pos uses OLD velocity, then vel += acc. */
+        pt.field_40 = 10; pt.field_48 = 4; pt.field_50 = 1;
+        pt.field_44 = 20; pt.field_4c = 6; pt.field_54 = 2;
+        aos_wo_particle_update(&pt, &pin, &pout);
+        assert(pout.probe_ran && !pout.probe_missed && !pout.done);
+        assert(pt.field_40 == 14 && pt.field_44 == 26);
+        assert(pt.field_48 == 5 && pt.field_4c == 8);
+        /* Probe miss -> +0x59 bit3. */
+        pin.probe_inside = false;
+        aos_wo_particle_update(&pt, &pin, &pout);
+        assert(pout.probe_missed && pout.done);
+        assert(pt.field_59 & 8);
+        /* +0xA >= 2 idles: no probe, no state change. */
+        pt.field_a = 2;
+        pt.field_59 = 0;
+        pt.field_40 = 100;
+        aos_wo_particle_update(&pt, &pin, &pout);
+        assert(!pout.probe_ran && !pout.done);
+        assert(pt.field_40 == 100 && pt.field_59 == 0);
+        /* Non-wrapping delay: +0xD 5 -> 4, stays in phase 0. */
+        memset(&pt, 0, sizeof pt);
+        pt.field_d = 5;
+        aos_wo_particle_update(&pt, &pin, &pout);
+        assert(pt.field_d == 4 && pt.field_a == 0 && !pout.done);
     }
 
     puts("test_aos_object20_whiteout_render: OK");

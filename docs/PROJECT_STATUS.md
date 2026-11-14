@@ -1,3 +1,32 @@
+## Patch 1111 - Headless `--simulate` mode and two loader bugs it exposed
+
+- `fusion_aria_runtime --simulate N [--simulate-hold MASK]` runs N
+  60 Hz frames headless (no SDL window): the same data loads as
+  the SDL runtime with renderer NULL — `load_frame` and the
+  WoodenDoor branch now decode BMP metrics without creating
+  textures — then `aos_soma_update`, the stats/save-room chain
+  and `update_entities` tick with neutral input (or the held
+  AOS_KEY_* mask). Room transitions, menus, rendering, audio
+  mixing, guardian and soul-skill attacks stay out of scope.
+  Each run prints per-SPECIAL-id spawn coverage plus enemy and
+  effect counts — the first automated exercise of the dispatch.
+- **Bug 1 (latent crash)**: `skill_art_names` had 57 entries for
+  58 `SKILL_ART_*` enum values — `SKILL_ART_MAN_EATER`'s slot was
+  NULL, so `load_objects`' `strcmp(enemy_name, skill_art_names[k])`
+  segfaulted on the first `Enemy/` line of runtime_index.tsv.
+  `"skill_man_eater"` added in enum order.
+- **Bug 2 (latent total failure)**: `special_variants[24]` held
+  only 24 (id, param0) slots but the export emits 31 distinct
+  `Object/special_NN_vP` records; the 25th made `load_objects`
+  return false, so `objects_ok`/`enemies_ok` failed and the whole
+  object/enemy art table silently did not load. Raised to
+  `SPECIAL_VARIANTS 40` with all six loops updated.
+- Verified: room 9/3 keeps 17 enemies alive after 300 frames;
+  room 5/6 with `--simulate-hold 0x10` (RIGHT) walks Soma across
+  the room, takes real contact damage and spawns 10/11 SPECIAL
+  ids versus 0/11 standing still; ids 20 and 32 still report 0
+  spawned, matching the Patch 1110 dead-entity audit.
+
 ## Patch 1110 - SPECIAL dispatch coverage audit
 
 - Audited every kind-2 entity record in the exported runtime

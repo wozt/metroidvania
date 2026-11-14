@@ -297,6 +297,9 @@ static const char *const enemy_names[ENEMY_KINDS] = {[0] = "bat", [1] = "zombie"
 /* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold
  * Medusa head (parameter 1 bit 0) and the Ghost Dancer (parameter 0). */
 #define VARIANT_ARTS 5
+/* Object/special_NN_vP records: the export currently emits 31 distinct
+ * (id, param0) pairs; 40 leaves headroom. */
+#define SPECIAL_VARIANTS 40
 static const struct { int id, bank; } variant_keys[VARIANT_ARTS] = {
     {57, 1}, {29, 1}, {29, 2}, {25, 1}, {-1, 0},
 };
@@ -410,7 +413,7 @@ static const char *const skill_art_names[SKILL_ARTS] = {"skill_bat", "skill_arch
                                                          "skill_shadow_knight",
                                                          "skill_alura_une", "skill_big_golem",
                                                          "skill_werewolf", "skill_killer_mantle", "skill_were_beast", "skill_demon_lord",
-                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor", "skill_cockatrice", "skill_dryad", "skill_arachne", "skill_red_minotaur", "skill_nightmare", "skill_sky_fish", "skill_creaking_skull", "skill_alastor", "skill_final_guard"};
+                                                         "skill_biphron", "skill_balore", "skill_kyoma_demon", "skill_legion", "skill_student_witch", "skill_slime", "skill_ukoback", "skill_altair", "skill_une", "skill_mandragora", "skill_chronomage", "skill_disc_armor", "skill_cockatrice", "skill_dryad", "skill_arachne", "skill_red_minotaur", "skill_nightmare", "skill_man_eater", "skill_sky_fish", "skill_creaking_skull", "skill_alastor", "skill_final_guard"};
 #define ARIA_KIND_ENEMY 1
 
 
@@ -6279,7 +6282,7 @@ typedef struct {
       special_objects[64],                     /* Object/special_NN */
       /* Object/special_NN_vP: param0-driven variants of SPECIAL objects
        * (ids 14 and 18 resolve their sprite through entity->param0). */
-      special_variants[24];
+      special_variants[SPECIAL_VARIANTS];
     struct {
         AriaFrame frames[MAX_FRAMES];
         uint8_t ticks[MAX_FRAMES];
@@ -6822,11 +6825,18 @@ static bool load_item_use(const char *path, AosItemUseRecord items[AOS_ITEM_RECO
 static bool load_frame(AriaFrame *out, const char *path, int ox, int oy, SDL_Renderer *renderer) {
     SDL_Surface *surface = SDL_LoadBMP(path);
     if (!surface) return false;
-    out->texture = SDL_CreateTextureFromSurface(renderer, surface);
     out->w = (float)surface->w;
     out->h = (float)surface->h;
     out->offset_x = ox;
     out->offset_y = oy;
+    if (!renderer) {
+        /* Headless loads (--simulate): the frame's metrics count as
+         * loaded but no texture exists; nothing draws in that mode. */
+        out->texture = NULL;
+        SDL_DestroySurface(surface);
+        return true;
+    }
+    out->texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_DestroySurface(surface);
     if (!out->texture) return false;
     SDL_SetTextureScaleMode(out->texture, SDL_SCALEMODE_NEAREST);
@@ -6836,7 +6846,7 @@ static bool load_frame(AriaFrame *out, const char *path, int ox, int oy, SDL_Ren
 static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *renderer) {
     FILE *f = fopen(path, "rb");
     if (!f) return false;
-    for (int v = 0; v < 24; ++v) objects->special_variants[v].id = -1;
+    for (int v = 0; v < SPECIAL_VARIANTS; ++v) objects->special_variants[v].id = -1;
     char line[1024];
     bool ok = fgets(line, sizeof line, f) && !strncmp(line, INDEX_SCHEMA, strlen(INDEX_SCHEMA));
     while (ok && fgets(line, sizeof line, f)) {
@@ -7004,14 +7014,14 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
         {
             __typeof__(objects->special_objects[0]) *art = NULL;
             if (object_param >= 0) {
-                for (int v = 0; v < 24; ++v)
+                for (int v = 0; v < SPECIAL_VARIANTS; ++v)
                     if (objects->special_variants[v].id == object_id &&
                         objects->special_variants[v].param0 == object_param) {
                         art = &objects->special_variants[v];
                         break;
                     }
                 if (!art)
-                    for (int v = 0; v < 24; ++v)
+                    for (int v = 0; v < SPECIAL_VARIANTS; ++v)
                         if (objects->special_variants[v].id < 0) {
                             objects->special_variants[v].id = object_id;
                             objects->special_variants[v].param0 = object_param;
@@ -7053,14 +7063,14 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
         SDL_Surface *surface = SDL_LoadBMP(frame_path);
         if (!surface) { ok = false; break; }
         AriaFrame *out = &objects->frames[style][frame];
-        out->texture = SDL_CreateTextureFromSurface(renderer, surface);
         out->w = (float)surface->w;
         out->h = (float)surface->h;
         out->offset_x = ox;
         out->offset_y = oy;
+        out->texture = renderer ? SDL_CreateTextureFromSurface(renderer, surface) : NULL;
         SDL_DestroySurface(surface);
-        if (!out->texture) { ok = false; break; }
-        SDL_SetTextureScaleMode(out->texture, SDL_SCALEMODE_NEAREST);
+        if (renderer && !out->texture) { ok = false; break; }
+        if (out->texture) SDL_SetTextureScaleMode(out->texture, SDL_SCALEMODE_NEAREST);
         objects->ticks[style][frame] = (uint8_t)ticks;
         objects->counts[style]++;
     }
@@ -7068,7 +7078,7 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
     for (int id = 0; id < ENEMY_KINDS; ++id) objects->enemies[id].set.anims = objects->enemies[id].defs;
     for (int id = 0; id < 64; ++id)
         objects->special_objects[id].set.anims = objects->special_objects[id].defs;
-    for (int v = 0; v < 24; ++v)
+    for (int v = 0; v < SPECIAL_VARIANTS; ++v)
         objects->special_variants[v].set.anims = objects->special_variants[v].defs;
     for (int v = 0; v < VARIANT_ARTS; ++v) objects->variants[v].set.anims = objects->variants[v].defs;
     for (int k = 0; k < SKILL_ARTS; ++k) objects->skills[k].set.anims = objects->skills[k].defs;
@@ -7099,7 +7109,7 @@ static void free_objects(AriaObjects *objects) {
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->special_objects[id].frames[i][j].texture)
                     SDL_DestroyTexture(objects->special_objects[id].frames[i][j].texture);
-    for (int v = 0; v < 24; ++v)
+    for (int v = 0; v < SPECIAL_VARIANTS; ++v)
         for (int i = 0; i < OBJECT_MAX_ANIMS; ++i)
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->special_variants[v].frames[i][j].texture)
@@ -7328,7 +7338,7 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
              * param0 == 2 selects the alternate set (v101). Positions
              * are fixed-point screen pixels (fx >> 16). */
             const __typeof__(objects->special_objects[0]) *child_art = NULL;
-            for (int v = 0; v < 24; ++v)
+            for (int v = 0; v < SPECIAL_VARIANTS; ++v)
                 if (objects->special_variants[v].id == 7 &&
                     objects->special_variants[v].param0 ==
                         (e->param0 == 2 ? 101 : 100) &&
@@ -7386,7 +7396,7 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
              * the + 0x32 param selects the record. */
             variant_key = e->param1 & 3;
         }
-        for (int v = 0; v < 24; ++v)
+        for (int v = 0; v < SPECIAL_VARIANTS; ++v)
             if ((objects->special_variants[v].id == e->id ||
                  (e->id == 41 &&
                   objects->special_variants[v].id == 42)) &&
@@ -8947,7 +8957,7 @@ static bool reload_equipped_weapon(uint8_t item, AosSoma *soma,
 
 static void usage(const char *name) {
     fprintf(stderr,
-            "Usage: %s [--check] [--save slot.sav] [--save-target slot.sav]"
+            "Usage: %s [--check] [--simulate N [--simulate-hold MASK]] [--save slot.sav] [--save-target slot.sav]"
             " [--consume-save] [--rom aria.gba] [--library index.tsv]\n"
             "       [--spawn X Y] [--moves MASK]\n"
             "       [--weapon none|INDEX] [--red-soul N] [--blue-soul N] [--yellow-soul N] [--hitboxes] [--no-overlays | --overlay-dir DIR] [--atk N] [--def N] [--hp N]\n"
@@ -8968,6 +8978,8 @@ int aria_runtime_main(int argc, char **argv) {
     const char *rom_path = NULL;
     bool consume_save = false;
     long area = -1, room_number = -1, capture_frames = 0;
+    long simulate_frames = 0;
+    unsigned simulate_hold = 0;   /* --simulate-hold: AOS_KEY_* bits held every frame */
     unsigned long capture_buttons = 0;
     /* A new file owns no ability soul. In particular, Malphas' mid-air jump
      * must be collected before AOS_MOVE_AIR_JUMP becomes available. Saves and
@@ -8997,6 +9009,10 @@ int aria_runtime_main(int argc, char **argv) {
     for (int i = 1; i < argc; ++i) {
         char *end = NULL;
         if (!strcmp(argv[i], "--check")) check = true;
+        else if (!strcmp(argv[i], "--simulate") && i + 1 < argc)
+            simulate_frames = atol(argv[++i]);
+        else if (!strcmp(argv[i], "--simulate-hold") && i + 1 < argc)
+            simulate_hold = (unsigned)strtoul(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--audit-transitions")) {
             aria_overlays_enabled = false;
             return audit_transitions();
@@ -9177,6 +9193,213 @@ int aria_runtime_main(int argc, char **argv) {
         aos_mp2k_engine_destroy(&mp2k);
         free_room(&room);
         return ok ? 0 : 1;
+    }
+
+    if (simulate_frames > 0) {
+        /* Headless gameplay tick: the same data loads as the SDL runtime
+         * (renderer NULL, so no textures) and the player, stats, save-room
+         * and entity updates run with neutral input for N frames. This is
+         * the only automated exercise of update_entities' SPECIAL dispatch.
+         * Out of scope: room transitions, pause/save menus, rendering,
+         * audio mixing, guardian and soul-skill attacks, the opening
+         * scene and death/game-over handling. */
+        if (!load_library(library_path, &library, NULL)) {
+            fprintf(stderr, "Cannot load the Soma library: %s\n", library_path);
+            aos_mp2k_engine_destroy(&mp2k);
+            free_room(&room);
+            return 1;
+        }
+        static AriaObjects objects;
+        bool objects_ok = load_objects(DEFAULT_OBJECTS, &objects, NULL);
+        bool enemies_ok = objects_ok && load_enemy_data(&objects);
+        if (!objects_ok)
+            fprintf(stderr, "No object library: ./build/fusion_rebuild --task aria_objects\n");
+        else if (!enemies_ok)
+            fprintf(stderr, "No enemy data: ./build/fusion_rebuild --task aria_objects\n");
+        static AosStats progress;
+        progress.character = 0;
+        aos_stats_init(&progress);
+        aos_button_config_default(&progress.buttons);
+        memset(aria_events, 0, sizeof aria_events);
+        aos_object01_reset();
+        memset(&aria_pickup_state, 0, sizeof aria_pickup_state);
+        aos_stats_new_game_equipment(&progress);
+        aos_stats_new_game_inventory(&progress);
+        aos_stats_level_up(&progress);
+        static AosEquipmentTables equipment;
+        bool have_equipment = load_equipment(DEFAULT_EQUIPMENT, &equipment);
+        static AosItemUseRecord item_use[AOS_ITEM_RECORDS];
+        bool have_item_use = load_item_use(DEFAULT_ITEM_USE, item_use);
+        if (!have_item_use)
+            fprintf(stderr, "No item-use table: ./build/fusion_rebuild --task aria_objects\n");
+        if (have_equipment) {
+            aos_stats_refresh(&progress, &equipment);
+            if (!atk_override) player_stats.atk = progress.atk;
+            if (!def_override) player_stats.def = progress.def;
+        }
+        if (!hp_override && progress.max_hp > player_stats.max_hp) {
+            player_stats.max_hp = progress.max_hp;
+            if (player_stats.hp > player_stats.max_hp) player_stats.hp = player_stats.max_hp;
+        }
+        if (red_soul_override >= 0 && red_soul_override < AOS_RED_SOUL_RECORDS) {
+            progress.red_soul = (uint8_t)red_soul_override;
+            if (red_soul_override > 0 &&
+                !aos_souls_total(&progress, AOS_SOUL_RED, red_soul_override - 1))
+                aos_souls_add(&progress, AOS_SOUL_RED, red_soul_override - 1, 1);
+        }
+        if (blue_soul_override >= 0 && blue_soul_override < AOS_BLUE_SOUL_RECORDS) {
+            progress.blue_soul = (uint8_t)blue_soul_override;
+            if (blue_soul_override > 0 &&
+                !aos_souls_total(&progress, AOS_SOUL_BLUE, blue_soul_override - 1))
+                aos_souls_add(&progress, AOS_SOUL_BLUE, blue_soul_override - 1, 1);
+        }
+        if (yellow_soul_override >= 0 && yellow_soul_override < AOS_YELLOW_SOUL_RECORDS) {
+            progress.yellow_soul = (uint8_t)yellow_soul_override;
+            if (yellow_soul_override > 0 &&
+                !aos_souls_total(&progress, AOS_SOUL_YELLOW, yellow_soul_override - 1))
+                aos_souls_add(&progress, AOS_SOUL_YELLOW, yellow_soul_override - 1, 1);
+        }
+        progress.mp = (int16_t)progress.max_mp;
+        static AosRedSoulRecord red_souls[AOS_RED_SOUL_RECORDS];
+        load_red_souls(DEFAULT_RED_SOULS, red_souls);
+        static AosThrowRecord skill_throws[AOS_THROW_RECORDS];
+        load_skill_throws(DEFAULT_SKILL_THROWS, skill_throws);
+        load_bursts(DEFAULT_BURSTS);
+        static AosYellowSoulRecord yellow_souls[AOS_YELLOW_SOUL_RECORDS];
+        bool have_yellow_souls = load_yellow_souls(DEFAULT_YELLOW_SOULS, yellow_souls);
+        AosYellowSoul yellow_soul = {0};
+        static char sim_weapon_name[8];
+        if (weapon_override)
+            progress.weapon = strcmp(weapon_name, "none") ? (uint8_t)atoi(weapon_name)
+                                                          : AOS_EQUIPMENT_NONE;
+        else {
+            snprintf(sim_weapon_name, sizeof sim_weapon_name, "%u", progress.weapon);
+            weapon_name = sim_weapon_name;
+        }
+        AosSoma soma = aos_soma_spawn(spawn_x << 16, spawn_y << 16, &library.set);
+        soma.moves = (uint32_t)moves;
+        soma.stats = &progress;
+        soma.random = aos_random;
+        soma.hp = (int16_t)player_stats.hp;
+        soma.max_hp = (int16_t)player_stats.max_hp;
+        if (!load_weapon(DEFAULT_WEAPONS, weapon_name, &soma.weapon))
+            fprintf(stderr, "Export the weapons first: ./build/fusion_rebuild --task aria_weapons\n");
+        AosPickupRecent recent_items;
+        aos_pickup_recent_reset(&recent_items);
+        AosRecentSouls recent_souls;
+        aos_pickup_recent_soul_reset(&recent_souls);
+        AosWeaponEntity weapon_entity = {0};
+        AriaCombat combat = {
+            .weapon = &weapon_entity,
+            .weapon_frames = NULL,
+            .player = &player_stats,
+            .progress = &progress,
+            .equipment = have_equipment ? &equipment : NULL,
+            .item_icons = objects_ok ? &objects.item_icon[0][0] : NULL,
+            .recent_items = &recent_items,
+            .recent_souls = &recent_souls,
+            .hud = NULL,
+            .hud_font = NULL,
+            .derive_atk = !atk_override,
+            .derive_def = !def_override,
+        };
+        if (objects.money_loaded) combat.money = objects.money;
+        for (int k = 0; objects_ok && k < AOS_EFFECT_KINDS; ++k)
+            if (objects.effects[k].def.count) combat.effects[k] = &objects.effects[k].set;
+        for (int id = 0; enemies_ok && id < ENEMY_KINDS; ++id) {
+            if (!objects.enemies[id].loaded) continue;
+            combat.kinds[id] = &objects.enemies[id].kind;
+            combat.stats[id] = &objects.enemies[id].stats;
+            combat.drops[id] = &objects.enemies[id].drops;
+        }
+        int cam_x = 0, cam_y = 0;
+        follow_camera(&room, spawn_x, spawn_y, &cam_x, &cam_y);
+        AosForcedInput forced = {0};
+        AosSaveRoom save_room = {0};
+        homing_room = &room;
+        object10_save_ctx = NULL;
+        for (long frame = 0; frame < simulate_frames; ++frame) {
+            if (!moves_override) soma.moves = progress.abilities[0] & 0x1Fu;
+            soma.abilities = progress.flags;
+            soma.guardian_alive = false;
+            aos_soma_update(&soma, &layer, (uint16_t)simulate_hold, 0);
+            bool door_held = false;
+            for (size_t k = 0; k < room.entity_count && !door_held; ++k)
+                door_held = room.entities[k].kind == ARIA_KIND_SPECIAL &&
+                            room.entities[k].spawned &&
+                            ((room.entities[k].id == ARIA_OBJECT_WOODEN_DOOR &&
+                              room.entities[k].door.holding) ||
+                             (room.entities[k].id == 2 &&
+                              room.entities[k].object02.holding));
+            if (progress.accessory == 0x2A && !door_held &&
+                !(soma.flags & (AOS_FLAG_AIRBORNE | AOS_FLAG_WALL)) &&
+                (simulate_hold & (AOS_KEY_LEFT | AOS_KEY_RIGHT)) &&
+                ((uint16_t)(soma.ticks - 1) & 7) == 0) {
+                if (++progress.experience > AOS_STATS_MAX_EXPERIENCE)
+                    progress.experience = AOS_STATS_MAX_EXPERIENCE;
+                int32_t gained = aos_stats_level_up(&progress);
+                if (gained > 0) {
+                    soma.max_hp = (int16_t)progress.max_hp;
+                    aos_levelup_start(&combat.levelup);
+                    if (combat.equipment) {
+                        aos_stats_refresh(&progress, combat.equipment);
+                        if (combat.derive_atk) combat.player->atk = progress.atk;
+                        if (combat.derive_def) combat.player->def = progress.def;
+                    }
+                }
+            }
+            aos_stats_frame_reset(&progress);
+            aos_stats_status_update(&progress, 0, (uint16_t)(soma.ticks - 1));
+            aos_stats_derive(&progress);
+            aria_pickup_state.global_flags &= ~0x101u;
+            if (door_held) aria_pickup_state.global_flags |= 0x101u;
+            if (have_yellow_souls) {
+                aos_yellow_soul_update(&yellow_soul, &progress, yellow_souls, soma.hp,
+                                       soma.max_hp);
+                aos_yellow_soul_regen(&yellow_soul, &progress, yellow_souls, &soma.hp,
+                                      soma.max_hp, soma.vx, soma.flags, door_held);
+            }
+            if (aos_save_room_update(&save_room, room_has_save_point(&room), soma.x >> 16,
+                                     soma.y >> 16, 0)) {
+                soma.hp = soma.max_hp;
+                player_stats.hp = soma.hp;
+            }
+            aos_combat_tick(&soma.combat);
+            follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
+            homing_room = &room;
+            object10_save_ctx = NULL;
+            update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
+            homing_age();
+            aos_enemy_set_soul_attacks(NULL, 0);
+        }
+        int spawned_special = 0, active_special = 0, enemies_alive = 0;
+        printf("Aria simulate: %ld frames, room %d/%d, spawn %d,%d, Soma %d,%d hp %d/%d\n",
+               simulate_frames, room.area, room.number, spawn_x, spawn_y,
+               (int)(soma.x >> 16), (int)(soma.y >> 16), soma.hp, soma.max_hp);
+        printf("Aria simulate: %zu entities, %zu effects, %zu pickups; SPECIAL coverage:\n",
+               room.entity_count, room.effect_count, room.pickup_count);
+        for (int id = 0; id < 64; ++id) {
+            int total = 0, spawned = 0;
+            for (size_t k = 0; k < room.entity_count; ++k) {
+                const AriaEntity *e = &room.entities[k];
+                if (e->kind != ARIA_KIND_SPECIAL || e->id != id) continue;
+                ++total;
+                if (e->spawned) ++spawned;
+            }
+            if (!total) continue;
+            spawned_special += spawned;
+            active_special += total;
+            printf("  id %2d: %d record(s), %d spawned\n", id, total, spawned);
+        }
+        for (size_t k = 0; k < room.entity_count; ++k) {
+            const AriaEntity *e = &room.entities[k];
+            if (e->kind == ARIA_KIND_ENEMY && e->spawned) ++enemies_alive;
+        }
+        printf("Aria simulate: SPECIAL %d/%d spawned, %d enemies alive\n",
+               spawned_special, active_special, enemies_alive);
+        aos_mp2k_engine_destroy(&mp2k);
+        free_room(&room);
+        return 0;
     }
 
     if (!fusion_host_init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | (mute ? 0 : SDL_INIT_AUDIO))) {

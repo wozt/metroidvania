@@ -75,4 +75,9 @@ void homing_register(int index);
 bool object10_item_owned(void *ctx, uint16_t item);
 void room_dialogue_bind(void);
 
+/* Object1C child animation table (sub_0803F17C's injected sequences):
+ * rebuilt from the loaded special_28_v<bank> art on each objects
+ * load; NULL clears it (children freeze on their spawn frame). */
+void object1c_anim_bind(const AriaObjects *objects);
+
 #endif /* ARIA_ENTITIES_H */

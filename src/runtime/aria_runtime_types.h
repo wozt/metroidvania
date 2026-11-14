@@ -337,7 +337,15 @@ typedef struct {
       special_objects[64],                     /* Object/special_NN */
       /* Object/special_NN_vP: param0-driven variants of SPECIAL objects
        * (ids 14 and 18 resolve their sprite through entity->param0). */
-      special_variants[SPECIAL_VARIANTS];
+      special_variants[SPECIAL_VARIANTS],
+      /* Object/whiteout_burst_carrier: the sub_08063168/sub_080632B0
+       * carrier's four variant animations (0x08267EE4 descriptor,
+       * anim index = the sub_0803F2C8 variant arg). */
+      wo_burst_carrier,
+      /* Object/whiteout_burst_particle: still frames of the same
+       * descriptor stored at their native +0x65 record index
+       * (frames 0xB/0xC only are exported). */
+      wo_burst_particle;
     struct {
         AriaFrame frames[MAX_FRAMES];
         uint8_t ticks[MAX_FRAMES];

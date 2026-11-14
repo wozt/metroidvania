@@ -108,12 +108,16 @@
  * effects, the + 0x60 save-block refresh and the + 0x42C/+ 0xA074
  * global flag writes are reported, not executed; there is no
  * emulator comparison. Child approximations: sub_0803F2C8 frame
- * sets assume the frame record exists (the native fails silently),
- * the + 0x6D/+ 0x6E animation bytes are advanced by the unported
- * sub_0803F17C/sub_0803EE24 chain and are exposed as child fields
- * the host must drive, sub_080009E4/sub_0806CDB8/sub_0806CDFC and
- * RandomNumberGenerator are injected callbacks, sub_0803AC40
- * commits are reported without its visibility result, and
+ * sets assume the frame record exists at spawn time (the native
+ * fails silently; the advance bounds-checks the injected table
+ * instead), the sub_0803F17C -> sub_0803EE24 animation chain IS
+ * ported below but needs the frame set's sequence table injected
+ * through AosObject1CChildrenIn (the module cannot see the loaded
+ * art; NULL freezes children on their spawn frame), the +0x6C
+ * bit-3-clear frame-descriptor path and the +0x5B 2/3 direct
+ * sequences are unported, sub_08042884/sub_080428F0's type-2/3
+ * auxiliary entity-data writes are not modeled, the mode-1
+ * palette tail uses a flattened per-frame byte table, and
  * sub_08054574 has no caller in the disassembly dump. */
 
 enum { AOS_O1C_MAX_ROWS = 4 };
@@ -189,12 +193,28 @@ typedef struct {
     int16_t pos42, pos46;   /* +0x42/+0x46 s16 — marker draw pos
                                (other kinds derive them from the
                                +0x40/+0x44 high words) */
-    /* Animation state advanced by the unported sub_0803F17C ->
-     * sub_0803EE24 chain; the routines read it but never write it
-     * (sub_0803F2C8 resets it on a frame set). The host must drive
-     * these — 0 stalls the sparkle state machine. */
-    uint8_t anim6d;         /* +0x6D current frame */
-    uint8_t anim6e;         /* +0x6E sub-frame */
+    /* Animation state advanced by the ported sub_0803F17C ->
+     * sub_0803EE24 chain (see AosObject1CAnimSeq); sub_0803F2C8
+     * resets +0x6D/+0x6E/+0x6F and +0x6C on a frame set. */
+    uint8_t anim6d;         /* +0x6D sequence/anim index */
+    uint8_t anim6e;         /* +0x6E sub-frame index (< seq count) */
+    uint8_t anim6f;         /* +0x6F sub-frame tick */
+    uint8_t mode5b;         /* +0x5B animation mode (sub_0803F2C8
+                               arg2: 0 direct step, 1 sub_0803EE24,
+                               2/3 unported direct sequences) */
+    uint8_t flags6c;        /* +0x6C: bit 0 loop, bit 1 pause,
+                               bit 2 ended, bit 3 play the +0x68
+                               sequence (set with |8 by
+                               sub_0803F2C8) */
+    uint8_t anim_boot;      /* port bookkeeping: run the spawn-time
+                               sub_0803F17C (native calls it inside
+                               sub_08054E38 right after sub_0803F2C8)
+                               on the first children_update — the
+                               sequence table only exists in `in` */
+    int16_t pal65;          /* last +0x65-change palette byte applied
+                               through the mode-1 tail, -1 none
+                               (port bookkeeping; the native reads
+                               the palette object each time) */
     int owner;              /* native entity link: marker +0x11 =
                                parent +0x10 index, spark +0x34 =
                                beam entity — stored as a child-array
@@ -214,6 +234,35 @@ typedef struct {
                                child +0x11 (informational) */
 } AosObject1CChildEnv;
 
+/* ---- Animation sequences (the sub_0803F17C advance chain) ----
+ * The native frame set (e.g. 0x08257964 for every Object1C child)
+ * carries a +0xC table of sequence records; sub_0803F2C8 stores
+ * seqs[frame] at entity +0x68 and the frame index at +0x6D. Each
+ * sequence is {u16 count @ +0x0, u16 step type @ +0x2, entries @
+ * +0x4} where the step type selects one of four entry layouts
+ * handled by the 0x080E2B34 step functions (sub_0803EBA8 stride
+ * 16, sub_0803EC34 stride 4, sub_0803ECC0 stride 8, sub_0803ED6C
+ * stride 12 — all four share the same +0x65/+0x6E/+0x6F/+0x6C tail
+ * decoded below). The host flattens the native layouts into
+ * {frame, ticks} pairs, so only the decoded values are carried;
+ * types 2/3's auxiliary sub_08042884/sub_080428F0 entity-data
+ * pointers are not modeled (engine attack data — no Object1C
+ * sequence uses types 2/3). `type` is kept for traceability. */
+typedef struct {
+    uint8_t frame;          /* entry frame value -> entity +0x65
+                               (u8 for types 0/1, low byte of the
+                               u16 for types 2/3) */
+    uint16_t ticks;         /* entry duration the +0x6F u8 tick is
+                               compared against (u8 native for
+                               types 0/1, u16 for types 2/3) */
+} AosObject1CAnimTick;
+
+typedef struct {
+    const AosObject1CAnimTick *ticks; /* decoded entries, `count` */
+    uint16_t count;         /* native seq +0x0 sub-frame count */
+    uint8_t type;           /* native seq +0x2 step index (0-3) */
+} AosObject1CAnimSeq;
+
 /* Injected engine probes for the child update pass. */
 typedef struct {
     /* sub_080009E4 angle lookup used by beam states 0/1; arg is the
@@ -229,6 +278,22 @@ typedef struct {
      * spawns. NULL -> 0. */
     uint32_t (*rng)(void *ctx);
     void *rng_ctx;
+    /* sub_0803F17C animation advance: the frame set's +0xC sequence
+     * table indexed by child +0x6D (0x08257964's twelve type-1
+     * sequences for every Object1C child — the host builds it from
+     * the loaded special_28_v<bank> art, which shares the one
+     * descriptor across banks). NULL/0 -> advances are no-ops and
+     * children hold their spawn frame (the pre-port behavior). */
+    const AosObject1CAnimSeq *anims;
+    unsigned anim_count;
+    /* sub_0803EE24's mode-1 (+0x5B == 1) palette tail: the palette
+     * byte each +0x65 frame selects through the frame-set record's
+     * two-level lookup, flattened to a per-flat-frame array
+     * (index >= frame_pal_count falls back to entry 0 like the
+     * native count clamp). NULL -> the tail is skipped; no
+     * Object1C child uses mode 1 today. */
+    const uint8_t *frame_pal;
+    unsigned frame_pal_count;
 } AosObject1CChildrenIn;
 
 enum { AOS_O1C_CHILD_MAX_COMMITS = 32, AOS_O1C_CHILD_MAX_FX = 16 };
@@ -246,6 +311,14 @@ typedef struct {
     uint8_t frame;          /* +0x6D arg */
 } AosObject1CFrameSet;
 
+/* One sub_0803EE24 mode-1 palette write (sub_0803AA20) triggered
+ * by a +0x65 frame change. */
+typedef struct {
+    uint8_t child;
+    uint8_t frame;          /* +0x65 that triggered the change */
+    uint8_t pal;            /* palette byte applied */
+} AosObject1CPal;
+
 /* Child engine effects. Update/draw entry points clear it; spawn
  * helpers only accumulate (pass NULL to skip recording). Counts
  * are capped at the array sizes, matching the palettes convention. */
@@ -255,6 +328,19 @@ typedef struct {
     unsigned frame_sets;    /* sub_0803F2C8 requests (update pass) */
     AosObject1CFrameSet frame_set[AOS_O1C_CHILD_MAX_FX];
     unsigned anim_advances; /* sub_0803F17C calls */
+    unsigned anim_steps;    /* ... that found a sequence and ran a
+                               step function (the four 0x080E2B34
+                               entries share one decoded tail) */
+    unsigned anim_ended;    /* once-sequences reaching their end
+                               (+0x6C bit 2 set, +0x6E = count-1) */
+    unsigned anim_looped;   /* looping sequences wrapping
+                               (+0x6E = 0, return 4) */
+    unsigned anim_modes;    /* +0x5B 2/3 advances: sub_0803EEFC/
+                               sub_0803EFF0 direct sequences, not
+                               modeled */
+    unsigned pal_changes;   /* sub_0803EE24 +0x65-change palette
+                               writes (mode +0x5B == 1 only) */
+    AosObject1CPal pal_change[AOS_O1C_CHILD_MAX_FX];
     unsigned frame_inits;   /* sub_0803B924 frame-record inits */
     unsigned pal_resolves;  /* sub_0803AFB8 resolves (spark state 0;
                                result is the parent's own 0x082052E8

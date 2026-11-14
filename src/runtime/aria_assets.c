@@ -718,23 +718,59 @@ bool aria_load_objects(const char *path, AriaObjects *objects, SDL_Renderer *ren
          * animation is kept. */
         char object_name[24];
         int object_id = -1, object_param = -1, object_style = -1;
+        int burst_kind = 0; /* 1 = carrier (anim_), 2 = particle (frame_) */
+        int burst_sub = 0;  /* still-row sub-index (always 0) */
         if (sscanf(line, "Object/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", object_name,
-                   &object_style, &frame, &ticks, &ox, &oy, frame_path) != 7)
-            goto not_object;
-        if (sscanf(object_name, "special_%d_v%d", &object_id, &object_param) < 1)
-            goto not_object;
-        if (object_param < 0 &&
-            sscanf(object_name, "special_%d", &object_id) != 1)
-            goto not_object;
-        if (object_id < 0 || object_id >= 64 || object_style < 0 ||
-            object_style >= OBJECT_MAX_ANIMS || frame < 0 ||
-            frame >= MAX_FRAMES || ticks < 1 || ticks > 255) {
+                   &object_style, &frame, &ticks, &ox, &oy, frame_path) == 7 &&
+            strcmp(object_name, "whiteout_burst_carrier") == 0)
+            burst_kind = 1;
+        else if (sscanf(line, "Object/%23[^/]/frame_%d\t%d\t%d\t%d\t%d\t%511s",
+                        object_name, &frame, &burst_sub, &ticks, &ox, &oy,
+                        frame_path) == 7 &&
+                 strcmp(object_name, "whiteout_burst_particle") == 0)
+            burst_kind = 2;
+        if (!burst_kind) {
+            if (sscanf(line, "Object/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s",
+                       object_name, &object_style, &frame, &ticks, &ox, &oy,
+                       frame_path) != 7)
+                goto not_object;
+            if (sscanf(object_name, "special_%d_v%d", &object_id,
+                       &object_param) < 1)
+                goto not_object;
+        }
+        if (burst_kind == 2) {
+            /* Still frames land at their native +0x65 record index
+             * (0xB/0xC), not a compacted slot — the draw indexes
+             * frames[0][field_65] directly. */
+            if (frame < 0 || frame >= MAX_FRAMES) { ok = false; break; }
+            __typeof__(objects->special_objects[0]) *part =
+                &objects->wo_burst_particle;
+            if (!load_frame(&part->frames[0][frame], frame_path, ox, oy,
+                            renderer)) {
+                ok = false;
+                break;
+            }
+            part->ticks[0][frame] = (uint8_t)ticks;
+            part->loaded = true;
+            continue;
+        }
+        if ((burst_kind != 2 &&
+             (burst_kind == 1
+                  ? (object_style < 0 ||
+                     object_style >= OBJECT_MAX_ANIMS)
+                  : (object_id < 0 || object_id >= 64 ||
+                     object_style < 0 ||
+                     object_style >= OBJECT_MAX_ANIMS))) ||
+            frame < 0 || frame >= MAX_FRAMES || ticks < 1 ||
+            ticks > 255) {
             ok = false;
             break;
         }
         {
             __typeof__(objects->special_objects[0]) *art = NULL;
-            if (object_param >= 0) {
+            if (burst_kind == 1) {
+                art = &objects->wo_burst_carrier;
+            } else if (object_param >= 0) {
                 for (int v = 0; v < SPECIAL_VARIANTS; ++v)
                     if (objects->special_variants[v].id == object_id &&
                         objects->special_variants[v].param0 == object_param) {
@@ -801,6 +837,8 @@ bool aria_load_objects(const char *path, AriaObjects *objects, SDL_Renderer *ren
         objects->special_objects[id].set.anims = objects->special_objects[id].defs;
     for (int v = 0; v < SPECIAL_VARIANTS; ++v)
         objects->special_variants[v].set.anims = objects->special_variants[v].defs;
+    objects->wo_burst_carrier.set.anims = objects->wo_burst_carrier.defs;
+    objects->wo_burst_particle.set.anims = objects->wo_burst_particle.defs;
     for (int v = 0; v < VARIANT_ARTS; ++v) objects->variants[v].set.anims = objects->variants[v].defs;
     for (int k = 0; k < SKILL_ARTS; ++k) objects->skills[k].set.anims = objects->skills[k].defs;
     return ok;
@@ -835,6 +873,15 @@ void aria_free_objects(AriaObjects *objects) {
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->special_variants[v].frames[i][j].texture)
                     SDL_DestroyTexture(objects->special_variants[v].frames[i][j].texture);
+    for (int b = 0; b < 2; ++b) {
+        const __typeof__(objects->special_objects[0]) *burst_art[] = {
+            &objects->wo_burst_carrier, &objects->wo_burst_particle,
+        };
+        for (int i = 0; i < OBJECT_MAX_ANIMS; ++i)
+            for (int j = 0; j < MAX_FRAMES; ++j)
+                if (burst_art[b]->frames[i][j].texture)
+                    SDL_DestroyTexture(burst_art[b]->frames[i][j].texture);
+    }
     for (int actor = 0; actor < 12; ++actor)
         for (int i = 0; i < OBJECT20_ACTOR_ANIMS; ++i)
             for (int j = 0; j < MAX_FRAMES; ++j)

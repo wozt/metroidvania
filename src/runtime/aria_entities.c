@@ -920,6 +920,63 @@ static uint32_t object1c_rng(void *ctx) {
     return aos_random();
 }
 
+/* Object1C child animation sequences — the table sub_0803F17C's
+ * advance walks (injected through AosObject1CChildrenIn.anims).
+ * Every child's sub_0803B924 call resolves the same frame descriptor
+ * 0x08257964: twelve type-1 sequences (sub_0803EC34, 4-byte
+ * {frame, ticks} entries — verified against the ROM dump) whose
+ * sub-frames are contiguous flat frame indices, so anim a's entries
+ * are base..base+count-1 with base the cumulative sub-frame count.
+ * All four special_28_v<bank> exports share that one descriptor and
+ * differ only in OBJ palette bank, so the first loaded variant
+ * supplies the timing; defs[a].count / ticks[a][j] mirror the
+ * native seq count/durations 1:1. Rebuilt on each objects load;
+ * NULL clears (children then freeze on their spawn frame). */
+static AosObject1CAnimTick object1c_anim_ticks[OBJECT_MAX_ANIMS * MAX_FRAMES];
+static AosObject1CAnimSeq object1c_anim_seqs[OBJECT_MAX_ANIMS];
+static unsigned object1c_anim_count;
+
+void object1c_anim_bind(const AriaObjects *objects) {
+    object1c_anim_count = 0;
+    if (objects == NULL)
+        return;
+    const __typeof__(objects->special_variants[0]) *art = NULL;
+    for (int v = 0; v < SPECIAL_VARIANTS; ++v)
+        if (objects->special_variants[v].id == 28 &&
+            objects->special_variants[v].loaded) {
+            art = &objects->special_variants[v];
+            break;
+        }
+    if (art == NULL)
+        return;
+    unsigned base = 0, total = 0;
+    for (unsigned a = 0; a < OBJECT_MAX_ANIMS; ++a) {
+        unsigned n = art->defs[a].count;
+        AosObject1CAnimSeq *s = &object1c_anim_seqs[a];
+        s->type = 1;                    /* 0x08257964: all type 1 */
+        s->count = (uint16_t)n;
+        s->ticks = NULL;
+        if (n && total + n <= OBJECT_MAX_ANIMS * MAX_FRAMES) {
+            s->ticks = &object1c_anim_ticks[total];
+            for (unsigned j = 0; j < n; ++j) {
+                object1c_anim_ticks[total].frame = (uint8_t)(base + j);
+                object1c_anim_ticks[total].ticks = art->ticks[a][j];
+                ++total;
+            }
+        } else {
+            s->count = 0;
+        }
+        base += n;
+    }
+    /* The native +0xC table holds twelve sequences; anims past the
+     * populated prefix stay count-0 (inert) — expose only the
+     * prefix so +0x6D bounds match the native table. */
+    object1c_anim_count = 0;
+    for (unsigned a = 0; a < OBJECT_MAX_ANIMS; ++a)
+        if (object1c_anim_seqs[a].count)
+            object1c_anim_count = a + 1;
+}
+
 int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                            int cam_x, int cam_y, AosForcedInput *input, AriaCombat *combat,
                            uint16_t new_input) {
@@ -2492,9 +2549,11 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* Children updateFunc pass (sub_080544E8 drawFunc is
              * draw-side): runs after the parent like the native
              * slot order, writes the +0x30..+0x33 sync bytes back.
-             * sub_0803F2C8 frame-set requests land on the child's
-             * +0x6D/+0x6E; sub_0803F17C advances stay counted
-             * (no host frame table). */
+             * sub_0803F2C8 frame sets and the sub_0803F17C animation
+             * advance run inside the module; the sequence table
+             * comes from object1c_anim_bind (the loaded
+             * special_28_v<bank> art — NULL freezes the children
+             * on their spawn frame). */
             {
                 AosObject1CChildrenIn cin2 = {0};
                 AosObject1CChildrenOut cout2;
@@ -2502,17 +2561,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 cin2.focus_x = (int16_t)px;
                 cin2.focus_y = (int16_t)py;
                 cin2.rng = object1c_rng;
+                cin2.anims = object1c_anim_seqs;
+                cin2.anim_count = object1c_anim_count;
                 aos_object1c_children_update(&e->object1c, &cin2,
                                               &cout2);
-                for (unsigned fs = 0; fs < cout2.frame_sets; ++fs) {
-                    AosObject1CFrameSet *f =
-                        &cout2.frame_set[fs];
-                    if (f->child < e->object1c.child_count) {
-                        e->object1c.children[f->child].anim6d =
-                            f->frame;
-                        e->object1c.children[f->child].anim6e = 0;
-                    }
-                }
                 /* +0x59 bit 3 marks children for post-draw
                  * deletion natively; the host deletes here. */
                 for (unsigned ci = 0;

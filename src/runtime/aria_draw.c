@@ -392,6 +392,67 @@ static void draw_object20_wo_bars(SDL_Renderer *renderer,
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
 
+/* Whiteout burst carriers (sub_08063168/sub_080632B0/
+ * sub_08065834) and particles (sub_080630E8) drawn from the
+ * wo_bursts host pool. Carrier positions are the native +0x42/+0x46
+ * screen coords; its animation is anim_<variant> advanced by wall
+ * clock through the exported tick durations (the native
+ * sub_0803F17C step is approximated like the other SPECIAL draws —
+ * the +0x65 frame byte is not tracked on the carrier). Particles
+ * draw their +0x65 still frame at the 16.16 position high words.
+ * Palette cycle banks 5-9 of 0x08119FDC are unexported, so both
+ * draw bank 0 — documented gap. */
+static void draw_object20_wo_bursts(SDL_Renderer *renderer,
+                                    const AriaObjects *objects,
+                                    const AriaEntity *e, unsigned step) {
+    if (!e->wo_burst_count) return;
+    const __typeof__(objects->special_objects[0]) *carrier =
+        &objects->wo_burst_carrier;
+    const __typeof__(objects->special_objects[0]) *particle =
+        &objects->wo_burst_particle;
+    for (uint8_t i = 0; i < e->wo_burst_count; ++i) {
+        const AosWoBurst *b = &e->wo_bursts[i];
+        if (b->carrier_valid && carrier->loaded &&
+            b->carrier.variant >= 0 &&
+            b->carrier.variant < OBJECT_MAX_ANIMS &&
+            carrier->defs[b->carrier.variant].count) {
+            unsigned total = 0;
+            for (unsigned f = 0;
+                 f < carrier->defs[b->carrier.variant].count; ++f)
+                total += carrier->ticks[b->carrier.variant][f];
+            if (total) {
+                unsigned t = (step / 4) % total, index = 0;
+                while (index + 1 <
+                           carrier->defs[b->carrier.variant].count &&
+                       t >= carrier->ticks[b->carrier.variant][index])
+                    t -= carrier->ticks[b->carrier.variant][index++];
+                const AriaFrame *frame =
+                    &carrier->frames[b->carrier.variant][index];
+                if (frame->texture) {
+                    SDL_FRect rect = {
+                        (float)(b->carrier.scr_42 + frame->offset_x),
+                        (float)(b->carrier.scr_46 + frame->offset_y),
+                        frame->w, frame->h};
+                    SDL_RenderTexture(renderer, frame->texture, NULL,
+                                      &rect);
+                }
+            }
+        }
+        for (uint8_t p = 0; p < b->particle_count; ++p) {
+            const AosWoBurstParticle *pt = &b->particles[p];
+            if (!particle->loaded || pt->field_65 >= MAX_FRAMES)
+                continue;
+            const AriaFrame *frame = &particle->frames[0][pt->field_65];
+            if (!frame->texture) continue;
+            SDL_FRect rect = {
+                (float)((pt->field_40 >> 16) + frame->offset_x),
+                (float)((pt->field_44 >> 16) + frame->offset_y),
+                frame->w, frame->h};
+            SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+        }
+    }
+}
+
 static void draw_object20_entity(SDL_Renderer *renderer,
                                  const AriaObjects *objects,
                                  const AriaEntity *e, int cam_x, int cam_y,
@@ -399,6 +460,7 @@ static void draw_object20_entity(SDL_Renderer *renderer,
     /* The whiteout bars are screen-space (no camera) and draw
      * under this entity's own sprite. */
     draw_object20_wo_bars(renderer, e);
+    draw_object20_wo_bursts(renderer, objects, e, step);
     /* Child sprites draw under the parent (native entity order is
      * unverified): the story family's +0x14 child14 and +0x18
      * link18 (param0 9/23/31) and the param0-26 companion's +0x18
@@ -549,16 +611,16 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
              * commits three sprite positions per frame, sparkle/beam
              * sub_0803B9D0 one, spark sub_080554BC two. Every kind
              * shares frame records 0x08257964 / graphics 0x082052E8;
-             * the palette bank is what differs, exported as
-             * special_28_v<bank> (OBJ row 0xA+N = bank N):
-             * marker -> bank 4 (v4, +0x65 is a flat record index
-             * 21-25 walked across the anims), sparkle anim6d 0 ->
-             * bank 2 (v2), sparkle anim6d 4 -> bank 1 (v1), beam and
-             * spark -> bank 3 (v3, frame = +0x65 within anim6d).
-             * commit x/y are the native +0x42/+0x46 screen positions
-             * — no camera offset. anim65 does not advance yet
-             * (sub_0803F17C unported), so non-marker children sit on
-             * frame 0 of their anim — documented gap. */
+             * the palette bank is the spawn-fixed +0x5A bits 3-6
+             * nibble minus 0xA (OBJ row 0xA+N = bank N), exported as
+             * special_28_v<bank>: marker param 0xE -> bank 4,
+             * sparkle records 0xC/0xB -> banks 2/1 (unchanged by the
+             * state-1 sub_0803F2C8 anim swap), beam and spark 0xD ->
+             * bank 3. commit x/y are the native +0x42/+0x46 screen
+             * positions — no camera offset. +0x65 is the flat
+             * frame-record index (0-25); the variant's anims are
+             * contiguous ranges of it, so it decomposes by cumulative
+             * count. */
             if (e->object1c.deleted) continue;
             /* children_draw recomputes the draw-side position
              * fields like the native drawFunc does; the writes
@@ -573,18 +635,7 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                 if (cm->child >= e->object1c.child_count) continue;
                 const AosObject1CChild *ch =
                     &e->object1c.children[cm->child];
-                int bank;
-                switch (ch->kind) {
-                case AOS_O1C_CHILD_MARKER: bank = 4; break;
-                case AOS_O1C_CHILD_SPARKLE:
-                    bank = ch->anim6d == 0 ? 2
-                         : ch->anim6d == 4 ? 1 : -1;
-                    break;
-                case AOS_O1C_CHILD_BEAM:
-                case AOS_O1C_CHILD_SPARK: bank = 3; break;
-                default: bank = -1; break;
-                }
-                if (bank < 0) continue;
+                int bank = (int)((ch->field5a >> 3) & 0xF) - 0xA;
                 const __typeof__(objects->special_objects[0]) *art28 =
                     NULL;
                 for (int v = 0; v < SPECIAL_VARIANTS; ++v)
@@ -595,21 +646,19 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                         break;
                     }
                 if (!art28) continue;
+                /* Flat +0x65 -> (anim, index): the descriptor's
+                 * sequences cover contiguous flat ranges in anim
+                 * order (anim0 0-3, anim1 4-7, anim2 8-9, anim3
+                 * 10-11, anim4 12-15, anim5 16-19, anims 6-11
+                 * 20-25). */
                 const AriaFrame *frame28 = NULL;
-                if (ch->kind == AOS_O1C_CHILD_MARKER) {
-                    unsigned want = cm->frame, seen = 0;
-                    for (unsigned a = 0;
-                         a < OBJECT_MAX_ANIMS && !frame28; ++a)
-                        for (unsigned f = 0;
-                             f < art28->defs[a].count; ++f, ++seen)
-                            if (seen == want) {
-                                frame28 = &art28->frames[a][f];
-                                break;
-                            }
-                } else if (ch->anim6d < OBJECT_MAX_ANIMS &&
-                           cm->frame <
-                               art28->defs[ch->anim6d].count) {
-                    frame28 = &art28->frames[ch->anim6d][cm->frame];
+                unsigned flat = cm->frame, base = 0;
+                for (unsigned a = 0; a < OBJECT_MAX_ANIMS && !frame28;
+                     ++a) {
+                    unsigned n = art28->defs[a].count;
+                    if (flat >= base && flat < base + n)
+                        frame28 = &art28->frames[a][flat - base];
+                    base += n;
                 }
                 if (!frame28 || !frame28->texture) continue;
                 SDL_FRect rect28 = {

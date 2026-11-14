@@ -539,6 +539,213 @@ int main(void) {
     int nidx = aos_object1c_fade_spawn(&o, NULL);
     assert(nidx == fidx);
 
+    /* ==================== animation advance ====================
+     * sub_0803F17C -> step chain over an injected sequence table
+     * shaped like 0x08257964's type-1 sequences: contiguous flat
+     * +0x65 frames, per-sub-frame tick durations. */
+    {
+        static const AosObject1CAnimTick seq0_ticks[4] = {
+            {0, 6}, {1, 6}, {2, 6}, {3, 6},       /* anim 0 */
+        };
+        static const AosObject1CAnimTick seq1_ticks[4] = {
+            {4, 8}, {5, 8}, {6, 8}, {7, 8},       /* anim 1 */
+        };
+        static const AosObject1CAnimTick seq2_ticks[2] = {
+            {8, 4}, {9, 4},                       /* anim 2 */
+        };
+        static const AosObject1CAnimTick seq3_ticks[2] = {
+            {10, 4}, {11, 4},                     /* anim 3 */
+        };
+        static const AosObject1CAnimTick seq4_ticks[4] = {
+            {12, 6}, {13, 6}, {14, 6}, {15, 6},   /* anim 4 */
+        };
+        static const AosObject1CAnimTick seq5_ticks[4] = {
+            {16, 8}, {17, 8}, {18, 8}, {19, 8},   /* anim 5 */
+        };
+        static const AosObject1CAnimTick seq6_ticks[1] = {{20, 1}};
+        static const AosObject1CAnimTick seq7_ticks[1] = {{21, 1}};
+        static const AosObject1CAnimTick seq8_ticks[1] = {{22, 1}};
+        static const AosObject1CAnimTick seq9_ticks[1] = {{23, 1}};
+        static const AosObject1CAnimTick seq10_ticks[1] = {{24, 1}};
+        static const AosObject1CAnimTick seq11_ticks[1] = {{25, 1}};
+        static const AosObject1CAnimSeq anims[12] = {
+            {seq0_ticks, 4, 1}, {seq1_ticks, 4, 1},
+            {seq2_ticks, 2, 1}, {seq3_ticks, 2, 1},
+            {seq4_ticks, 4, 1}, {seq5_ticks, 4, 1},
+            {seq6_ticks, 1, 1}, {seq7_ticks, 1, 1},
+            {seq8_ticks, 1, 1}, {seq9_ticks, 1, 1},
+            {seq10_ticks, 1, 1}, {seq11_ticks, 1, 1},
+        };
+        memset(&cin, 0, sizeof cin);
+        cin.anims = anims;
+        cin.anim_count = 12;
+
+        /* Fresh create: two sparkles (anim6d 0 and 4) carry the
+         * spawn-time anim_boot; the marker never advances. */
+        aos_object1c_create(&o, (ci = create_in(), &ci), &co);
+        assert(o.children[1].anim_boot == 1 &&
+               o.children[2].anim_boot == 1);
+        assert(o.children[1].flags6c == 0x9 &&
+               o.children[1].mode5b == 0);
+        /* +0x5A nibble: sparkle params 0xC/0xB -> banks 2/1. */
+        assert(((o.children[1].field5a >> 3) & 0xF) == 0xC);
+        assert(((o.children[2].field5a >> 3) & 0xF) == 0xB);
+
+        /* First update: per sparkle the spawn-time boot advance
+         * (+0x65 = entry0 frame, +0x6F = 1) then the updateFunc tail
+         * advance (+0x6F = 2); state 0 with flags24 clear does
+         * nothing between them. Sparkle 2's anim4 entry0 frame is
+         * 12. Marker never advances -> 4 advances/steps total. */
+        aos_object1c_children_update(&o, &cin, &cout);
+        assert(!o.children[1].anim_boot);
+        assert(o.children[1].anim65 == 0 && o.children[1].anim6e == 0 &&
+               o.children[1].anim6f == 2);
+        assert(o.children[2].anim65 == 12 && o.children[2].anim6e == 0 &&
+               o.children[2].anim6f == 2);
+        assert(cout.anim_advances == 4 && cout.anim_steps == 4);
+
+        /* Subsequent updates: one tail advance per sparkle (state 0
+         * is stable while flags24 bit 1 stays clear). */
+        for (int i = 0; i < 8; ++i)
+            aos_object1c_children_update(&o, &cin, &cout);
+        /* sparkle commits carry the flat +0x65 (anim0 frames 0-3,
+         * anim4 frames 12-15). */
+        aos_object1c_children_draw(&o, &cout);
+        assert(cout.commit[3].frame == o.children[1].anim65);
+        assert(cout.commit[4].frame == o.children[2].anim65);
+
+        /* Loop wrap: anim0 (4 subs * 6 ticks, one advance per
+         * update now) wraps inside 40 updates; accumulate the
+         * per-update counter. */
+        unsigned loops = 0;
+        for (int i = 0; i < 40; ++i) {
+            aos_object1c_children_update(&o, &cin, &cout);
+            loops += cout.anim_looped;
+        }
+        assert(loops > 0);
+        assert(o.children[1].anim6e < 4 && o.children[1].anim6f < 6);
+        assert(o.children[1].anim65 <= 3);
+
+        /* Once (non-loop) sequence: clear the loop bit on an
+         * isolated sparkle — +0x6E pins at count-1, +0x6C bit 2
+         * latches, later advances early-out but still rewrite
+         * +0x65. */
+        {
+            AosObject1CChildEnv env = {
+                .palette = o.palette, .anim_1a = o.anim_1a,
+                .pos40 = o.pos40, .pos44 = o.pos44,
+                .affine_slot = o.affine_slot, .owner = -1,
+            };
+            int sidx = aos_object1c_sparkle_spawn(&o, &env, 0, 0xC,
+                                                  0x13, NULL);
+            assert(sidx >= 0);
+            AosObject1CChild *s = &o.children[sidx];
+            s->anim_boot = 0;               /* skip the spawn step */
+            s->flags6c = 0x8;               /* bit3 seq, no loop */
+            /* State 0 never leaves (flags24 bit 1 clear) -> exactly
+             * one tail advance per update; 4 subs * 6 ticks = 24
+             * advances to end. */
+            for (int i = 0; i < 30; ++i)
+                aos_object1c_children_update(&o, &cin, &cout);
+            assert(s->flags6c & 4);
+            assert(s->anim6e == 3 && s->anim6f == 0);
+            assert(s->anim65 == 3);         /* last entry frame */
+            uint8_t f6e = s->anim6e, f6f = s->anim6f;
+            aos_object1c_children_update(&o, &cin, &cout);
+            /* Ended early-out: +0x65 rewritten, counters frozen. */
+            assert(s->anim6e == f6e && s->anim6f == f6f);
+            assert(s->anim65 == 3);
+        }
+
+        /* Pause (+0x6C bit 1): step writes +0x65 then returns 1
+         * without ticking. */
+        {
+            AosObject1CChild *s = &o.children[o.child_count - 1];
+            /* reuse the once-ended child: clear ended, set pause */
+            s->flags6c = (uint8_t)((s->flags6c & ~4u) | 2u);
+            s->anim6e = 0; s->anim6f = 0;
+            uint8_t old65 = s->anim65;
+            aos_object1c_children_update(&o, &cin, &cout);
+            assert(s->anim6f == 0 && s->anim6e == 0);
+            assert(s->anim65 == 0);         /* entry0 frame rewritten */
+            (void)old65;
+        }
+
+        /* +0x6C bit-3 clear: the frame-set +8 descriptor path is
+         * unported — advance is a no-op. */
+        {
+            AosObject1CChild *s = &o.children[o.child_count - 1];
+            s->flags6c = 0x1;               /* loop only, no seq bit */
+            s->anim65 = 0x55;
+            aos_object1c_children_update(&o, &cin, &cout);
+            assert(s->anim65 == 0x55);
+        }
+
+        /* +0x5B modes: 2/3 count as unported; mode 1 runs the
+         * palette tail when frame_pal is supplied. */
+        {
+            AosObject1CChild *s = &o.children[o.child_count - 1];
+            s->flags6c = 0x9; s->mode5b = 2;
+            s->anim6e = 0; s->anim6f = 0; s->anim6d = 2;
+            aos_object1c_children_update(&o, &cin, &cout);
+            assert(cout.anim_modes >= 1);
+        }
+        {
+            /* mode 1 + frame_pal: seq2 entries frames 8,9. */
+            static uint8_t pals[26];
+            memset(pals, 0, sizeof pals);
+            pals[8] = 0x11; pals[9] = 0x22;
+            AosObject1CChild *s = &o.children[o.child_count - 1];
+            s->flags6c = 0x9; s->mode5b = 1;
+            s->anim6d = 2;                  /* seq2: frames 8,9 t4 */
+            s->anim6e = 0; s->anim6f = 3;   /* one tick from advance */
+            s->anim65 = 0; s->pal65 = -1;
+            cin.frame_pal = pals;
+            cin.frame_pal_count = 26;
+            aos_object1c_children_update(&o, &cin, &cout);
+            /* One tail advance (state 0): +0x65 0 -> 8 fires the
+             * palette tail once. */
+            assert(s->pal65 == 0x11);
+            assert(cout.pal_changes == 1);
+            assert(cout.pal_change[0].child == (uint8_t)(o.child_count - 1));
+            assert(cout.pal_change[0].frame == 8);
+            assert(cout.pal_change[0].pal == 0x11);
+            cin.frame_pal = NULL;
+            cin.frame_pal_count = 0;
+        }
+
+        /* Beam + spark children animate too: beam anim6d 2 loops
+         * frames 8/9; spark state-0 frame set picks anim 3. */
+        aos_object1c_create(&o, (ci = create_in(), &ci), &co);
+        {
+            AosObject1CChildEnv env = {
+                .palette = o.palette, .anim_1a = o.anim_1a,
+                .pos40 = o.pos40, .pos44 = o.pos44,
+                .affine_slot = o.affine_slot, .owner = -1,
+            };
+            int bidx = aos_object1c_beam_spawn(&o, &env, 0, NULL);
+            assert(bidx >= 0);
+            AosObject1CChild *b = &o.children[bidx];
+            assert(b->anim6d == 2 && b->flags6c == 0x9);
+            assert(((b->field5a >> 3) & 0xF) == 0xD);   /* bank 3 */
+            for (int i = 0; i < 10; ++i)
+                aos_object1c_children_update(&o, &cin, &cout);
+            assert(b->anim65 == 8 || b->anim65 == 9);
+            /* Spark: state 0 -> 1 frame set anim 3 (frames 10/11). */
+            int sidx = aos_object1c_spark_spawn(&o, (unsigned)bidx,
+                                                0, 0, &cin, &cout);
+            assert(sidx >= 0);
+            aos_object1c_child_delete(&o, (unsigned)bidx); /* silence */
+            for (int i = 0; i < 3; ++i)
+                aos_object1c_children_update(&o, &cin, &cout);
+            AosObject1CChild *s = &o.children[sidx];
+            assert(s->state >= 1 && s->anim6d == 3);
+            for (int i = 0; i < 12; ++i)
+                aos_object1c_children_update(&o, &cin, &cout);
+            assert(s->anim65 == 10 || s->anim65 == 11);
+        }
+    }
+
     puts("aos_object1c: ok");
     return 0;
 }

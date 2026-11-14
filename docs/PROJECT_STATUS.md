@@ -1,3 +1,48 @@
+## Patch 1133 - Object1C child animation advance (sub_0803F17C chain)
+
+- **Native frame-step chain ported** in `aos_object1c.c/.h`:
+  `sub_0803F17C` (the +0x5B dispatcher) -> `sub_0803EE24` (mode-1
+  step + palette tail) and the four shared-tail step functions
+  `sub_0803EBA8`/`sub_0803EC34`/`sub_0803ECC0`/`sub_0803ED6C`
+  (table 0x080E2B34, entry layouts flattened to {frame, ticks}).
+  Children now carry the native bytes: +0x6D sequence index,
+  +0x6E sub-frame index, +0x6F tick, +0x65 committed frame, +0x6C
+  flags (loop/pause/ended/seq), +0x5B mode, +0x5A palette nibble.
+  Looping sequences wrap (+0x6E = 0); one-shot sequences pin
+  +0x6E at count-1, latch +0x6C bit 2 and keep rewriting +0x65.
+  `sub_0803F2C8` frame sets reset +0x6D/+0x6E/+0x6F/+0x6C; the
+  spawn-time `sub_0803F17C` that `sub_08054E38` runs after
+  `sub_0803F2C8` is deferred to the first `children_update`
+  (`anim_boot`) because the sequence table lives in `ChildrenIn`.
+- **Injected animation table**: `AosObject1CChildrenIn.anims` is a
+  per-sequence {count, type, ticks[]} table the host builds in
+  `object1c_anim_bind` (`aria_entities.c`) from the loaded
+  `special_28_v<bank>` art — all four banks share frame descriptor
+  0x08257964's twelve type-1 sequences, verified 1:1 against the
+  index data (anim0 0-3/t6, anim1 4-7/t8, anim2 8-9/t4, anim3
+  10-11/t4, anim4 12-15/t6, anim5 16-19/t8, anims 6-11 single
+  frames 20-25/t1). `aria_runtime.c` binds unconditionally because
+  `aria_load_objects` is all-or-nothing while variants mark
+  `loaded` per frame (the variant table fills before special_31_v6+
+  in this index). NULL/empty table keeps the old freeze-on-frame-0
+  behaviour.
+- **Draw side** (`aria_draw.c` id-28): palette bank now comes from
+  the spawn-fixed +0x5A nibble (OBJ row 0xA+N) instead of a
+  kind/anim6d switch, and the flat +0x65 commit decomposes across
+  the variant's anims by cumulative count — sparkle/beam/spark now
+  animate instead of sitting on frame 0.
+- **Honest gaps**: +0x5B modes 2/3 (`sub_0803EEFC`/`sub_0803EFF0`)
+  and the +0x6C-bit-3-clear descriptor path are counted, not
+  played; the mode-1 palette tail is ported but unused (no
+  Object1C child selects mode 1 — `frame_pal` stays NULL);
+  types 2/3 auxiliary entity-data writes (`sub_08042884`/
+  `sub_080428F0`) are unmodelled (no Object1C sequence uses them);
+  unit-tested and `--simulate`-verified (sparkle +0x65 advances
+  through seq0/seq4 in room 0/14), no emulator comparison yet.
+- Tests: `tests/test_aos_object1c.c` covers boot advance, tick
+  accumulation, +0x65 commits, loop wrap, once-end latch,
+  pause/ended early-outs, +0x5B modes and the palette tail.
+
 ## Patch 1132 - aria_runtime decomposition wave 3, Object1C child draw, whiteout bursts
 
 - **aria_runtime.c: ~13.4k -> ~4.9k lines.** Wave 3 extracted the two
@@ -82,9 +127,11 @@
   sub_080630E8 particles) on a second host pool (`wo_bursts`), the
   child machine's direct carrier_spawn goes through
   `aos_wo_carrier_spawn`, and the particle sub_08068AD4 probe is
-  computed natively as the screen-rect containment test it is. Burst
-  draw records (frames 0x08267EE4 / graphics 0x08260390) stay
-  unexported — state and RNG run, nothing draws yet.
+  computed natively as the screen-rect containment test it is. The
+  burst art is exported too (`Object/whiteout_burst_carrier` anims
+  0-3, `Object/whiteout_burst_particle` stills 0xB/0xC, pipeline v76)
+  and drawn in the world pass; the carrier anim is wall-clock and
+  particle palette banks 5-9 stay unexported.
 - **Object1D (id 29) draw** still frames by the +0x65 index through
   `special_29_v0/v1`, now in the `aria_draw.c` id-29 branch.
 - Misc: `aos_object0e.c` >=14 delete-path comment corrected (the

@@ -441,13 +441,21 @@ static int child_alloc(AosObject1C *o) {
 
 static void fx_frame_set(AosObject1CChild *c, unsigned child_idx,
                          uint8_t frame, AosObject1CChildrenOut *out) {
-    /* sub_0803F2C8(child, frame, 0, 1): on success +0x6D = frame,
-     * +0x6E = +0x6F = 0, +0x5B = 0, +0x6C = 1 | 8, +0x59 &= ~2.
-     * The native fails silently on a missing frame record; the
-     * port has no frame table and assumes success (documented).
-     * +0x5B/+0x6C/+0x6F are engine-owned and not modeled. */
+    /* sub_0803F2C8(child, frame, 0, 1): on success +0x5B = 0,
+     * +0x6C = arg3 | 8 = 0x9 (loop bit + play the +0x68 sequence),
+     * +0x6D = frame (which also selects seqs[frame] at +0x68 —
+     * implicit here as anims[+0x6D]), +0x6E = +0x6F = 0, +0x59 &= ~2.
+     * +0x65 is NOT touched (the next advance rewrites it). The
+     * native fails silently when frame >= the sequence count; the
+     * port has no table at spawn time and assumes success — the
+     * advance bounds-checks against the injected table instead
+     * (documented). */
+    c->mode5b = 0;
+    c->flags6c = 0x9;
     c->anim6d = frame;
     c->anim6e = 0;
+    c->anim6f = 0;
+    c->pal65 = -1;
     c->flags59 = (uint8_t)(c->flags59 & ~0x2u);
     if (out != NULL && out->frame_sets < AOS_O1C_CHILD_MAX_FX) {
         out->frame_set[out->frame_sets].child = (uint8_t)child_idx;
@@ -506,6 +514,9 @@ int aos_object1c_marker_spawn(AosObject1C *o, const AosObject1CChildEnv *env,
     c->active = 1;
     c->flags58 |= 0x20;
     c->anim5c = 3;
+    /* sub_0803B924's param 0xE -> +0x5A bits 3-6 = 0xE (OBJ row
+     * 0xE = palette bank 4, the marker's YES/NO art). */
+    c->field5a = (uint8_t)(0xE << 3);
     c->owner = env->owner;
     fx_frame_init(out);
     return idx;
@@ -541,7 +552,13 @@ int aos_object1c_sparkle_spawn(AosObject1C *o, const AosObject1CChildEnv *env,
     fx_frame_set(c, (unsigned)idx, (uint8_t)frame, out);
     c->timer = 4;               /* +0xD = 4 */
     c->anim5c = anim5c;
-    (void)rec_param;            /* consumed by sub_0803B924 */
+    /* sub_0803B924's param (record word1 = +0x1A+2/+0x1A+1 =
+     * 0xC/0xB) -> +0x5A bits 3-6: OBJ row 0xC/0xB = banks 2/1. */
+    c->field5a = (uint8_t)(((uint8_t)rec_param & 0xF) << 3);
+    /* Native calls sub_0803F17C immediately after sub_0803F2C8 in
+     * sub_08054E38; deferred to the first children_update because
+     * the sequence table only exists in AosObject1CChildrenIn. */
+    c->anim_boot = 1;
     return idx;
 }
 
@@ -567,6 +584,9 @@ int aos_object1c_beam_spawn(AosObject1C *o, const AosObject1CChildEnv *env,
     c->owner = -1;
     fx_frame_init(out);
     fx_frame_set(c, (unsigned)idx, 2, out);
+    /* sub_0803B924's param (parent +0x1A + 3 = 0xD) -> +0x5A bits
+     * 3-6: OBJ row 0xD = palette bank 3. */
+    c->field5a = (uint8_t)(((uint8_t)(env->anim_1a + 3) & 0xF) << 3);
     c->anim5c = 0x11;
     c->field20 = index;         /* +0x20 low byte = beam index */
     c->field24 = 0x80000;
@@ -647,9 +667,127 @@ void aos_object1c_child_delete(AosObject1C *o, unsigned idx) {
 
 /* ---- updateFunc routines ---- */
 
+/* The four 0x080E2B34 step functions — sub_0803EBA8 (type 0,
+ * 16-byte entries), sub_0803EC34 (type 1, 4-byte), sub_0803ECC0
+ * (type 2, 8-byte) and sub_0803ED6C (type 3, 12-byte) — share one
+ * tail: write the entry's frame to +0x65, early-out on +0x6C bits
+ * 2/1-2, tick +0x6F against the entry duration, advance +0x6E and
+ * wrap or end the sequence. The host flattens the native entry
+ * layouts into AosObject1CAnimTick, so one core covers all four;
+ * types 2/3's sub_08042884/sub_080428F0 auxiliary entity-data
+ * writes are not modeled (no Object1C sequence uses them). */
+static int child_seq_step(const AosObject1CAnimSeq *seq,
+                          AosObject1CChild *c,
+                          AosObject1CChildrenOut *out) {
+    if (seq == NULL || seq->count == 0 || seq->ticks == NULL)
+        return 0;
+    /* Native indexes entries by +0x6E with no bounds check; the
+     * +0x6E < count invariant is maintained by the wrap below, so
+     * this guard only fires on corrupted state (documented). */
+    if (c->anim6e >= seq->count)
+        return 0;
+    const AosObject1CAnimTick *e = &seq->ticks[c->anim6e];
+    c->anim65 = e->frame;               /* strb entry frame -> +0x65 */
+    uint8_t fl = c->flags6c;
+    if (fl & 4)                         /* +0x6C bit 2: already ended */
+        return 3;
+    if (fl & 6)                         /* bits 1-2: paused */
+        return 1;
+    c->anim6f = (uint8_t)(c->anim6f + 1);   /* u8 +0x6F tick */
+    if ((unsigned)c->anim6f < e->ticks)
+        return 1;
+    c->anim6f = 0;
+    c->anim6e = (uint8_t)(c->anim6e + 1);   /* u8 +0x6E sub-frame */
+    if ((unsigned)c->anim6e < seq->count)
+        return 1;
+    /* Sequence end: +0x59 bit 0 marks it; +0x6C bit 0 loops back
+     * to sub-frame 0 (return 4), otherwise +0x6E pins to count-1,
+     * +0x6C bit 2 latches ended and the step returns 3. */
+    c->flags59 |= 1;
+    if (fl & 1) {
+        c->anim6e = 0;
+        ++out->anim_looped;
+        return 4;
+    }
+    c->anim6e = (uint8_t)(seq->count - 1);
+    c->flags6c = (uint8_t)(c->flags6c | 4);
+    ++out->anim_ended;
+    return 3;
+}
+
+/* sub_0803EE24: the +0x5B == 1 advance — the same sequence step
+ * plus the +0x65-change palette tail. The native re-resolves the
+ * frame-set record and walks record->+4[+0x65]->+0xC->byte 9
+ * through sub_0803B998/sub_0803B840/sub_0803AA20; the two-level
+ * lookup is collapsed to in->frame_pal and the compare/store runs
+ * against the child's last applied byte (pal65). */
+static int child_seq_step_pal(const AosObject1CAnimSeq *seq,
+                              unsigned idx, AosObject1CChild *c,
+                              const AosObject1CChildrenIn *in,
+                              AosObject1CChildrenOut *out) {
+    uint8_t old65 = c->anim65;
+    int rc = child_seq_step(seq, c, out);
+    if (seq == NULL || c->anim65 == old65 ||
+        in->frame_pal == NULL || in->frame_pal_count == 0)
+        return rc;
+    unsigned fi = c->anim65 < in->frame_pal_count
+                ? c->anim65 : 0;      /* native count clamp -> entry 0 */
+    uint8_t pal = in->frame_pal[fi];
+    if ((int)pal == c->pal65)
+        return rc;
+    c->pal65 = pal;
+    if (out->pal_changes < AOS_O1C_CHILD_MAX_FX) {
+        AosObject1CPal *p = &out->pal_change[out->pal_changes++];
+        p->child = (uint8_t)idx;
+        p->frame = c->anim65;
+        p->pal = pal;
+    }
+    return rc;
+}
+
+/* sub_0803F17C(entity): +0x5B selects the advance — 0 resolves the
+ * current sequence (+0x6C bit 3 ? +0x68 : the frame set's
+ * +8[+0x6D] descriptors) and calls its step function directly;
+ * 1 is sub_0803EE24 (step + palette tail); 2/3 are sub_0803EEFC/
+ * sub_0803EFF0, the direct-sequence systems this module does not
+ * model. The +0x6C-bit-3-clear descriptor path is likewise
+ * unported — no Object1C child reaches it (every spawn goes
+ * through sub_0803F2C8/sub_0803F0E4, both of which set the bit). */
+static int child_anim_advance(unsigned idx, AosObject1CChild *c,
+                              const AosObject1CChildrenIn *in,
+                              AosObject1CChildrenOut *out) {
+    const AosObject1CAnimSeq *seq = NULL;
+    if ((c->flags6c & 8) && in->anims != NULL &&
+        c->anim6d < in->anim_count)
+        seq = &in->anims[c->anim6d];    /* +0x68 = seqs[+0x6D] */
+    int rc;
+    switch (c->mode5b) {
+    case 0:
+        if (seq != NULL)
+            ++out->anim_steps;
+        rc = child_seq_step(seq, c, out);
+        break;
+    case 1:
+        if (seq != NULL)
+            ++out->anim_steps;
+        rc = child_seq_step_pal(seq, idx, c, in, out);
+        break;
+    case 2:
+    case 3:
+        ++out->anim_modes;
+        rc = 0;
+        break;
+    default:
+        rc = 0;
+        break;
+    }
+    return (int16_t)(uint16_t)rc;   /* native u16 -> s16 result */
+}
+
 /* sub_08055070 sparkle update. `parent` is child +0x1C = o. */
 static void child_sparkle_update(AosObject1C *o, AosObject1CChild *c,
                                  unsigned idx,
+                                 const AosObject1CChildrenIn *in,
                                  AosObject1CChildrenOut *out) {
     switch (c->state) {
     case 0:
@@ -691,6 +829,7 @@ static void child_sparkle_update(AosObject1C *o, AosObject1CChild *c,
     }
     /* Tail _08055140: sub_0803F17C animation advance. */
     ++out->anim_advances;
+    child_anim_advance(idx, c, in, out);
 }
 
 /* sub_080553A0 + sub_08055414 invoked from the beam tail with
@@ -770,12 +909,14 @@ static void child_beam_update(AosObject1C *o, unsigned idx,
     if ((c->timer & 3) == 0)
         beam_spark_attempt(o, idx, in, out);
     ++out->anim_advances;
+    child_anim_advance(idx, c, in, out);
 }
 
 /* sub_080552C4 type-0x49 spark update; state 0 swaps the drawFunc
  * to sub_080554BC (implicit: kind SPARK draws it once state >= 1). */
 static void child_spark_update(AosObject1C *o, AosObject1CChild *c,
                                unsigned idx,
+                               const AosObject1CChildrenIn *in,
                                AosObject1CChildrenOut *out) {
     switch (c->state) {
     case 0:
@@ -819,6 +960,7 @@ static void child_spark_update(AosObject1C *o, AosObject1CChild *c,
     }
     /* Tail _08055394: sub_0803F17C. */
     ++out->anim_advances;
+    child_anim_advance(idx, c, in, out);
 }
 
 /* sub_08054574 fade routine (no caller in the dump). Returns 1 in
@@ -879,17 +1021,27 @@ void aos_object1c_children_update(AosObject1C *o,
         AosObject1CChild *c = &o->children[i];
         if (!c->active)
             continue;
+        /* sub_08054E38's spawn-time sub_0803F17C (native runs it
+         * right after sub_0803F2C8, before the child's first
+         * updateFunc): deferred here because the sequence table
+         * only exists in `in`. Runs before the updateFunc like the
+         * native ordering. */
+        if (c->anim_boot) {
+            c->anim_boot = 0;
+            ++out->anim_advances;
+            child_anim_advance(i, c, in, out);
+        }
         switch (c->kind) {
         case AOS_O1C_CHILD_MARKER:
             break;              /* updateFunc = EntityUpdateNothing */
         case AOS_O1C_CHILD_SPARKLE:
-            child_sparkle_update(o, c, i, out);
+            child_sparkle_update(o, c, i, in, out);
             break;
         case AOS_O1C_CHILD_BEAM:
             child_beam_update(o, i, c, in, out);
             break;
         case AOS_O1C_CHILD_SPARK:
-            child_spark_update(o, c, i, out);
+            child_spark_update(o, c, i, in, out);
             break;
         case AOS_O1C_CHILD_FADE:
             child_fade_update(c, out);

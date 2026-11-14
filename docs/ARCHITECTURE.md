@@ -557,8 +557,11 @@ constants), `aria_wav.c` (WAV recording), `aria_sim.c` (the
 loaders and the save converters), `aria_tables.c` (shared name tables)
 `aria_draw.c` (the world draw cluster, including the SPECIAL-object
 draw branches), `aria_entities.c` (the `update_entities` SPECIAL/kind
-dispatch, spawn/probe helpers and Object20 host glue) and
-`aria_skills.c` (skills, soul attacks and the guardian).
+dispatch, spawn/probe helpers and Object20 host glue),
+`aria_skills.c` (skills, soul attacks and the guardian),
+`aria_menus_debug.c` (native pause-page draws, soul menu, debug
+overlay) and `aria_opening.c` (opening text/portrait/backdrop/cue
+helpers).
 
 Responsibilities inside `src/runtime/aos/`:
 

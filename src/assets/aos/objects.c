@@ -59,7 +59,9 @@ typedef struct {
     uint32_t probes;
     uint32_t volleys;
     uint8_t volley_count;
-    uint8_t static_count;
+    uint8_t static_count;   /* bit 7: export still frames only, no
+                             * animation sequences (see
+                             * whiteout_burst_particle) */
     uint8_t static_frames[MAX_STATIC_FRAMES];
 } EntitySpec;
 
@@ -937,6 +939,40 @@ static const EntitySpec special31_variants[] = {
     ENTITY("special_31_v7", 0x082052F0, 0x08119E14, 7, 0x08257BD8),
 };
 
+/* Object20's opening whiteout burst (code_08060B98.s). The carrier
+ * entities of sub_08063168/sub_080632B0 (and the sibling carrier
+ * spawns at sub_08063420/sub_08063698/sub_08063740) all load tiles
+ * 0x08260390 through sub_0803B800, palette descriptor 0x08266544
+ * bank 0 through the sub_0806E0D0 -> sub_08068264 slot cache
+ * (entity + 0x2C = OBJ row 0xA-0xD), frames 0x08267EE4 through the
+ * same gate and draw through sub_0803B9D0. sub_0803F2C8's variant
+ * argument IS the animation index into the descriptor's four
+ * sequences (pointer table 0x0864356C, counts 19/19/10/11):
+ * sub_08063168 passes 0, sub_080632B0 picks {0,2,3,2,3}[RNG % 5]
+ * from 0x081189B8 and the other callers pass RNG & 3, so anim_N
+ * below is selected directly by the variant.
+ * The sub_080630E8 particles share tiles and frames but bypass
+ * sub_0806E0D0: sub_08062B60 sets + 0x2C = 0xE, putting them on OBJ
+ * palette row 0xE, which the whiteout driver sub_0806447C fills
+ * from descriptor 0x08119FDC banks {0,5,6,7,8,9} cycled through
+ * table 0x08526924 (durations 0x40 then 5 x 0x10); bank 0 is
+ * exported here — its colours are identical to 0x08266544 bank 0.
+ * + 0x65 is the still-frame index into the descriptor's 28 frame
+ * records: the spawn loops pick {0xC,0xB,0xC}[RNG % 3] from
+ * 0x081189AC, i.e. frames 11 and 12. + 0x5C = 3 and + 0x63 = 0x80
+ * are OAM-side attributes (the 0x03005174 attribute callback and
+ * the entity flag byte) the draw port must honour. */
+static const EntitySpec whiteout_burst[] = {
+    ENTITY("whiteout_burst_carrier", 0x08260390, 0x08266544, 0,
+           0x08267EE4),
+    /* static_count bit 7 (still-frames-only): sub_080630E8 never
+     * calls sub_0803F2C8 — the particles draw the + 0x65 still
+     * frames 11 and 12 only; the descriptor's four animation
+     * sequences belong to the carrier sibling. */
+    {"whiteout_burst_particle", 0x08260390, 0x08119FDC, 0, 0x08267EE4,
+     0, 0, 0, 0x82, {0xB, 0xC}},
+};
+
 static const EffectSpec effects[] = {
     {"flame", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {0}, -1},
     {"blood", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {13}, -1},
@@ -1678,7 +1714,8 @@ static bool export_entity(const FusionRom *rom, FusionSpriteLibrary *library,
         set_error(error, error_size, "entity animation count exceeds native limit");
         success = false;
     }
-    size_t sequence_count = animation_count ? animation_count : record_count;
+    size_t sequence_count = (entity->static_count & 0x80) ? 0
+        : animation_count ? animation_count : record_count;
     for (size_t number = 0; success && number < sequence_count; ++number) {
         uint32_t pointer = 0;
         if (animation_count) {
@@ -1695,11 +1732,14 @@ static bool export_entity(const FusionRom *rom, FusionSpriteLibrary *library,
     }
     if (success) success = append_probes(rom, entity, rows, error, error_size) &&
                            append_volleys(rom, entity, rows, error, error_size);
-    for (size_t index = 0; success && index < entity->static_count; ++index) {
+    for (size_t index = 0;
+         success && index < (size_t)(entity->static_count & 0x7F);
+         ++index) {
         uint8_t frame_id = entity->static_frames[index];
         RenderedFrame rendered;
         char key[96];
-        snprintf(key, sizeof key, "Enemy/%s/frame_%u", entity->name, frame_id);
+        snprintf(key, sizeof key, "%s/%s/frame_%u", key_prefix,
+                 entity->name, frame_id);
         success = render_frame(rom, entity->frames, &sheet, palette, frame_id,
                                &rendered, error, error_size);
         if (!success) break;
@@ -2283,6 +2323,11 @@ bool fusion_aos_export_objects(const FusionRom *rom,
          success && index < sizeof special31_variants / sizeof special31_variants[0];
          ++index)
         success = export_entity(rom, &library, &special31_variants[index],
+                                "Object", &object_rows, error, error_size);
+    for (size_t index = 0;
+         success && index < sizeof whiteout_burst / sizeof whiteout_burst[0];
+         ++index)
+        success = export_entity(rom, &library, &whiteout_burst[index],
                                 "Object", &object_rows, error, error_size);
     for (size_t index = 0;
          success && index < sizeof effects / sizeof effects[0]; ++index)

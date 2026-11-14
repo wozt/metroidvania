@@ -891,6 +891,29 @@ static const EntitySpec special29_variants[] = {
     ENTITY("special_29_v1", 0x082052E8, 0x0820C384, 0, 0x08257964),
 };
 
+/* Id 31 (Object1FCreate 0x080564F8, the opening gate): the parent
+ * entity attaches no sprite of its own — sub_08056514 only resolves
+ * the packed type-1 tiles descriptor 0x082052F0 (LZ77 sheet, decoded
+ * by the same load_tile_sheet path as special_29_v0) and stores the
+ * sub_0803AFB8 palette slot. The visible art is ten type-0x1B
+ * children: sub_08055BE0 spawns eight gate segments and sub_0805607C
+ * two flank children, every one drawing frame descriptor 0x08257BD8
+ * (the same twelve records special_29_v0 exports) through
+ * sub_0803B924. What differs from id 29 is the palette: sub_0803C7B4
+ * banks descriptor 0x08119E14 — bank 2 onto OBJ row 0xA for the eight
+ * segments, bank 4 onto row 0xB for the flanks, and the flanks'
+ * sub_08056130 state-1 re-bank walks banks {4,5,6,7} of the same
+ * descriptor through the u32 table at 0x081185F8 (+ 0x12 indexes it,
+ * capped at 0xB). The _vN suffix is the palette bank, not a param0;
+ * bank 0 is not used by this object. */
+static const EntitySpec special31_variants[] = {
+    ENTITY("special_31_v2", 0x082052F0, 0x08119E14, 2, 0x08257BD8),
+    ENTITY("special_31_v4", 0x082052F0, 0x08119E14, 4, 0x08257BD8),
+    ENTITY("special_31_v5", 0x082052F0, 0x08119E14, 5, 0x08257BD8),
+    ENTITY("special_31_v6", 0x082052F0, 0x08119E14, 6, 0x08257BD8),
+    ENTITY("special_31_v7", 0x082052F0, 0x08119E14, 7, 0x08257BD8),
+};
+
 static const EffectSpec effects[] = {
     {"flame", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {0}, -1},
     {"blood", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {13}, -1},
@@ -2227,6 +2250,11 @@ bool fusion_aos_export_objects(const FusionRom *rom,
          success && index < sizeof special29_variants / sizeof special29_variants[0];
          ++index)
         success = export_entity(rom, &library, &special29_variants[index],
+                                "Object", &object_rows, error, error_size);
+    for (size_t index = 0;
+         success && index < sizeof special31_variants / sizeof special31_variants[0];
+         ++index)
+        success = export_entity(rom, &library, &special31_variants[index],
                                 "Object", &object_rows, error, error_size);
     for (size_t index = 0;
          success && index < sizeof effects / sizeof effects[0]; ++index)

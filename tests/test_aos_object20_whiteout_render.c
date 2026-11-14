@@ -351,6 +351,189 @@ int main(void) {
     /* field_26 = 2 - (rng&3) as u8: in {0xFF,0,1,2} */
     assert(s.field_26 == 0xff || s.field_26 <= 2);
 
+    /* The committed 0x08118B34 table decodes aux 3 to the
+     * sub_08063698 Thumb update pointer (ROM word 0x08063699). */
+    {
+        memset(&s, 0, sizeof s);
+        s.field_15 = 2;
+        s.field_16 = 1;
+        s.field_24 = 0xc0;
+        in = base_in();
+        step(&s, &in, &out);
+        assert(out.spawn_count == 1 &&
+               out.spawns[0].aux == 3 &&
+               out.spawns[0].fn_addr == 0x08063699);
+    }
+
+    /* ---- 0x08118B34 spawn-child updates (sub_08063420/3558/3600/
+     * 3698/3740). ---- */
+    {
+        /* init: only TABLE_118B34 spawns with aux < 5 instantiate. */
+        AosWoSpawn sp;
+        memset(&sp, 0, sizeof sp);
+        sp.kind = AOS_WO_SPAWN_FX_63DF8;
+        sp.aux = 0; sp.scr_x = 10; sp.scr_y = 20;
+        AosWoSpawnChild ch;
+        assert(!aos_wo_spawn_child_init(&ch, &sp));
+        sp.kind = AOS_WO_SPAWN_TABLE_118B34;
+        sp.aux = 5;
+        assert(!aos_wo_spawn_child_init(&ch, &sp));
+        sp.aux = 2;
+        assert(aos_wo_spawn_child_init(&ch, &sp));
+        assert(ch.aux == 2 && ch.field_a == 0 && ch.field_c == 0 &&
+               ch.scr_x == 10 && ch.scr_y == 20 && ch.field_59 == 0);
+
+        AosWoSpawnChildIn cin;
+        AosWoSpawnChildOut cout;
+        memset(&cin, 0, sizeof cin);
+        cin.rng = 0x12345678;
+
+        /* aux 2 / sub_08063600: table 0x08118A94, 5 entries all
+         * delay 0x20, fire = sub_08063168(s16(+0x42+dx),
+         * s16(+0x46+dy)), no in-routine RNG. Entry 0 is {0,0,0x20}:
+         * call 1 loads +0xD=0x20, +0xA=1; calls 2..0x21 count down
+         * (0x20 -> 0xFF wrap advances); fire on the call after. */
+        aos_wo_spawn_child_update(&ch, &cin, &cout);
+        assert(cout.rng == cin.rng);        /* no draws yet */
+        assert(ch.field_a == 1 && ch.field_d == 0x20);
+        assert(!cout.done);
+        int calls = 1;
+        /* +0xD 0x20 -> 0 takes 0x21 calls; the wrap call sets
+         * +0xA = 2; the next call fires. */
+        while (ch.field_a != 2) {
+            aos_wo_spawn_child_update(&ch, &cin, &cout);
+            ++calls;
+            assert(calls < 100);
+            assert(!cout.burst_63168 && !cout.carrier_spawn &&
+                   !cout.burst_632b0);
+        }
+        assert(ch.field_d == 0xff);
+        aos_wo_spawn_child_update(&ch, &cin, &cout);
+        assert(cout.burst_63168);
+        assert(cout.burst_x == 10 && cout.burst_y == 20);
+        assert(!cout.carrier_spawn && !cout.burst_632b0);
+        assert(cout.rng == cin.rng);        /* aux 2 draws no RNG */
+        assert(ch.field_a == 0 && ch.field_c == 1);
+        assert(!cout.done);                 /* +0xC 1 != 5 */
+        cin.rng = cout.rng;
+
+        /* Last entry walk: aux-2 record 4 = {30,20,0x20}. Drive
+         * the machine with +0xD = 0 so the countdown wraps to
+         * 0xFF (and +0xA = 2) on the next call. */
+        memset(&ch, 0, sizeof ch);
+        ch.aux = 2; ch.scr_x = 10; ch.scr_y = 20;
+        ch.field_c = 4; ch.field_a = 1; ch.field_d = 0;
+        aos_wo_spawn_child_update(&ch, &cin, &cout); /* 0->0xFF,a=2 */
+        assert(ch.field_a == 2);
+        aos_wo_spawn_child_update(&ch, &cin, &cout); /* fire entry 4 */
+        assert(cout.burst_63168);
+        assert(cout.burst_x == (int16_t)(10 + 30) &&
+               cout.burst_y == (int16_t)(20 + 20));
+        assert(ch.field_c == 5 && (ch.field_59 & 8));
+        assert(cout.done);
+        /* Post-done calls: no events, done still reported. */
+        aos_wo_spawn_child_update(&ch, &cin, &cout);
+        assert(cout.done && !cout.burst_63168 &&
+               !cout.carrier_spawn && !cout.burst_632b0);
+        assert(cout.rng == cin.rng);
+
+        /* aux 0 / sub_08063420: table 0x081189CC, 15 entries.
+         * Even +0xA fire -> carrier spawn with variant RNG & 3.
+         * Entry 0 = {0,0,0}: init d=0, one countdown call wraps,
+         * next call fires. */
+        memset(&ch, 0, sizeof ch);
+        ch.aux = 0; ch.scr_x = 0xb8; ch.scr_y = 0x70;
+        cin.rng = 0x12345678;
+        uint32_t rng_before = cin.rng;
+        aos_wo_spawn_child_update(&ch, &cin, &cout); /* +0xA 0->1 */
+        assert(ch.field_a == 1 && ch.field_d == 0);
+        aos_wo_spawn_child_update(&ch, &cin, &cout); /* wrap -> 2 */
+        assert(ch.field_a == 2);
+        uint32_t expect_rng = (rng_before >> 8) * 0x3243F6ADu +
+                              0x1B0CB175u;
+        aos_wo_spawn_child_update(&ch, &cin, &cout); /* fire */
+        assert(cout.carrier_spawn);
+        assert(cout.carrier_x == 0xb8 && cout.carrier_y == 0x70);
+        assert(cout.carrier_variant == (uint8_t)(expect_rng & 3));
+        assert(!cout.burst_63168 && !cout.burst_632b0);
+        assert(cout.rng == expect_rng);      /* exactly one draw */
+        cin.rng = cout.rng;
+        assert(ch.field_c == 1 && ch.field_a == 0);
+
+        /* Odd +0xA (unreachable via the machine but ported):
+         * aux 0 -> sub_08063168 burst, NO rng draw. */
+        ch.field_a = 3; ch.field_c = 0;
+        aos_wo_spawn_child_update(&ch, &cin, &cout);
+        assert(cout.burst_63168 && !cout.carrier_spawn);
+        assert(cout.rng == cin.rng);
+        assert(ch.field_c == 1 && ch.field_a == 0);
+
+        /* aux 4 / sub_08063740 shares the aux-0 machine with
+         * table 0x08118B0C (5 entries, delay 8). Last entry 4 =
+         * {30,20,8} -> done after its fire. */
+        memset(&ch, 0, sizeof ch);
+        ch.aux = 4; ch.scr_x = 0; ch.scr_y = 0;
+        ch.field_c = 4; ch.field_a = 2;      /* fire directly */
+        cin.rng = 0x12345678;
+        aos_wo_spawn_child_update(&ch, &cin, &cout);
+        assert(cout.carrier_spawn);
+        assert(cout.carrier_x == 30 && cout.carrier_y == 20);
+        assert(ch.field_c == 5 && (ch.field_59 & 8) && cout.done);
+
+        /* aux 1 / sub_08063558: table 0x08118A44, 10 entries,
+         * delay 1, jittered sub_080632B0 fire (2 RNG draws). */
+        memset(&ch, 0, sizeof ch);
+        ch.aux = 1; ch.scr_x = 100; ch.scr_y = 50;
+        ch.field_c = 0; ch.field_a = 2;      /* fire directly */
+        cin.rng = 0x12345678;
+        rng_before = cin.rng;
+        aos_wo_spawn_child_update(&ch, &cin, &cout);
+        assert(cout.burst_632b0 && !cout.burst_63168 &&
+               !cout.carrier_spawn);
+        /* entry 0 = {42,10}: base (142,60); x -= (r1&3)-2,
+         * y -= (r2&3)-2 where r1/r2 are successive LCG outputs. */
+        uint32_t r1 = (rng_before >> 8) * 0x3243F6ADu + 0x1B0CB175u;
+        uint32_t r2 = (r1 >> 8) * 0x3243F6ADu + 0x1B0CB175u;
+        int ex = (int16_t)(142 - ((int32_t)(r1 & 3) - 2));
+        int ey = (int16_t)(60 - ((int32_t)(r2 & 3) - 2));
+        assert(cout.burst_632b0_x == ex && cout.burst_632b0_y == ey);
+        assert(cout.rng == r2);              /* exactly two draws */
+        cin.rng = cout.rng;
+        assert(ch.field_c == 1 && ch.field_a == 0);
+
+        /* aux 3 / sub_08063698: same machine, table 0x08118ABC.
+         * Entry 0 = {-45,8}: scr (200,100) -> base (155,108). */
+        memset(&ch, 0, sizeof ch);
+        ch.aux = 3; ch.scr_x = 200; ch.scr_y = 100;
+        ch.field_c = 9; ch.field_a = 2;      /* last entry {-45,28} */
+        cin.rng = 0x12345678;
+        rng_before = cin.rng;
+        aos_wo_spawn_child_update(&ch, &cin, &cout);
+        assert(cout.burst_632b0);
+        r1 = (rng_before >> 8) * 0x3243F6ADu + 0x1B0CB175u;
+        r2 = (r1 >> 8) * 0x3243F6ADu + 0x1B0CB175u;
+        /* entry 9 = {-45,28}: base (155,128) */
+        ex = (int16_t)(155 - ((int32_t)(r1 & 3) - 2));
+        ey = (int16_t)(128 - ((int32_t)(r2 & 3) - 2));
+        assert(cout.burst_632b0_x == ex && cout.burst_632b0_y == ey);
+        assert(ch.field_c == 10 && (ch.field_59 & 8) && cout.done);
+
+        /* aux 1 entry-count tail: +0xC == 10 -> done. Covered by
+         * aux 3 above (same count); aux-0 count is 15. */
+        memset(&ch, 0, sizeof ch);
+        ch.aux = 0; ch.field_c = 15;         /* past the table */
+        ch.field_a = 1; ch.field_d = 5;
+        cin.rng = 0x12345678;
+        aos_wo_spawn_child_update(&ch, &cin, &cout);
+        assert(!cout.done);                  /* bit3 not set yet */
+        assert(!cout.carrier_spawn && !cout.burst_63168 &&
+               !cout.burst_632b0);
+        ch.field_59 |= 8;                    /* host-visible done */
+        aos_wo_spawn_child_update(&ch, &cin, &cout);
+        assert(cout.done);                   /* still reported */
+        assert(cout.rng == cin.rng);
+    }
+
     puts("test_aos_object20_whiteout_render: OK");
     return 0;
 }

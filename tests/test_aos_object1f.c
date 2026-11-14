@@ -10,10 +10,22 @@ int main(void) {
     aos_object1f_create(&o, false, &deleted);
     assert(deleted && o.deleted);
 
-    /* Create counts the ten children. */
+    /* Create spawns the eleven children: nine ring slots with
+     * the +0x5C bands and two flanks at 0x54/0x9C, 0x80. */
     aos_object1f_create(&o, true, &deleted);
     assert(!deleted && !o.deleted);
-    assert(o.child_count == 10 && o.state == 0);
+    assert(o.child_count == 11 && o.state == 0);
+    for (int i = 0; i < 9; ++i) {
+        assert(o.children[i].idx65 == i);
+        assert(o.children[i].band5c ==
+               (i == 0 ? 0x1C : i <= 4 ? 0x1D : 0x1E));
+        assert(o.children[i].state == 6);
+        assert(o.children[i].pos42 == 0x78 &&
+               o.children[i].pos46 == 0x48);
+    }
+    assert(o.children[9].pos42 == 0x54 && o.children[9].pos46 == 0x80);
+    assert(o.children[10].pos42 == 0x9C && o.children[10].idx65 == 9);
+    assert(o.children[9].band5c == 0x15 && o.children[10].band5c == 0x15);
 
     /* State 0 waits for the bundled gate. */
     aos_object1f_update(&o, false);
@@ -110,7 +122,7 @@ int main(void) {
     /* Child updates: sub_08055CB4 ring init. */
     AosObject1FChild c;
     memset(&c, 0, sizeof c);
-    c.idx65 = 2; c.aux61 = 3;
+    c.idx65 = 2; c.aux1f = 3;
     aos_object1f_child_ring_init(&c, false);
     assert(c.state == 6 && c.pos42 == 0x78 && c.pos46 == 0x48);
     assert(c.timer_d == (9 - 2) * 5);       /* idx!=0: no +0xF */
@@ -129,9 +141,14 @@ int main(void) {
     c.anchor_y = 6; c.pos42 = 1; c.pos46 = 2;
     aos_object1f_child_ring_update(&c, 0, 4, false);
     assert(c.state == 4 && c.pos42 == 5 && c.pos46 == 6);
-    /* state 8 acc20 == 0 -> state 0 + record_inc + clr41. */
+    /* state 8 acc20 == 0 -> state 0 + clr41; record_inc only
+     * for the +0x65 == 0 ring child (_08056050 gate). */
     memset(&c, 0, sizeof c);
     c.state = 8; c.idx65 = 1; c.acc20 = 0; c.life = 1;
+    aos_object1f_child_ring_update(&c, 0, 0, false);
+    assert(c.state == 0 && !c.record_inc && c.flags_42c_clr41);
+    memset(&c, 0, sizeof c);
+    c.state = 8; c.idx65 = 0; c.acc20 = 0; c.life = 1;
     aos_object1f_child_ring_update(&c, 0, 0, false);
     assert(c.state == 0 && c.record_inc && c.flags_42c_clr41);
 
@@ -163,6 +180,21 @@ int main(void) {
     c.state = 0xB; c.pos46 = 0x90; c.aux37 = 0;
     aos_object1f_child_free_update(&c, 0, 0);
     assert(c.state == 0 && c.pos46 == 0x84 && c.sound == 1);
+
+    /* record_state channel: entityData[slot]+0xA is the parent
+     * entity's own +0xA byte, so record_state tracks o->state. */
+    memset(&o, 0, sizeof o);
+    o.state = 3;
+    assert(aos_object1f_record_state(&o) == 3);
+    o.state = 5;
+    assert(aos_object1f_record_state(&o) == 5);
+    /* record_commit applies each child's pending record_inc to
+     * the parent state — only children[0] (idx65 0) can set it. */
+    memset(&o, 0, sizeof o);
+    o.state = 4;
+    o.children[0].record_inc = true;   /* the +0x65 == 0 ring child */
+    aos_object1f_record_commit(&o);
+    assert(o.state == 5);
 
     puts("aos_object1f: ok");
     return 0;

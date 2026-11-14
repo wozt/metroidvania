@@ -1,3 +1,67 @@
+## Patch 1131 - aria_runtime decomposition wave 1+2, Object1C/1F children, whiteout spawn children
+
+- **`aria_runtime.c` decomposition (AGENTS.md rule 8)**: the ~13.4k-line
+  host is now ~11.1k lines. Extracted verbatim into
+  `src/runtime/aria_runtime_types.h` (shared Aria*/entity types and
+  constants), `aria_wav.c/.h` (WAV recording), `aria_sim.c/.h`
+  (`--simulate-script` parser), `aria_assets.c/.h` (`aria_load_*`
+  asset/data loaders plus `aria_souls_from_save`,
+  `aria_runtime_to_save`, `aria_free_objects`), `aria_tables.c/.h`
+  (shared name tables: pickup_art_names, enemy_names, variant_keys,
+  skill_art_names, effect_names) and `aria_draw.c/.h` (the world draw
+  cluster — doors, walls, enemies, special objects, opening actors,
+  effects, level-up, damage popup, object20 whiteout bars, the id-28/29/31
+  draw branches and the opening callbacks). `static_index` stays in
+  `aria_runtime.c` as a shared extern declared in `aria_draw.h`, and
+  `draw_levelup` now takes `const AosLevelUp *`. CMake and the
+  generated-checklist inputs were updated; no behaviour change intended.
+- **Object1C (SPECIAL id 28) children ported** in
+  `src/runtime/aos/game/aos_object1c.c/.h`: sub_080544E8 (marker
+  drawFunc), sub_08055070 (sparkle), sub_0805514C (beam) with its
+  sub_080553A0/sub_08055414 spark-spawn helpers, the type-0x49 spark's
+  sub_080552C4 update / sub_080554BC drawFunc, and sub_08054574 (fade,
+  no caller in the dump). The runtime runs `aos_object1c_children_update`
+  after the parent update, `aos_object1c_children_draw` in the
+  `aria_draw.c` world pass, and `aos_object1c_child_delete` on the
+  +0x59 bit-3 mark. Gaps kept honest: only marker drawFunc commits draw
+  (the sparkle/beam/spark frame-record exports are unverified), the
+  +0x6D/+0x6E animation bytes are driven through frame_set outputs, and
+  sub_0803F17C advances are counted, not played.
+- **Object1F (SPECIAL id 31) children instantiated** in
+  `aos_object1f.c/.h`: sub_08055BE0 loops r5 = 0..8 for NINE ring
+  children plus sub_0805607C's TWO flank children — eleven total,
+  correcting the earlier ten. The +0x5C band field is modelled
+  (0x1C/0x1D/0x1E ring bands, 0x15 flanks) and aux61 is renamed aux1f
+  (+0x1F). The runtime updates all eleven each frame
+  (`aos_object1f_child_ring_update` / `aos_object1f_child_flank_update`)
+  and draws them through the new `Object/special_31_v<bank>` exports
+  (v2 ring, v4-v7 flank palette cycle through the 0x081185F8 table).
+  The record_state channel is resolved: the gEwramData +0x4E4 "slot
+  record" IS entityData[slot], so record_state is the parent's own +0xA
+  byte (`aos_object1f_record_state` / `aos_object1f_record_commit`).
+  sub_0805632C is confirmed dead code (no ROM path installs it) and
+  stays modelled but never instantiated. Child sounds/affine/anim-op
+  counts remain unreported.
+- **Whiteout spawn children** in
+  `aos_object20_whiteout_render.c/.h`: the five 0x08118B34 update
+  functions (sub_08063420/63558/63600/63698/63740) run one shared
+  delay/fire state machine over five committed ROM tables; the aux3
+  fn_addr bug is fixed (0x08063699). The host owns an
+  `AosWoSpawnChild[8]` pool on `AriaEntity` (`wo_children`), fed by
+  `object20_apply_out` and sharing the `object20_wo_rng` gEwramData+8
+  channel. The carrier/burst callees sub_08063168/sub_080632B0/
+  sub_08065835 remain unforwarded Out events.
+- **Object1D (id 29) draw** still frames by the +0x65 index through
+  `special_29_v0/v1`, now in the `aria_draw.c` id-29 branch.
+- Misc: `aos_object0e.c` >=14 delete-path comment corrected (the
+  sub_0806E0D0 failure path is faithful but dormant — no shipped
+  cfg_res selector reaches it).
+- Registries synced (`annotations.tsv` rows opening_scene,
+  multi_sprite_display, opening_gate, special_sprites,
+  portable_slots; `aos_unassigned_routines.tsv` drops the seven newly
+  assigned routines; `features.tsv` aria_opening_event,
+  aria_save_rooms_0479, aria_objects).
+
 ## Patch 1130 - Object1C/1D/1F integration, Object20 sentinel fix, spawn sweep
 
 - **Critical fix**: `aos_object20.c` `out_reset` now initializes every

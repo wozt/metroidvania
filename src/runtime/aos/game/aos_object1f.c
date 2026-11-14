@@ -12,8 +12,33 @@ void aos_object1f_create(AosObject1F *o, bool sprite_ok,
         *deleted = true;
         return;
     }
-    /* sub_08055BE0 x8 + sub_0805607C x2 children. */
-    o->child_count = 10;
+    /* sub_08055BE0 x9 + sub_0805607C x2 children. */
+    o->child_count = 11;
+    /* sub_08055BE0: nine ring children, +0x65 = slot index,
+     * +0x5C band 0x1C for index 0, 0x1D for 1-4, 0x1E for 5-8,
+     * +0x59 |= 2, then the sub_08055CB4 init. +0x42C bit 0x40
+     * is clear on a fresh entity, so flag42c_40 = false. */
+    for (int i = 0; i < 9; ++i) {
+        AosObject1FChild *c = &o->children[i];
+        *c = (AosObject1FChild){0};
+        c->idx65 = (uint8_t)i;
+        c->band5c = i == 0 ? 0x1C : (i <= 4 ? 0x1D : 0x1E);
+        c->flags59 |= 2;
+        /* +0x11 = parent +0x10 byte — no runtime channel, 0. */
+        aos_object1f_child_ring_init(c, false);
+    }
+    /* sub_0805607C: two flank children at +0x42 = 0x54 / 0x9C,
+     * +0x46 = 0x80, +0x65 = 9, +0x5C = 0x15, +0x59 |= 2,
+     * state/anim_idx = 0. */
+    for (int i = 0; i < 2; ++i) {
+        AosObject1FChild *c = &o->children[9 + i];
+        *c = (AosObject1FChild){0};
+        c->pos42 = i == 0 ? 0x54 : 0x9C;
+        c->pos46 = 0x80;
+        c->idx65 = 9;
+        c->band5c = 0x15;
+        c->flags59 |= 2;
+    }
 }
 
 void aos_object1f_update(AosObject1F *o, bool gate_open) {
@@ -275,8 +300,9 @@ void aos_object1f_child_ring_init(AosObject1FChild *c,
     c->pos42 = 0x78;
     c->pos46 = 0x48;
     c->state = 1;
-    /* +0xD = aux61 * 5 (+0xF when aux61 != 0), read at +0x61. */
-    c->timer_d = (uint8_t)(c->aux61 * 5 + (c->aux61 ? 0xF : 0));
+    /* +0xD = +0x1F * 5 + 0xF when +0x1F is set, else 0 — the
+     * ROM reads the +0x1F byte here, not +0x61. */
+    c->timer_d = (uint8_t)(c->aux1f * 5 + (c->aux1f ? 0xF : 0));
     c->life = 0xFFFF;
     c->vel1a = 0xA;
     c->vel18 = 0x3C;
@@ -374,10 +400,34 @@ void aos_object1f_child_ring_update(AosObject1FChild *c,
         ring_decay(c, ring_period(c->idx65, true), true);
         if ((int16_t)c->acc20 == 0) {
             c->state = 0;
-            c->record_inc = true;
+            /* _08056050: only the + 0x65 == 0 ring child bumps
+             * record + 0xA (the parent's own + 0xA byte);
+             * _08056058 clears + 0x42C bit 0x41 for all. */
+            c->record_inc = c->idx65 == 0;
             c->flags_42c_clr41 = true;
         }
         break;
+    }
+}
+
+uint8_t aos_object1f_record_state(const AosObject1F *o) {
+    /* entityData[slot] at gEwramData + 0x4E4 + slot * 0x84 is
+     * the live entity array (EwramData_EntityData: updateFunc
+     * +0, drawFunc +4, state +0xA), and the slot the children
+     * reach through parent + 0x10 -> child + 0x11 is the
+     * parent's own — the record's + 0xA is therefore the
+     * parent's + 0xA, the byte Object1FUpdate and
+     * sub_08055748 share as o->state. */
+    return o->state;
+}
+
+void aos_object1f_record_commit(AosObject1F *o) {
+    /* Each pending record_inc is the ROM's strb into
+     * entityData[parent_slot] + 0xA — the parent's state byte.
+     * Only children[0] (the + 0x65 == 0 ring child) can set it. */
+    for (int i = 0; i < 11; ++i) {
+        if (o->children[i].record_inc)
+            o->state = (uint8_t)(o->state + 1);
     }
 }
 

@@ -359,6 +359,10 @@ typedef struct {
                              * requests this call (kinds/args in
                              * the renderer module — the ROM spawn
                              * table 0x08118B34 is committed) */
+    AosWoSpawn wo_spawns[AOS_WO_MAX_EVENTS]; /* the spawn records
+                             * themselves — the host instantiates
+                             * AosWoSpawnChild state for kind
+                             * AOS_WO_SPAWN_TABLE_118B34 events */
     uint8_t wo_particle_count;
     bool fade_pair_wo;      /* sub_08064518's fade pair fired —
                              * sub_0803D18C + sub_0803CDF0 with the

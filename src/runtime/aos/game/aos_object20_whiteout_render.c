@@ -38,7 +38,9 @@ static const uint32_t wo_spawn_table_118b34[5] = {
                 *          first spawn) */
     0x08063601, /* sub_08063600 — aux 2 (+0x24 == 0x1FE and the
                 *          second 0x11F spawn) */
-    0x08063698, /* sub_08063698 — aux 3 (+0x24 == 0xC0) */
+    0x08063699, /* sub_08063698 — aux 3 (+0x24 == 0xC0); the ROM
+                * word at 0x08118B34+0xC is 0x08063699 (thumb
+                * pointer to the even sub_08063698 label) */
     0x08063741, /* sub_08063740 — aux 4 (state4/5 init) */
 };
 
@@ -181,6 +183,153 @@ static void wo_cycle_6447c(AosWoRender *s, AosWoRenderOut *out) {
     out->cycle.seq_3cf34 = true;    /* sub_0803CF34(+0x2C, n->data,
                                      * n->tile, 0x10000, 0,
                                      * n->dwell) */
+}
+
+/* ------------------------------------------------------------------
+ * 0x08118B34 spawn-child update functions — sub_08063420 (aux 0),
+ * sub_08063558 (aux 1), sub_08063600 (aux 2), sub_08063698 (aux 3),
+ * sub_08063740 (aux 4). Decoded literally from
+ * third_party/cvaos/asm/code/code_08060B98.s:5109-5655.
+ *
+ * Every routine memcpy's its entry table onto the stack and walks
+ * the same +0xA/+0xC/+0xD machine (see the header for the full
+ * contract). Entry records are 8 bytes: s16 dx @+0, s16 dy @+2,
+ * u8 delay @+4 (loaded into entity +0xD); bytes +5..+7 are copied
+ * but never read, so only the three used fields are committed.
+ * Tables were decoded from the ROM at their native addresses; the
+ * six spawn-related tables sit contiguously at 0x081189AC..0x08118B47.
+ * ------------------------------------------------------------------ */
+typedef struct {
+    int16_t  dx;      /* record +0: fire x offset from +0x42 */
+    int16_t  dy;      /* record +2: fire y offset from +0x46 */
+    uint8_t  delay;   /* record +4: entity +0xD init value */
+} WoChildEntry;
+
+/* 0x081189CC — sub_08063420, aux 0, 15 entries (0x78 bytes). */
+static const WoChildEntry wo_child_1189cc[15] = {
+    {0, 0, 0}, {-20, -50, 5}, {10, -20, 5}, {-30, 30, 3},
+    {30, 20, 3}, {8, 0, 2}, {-20, -42, 2}, {18, -20, 1},
+    {-30, 38, 1}, {38, 20, 1}, {0, 8, 1}, {-12, -50, 1},
+    {10, -12, 1}, {-22, 30, 1}, {30, 28, 1},
+};
+
+/* 0x08118A44 — sub_08063558, aux 1, 10 entries (0x50 bytes). */
+static const WoChildEntry wo_child_118a44[10] = {
+    {42, 10, 1}, {29, 55, 1}, {39, 45, 1}, {24, 50, 1}, {47, 35, 1},
+    {42, 30, 1}, {57, 25, 1}, {47, 15, 1}, {34, 40, 1}, {52, 20, 1},
+};
+
+/* 0x08118A94 — sub_08063600, aux 2, 5 entries (0x28 bytes). */
+static const WoChildEntry wo_child_118a94[5] = {
+    {0, 0, 0x20}, {-20, -50, 0x20}, {10, -20, 0x20},
+    {-30, 30, 0x20}, {30, 20, 0x20},
+};
+
+/* 0x08118ABC — sub_08063698, aux 3, 10 entries (0x50 bytes). */
+static const WoChildEntry wo_child_118abc[10] = {
+    {-45, 8, 1}, {-40, 20, 1}, {-30, -10, 1}, {-40, 0, 1},
+    {-55, 18, 1}, {-50, 10, 1}, {-35, 38, 1}, {-35, -18, 1},
+    {-30, 30, 1}, {-45, 28, 1},
+};
+
+/* 0x08118B0C — sub_08063740, aux 4, 5 entries (0x28 bytes). */
+static const WoChildEntry wo_child_118b0c[5] = {
+    {0, 0, 8}, {-20, -30, 8}, {10, -20, 8}, {-30, 30, 8}, {30, 20, 8},
+};
+
+static const WoChildEntry *const wo_child_tables[5] = {
+    wo_child_1189cc, wo_child_118a44, wo_child_118a94,
+    wo_child_118abc, wo_child_118b0c,
+};
+
+bool aos_wo_spawn_child_init(AosWoSpawnChild *c,
+                             const AosWoSpawn *sp) {
+    if (!c || !sp || sp->kind != AOS_WO_SPAWN_TABLE_118B34 ||
+        sp->aux >= 5)
+        return false;
+    memset(c, 0, sizeof *c);
+    c->aux = sp->aux;
+    c->scr_x = sp->scr_x;
+    c->scr_y = sp->scr_y;
+    return true;
+}
+
+void aos_wo_spawn_child_update(AosWoSpawnChild *c,
+                               const AosWoSpawnChildIn *in,
+                               AosWoSpawnChildOut *out) {
+    uint32_t rng = in->rng;
+    memset(out, 0, sizeof *out);
+    const WoChildEntry *t = wo_child_tables[c->aux];
+    const uint8_t count = (uint8_t)(c->aux == 0 ? 15 :
+                          c->aux == 1 || c->aux == 3 ? 10 : 5);
+    if (c->field_c >= count) {
+        /* Native keeps cycling on bytes past the copied stack
+         * table until the host deletes the entity on +0x59 bit3;
+         * the port treats the walk as finished (documented
+         * approximation — see header). */
+        out->done = (c->field_59 & 8) != 0;
+        out->rng = rng;
+        return;
+    }
+    const WoChildEntry *e = &t[c->field_c];
+    if (c->field_a == 0) {
+        /* _08063430/_08063572/_08063640/_080636D2/_0806378A:
+         * delay init from record +4. */
+        c->field_d = e->delay;
+        c->field_a = 1;
+    } else if (c->field_a == 1) {
+        /* Delay countdown: store +0xD-1, advance only when the
+         * u8 result wraps to 0xFF (old +0xD == 0). */
+        uint8_t nd = (uint8_t)(c->field_d - 1);
+        c->field_d = nd;
+        if (nd == 0xff)
+            c->field_a = 2;
+    } else {
+        /* Fire branch (+0xA >= 2; == 2 in the native machine).
+         * Position math: s16 wrap after the adds/subtracts. */
+        int32_t x = (int32_t)(int16_t)(c->scr_x + e->dx);
+        int32_t y = (int32_t)(int16_t)(c->scr_y + e->dy);
+        if (c->aux == 0 || c->aux == 4) {
+            /* sub_08063420/_08063740: parity of +0xA picks the
+             * callee — odd -> sub_08063168(x,y); even ->
+             * EntityCreateInRange(0x1B,0x48,sub_08065835) with
+             * sub_0806E0D0 gate, grandchild +0x42/+0x46 = fire
+             * pos, +0x5C = 0, sub_0803F2C8(arg1 = RNG & 3),
+             * sub_0803F17C. */
+            if (c->field_a & 1) {
+                out->burst_63168 = true;
+                out->burst_x = (int16_t)x;
+                out->burst_y = (int16_t)y;
+            } else {
+                out->carrier_spawn = true;
+                out->carrier_x = (int16_t)x;
+                out->carrier_y = (int16_t)y;
+                out->carrier_variant = (uint8_t)(wo_rng(&rng) & 3);
+            }
+        } else if (c->aux == 2) {
+            /* sub_08063600: sub_08063168(x,y), no RNG in-routine. */
+            out->burst_63168 = true;
+            out->burst_x = (int16_t)x;
+            out->burst_y = (int16_t)y;
+        } else {
+            /* aux 1/3 — sub_08063558/_08063698: two RNG draws,
+             * x -= (rng&3)-2 and y -= (rng&3)-2 (s16 wrap),
+             * then sub_080632B0(x,y). */
+            x = (int32_t)(int16_t)(x - ((int32_t)(wo_rng(&rng) & 3) - 2));
+            y = (int32_t)(int16_t)(y - ((int32_t)(wo_rng(&rng) & 3) - 2));
+            out->burst_632b0 = true;
+            out->burst_632b0_x = (int16_t)x;
+            out->burst_632b0_y = (int16_t)y;
+        }
+        c->field_a = 0;
+        c->field_c = (uint8_t)(c->field_c + 1);
+    }
+    /* Shared tail: +0xC == count -> entity +0x59 |= 8. Runs on
+     * every call, including the init/countdown phases. */
+    if (c->field_c == count)
+        c->field_59 = (uint8_t)(c->field_59 | 8);
+    out->done = (c->field_59 & 8) != 0;
+    out->rng = rng;
 }
 
 void aos_wo_render_update(AosWoRender *s,

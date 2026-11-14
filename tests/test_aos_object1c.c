@@ -17,6 +17,12 @@ static AosObject1CCreateIn create_in(void) {
     return in;
 }
 
+static uint32_t test_rng(void *ctx) {
+    uint32_t *s = (uint32_t *)ctx;
+    *s = *s * 1103515245u + 12345u;
+    return *s;
+}
+
 static AosObject1CIn upd_in(void) {
     AosObject1CIn in;
     memset(&in, 0, sizeof in);
@@ -330,6 +336,208 @@ int main(void) {
     o.state = 2;
     aos_object1c_update(&o, &ui, &uo);
     assert(uo.forced_keys == 0x40);
+
+    /* ==================== child entities ==================== */
+    AosObject1CChildrenIn cin;
+    AosObject1CChildrenOut cout;
+    memset(&cin, 0, sizeof cin);
+
+    /* Create auto-spawns the marker + two live sparkle records. */
+    aos_object1c_create(&o, (ci = create_in(), &ci), &co);
+    assert(o.child_count == 3);
+    assert(o.children[0].kind == AOS_O1C_CHILD_MARKER &&
+           o.children[0].active);
+    assert(o.children[0].flags58 & 0x20 && o.children[0].anim5c == 3);
+    assert(o.children[1].kind == AOS_O1C_CHILD_SPARKLE &&
+           o.children[2].kind == AOS_O1C_CHILD_SPARKLE);
+    assert(o.children[1].timer == 4 && o.children[1].anim5c == 0x13 &&
+           o.children[1].anim6d == 0);
+    assert(o.children[2].anim6d == 4 && o.children[2].anim5c == 0x14);
+    assert(o.children[1].pos40 == o.pos40 &&
+           o.children[1].pos44 == o.pos44);
+    assert(o.pos40 == (int32_t)0x78 << 16 &&
+           o.pos44 == (int32_t)0x50 << 16);
+
+    /* Marker drawFunc: three commits; +0x16 picks the variant.
+     * The two sparkles add one sub_0803B9D0 commit each. */
+    aos_object1c_children_draw(&o, &cout);
+    assert(cout.commits == 5);
+    assert(cout.commit[0].x == 0x48 && cout.commit[0].y == 0x26 &&
+           cout.commit[0].frame == 0x15);
+    assert(cout.commit[1].x == 0x39 && cout.commit[1].y == 0x3E &&
+           cout.commit[1].frame == 0x17);   /* save_sel == 0 */
+    assert(cout.commit[2].x == 0x99 && cout.commit[2].frame == 0x18);
+    o.save_sel = 1;
+    aos_object1c_children_draw(&o, &cout);
+    assert(cout.commit[1].frame == 0x16 && cout.commit[2].frame == 0x19);
+    o.save_sel = 0;
+
+    /* Sparkle update: gated on parent +0x24 bit 1, then the frame
+     * sets and the sync-byte writes. */
+    aos_object1c_children_update(&o, &cin, &cout);
+    assert(o.children[1].state == 0 && o.children[2].state == 0);
+    o.flags24 = 2;                          /* save committed */
+    aos_object1c_children_update(&o, &cin, &cout);
+    assert(o.children[1].state == 1 && o.children[2].state == 1);
+    aos_object1c_children_update(&o, &cin, &cout);
+    /* state 1 -> 2 with sub_0803F2C8(1) / (5) frame sets. */
+    assert(o.children[1].state == 2 && o.children[2].state == 2);
+    assert(cout.frame_sets == 2);
+    assert(cout.frame_set[0].frame == 1 && cout.frame_set[1].frame == 5);
+    assert(o.children[1].anim6d == 1 && o.children[2].anim6d == 5);
+    assert(o.children[1].anim6e == 0);
+    /* +0x6E == 2 at frame 1/5 syncs parent +0x31 (beam enable). */
+    o.children[1].anim6e = 2;
+    o.children[2].anim6e = 0;
+    aos_object1c_children_update(&o, &cin, &cout);
+    assert(o.sync31 == 1);
+    /* Expiry: +0x6E back to 0, +0x59 bit 0 set, +0xD counts 4 -> 0. */
+    o.children[1].anim6e = 0;
+    o.children[1].flags59 |= 1;
+    o.sync30 = 0;
+    for (int i = 0; i < 4; ++i)
+        aos_object1c_children_update(&o, &cin, &cout);
+    assert(o.sync30 == 1 && (o.children[1].flags59 & 8));
+    /* Sparkle draw is the single sub_0803B9D0 commit. */
+    aos_object1c_children_draw(&o, &cout);
+    assert(cout.commits == 3 + 2);          /* marker 3 + 2 sparkles */
+
+    /* ---- beams: state 10/20 auto-spawn ---- */
+    aos_object1c_create(&o, (ci = create_in(), &ci), &co);
+    o.state = 10; o.sync31 = 1;
+    ui = upd_in();
+    aos_object1c_update(&o, &ui, &uo);
+    assert(o.state == 11 && uo.beam_children == 8);
+    assert(o.child_count == 3 + 8);
+    assert(uo.children.frame_inits == 8 && uo.children.frame_sets == 8);
+    for (int i = 0; i < 8; ++i) {
+        AosObject1CChild *b = &o.children[3 + i];
+        assert(b->kind == AOS_O1C_CHILD_BEAM && b->active);
+        assert(b->field20 == i && b->state == 0 && b->timer == 2);
+        assert(b->field24 == 0x80000 && b->anim5c == 0x11);
+        assert(b->flags59 == 0x10 && b->flags58 == 3);
+    }
+
+    /* Beam state 0 -> 1: white-box the lifetime to the edge. */
+    AosObject1CChild *b = &o.children[3];
+    b->field24 = 0x1000000;                 /* already past 0xFFFFFF */
+    memset(&cin, 0, sizeof cin);            /* trig NULL -> 0 */
+    aos_object1c_children_update(&o, &cin, &cout);
+    assert(b->state == 1 && o.sync33 == 1);
+    assert(b->anim5c == 9 && b->field28 == 0 && b->timer == 3);
+    assert(b->pos44 == 0x500000 && b->pos40 == 0x760000);
+
+    /* Beam state 1: focus delta + countdown -> parent +0x32. */
+    cin.focus_x = 0x78; cin.focus_y = 0xA0;
+    b->field24 = 0x30000;                   /* -0x30000 -> 0: expire */
+    aos_object1c_children_update(&o, &cin, &cout);
+    assert(o.sync32 == 1 && (b->flags59 & 8));
+    /* pos40 = 0x780000 + (0x78<<16 - 0x780000) = 0x780000;
+     * pos44 = 0x500000 + (0xA0<<16 - 0x500000) + 0x200000. */
+    assert(b->pos40 == 0x780000 && b->pos44 == 0xC00000);
+    /* The state-1 tail tick (timer 4 & 3 == 0) spawned a spark. */
+    assert(cout.spark_attempts >= 1 && cout.sparks_spawned >= 1);
+
+    /* Deterministic rng: sub_08055414 spin velocities. */
+    {
+        static uint32_t rng_state;
+        /* test_rng outputs for seed 0: lcg(0), then lcg of that. */
+        uint32_t ra = 12345u;
+        uint32_t rb = ra * 1103515245u + 12345u;
+        rng_state = 0;
+        cin.rng = test_rng;
+        cin.rng_ctx = &rng_state;
+        int didx = aos_object1c_spark_spawn(&o, 3, 0x100000, 0x200000,
+                                            &cin, &cout);
+        assert(didx >= 0);
+        AosObject1CChild *d = &o.children[didx];
+        assert(d->pos40 == 0x100000 && d->pos44 == 0x200000);
+        assert(d->field1c == ((int32_t)(ra & 0x1F) - 0x10) << 16);
+        assert(d->field20 == ((int32_t)(rb & 0x1F) - 0x10) << 16);
+        assert(d->acc50 == b->acc50 && d->acc54 == b->acc54);
+        assert(d->anim5c == (uint8_t)(b->anim5c + 1));
+        assert(d->flags58 == (b->flags58 & 7));
+        cin.rng = NULL;
+    }
+
+    /* Spark lifecycle on an isolated child set (the live beams keep
+     * spawning sparks, so a fresh parent keeps the Out counts
+     * exact). */
+    aos_object1c_create(&o, (ci = create_in(), &ci), &co);
+    {
+        AosObject1CChildEnv env = {
+            .palette = o.palette, .anim_1a = o.anim_1a,
+            .pos40 = o.pos40, .pos44 = o.pos44,
+            .affine_slot = o.affine_slot, .owner = -1,
+        };
+        int bidx = aos_object1c_beam_spawn(&o, &env, 0, NULL);
+        assert(bidx == 3);
+        int sidx = aos_object1c_spark_spawn(&o, (unsigned)bidx,
+                                            0x100000, 0x200000,
+                                            &cin, &cout);
+        assert(sidx >= 0);
+        /* Silence the beam so only the spark produces effects. */
+        aos_object1c_child_delete(&o, (unsigned)bidx);
+        AosObject1CChild *s = &o.children[sidx];
+        assert(s->kind == AOS_O1C_CHILD_SPARK && s->active);
+        assert(s->owner == 3 && s->anim5c == 0x12 && s->field18 == 0);
+        /* rng NULL -> spin velocities at the -16 extreme. */
+        assert(s->field1c == (int32_t)(-0x10u << 16) &&
+               s->field20 == (int32_t)(-0x10u << 16));
+        /* state 0 -> 1: palette resolve + frame init + frame set 3. */
+        aos_object1c_children_update(&o, &cin, &cout);
+        assert(s->state == 1 && cout.pal_resolves == 1 &&
+               cout.pal_index == o.palette);
+        assert(cout.frame_inits == 1 && cout.frame_sets == 1 &&
+               cout.frame_set[0].frame == 3);
+        assert(s->vel4c == (int32_t)0xFFFF0000 && s->timer == 0xC);
+        /* state 1 drift: +0x44 += +0x4C each frame. */
+        int32_t y0 = s->pos44;
+        aos_object1c_children_update(&o, &cin, &cout);
+        assert(s->pos44 == y0 + s->vel4c && s->vel4c == (int32_t)0xFFFF0000);
+        for (int i = 0; i < 11; ++i)
+            aos_object1c_children_update(&o, &cin, &cout);
+        assert(s->state == 2);
+        for (int i = 0; i < 9; ++i)
+            aos_object1c_children_update(&o, &cin, &cout);
+        assert(s->flags59 & 8);
+        /* Spark drawFunc sub_080554BC: two commits once state >= 1;
+         * total = marker 3 + 2 sparkles + spark 2. */
+        aos_object1c_children_draw(&o, &cout);
+        assert(cout.commits == 7);
+    }
+
+    /* ---- fade child (sub_08054574) ---- */
+    aos_object1c_create(&o, (ci = create_in(), &ci), &co);
+    int fidx = aos_object1c_fade_spawn(&o, NULL);
+    assert(fidx >= 0 && o.children[fidx].kind == AOS_O1C_CHILD_FADE);
+    AosObject1CChild *f = &o.children[fidx];
+    aos_object1c_children_update(&o, &cin, &cout);
+    assert(f->substate == 1 && cout.obj_palettes == 1);
+    assert(cout.obj_rows[0].desc == 0x0820C384 &&
+           cout.obj_rows[0].src == 5 && cout.obj_rows[0].dst == 0xE);
+    for (int i = 0; i < 8; ++i)
+        aos_object1c_children_update(&o, &cin, &cout);
+    assert(f->substate == 2);
+    aos_object1c_children_update(&o, &cin, &cout);
+    assert(cout.fade_finished == 1);
+    /* State-1 (fade-out) variant. */
+    f->state = 1; f->substate = 0; f->field14 = 0;
+    aos_object1c_children_update(&o, &cin, &cout);
+    assert(f->substate == 1 && f->field14 == 0x10000);
+    for (int i = 0; i < 8; ++i)
+        aos_object1c_children_update(&o, &cin, &cout);
+    assert(f->substate == 2 && cout.obj_palettes == 1);
+    assert(cout.obj_rows[0].desc == 0x082099FC &&
+           cout.obj_rows[0].src == 0xE && cout.obj_rows[0].dst == 0xE);
+    aos_object1c_children_update(&o, &cin, &cout);
+    assert(cout.fade_finished == 1 && (f->flags58 & 0x20));
+
+    /* Slot reuse after delete. */
+    aos_object1c_child_delete(&o, (unsigned)fidx);
+    assert(!o.children[fidx].active);
+    int nidx = aos_object1c_fade_spawn(&o, NULL);
+    assert(nidx == fidx);
 
     puts("aos_object1c: ok");
     return 0;

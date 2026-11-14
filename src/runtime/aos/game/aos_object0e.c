@@ -35,7 +35,10 @@ void aos_object0e_create(AosObject0e *o, int param0, int param1,
     o->content_fx = 0;
     o->gore_fx = 0;
     if (cfg_res[cfg] >= 14) {
-        /* Native load failure deletes the entity. */
+        /* Native load failure deletes the entity: the
+         * 0x08526214 resource table's groups 0-13 are all valid,
+         * so no shipped cfg_res selector reaches this — the
+         * sub_0806E0D0 failure path stays faithful but dormant. */
         *deleted = true;
     }
 }

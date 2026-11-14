@@ -234,4 +234,111 @@ void aos_wo_render_update(AosWoRender *s,
                           const AosWoRenderIn *in,
                           AosWoRenderOut *out);
 
+/* ------------------------------------------------------------------
+ * 0x08118B34 spawn-child update functions — the updateFunc words the
+ * renderer's spawn events carry. Native routines, decoded from
+ * third_party/cvaos/asm/code/code_08060B98.s:5109-5655:
+ *   aux 0  sub_08063420  table 0x081189CC, 15 entries
+ *   aux 1  sub_08063558  table 0x08118A44, 10 entries
+ *   aux 2  sub_08063600  table 0x08118A94,  5 entries
+ *   aux 3  sub_08063698  table 0x08118ABC, 10 entries
+ *   aux 4  sub_08063740  table 0x08118B0C,  5 entries
+ *
+ * All five run the same state machine on the child entity:
+ *   +0xA == 0 : +0xD = table[+0xC].delay (+4), +0xA = 1
+ *   +0xA == 1 : +0xD--; when the stored u8 wraps to 0xFF, +0xA = 2
+ *   +0xA >= 2 : fire once at s16(+0x42+dx)/s16(+0x46+dy), then
+ *               +0xA = 0 and +0xC++
+ *   tail      : +0xC == entry count -> entity +0x59 |= 8
+ *
+ * Fire variants:
+ *   aux 0/4: parity of +0xA — odd calls sub_08063168(x,y); even
+ *     calls EntityCreateInRange(0x1B,0x48,sub_08065835) gated by
+ *     sub_0806E0D0, finished with sub_0803F2C8(arg1 = RNG & 3) and
+ *     sub_0803F17C. +0xA is always 2 at fire time in the native
+ *     machine, so the odd branch is unreachable through the state
+ *     machine itself but is ported for faithfulness.
+ *   aux 2:   sub_08063168(x,y); the routine draws no RNG itself.
+ *   aux 1/3: two RNG draws jitter the fire position by
+ *     2-(rng&3) per axis, then sub_080632B0(x,y).
+ *
+ * sub_08063168 (carrier + 3x sub_080630E8 particles) and
+ * sub_080632B0 (carrier + 2x particles, variant table
+ * 0x081189B8) are engine effects reported as Out events; their
+ * internal RNG draws belong to the unported callees and are NOT
+ * consumed here. Once +0xC reaches the entry count the native
+ * routine keeps reading past the copied stack table until the
+ * host deletes the entity on +0x59 bit3; the port reports done
+ * and stops touching table state (documented approximation).
+ *
+ * The host owns the child pool: instantiate one AosWoSpawnChild
+ * per AOS_WO_SPAWN_TABLE_118B34 spawn event (bounded by
+ * AOS_WO_MAX_EVENTS per frame) and call the update once per
+ * frame per live child.
+ * ------------------------------------------------------------------ */
+
+/* Child state mirroring the native entity bytes the five routines
+ * touch. `aux` is a port-side dispatch selector: native code picks
+ * the routine through the updateFunc pointer; aux == the 0x08118B34
+ * word index, which maps 1:1 onto the five routines. */
+typedef struct {
+    uint8_t  aux;        /* table word index 0..4 */
+    uint8_t  field_a;    /* entity +0xA phase: 0 init / 1 delay /
+                          * >=2 fire (always 2 in the native
+                          * machine) */
+    uint8_t  field_c;    /* entity +0xC entry index */
+    uint8_t  field_d;    /* entity +0xD delay counter */
+    int16_t  scr_x;      /* entity +0x42 (spawn event scr_x) */
+    int16_t  scr_y;      /* entity +0x46 (spawn event scr_y) */
+    uint8_t  field_59;   /* entity +0x59 flags; bit3 = walk done */
+} AosWoSpawnChild;
+
+typedef struct {
+    uint32_t rng;        /* gEwramData+8 LCG state (read+write) */
+} AosWoSpawnChildIn;
+
+typedef struct {
+    uint32_t rng;        /* gEwramData+8 after this call's draws —
+                          * only the draws inside the ported routine
+                          * are consumed; callee-internal draws are
+                          * not */
+    bool     done;       /* entity +0x59 bit3 set after this call —
+                          * the entry walk reached the table end and
+                          * the host should delete the child */
+    /* aux 0/4 even fire: EntityCreateInRange(0x1B,0x48,
+     * sub_08065835) + sub_0806E0D0 gate + sub_0803F2C8/sub_0803F17C
+     * setup. A request, not a guarantee: native deletes the new
+     * entity when allocation or sub_0806E0D0 fails. */
+    bool     carrier_spawn;
+    int16_t  carrier_x;  /* grandchild +0x42 = fire x */
+    int16_t  carrier_y;  /* grandchild +0x46 = fire y */
+    uint8_t  carrier_variant; /* RNG & 3 -> sub_0803F2C8 arg1 */
+    /* aux 0/4 odd fire and aux 2 fire: sub_08063168(x,y) — one
+     * sub_08065835 carrier plus 3 sub_080630E8 particles whose
+     * positions/velocities come from the callee's own RNG draws. */
+    bool     burst_63168;
+    int16_t  burst_x;
+    int16_t  burst_y;
+    /* aux 1/3 fire: sub_080632B0(x,y) — one carrier plus 2
+     * sub_080630E8 particles; the carrier variant is picked inside
+     * the callee by RNG % 5 over the 0x081189B8 word table
+     * {0,2,3,2,3}. */
+    bool     burst_632b0;
+    int16_t  burst_632b0_x;
+    int16_t  burst_632b0_y;
+} AosWoSpawnChildOut;
+
+/* Instantiate child state from a renderer spawn event. Returns
+ * false (state untouched) unless sp is AOS_WO_SPAWN_TABLE_118B34
+ * with aux < 5 — the only kind these five update functions serve. */
+bool aos_wo_spawn_child_init(AosWoSpawnChild *c,
+                             const AosWoSpawn *sp);
+
+/* Advance one child one frame. Mirrors the shared native machine
+ * described above; engine effects (entity creation, sprite setup,
+ * the sub_08063168/sub_080632B0 bursts) are reported through Out. */
+void aos_wo_spawn_child_update(AosWoSpawnChild *c,
+                               const AosWoSpawnChildIn *in,
+                               AosWoSpawnChildOut *out);
+
 #endif /* AOS_OBJECT20_WHITEOUT_RENDER_H */

@@ -28,10 +28,11 @@
  * sub_0803C7B4(0x08119E14, set, 1, slot) DMAs 0x20-byte OAM
  * records into the unk_11DDC staging — and no palette pointer
  * exists in the descriptor at all (the OBJP palette is loaded
- * by the opening/background path). Exporting special_31 art
- * therefore needs a new decoder for the packed-descriptor +
- * OAM-record path; until then the entity stays invisible,
- * which the runtime draw path already tolerates.
+ * by the opening/background path). The runtime exports the
+ * twelve 0x08257BD8 frame records as Object/special_31_v<bank>
+ * anim_0..11 stills — _vN carries the palette bank
+ * (sub_0803C7B4 set arg: 2 for the ring children, 4 for the
+ * flanks, cycled {4,5,6,7} through the 0x081185F8 table).
  *
  * Object1FUpdate is the dispatch-side three-state gate:
  *  - state 0 (+ 0xA == 0) fires when gEwramData + 0x14 bit
@@ -54,10 +55,59 @@
  * Approximations: the gDisplayRegisters writes stay outputs, the
  * sub_08068AD4 probe geometry, the + 0x88/+ 0x3F8 record compare,
  * the + 0x3F4 sequence byte and the stage-7 game-mode sequence
- * (sub_080115D4/sub_080116A8) have no runtime channel, and there
- * is no emulator comparison. The ten children's ported updates
- * (sub_08055DF8/sub_08056130/sub_08055CB4/sub_0805632C) are not
- * instantiated by the runtime — create only counts them. */
+ * (sub_080115D4/sub_080116A8) have no runtime channel.
+ *
+ * record_state channel (resolved): the "slot record" the
+ * children index at gEwramData + 0x4E4 + slot * 132 IS the
+ * entityData table itself — EwramData_EntityData (stride 0x84)
+ * is the live entity array, so record + 0xA is the + 0xA state
+ * byte of whichever entity occupies the slot the parent points
+ * at through + 0x10 (copied to each child's + 0x11). For
+ * Object1F that slot is the parent's own: the ring child with
+ * + 0x65 == 0 writes record + 0xA++ on every state-8 landing
+ * (_08056050), which is the parent's own state byte being
+ * bumped as cycle-completion feedback. record_state is
+ * therefore the parent's + 0xA — the byte shared by
+ * Object1FUpdate and sub_08055748 — exposed through
+ * aos_object1f_record_state(); the write side is
+ * aos_object1f_record_commit(). */
+typedef struct {
+    uint8_t state;          /* +0xA */
+    uint8_t timer_d;        /* +0xD */
+    int8_t anim_idx;        /* +0x12 (s8, flank anim cycle) */
+    uint8_t slot;           /* +0x11 record slot */
+    uint8_t aux1f;          /* +0x1F ring init delay index */
+    uint8_t band5c;         /* +0x5C draw band (0x1C/1D/1E, 0x15) */
+    uint8_t aux17;          /* +0x17 sprite/affine aux */
+    uint8_t aux37;          /* +0x37 land sound gate */
+    uint8_t flags58;        /* +0x58 */
+    uint8_t flags59;        /* +0x59 */
+    uint8_t idx65;          /* +0x65 ring index / frame record */
+    int32_t life;           /* +0x14 s32 decay counter */
+    int32_t acc20;          /* +0x20 s16 drift accumulator */
+    int32_t acc22;          /* +0x22 s16 drift step */
+    int32_t vel18;          /* +0x18 s16 */
+    int32_t vel1a;          /* +0x1A s16 */
+    int32_t anchor_x;       /* +0x1C s16 saved position */
+    int32_t anchor_y;       /* +0x1E s16 */
+    int16_t pos42;          /* +0x42 s16 x */
+    int16_t pos46;          /* +0x46 s16 y */
+    int32_t fine40;         /* +0x40 s32 fine x */
+    int32_t fine44;         /* +0x44 s32 fine y */
+    int32_t vel48;          /* +0x48 s32 fine vx */
+    int32_t vel4c;          /* +0x4C s32 fine vy */
+    /* outputs, reset each update */
+    int sound;              /* sub_0800C5A8 argument, -1 none */
+    unsigned affine_ops;    /* sub_0803E058 calls this frame */
+    unsigned anim_sets;     /* sub_0803C7B4 calls this frame */
+    uint8_t anim_id;        /* last sub_0803C7B4 frame arg */
+    bool flags_42c_clr41;   /* +0x42C &= ~0x41 request */
+    bool record_inc;        /* entityData record +0xA increment —
+                             * only the +0x65==0 ring child sets it;
+                             * aos_object1f_record_commit applies it
+                             * to the parent's +0xA (o->state) */
+} AosObject1FChild;
+
 typedef struct {
     uint8_t state;          /* +0xA: 0 gate, 1 sequence, 2 done */
     uint8_t substate;       /* +0xB: think-machine substate */
@@ -87,6 +137,10 @@ typedef struct {
     bool misc_ops;          /* sub_080115D4/12048/109B8/13C5C/1083C */
     bool event_39;          /* sub_08012048(0x39) story-event arm */
     bool event_39_reported; /* host-side one-shot print latch */
+    /* sub_08055BE0 x9 ring + sub_0805607C x2 flank children,
+     * instantiated at create (children[0..8] ring, [9..10]
+     * flank). */
+    AosObject1FChild children[11];
 } AosObject1F;
 
 /* Object1FCreate. `sprite_ok` is the sub_08056514 load result;
@@ -119,61 +173,38 @@ void aos_object1f_think(AosObject1F *o, bool flags_42c_40,
                         bool words_differ);
 
 
-/* The ten children of the opening gate. sub_08055DF8 drives the
- * eight ring children through states 0-8 off a per-slot 132-byte
- * record at gEwramData + 0x4E4 + slot * 132 (only the record's
- * + 0xA state byte is modelled); sub_08056130 drives the two
- * flank children; sub_0805632C drives the free child. ROM helpers
+/* The children of the opening gate: nine ring children driven by
+ * sub_08055DF8 through states 0-8 off the entityData slot record
+ * at gEwramData + 0x4E4 + slot * 132 — which is the parent
+ * entity's own + 0xA state byte (see the file header); two flank
+ * children run sub_08056130; sub_0805632C is dead code in this
+ * build — a full-ROM scan finds no reference installing it as an
+ * entity update (the create chain spawns only the 9 + 2), so the
+ * free child is modelled but never instantiated. ROM helpers
  * (sub_0803E058 affine, sub_0803C7B4 anim, sub_0803E6BC, the
- * sub_08068AD4 probe and sub_08021304 poll) are inputs/outputs. */
-typedef struct {
-    uint8_t state;          /* +0xA */
-    uint8_t timer_d;        /* +0xD */
-    int8_t anim_idx;        /* +0x12 (s8, flank anim cycle) */
-    uint8_t slot;           /* +0x11 record slot */
-    uint8_t aux61;          /* +0x61 ring init index */
-    uint8_t aux17;          /* +0x17 sprite/affine aux */
-    uint8_t aux37;          /* +0x37 land sound gate */
-    uint8_t flags58;        /* +0x58 */
-    uint8_t flags59;        /* +0x59 */
-    uint8_t idx65;          /* +0x65 ring index */
-    int32_t life;           /* +0x14 s32 decay counter */
-    int32_t acc20;          /* +0x20 s16 drift accumulator */
-    int32_t acc22;          /* +0x22 s16 drift step */
-    int32_t vel18;          /* +0x18 s16 */
-    int32_t vel1a;          /* +0x1A s16 */
-    int32_t anchor_x;       /* +0x1C s16 saved position */
-    int32_t anchor_y;       /* +0x1E s16 */
-    int16_t pos42;          /* +0x42 s16 x */
-    int16_t pos46;          /* +0x46 s16 y */
-    int32_t fine40;         /* +0x40 s32 fine x */
-    int32_t fine44;         /* +0x44 s32 fine y */
-    int32_t vel48;          /* +0x48 s32 fine vx */
-    int32_t vel4c;          /* +0x4C s32 fine vy */
-    /* outputs, reset each update */
-    int sound;              /* sub_0800C5A8 argument, -1 none */
-    unsigned affine_ops;    /* sub_0803E058 calls this frame */
-    unsigned anim_sets;     /* sub_0803C7B4 calls this frame */
-    uint8_t anim_id;        /* last sub_0803C7B4 frame arg */
-    bool flags_42c_clr41;   /* +0x42C &= ~0x41 request */
-    bool record_inc;        /* gEwramData record +0xA increment */
-} AosObject1FChild;
+ * sub_08068AD4 probe and sub_08021304 poll) are inputs/outputs.
+ * Create spawns 9 + 2 = 11 children (sub_08055BE0 loops r5 =
+ * 0..8 inclusive, sub_0805607C loops r5 = 0..1). */
 
 /* sub_08055CB4: ring child state-0 init — fixed anchor
- * (+0x42 = 0x78, +0x46 = 0x48), the *5 (+0xF when aux61) timer,
- * the 0xFFFF life decay and the fall/rise half, then state 6. */
+ * (+0x42 = 0x78, +0x46 = 0x48), the *5 (+0xF when +0x1F set)
+ * timer, the 0xFFFF life decay and the fall/rise half, then
+ * state 6. */
 void aos_object1f_child_ring_init(AosObject1FChild *c,
                                   bool flag42c_40);
 
 /* sub_08055DF8: ring child dispatcher, states 0-8. `record_state`
- * is the slot record's +0xA byte, `rng` a RandomNumberGenerator
- * sample and `flag42c_40` the + 0x42C bit-0x40 gate. */
+ * is the slot record's +0xA byte — the parent entity's own + 0xA
+ * state (aos_object1f_record_state), `rng` a
+ * RandomNumberGenerator sample and `flag42c_40` the + 0x42C
+ * bit-0x40 gate. */
 void aos_object1f_child_ring_update(AosObject1FChild *c,
                                     uint8_t record_state,
                                     uint32_t rng, bool flag42c_40);
 
-/* sub_08056130: flank child update. `record_state` gates the
- * state-1 abort, `probe_ok`/`poll_done` stand in for
+/* sub_08056130: flank child update. `record_state` (the parent
+ * + 0xA byte) gates the state-1 abort, `probe_ok`/`poll_done`
+ * stand in for
  * sub_08068AD4 and sub_08021304; the 12-entry ROM table
  * 0x081185F8 {4,7,5,6,5,7,4,7,6,5,6,7} cycles through
  * anim_idx every eighth tick. */
@@ -184,9 +215,31 @@ void aos_object1f_child_flank_update(AosObject1FChild *c,
 /* sub_0805632C: free child update — states 0,1,2,3 then 0xA,
  * 0xB and 0x63 (the ROM jump table's other cases are empty).
  * `record_state` is read by state 0 and `rng` feeds the
- * state-0/1 delays. */
+ * state-0/1 delays. NOTE: no code path in the ROM installs
+ * sub_0805632C as an entity update — the create chain spawns
+ * only the nine ring and two flank children, so this routine is
+ * dead code kept for completeness. */
 void aos_object1f_child_free_update(AosObject1FChild *c,
                                     uint8_t record_state,
                                     uint32_t rng);
+
+/* record_state channel. The slot "record" at gEwramData +
+ * 0x4E4 + slot * 132 is entityData[slot] — the live entity
+ * array — so its + 0xA byte is the + 0xA state byte of the
+ * entity the children point at, which for Object1F is the
+ * parent itself (parent + 0x10 -> child + 0x11). All eleven
+ * children share it: ring state 1 advances on == 3, ring state
+ * 6 on == 5, the flanks abort their state 1 while it is <= 2
+ * and the free child waits for != 0. Pass the result as every
+ * child's `record_state` argument. */
+uint8_t aos_object1f_record_state(const AosObject1F *o);
+
+/* Write side of the same channel: sub_08055DF8's state-8 tail
+ * (_08056050) increments record + 0xA — the parent's own + 0xA
+ * byte — but only for the ring child with + 0x65 == 0. Call
+ * once per frame after all child updates; each pending
+ * `record_inc` adds one to o->state, matching the ROM's direct
+ * strb into entityData[slot] + 0xA. */
+void aos_object1f_record_commit(AosObject1F *o);
 
 #endif

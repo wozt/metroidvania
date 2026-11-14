@@ -549,7 +549,14 @@ engine state must never be copied blindly between engines.
 `src/runtime/aria_runtime.c` is the Aria runtime host: room loading,
 entity dispatch, combat, rendering and the frame loop. It is large by
 historical growth; the SPECIAL-object dispatch delegates each object to
-its own module, and further extraction must be incremental.
+its own module, and further extraction must be incremental. The first
+decomposition waves moved coherent clusters out verbatim into sibling
+modules: `aria_runtime_types.h` (shared Aria*/entity types and
+constants), `aria_wav.c` (WAV recording), `aria_sim.c` (the
+`--simulate-script` parser), `aria_assets.c` (`aria_load_*` asset/data
+loaders and the save converters), `aria_tables.c` (shared name tables)
+and `aria_draw.c` (the world draw cluster, including the SPECIAL-object
+draw branches).
 
 Responsibilities inside `src/runtime/aos/`:
 

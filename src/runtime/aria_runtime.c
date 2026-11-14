@@ -5461,7 +5461,10 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 room->effects[room->effect_count++] = (AosEffect){
                     .kind = AOS_EFFECT_SPARKLE, .direct = false,
                     .x = e->x, .y = e->y};
-            if (e->object32.deactivate) e->spawned = false;
+            /* object32.deactivate is the sub_08021278(1)
+             * proximity-table registration, not a delete — the
+             * entity stays spawned (resetting it here churned
+             * create/update every frame near the player). */
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 53) {

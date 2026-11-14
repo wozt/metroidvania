@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-14T00:42:29+00:00",
+ "generated_at": "2026-11-14T00:43:59+00:00",
  "git": {
-  "commit": "a237bec8",
+  "commit": "31939192",
   "branch": "main",
   "dirty": true
  },
@@ -105,8 +105,8 @@
    },
    "functional_or_better": 225,
    "functional_or_better_percent": 66.2,
-   "with_passing_tests": 322,
-   "with_passing_tests_percent": 94.7,
+   "with_passing_tests": 327,
+   "with_passing_tests_percent": 96.2,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -470,8 +470,8 @@
    },
    "functional_or_better": 92,
    "functional_or_better_percent": 100.0,
-   "with_passing_tests": 90,
-   "with_passing_tests_percent": 97.8,
+   "with_passing_tests": 92,
+   "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.particles",
@@ -855,8 +855,8 @@
    },
    "functional_or_better": 5,
    "functional_or_better_percent": 33.3,
-   "with_passing_tests": 11,
-   "with_passing_tests_percent": 73.3,
+   "with_passing_tests": 12,
+   "with_passing_tests_percent": 80.0,
    "unknown_or_blocked": 0,
    "features": [
     "tools.dashboard",
@@ -957,8 +957,8 @@
    },
    "functional_or_better": 2,
    "functional_or_better_percent": 66.7,
-   "with_passing_tests": 0,
-   "with_passing_tests_percent": 0.0,
+   "with_passing_tests": 2,
+   "with_passing_tests_percent": 66.7,
    "unknown_or_blocked": 1,
    "features": [
     "platform.dashboard_offline",
@@ -6561,15 +6561,13 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-14"
    }
   },
   {
@@ -6712,15 +6710,13 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-14"
    }
   },
   {
@@ -28002,7 +27998,7 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -28016,11 +28012,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-14"
    }
   },
   {
@@ -30833,15 +30827,13 @@
       "ctest": [
        "dashboard_generator"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-14"
    }
   },
   {
@@ -30879,14 +30871,12 @@
       "test": "@all-tests on linux",
       "kind": "suite",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-14"
    }
   },
   {
@@ -31118,7 +31108,7 @@
     "files": [
      "tests/test_dashboard.c"
     ],
-    "outcome": "failed"
+    "outcome": "passed"
    },
    {
     "name": "native_map_contract",
@@ -32434,12 +32424,18 @@
    }
   ],
   "summary": {
-   "passed": 217,
-   "failed": 1,
+   "passed": 218,
+   "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "31939192",
+   "date": "2026-11-14",
+   "subject": "Port Object20 story variants (param0 9,10,21-24,29) as parity module",
+   "scope": "project"
+  },
   {
    "commit": "a237bec8",
    "date": "2026-11-14",
@@ -32912,12 +32908,6 @@
    "commit": "b1d76022",
    "date": "2026-11-12",
    "subject": "Port Aria Object06 cinematic trigger",
-   "scope": "project"
-  },
-  {
-   "commit": "f572e37c",
-   "date": "2026-11-12",
-   "subject": "Port Aria Object05 proximity trigger",
    "scope": "project"
   }
  ],

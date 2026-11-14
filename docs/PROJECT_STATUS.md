@@ -1,3 +1,15 @@
+## Patch 1117 - Object32 proximity churn fixed
+
+- The dispatch treated `AosObject32.deactivate` as a despawn, but
+  the flag is the native `sub_08021278(1)` proximity-table
+  registration — resetting `spawned` made the entity recreate
+  every frame while the player stood near. The entity now stays
+  spawned (still inert behind the approximated `linked_self`).
+  Follow-ups from the dispatch audit remain open: id 19's
+  hardcoded zero amplitude keeps its `aria_events` write
+  unreachable, `global_flags & 0x1000` has no producer (ids
+  47/48/49 gates), and id 29's display path is inert by design.
+
 ## Patch 1116 - Object20 story variants ported as `aos_object20_story`
 
 - New parity-reference module

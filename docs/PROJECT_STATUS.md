@@ -1,3 +1,29 @@
+## Patch 1112 - Multi-room `--simulate` sweep: dead SPECIAL ids confirmed
+
+- Ran `--simulate 400 --simulate-hold` (RIGHT then LEFT) on all 293
+  rooms containing kind-2 records (~600 runs, about a minute) and
+  aggregated the per-id spawn report.
+- **46 of 49 SPECIAL ids spawn somewhere.** The three that never
+  do:
+  - **id 32 (Object20)**: 34 records in 12 rooms — no dispatch
+    case exists; the NPC dialogue/sequence director is dead in
+    gameplay (Patch 1110).
+  - **id 20 (Object14)**: 20 records in 4 area_07 rooms — same,
+    no dispatch case and no state member.
+  - **id 28 (0x1C save point)**: 40 records in 20 rooms report 0
+    spawned, but this is expected — save points are not
+    dispatch-spawned; `load_room` sets `AOS_ROOM_FLAG_SAVE` and
+    `aos_save_room_update` owns the interaction. The metric does
+    not apply to it.
+- Every other id (doors, walls, triggers, directors, emitters)
+  reached `spawned` in at least one room/direction, so the
+  dispatch's coverage is otherwise complete for ambient spawns.
+  Flag-gated and event-gated ids may still under-report in a
+  400-frame one-direction run.
+- Reproduce with: for each `area_A_room_R` folder,
+  `fusion_aria_runtime --area A --room R --simulate 400
+  --simulate-hold 0x10` (then `0x20`).
+
 ## Patch 1111 - Headless `--simulate` mode and two loader bugs it exposed
 
 - `fusion_aria_runtime --simulate N [--simulate-hold MASK]` runs N

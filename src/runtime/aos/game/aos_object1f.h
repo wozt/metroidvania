@@ -7,14 +7,31 @@
  * dispatch index 31 (0x1F).
  *
  * Create chains three loaders: sub_08056514 attaches the
- * 0x082052F0 palette descriptor (opening-actor family) and
- * installs + 0 = sub_08055748 as the entity think callback;
- * sub_08055BE0 spawns eight type-0x1B children (frames
- * 0x08257BD8, animation table 0x08119E14 args 2,1,0xA,
- * + 0x65 = index, + 0x5C by index band, update
- * sub_08055DF8); sub_0805607C spawns two more (args 4,1,0xB,
- * + 0x42 = 0x54 / 0x9C, + 0x46 = 0x80, update sub_08056130).
- * sub_0805632C is the per-state display helper.
+ * 0x082052F0 packed sprite descriptor and installs + 0 =
+ * sub_08055748 as the entity think callback; sub_08055BE0
+ * spawns eight type-0x1B children (frames 0x08257BD8,
+ * animation table 0x08119E14 args 2,1,0xA, + 0x65 = index,
+ * + 0x5C by index band, update sub_08055DF8); sub_0805607C
+ * spawns two more (args 4,1,0xB, + 0x42 = 0x54 / 0x9C,
+ * + 0x46 = 0x80, update sub_08056130). sub_0805632C is the
+ * per-state display helper.
+ *
+ * Sprite resources (verified against the ROM): 0x082052F0 is
+ * an 8-byte type-1 sub_0803B800 descriptor — bytes
+ * {01 04 10 10} then the LZ77 tile pointer 0x0863803C
+ * (param_0[3] = 0x10 selects the 4-bank VRAM class through
+ * sub_08039E90_inline_4). The descriptor family is shared
+ * with Object1D (id 29): 0x082052E8 -> tiles 0x08636F1C and
+ * 0x082052E0 -> tiles 0x086363B8. The frame side is NOT the
+ * exporter's sub_0806E0D0 {tiles, palette, frames} triple:
+ * sub_0803B924 installs the 0x08257BD8 OAM attribute list and
+ * sub_0803C7B4(0x08119E14, set, 1, slot) DMAs 0x20-byte OAM
+ * records into the unk_11DDC staging — and no palette pointer
+ * exists in the descriptor at all (the OBJP palette is loaded
+ * by the opening/background path). Exporting special_31 art
+ * therefore needs a new decoder for the packed-descriptor +
+ * OAM-record path; until then the entity stays invisible,
+ * which the runtime draw path already tolerates.
  *
  * Object1FUpdate is the dispatch-side three-state gate:
  *  - state 0 (+ 0xA == 0) fires when gEwramData + 0x14 bit
@@ -34,13 +51,13 @@
  *    -> 2.
  *  - state >= 2 is inert.
  *
- * Approximations: the + 0 = sub_08055748 think callback —
- * the nine-state cinematic machine — is NOT ported (it stays
- * an unassigned referrer), nor are the ten children's updates
- * (sub_08055DF8/sub_08056130/sub_0805632C), the
- * sub_08068AD4 probe geometry, the gDisplayRegisters writes
- * (outputs), the gEwramData + 0x42C/+ 0x14/+ 0x64/+ 0x60
- * globals (inputs) and there is no emulator comparison. */
+ * Approximations: the gDisplayRegisters writes stay outputs, the
+ * sub_08068AD4 probe geometry, the + 0x88/+ 0x3F8 record compare,
+ * the + 0x3F4 sequence byte and the stage-7 game-mode sequence
+ * (sub_080115D4/sub_080116A8) have no runtime channel, and there
+ * is no emulator comparison. The ten children's ported updates
+ * (sub_08055DF8/sub_08056130/sub_08055CB4/sub_0805632C) are not
+ * instantiated by the runtime — create only counts them. */
 typedef struct {
     uint8_t state;          /* +0xA: 0 gate, 1 sequence, 2 done */
     uint8_t substate;       /* +0xB: think-machine substate */
@@ -68,6 +85,8 @@ typedef struct {
     bool player_5a_20;      /* player +0x5A bit 0x20 window */
     bool player_5a_clr79;   /* player +0x5A &= ~0x79 window */
     bool misc_ops;          /* sub_080115D4/12048/109B8/13C5C/1083C */
+    bool event_39;          /* sub_08012048(0x39) story-event arm */
+    bool event_39_reported; /* host-side one-shot print latch */
 } AosObject1F;
 
 /* Object1FCreate. `sprite_ok` is the sub_08056514 load result;
@@ -83,15 +102,21 @@ void aos_object1f_update(AosObject1F *o, bool gate_open);
 
 /* sub_08055748 — the entity + 0 think callback, a nine-state
  * cinematic machine sharing + 0xA/+ 0xB/+ 0xD/+ 0x14 with the
- * dispatch update. `flags_42c_40`/`flags_42c_20000`/
- * `flags_a074_2` are the gEwramData flag bits the machine
- * tests or writes, `s8_3f4` the + 0x3F4 signed byte (the -1
- * compare), `words_differ` the + 0x88 vs + 0x3F8 word
- * compare, `probe_ok` the sub_08021304() result and
- * `player_probe` the sub_08068AD4 gate. */
+ * dispatch update. `flags_42c_40` is the gEwramData + 0x42C bit
+ * 0x40 the case-0/case-4 tests share, `up_pressed` the
+ * inputData.newInput & 0x40 edge the case-1 substate-0 gate
+ * tests (distinct from the + 0x42C bit — the ROM reads
+ * + 0x16 there, not the flag word), `probe_ok` the
+ * sub_08068AD4 gate, `think_done` the sub_08021304()==0 poll,
+ * `s8_3f4_neg` the + 0x3F4 signed byte (the -1 compare) and
+ * `words_differ` the + 0x88 vs + 0x3F8 word compare. Songs,
+ * the gUnk_03002CB0 flash, the + 0x42C/+ 0xA074 writes, the
+ * player + 0x5A window, the sub_08012048(0x39) event arm and
+ * the misc sequence calls are outputs. */
 void aos_object1f_think(AosObject1F *o, bool flags_42c_40,
-                        bool probe_ok, bool think_done,
-                        bool s8_3f4_neg, bool words_differ);
+                        bool up_pressed, bool probe_ok,
+                        bool think_done, bool s8_3f4_neg,
+                        bool words_differ);
 
 
 /* The ten children of the opening gate. sub_08055DF8 drives the

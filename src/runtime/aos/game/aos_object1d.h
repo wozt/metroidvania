@@ -18,7 +18,13 @@
  * It then sets + 0x5C = 0x11 and sums the signed bytes at
  * offset + 4 of the + 0x18 record array (stride 0x10, count
  * from + 0x1C) reached through gEwramData + 0x60 -> + 0x28 —
- * the room record table — into r3:
+ * decoded as the current room node's transition table: each
+ * 16-byte entry is {target room pointer, s8 source screen X,
+ * s8 source screen Y, s16 X adjust, u16 unused, u16 load X,
+ * u16 load Y, u16 unused} (the same layout
+ * src/assets/aos/world.c reads as the ROM transition table),
+ * so byte + 4 is the transition's source screen X and the
+ * sum is the total of screen_x over the room's exits — into r3:
  *  - param0 == 0, + 0x65 = 0xB: sum 1 shifts + 0x42 by -0xD0,
  *    sets + 0x14 = 1 and clears + 0x58 bits 0/6; sum -1 sets
  *    + 0x14 = -1 and + 0x58 bit 6; sum 0 deletes the entity.
@@ -31,9 +37,9 @@
  * plus the A094 origin, shifted by -0x10 when + 0x58 bit 6 is
  * clear.
  *
- * Approximations: `sum` is an input because the native source
- * (the gEwramData + 0x60 -> + 0x28 room record array) has no
- * runtime model; the sub_0803AFB8 palette-table lookup, the
+ * Approximations: `sum` is an input; the runtime feeds it the
+ * sum of the room transitions' source screen X (the decoded
+ * native table). The sub_0803AFB8 palette-table lookup, the
  * sub_0803C7B4/sub_0803B924 sprite attach and the
  * sub_08002200 placements stay under special_sprites / output
  * counts; there is no emulator comparison. */

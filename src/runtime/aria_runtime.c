@@ -62,6 +62,7 @@
 #include "aos/game/aos_object37.h"
 #include "aos/game/aos_object1d.h"
 #include "aos/game/aos_object1f.h"
+#include "aos/game/aos_object1c.h"
 #include "aos/game/aos_object28.h"
 #include "aos/game/aos_object20.h"
 #include "aos/game/aos_room_dialogue.h"
@@ -484,6 +485,14 @@ typedef struct {
     AosObject20 object20;   /* object 0x20: SPECIAL id 32 dispatcher */
     int object20_anim;      /* last sub_0803F2C8 sequence pick, -1 none —
                              * the draw pass's +0x6D approximation */
+    AosWoBar wo_bars[AOS_WO_BAR_COUNT]; /* param0-30 whiteout
+                             * (sub_08064518) per-scanline BgAffineSet
+                             * records from the entity's last update —
+                             * object20_apply_out persists them for
+                             * draw_object20_wo_bars */
+    uint8_t  wo_bars_count; /* 0 or AOS_WO_BAR_COUNT; rewritten every
+                             * update so the bars drop the frame the
+                             * cinematic stops emitting them */
     AosObject19 object19;   /* object 0x19: rectangular patrol mover */
     AosObject1b object1b;   /* object 0x1B: spin-synced object */
     AosObject15 object15;   /* object 0x15: story cutscene director */
@@ -512,6 +521,9 @@ typedef struct {
     AosObject1E object1e;   /* object 0x1E: inert placeholder */
     AosObject1D object1d;   /* object 0x1D: sum-indexed display */
     AosObject1F object1f;   /* object 0x1F: opening gate */
+    AosObject1C object1c;   /* object 0x1C: save point */
+    int object1c_save_result; /* last SaveData_SaveSlotToSram result
+                               * fed back as the next frame's input */
     AosObject23 object23;   /* object 0x23: plain animated sprite */
     AosObject2D object2d;   /* object 0x2D: proximity attack sprite */
     AosObject2E object2e;   /* object 0x2E: one-shot breakable prop */
@@ -624,6 +636,7 @@ static bool load_room(const char *path, AriaRoom *room) {
             e->spawned = false;
             e->secret_mark = false;
             e->object20_anim = -1;
+            e->wo_bars_count = 0;
             if (e->kind == ARIA_KIND_SPECIAL && e->id == AOS_OBJECT_SAVE_POINT)
                 room->room_flags |= AOS_ROOM_FLAG_SAVE;
             room->entity_count++;
@@ -684,6 +697,11 @@ static bool room_has_save_point(const AriaRoom *room) {
  * update_entities has no save handle, so the room loop publishes
  * the active save through this pointer. */
 static const AosSaveData *object10_save_ctx;
+/* Object1C's SaveData_SaveSlotToSram needs the live save and its
+ * store path; update_entities has no save handle, so the room
+ * loops publish them here (same pattern as object10_save_ctx). */
+static AosSaveData *object1c_save_ctx;
+static const char *object1c_save_path;
 static bool object10_item_owned(void *ctx, uint16_t item) {
     const AosSaveData *save = ctx ? ctx : object10_save_ctx;
     uint8_t category, index;
@@ -692,26 +710,6 @@ static bool object10_item_owned(void *ctx, uint16_t item) {
         : category == AOS_PICKUP_WEAPON ? AOS_SAVE_WEAPONS
         : AOS_SAVE_WEAPONS + 59;
     return save->inventory[base + index] != 0;
-}
-
-/* Temporary host presentation around Object1C's native fixed room position.
- * The original sprite, healing animation and save question are separate work. */
-static void draw_save_point(SDL_Renderer *renderer, const AriaRoom *room, int cam_x, int cam_y,
-                            bool player_inside, long step) {
-    if (!room_has_save_point(room)) return;
-    float x = 120.0f - (float)cam_x;
-    float y = 104.0f - (float)cam_y;
-    float pulse = (float)((step / 4) % 8);
-    if (pulse > 4.0f) pulse = 8.0f - pulse;
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderDrawColor(renderer, player_inside ? 130 : 80, 255, 255, 210);
-    SDL_FRect core = {x - 3.0f, y - 3.0f, 6.0f, 6.0f};
-    SDL_RenderFillRect(renderer, &core);
-    SDL_SetRenderDrawColor(renderer, 100, 210, 255, 130);
-    SDL_FRect glow = {x - 8.0f - pulse, y - 8.0f - pulse,
-                      16.0f + pulse * 2.0f, 16.0f + pulse * 2.0f};
-    SDL_RenderRect(renderer, &glow);
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
 
 /* Reads the sprite index; textures are created only with a renderer. */
@@ -4327,9 +4325,13 @@ static int obj14_probe(void *ctx, int kind, int32_t a, int32_t b,
  *   entity's screen position.
  *   npc gate_4be: the gEwramData + 0x4BE pause word has no runtime
  *   channel; 0 (clear, the in-game value).
- *   npc picked_text: the param0-27 +0x14 pick — the native pickers
- *   sub_08066308/sub_0806666C/sub_0806668C are unported, so the
- *   entity's stored guard text id is fed back (documented gap).
+ *   npc picked_text: DEPRECATED upstream — the param0-27 +0x14
+ *   pick runs the ported sub_08066308/sub_0806666C/sub_0806668C
+ *   pickers on the committed 0x08118C85 table through guard_pick;
+ *   the stored guard text id is still fed for legacy callers.
+ *   npc word16: gEwramData + 0x16 has no runtime channel and
+ *   stays 0, so the npc_flags_66094 (flags & 7)==7 gate cannot
+ *   reach the picker state in rooms yet (documented gap).
  *   npc rng/rng_bit: RandomNumberGenerator draws; rng_bit is RNG&1.
  *   npc spawn_child: NULL — the param0-26 companion's +0x18 child
  *   (update sub_08065C2C) is not spawned (documented gap).
@@ -4665,12 +4667,25 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         out->story.wo_burst_63aec)
         printf("Object20 %d: whiteout render bars=%u spawns=%u "
                "particles=%u purge=%d/%d burst=%d (%d,%d) "
-               "(affine/spawn consumers unforwarded)\n",
+               "(bars->draw pass; spawn/particle consumers "
+               "unforwarded)\n",
                e->id, out->story.wo_bars_drawn,
                out->story.wo_spawn_count, out->story.wo_particle_count,
                out->story.wo_purge_547, out->story.wo_purge_flagged,
                out->story.wo_burst_63aec, out->story.wo_burst_x,
                out->story.wo_burst_y);
+    /* The whiteout's per-scanline BgAffineSet records persist for
+     * the draw pass: natively the hblank streams them into BG2's
+     * affine register window; the host has no affine pipeline, so
+     * draw_object20_wo_bars approximates them as white strips.
+     * wo_bars_drawn is 0 or AOS_WO_BAR_COUNT and is rewritten every
+     * update, so a frame without bars clears the persisted set and
+     * the whiteout drops as soon as the cinematic stops emitting. */
+    e->wo_bars_count = out->story.wo_bars_drawn > AOS_WO_BAR_COUNT
+                           ? AOS_WO_BAR_COUNT : out->story.wo_bars_drawn;
+    if (e->wo_bars_count)
+        memcpy(e->wo_bars, out->story.wo_bars,
+               e->wo_bars_count * sizeof e->wo_bars[0]);
     if (set42c || clear42c) {
         aria_pickup_state.global_flags |= set42c;
         aria_pickup_state.global_flags &= ~clear42c;
@@ -4763,8 +4778,30 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
                (unsigned)out->story.ed24_b);
     }
     if (out->fade_out || out->story.fade_out || out->story.fade_3d18c ||
-        out->story.fade_3cdf0)
+        out->story.fade_3cdf0 || out->slots.fade_count)
         printf("Object20 %d: fade request (unforwarded)\n", e->id);
+
+    /* Slots family (param0 0-2, 11-18): PlaySong args play through
+     * the shared channel; the fade pairs, sfx/call reports, player
+     * writes and misc engine effects have no consumer yet. */
+    for (unsigned si = 0; si < out->slots.playsong_count; ++si) {
+        aos_audio_play_song(out->slots.playsong[si]);
+        printf("Object20 %d: slots song 0x%X\n", e->id,
+               out->slots.playsong[si]);
+    }
+    if (out->slots.sfx_13eec >= 0 || out->slots.call_13cf0 >= 0 ||
+        out->slots.call_00ea8 >= 0 || out->slots.call_6666c ||
+        out->slots.call_0eb04 || out->slots.call_235c8 ||
+        out->slots.call_2dff0 || out->slots.call_67804 ||
+        out->slots.unk2cb0_feff || out->slots.unk2cb0_or100 ||
+        out->slots.unk7864_or2 || out->slots.write_90 ||
+        out->slots.write_417 || out->slots.write_414 ||
+        out->slots.player5a_count || out->slots.rec_53c_write ||
+        out->slots.player_scr42_set || out->slots.player58_or_40 ||
+        out->slots.player58_andnot_41 || out->slots.player_w48_zero ||
+        out->slots.player_w50_zero || out->slots.player_w4c_min0)
+        printf("Object20 %d: slots engine effects (unforwarded)\n",
+               e->id);
 
     /* SetPlayerInput(enable, arg): the runtime's forced-input slot.
      * The second argument is approximated as the held mask (0 locks
@@ -4772,14 +4809,18 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     int setplayerinput = out->setplayerinput >= 0 ? out->setplayerinput
                             : out->dirs.setplayerinput >= 0
                                 ? out->dirs.setplayerinput
-                            : out->story.setplayerinput;
+                            : out->story.setplayerinput >= 0
+                                ? out->story.setplayerinput
+                                : out->slots.setplayerinput;
     if (setplayerinput >= 0 && input) {
         input->active = true;
         input->held = (uint16_t)(out->setplayerinput >= 0
                                      ? out->setplayerinput_arg
                                      : out->dirs.setplayerinput >= 0
                                          ? out->dirs.setplayerinput_arg
-                                         : out->story.setplayerinput_arg);
+                                         : out->story.setplayerinput >= 0
+                                             ? out->story.setplayerinput_arg
+                                             : out->slots.setplayerinput_arg);
     }
 
     /* Player-entity writes (story family): +0x40/+0x44 are 16.16
@@ -4829,7 +4870,8 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     }
     if (out->deleted || out->npc_deleted || npc_released ||
         out->shop.release || out->shop.frames_release ||
-        out->story.release_arg >= 0 || out->dirs.release_arg >= 0) {
+        out->story.release_arg >= 0 || out->dirs.release_arg >= 0 ||
+        out->slots.release_arg >= 0) {
         e->object20.deleted = true;
     }
 
@@ -4855,6 +4897,22 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     (void)combat;
 }
 
+/* sub_0800F4F8/sub_0800F5BC's record scan: a record whose flags byte
+ * has any of the low nibble set (the exported unk_7 & 0xF) is handed
+ * to sub_0800F1FC unconditionally at room load; the rest wait for the
+ * camera window — [cam_x - 80, cam_x + 320] on x, or [cam_y - 80,
+ * cam_y + 240] on y for rooms taller than wide (sub_0800F5BC; the
+ * native bgInfo yPos +0x30 adjustment for unk_60.unk_8E_4 is not
+ * modelled). Kind-1 (enemy) records never reach this helper: they
+ * all spawn unconditionally in sub_0800F92C. */
+static bool entity_spawn_due(const AriaEntity *e, const AriaRoom *room,
+                             int cam_x, int cam_y) {
+    if (e->flags & 0xF) return true;
+    if (room->height_screens > room->width_screens)
+        return e->y >= cam_y - 80 && e->y <= cam_y + 240;
+    return e->x >= cam_x - 80 && e->x <= cam_x + 320;
+}
+
 static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                            int cam_x, int cam_y, AosForcedInput *input, AriaCombat *combat,
                            uint16_t new_input) {
@@ -4871,7 +4929,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         AriaEntity *e = &room->entities[i];
         bool placed_pickup = e->kind == ARIA_KIND_PICKUP && e->id >= 1 && e->id <= 8;
         if (placed_pickup) {
-            if (!e->spawned && e->x >= cam_x - 80 && e->x <= cam_x + 320) {
+            if (!e->spawned && entity_spawn_due(e, room, cam_x, cam_y)) {
                 e->spawned = true;
                 AosPickup pickup;
                 bool created = e->id <= 4
@@ -4892,7 +4950,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     (e->id == ARIA_OBJECT_WALL || e->id == ARIA_OBJECT_EVENT_WALL);
         if (wall) {
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 if (!aos_wall_create(&e->wall, layer, e->x, e->y, e->param0, e->param1,
                                      e->id == ARIA_OBJECT_EVENT_WALL, aria_events))
@@ -4923,7 +4981,14 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         if (enemy) {
             const AosEnemyKind *kind = combat->kinds[e->id];
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                /* sub_0800F92C hands every kind-1 (unk_5 == 1) record
+                 * to sub_0800F1FC unconditionally at room load — no
+                 * camera window, no flags check. The persistent-index
+                 * bit sub_0800F1FC consults stays unmodelled, as
+                 * before; removed enemies early-out of
+                 * aos_enemy_update, so the whole-room spawn cannot
+                 * flood the entity table (records are fixed at load)
+                 * or keep dead enemies updating. */
                 e->spawned = aos_enemy_create(&e->enemy, (uint8_t)e->id, e->x, e->y,
                                               (int16_t)e->param0, (int16_t)e->param1, soma, layer,
                                               kind, combat->stats[e->id]);
@@ -5209,7 +5274,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * gate deletes the entity; a passed one turns it into the
              * enemy — here a spawned ENEMY entity takes its place. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool gate = e->id == 10
                     ? ((aria_pickup_state.special >> e->param1) & 1) != 0
@@ -5242,7 +5307,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * slot once per room and spawns its static children; an
              * unclaimed object deletes itself on the first update. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object01_create(&e->object01, (int16_t)e->param0);
                 continue;
@@ -5258,7 +5323,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * (none modelled: cinematic false takes the direct
              * state-0 -> 2 path). */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object03_create(&e->object03, layer, e->param0,
                                     e->param1, e->x - cam_x, e->x, e->y);
@@ -5285,7 +5350,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * approach probe is one-sided and cases 2/10 push opposite
              * ways with no + 0x42C hold. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
                 aos_object04_create(&e->object04, e->param0, e->param1,
@@ -5316,7 +5381,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* Object05Create / Object05Update: passive proximity
              * trigger — no blocks, no forced input, params unused. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 int32_t sx = e->x - cam_x, sy = e->y - cam_y;
                 int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
@@ -5340,7 +5405,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * probe, then the forced-walk release gated on the + 0x4CC
              * bit 6 cinematic flag (not modelled: passed false). */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 int32_t sx = e->x - cam_x, sy = e->y - cam_y;
                 int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
@@ -5381,7 +5446,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * draw through special_07_v100/v101 in the special-object
              * pass. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object07_create(&e->object07, e->param0, e->param1,
                                     cam_x, cam_y, aos_random);
@@ -5398,7 +5463,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * camera; the + 0x10 bit-30 gate is unmodelled and passed
              * as set while Soma is active. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object0c_create(&e->object0c, e->param0);
                 continue;
@@ -5421,7 +5486,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * sub_08045F9C attack-box match the weapon hitbox overlap
              * with the entity box (documented approximation). */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object0f_create(&e->object0f, e->param0);
                 continue;
@@ -5460,7 +5525,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * focus and the sub_080421AC attack match are approximated
              * by a proximity window and the weapon hitbox overlap. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object0d_create(&e->object0d, e->param0, e->param1,
@@ -5497,7 +5562,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * uses; the sub_08050A3C content children and the
              * sub_0806D5C0 gore burst are counted, not spawned. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object0e_create(&e->object0e, e->param0, e->param1,
@@ -5547,7 +5612,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * small box; the SRAM slot sequence is reported while
              * the live save stays on the Object1C path. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object10_create(&e->object10, 0,
                                     (uint8_t)e->param0, 0, 0,
@@ -5574,7 +5639,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * sub_080512FC callback counts + 0x14 frames while the
              * + 0x42C bit-1 (B) hold lasts, capped at 0x34BBD. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object11_create(&e->object11);
                 if (e->object11.removed_save)
@@ -5591,7 +5656,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * bit-3 probe becomes a player-near window, the + 0x6C
              * bit-2 re-arm the weapon hitbox overlap. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object12_create(&e->object12, e->param0, e->param1,
@@ -5625,7 +5690,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * aos_object13_strike; the link physics of
              * sub_080515F0/sub_0805170C stays approximated. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object13_create(&e->object13, e->param0, e->param1,
                                     0, 0, 0);
@@ -5669,7 +5734,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * aos_collision through obj14_probe and the six
              * sub_08051CC4 children collapse to counted sparkles. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object14_create(&e->object14, (int16_t)e->param0,
@@ -5719,7 +5784,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * rotation draw and the sub_080421AC attack-slot read
              * are approximated by the static animation. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object19_create(&e->object19, e->param0, e->param1,
                                     ((int32_t)e->x) << 16,
@@ -5743,7 +5808,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * Object0D proximity approximation; the sub_0803C918
              * tile push collapses to the frame output. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object1b_create(&e->object1b);
                 continue;
@@ -5768,7 +5833,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * lock the forced-input outputs, the fades and the
              * dialogue record are reported, not played. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 /* + 0x348 bit 0x8000000 has no runtime equivalent;
                  * the create-time event test stays clear. */
@@ -5804,7 +5869,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * reported on the object, songs/fades/dialogue are
              * outputs only. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object16_create(&e->object16, e->param0);
                 continue;
@@ -5846,7 +5911,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * flags the held Up/Down approximation and the
              * sub_08068AD4 probe a player-near window. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object17_create(&e->object17,
                                     (int)(soma->y >> 16), 0, 0);
@@ -5889,7 +5954,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * ring, the sub_0806D5C0 gore and the type-0x1B
              * sub_080C24AD/0x080C2559 children are counted. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object18_create(&e->object18, e->param0);
                 continue;
@@ -5943,7 +6008,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * approximated by a sparkle effect at a random
              * screen x over the camera. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object30_create(&e->object30, &deleted);
@@ -5974,7 +6039,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * approximated as always available. Each launch
              * spawns the type-0x49 fx child as a sparkle. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object31_create(&e->object31, (int16_t)e->param0,
@@ -6005,7 +6070,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * child burst is approximated by sparkle effects at
              * the entity position. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object33_create(&e->object33, (int16_t)e->param0,
@@ -6033,7 +6098,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * room fields pass 0 and each sub_08056F50 shot /
              * sub_08056D6C carrier becomes a sparkle effect. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object22_create(&e->object22, e->param1, 0, 0,
@@ -6070,7 +6135,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * resolves through the special_42_v00-v03 variants
              * and room fields pass 0. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object29_create(&e->object29, (int16_t)e->param0,
@@ -6092,7 +6157,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * proximity from the soma distance) and the
              * sub_080596E0 children become counted effects. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object32_create(&e->object32, (int16_t)e->param0,
@@ -6129,7 +6194,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * bitfield and + 0x13190 link are approximated and the
              * sub_0806D9CC particles become counted effects. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object35_create(&e->object35, (int16_t)e->param0,
@@ -6157,7 +6222,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * player + 0x58 bit 0x40 and the RNG rolls are
              * approximated. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 int32_t psx = soma ? (int32_t)(soma->x >> 16) : 0x7FFFFFFF;
@@ -6179,16 +6244,24 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 29) {
             /* Object1DCreate (sUnk_084F0EA4[29]): the sum-indexed
-             * display. The gEwramData + 0x60 -> + 0x28 room
-             * record checksum has no runtime model, so sum is 0
-             * and the entity self-deletes exactly as the native
-             * empty-table path does; spawned stays set so the
-             * create is not retried every frame. */
+             * display. Native sums the signed byte at + 4 (the
+             * source screen X, s8) of each 0x10-stride record in the
+             * current room node's + 0x18 table — gEwramData + 0x60 ->
+             * + 0x28 -> + 0x18, count at + 0x1C — which is the room's
+             * transition table (src/assets/aos/world.c reads the same
+             * ROM layout: 16-byte entries ending at the room
+             * descriptor). AriaRoom.transitions is that table, so the
+             * faithful sum is the total of screen_x over
+             * transition_count entries. */
             if (!e->spawned) {
                 e->spawned = true;
+                int sum = 0;
+                for (size_t t = 0; t < room->transition_count; ++t)
+                    sum += room->transitions[t].screen_x;
                 bool deleted;
                 aos_object1d_create(&e->object1d, (int16_t)e->param0,
-                                    e->x, e->y, 0, &deleted);
+                                    e->x, e->y, sum, &deleted);
+                if (deleted) e->spawned = false;
             }
             continue;
         }
@@ -6196,31 +6269,193 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* Object1FCreate / Object1FUpdate / sub_08055748
              * (sUnk_084F0F0C[31] / sUnk_084F108C[31] / entity
              * + 0): the opening gate and its nine-state think.
-             * The state-0 gate globals, the sub_08068AD4 probe,
-             * the + 0x42C/+ 0xA074 event words, the + 0x3F4
-             * byte and the + 0x88/+ 0x3F8 word compare have no
-             * runtime model, so the think runs with them clear:
-             * it parks in state 1 substate 0 instead of locking
-             * the player in a loop. Display/global writes stay
-             * outputs. */
+             * The sprite attach is the packed 0x082052F0
+             * descriptor (LZ77 tiles 0x0863803C) — not the
+             * sub_0806E0D0 triple the special_NN exports use,
+             * so no art is drawn (documented gap). Inputs:
+             * the sub_08068AD4 probe is the player + 0x42/+ 0x46
+             * screen position inside x [0x55,0x9E] and the
+             * y {0x7F..0x81} band; the update gate is
+             * inputData.heldInput & 0x40 (soma->held, the + 0x1C
+             * player mask) with the + 0x64 game-mode stage == 1
+             * folded to always-true (entities only run in-game)
+             * and the probe; the think's + 0x42C bit 0x40 is
+             * aria_pickup_state.global_flags bit 6, its
+             * substate-0 gate inputData.newInput & 0x40 is
+             * new_input, sub_08021304 is approximated done as
+             * for Object17, and + 0x3F4 / the + 0x88/+ 0x3F8
+             * compare stay clear. Outputs: + 0x42C writes fold
+             * into global_flags, sub_08012048(0x39) arms
+             * aria_events bit 0x39, the stage-5/7 sequences,
+             * fades, display window and player + 0x5A writes
+             * stay reported outputs. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object1f_create(&e->object1f, true, &deleted);
                 if (deleted) e->spawned = false;
                 continue;
             }
-            aos_object1f_update(&e->object1f, false);
-            aos_object1f_think(&e->object1f, false, false, true,
-                               false, false);
-            if (e->object1f.think_song >= 0)
+            int32_t gssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t gssy = (int32_t)(soma->y >> 16) - cam_y;
+            bool gate_probe = gssx >= 0x55 && gssx <= 0x9E &&
+                              (uint16_t)(gssy - 0x7F) <= 2;
+            bool gate_held = gate_probe &&
+                             (soma->held & AOS_KEY_UP) != 0;
+            aos_object1f_update(&e->object1f, gate_held);
+            aos_object1f_think(&e->object1f,
+                               (aria_pickup_state.global_flags & 0x40) != 0,
+                               (new_input & AOS_KEY_UP) != 0,
+                               gate_probe, true, false, false);
+            if (e->object1f.event_39)
+                aria_events[0x39 >> 5] |= 1u << (0x39 & 31);
+            if (e->object1f.think_song >= 0) {
                 aos_audio_play_song((uint16_t)e->object1f.think_song);
+                printf("Object1F %zu: song 0x%X\n", i,
+                       e->object1f.think_song);
+            }
+            if (e->object1f.event_39 && !e->object1f.event_39_reported) {
+                e->object1f.event_39_reported = true;
+                printf("Object1F %zu: story event 0x39 armed\n", i);
+            }
+            if (e->object1f.flags_42c_40)
+                aria_pickup_state.global_flags |= 0x40;
+            if (e->object1f.flags_42c_20000)
+                aria_pickup_state.global_flags |= 0x20000;
+            if (e->object1f.flags_42c_clr41)
+                aria_pickup_state.global_flags &= ~0x41u;
+            if (e->object1f.global_42c_bit0)
+                aria_pickup_state.global_flags |= 1;
+            if (e->object1f.seq_end)
+                printf("Object1F %zu: sequence end "
+                       "(sub_08010978 -> stage 5)\n", i);
             if (e->object1f.input_lock) {
                 /* SetPlayerInput(1, 0): lock player input. */
                 input->active = true;
                 input->held = 0;
             }
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 28) {
+            /* Object1CCreate / Object1CUpdate (sUnk_084F0EA4[28] /
+             * sUnk_084F0F8C[28]): the save point. Twenty kind-2
+             * records (persistent_index 1) share the fixed anchor
+             * + 0x42 = 0x78 / + 0x46 = 0x50 floor-snapped by
+             * sub_0806AF98 — approximated by probing the collision
+             * layer at that spot. The + 0x30..+ 0x33 sync bytes are
+             * the record's param0/param1. The sub_08068AD4 probe is
+             * the same screen-space box family as Object1F's but
+             * with rect (0x68,0x80,0x20,0x37): the player screen
+             * position inside it. buttons_16 is the held mask
+             * (+0x16: Up 0x40, A/B bits 0-1) and buttons_14 the
+             * new-input edge mask (+0x14: A bit 0, Right/Left
+             * 0x10/0x20) — the edge/level split is documented but
+             * unverified in aos_object1c.h. sub_08021304 is
+             * approximated not-busy (Object17 precedent); the
+             * sub_0803E654 affine slot has no host table, so slot 0
+             * is reported. save_result feeds back the previous
+             * frame's actual aos_save_store result (0 until the
+             * first commit — SRAM writes are synchronous and
+             * effectively infallible). Child entities
+             * (sub_080544E8/0x08055070/0x0805514C/...) stay
+             * unported: spawn requests are counted in Out. */
+            if (!e->spawned) {
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
+                e->spawned = true;
+                AosObject1CCreateIn cin = {0};
+                AosObject1CCreateOut cout;
+                cin.affine_slot = 0;    /* no host affine table */
+                cin.palette_index = 0;  /* sub_0803B800 bank-0
+                                         * fallback index */
+                cin.param0 = (int16_t)e->param0;
+                cin.param1 = (int16_t)e->param1;
+                /* sub_0806AF98 floor snap at the fixed anchor:
+                 * first floor cell at/below y = 0x50 under x = 0x78
+                 * on the collision layer (same probe shape as
+                 * find_spawn). */
+                int gy = 0x50;
+                for (int yy = 0x50; yy < 0x1000; ++yy)
+                    if (aos_collision_cell(layer, 0x78, yy) & 1) {
+                        gy = yy;
+                        break;
+                    }
+                cin.ground_y = (int16_t)gy;
+                /* Child spawn outcomes: the routines are unported,
+                 * so report the native attempt counts without
+                 * instantiating anything. */
+                cin.marker_spawned = false;
+                cin.sparkle_spawned = 0;
+                cin.frame_record = 0;
+                if (!aos_object1c_create(&e->object1c, &cin, &cout)) {
+                    e->spawned = false;
+                    continue;
+                }
+                if (cout.deleted) e->spawned = false;
+                continue;
+            }
+            AosObject1CIn in1c = {0};
+            AosObject1COut out1c;
+            int32_t px = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t py = (int32_t)(soma->y >> 16) - cam_y;
+            in1c.player_x = (int16_t)px;
+            in1c.player_y = (int16_t)py;
+            in1c.buttons_16 = soma->held;
+            in1c.buttons_14 = new_input;
+            in1c.player_busy = false;   /* sub_08021304 ~ done */
+            in1c.save_slot = 0;         /* +0x428: slot 0 until a
+                                         * slot-select UI exists */
+            in1c.save_result = e->object1c_save_result;
+            aos_object1c_update(&e->object1c, &in1c, &out1c);
+            if (out1c.song >= 0) {
+                sound = out1c.song;
+                printf("Object1C %zu: song 0x%X\n", i, out1c.song);
+            }
+            if (out1c.forced_keys >= 0) {
+                /* SetPlayerInput(1, 0x40): lock player input while
+                 * the save flow owns the pad. */
+                input->active = true;
+                input->held = (uint16_t)out1c.forced_keys;
+            }
+            aria_pickup_state.global_flags |= out1c.flags42c_set;
+            aria_pickup_state.global_flags &= ~out1c.flags42c_clear;
+            if (out1c.save_mode_set || out1c.save_mode_clear) {
+                /* +0xA074 save-mode byte has no host consumer yet. */
+                printf("Object1C %zu: +0xA074 %s0x%02X\n", i,
+                       out1c.save_mode_set ? "set " : "clear ",
+                       out1c.save_mode_set | out1c.save_mode_clear);
+            }
+            if (out1c.save_setup)
+                printf("Object1C %zu: save screen setup "
+                       "(sub_08054280) — UI not ported\n", i);
+            if (out1c.save_block_refresh)
+                printf("Object1C %zu: +0x60 save block refresh "
+                       "(sub_08012688/0x080135C0)\n", i);
+            if (out1c.save_write) {
+                /* SaveData_SaveSlotToSram(+0x428): the portable
+                 * store writes the live save; the result feeds the
+                 * next frame's in->save_result. */
+                char error[128];
+                int result = -1;
+                if (object1c_save_ctx && object1c_save_path)
+                    result = aos_save_store(object1c_save_path,
+                                            object1c_save_ctx, error,
+                                            sizeof error) ? 0 : -1;
+                else
+                    result = 0;    /* no save context (e.g. --simulate):
+                                    * report the commit, skip the file */
+                e->object1c_save_result = result;
+                printf("Object1C %zu: SaveData_SaveSlotToSram -> %d\n",
+                       i, result);
+            }
+            if (out1c.beam_children)
+                printf("Object1C %zu: %u beam children requested "
+                       "(sub_08054F74, unported)\n", i,
+                       out1c.beam_children);
+            if (out1c.save_committed)
+                printf("Object1C %zu: save committed (state 0x14)\n", i);
+            if (out1c.save_rejected)
+                printf("Object1C %zu: save rejected (state 0)\n", i);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 33) {
@@ -6233,7 +6468,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * physics runs inside the module; the + 0x44 y
              * position writes back to e->y. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object21_create(&e->object21, 0, 0, e->param1,
@@ -6257,7 +6492,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * sprite — RNG-gated animation step plus the + 0x58
              * bit-0x20 parity mark the draw reads as hidden. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object24_create(&e->object24, aos_random(),
                                     aos_random());
@@ -6283,7 +6518,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * The hurt callback takes the weapon hitbox against
              * a nominal box with Soma's ATK as the damage. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
                 aos_object25_create(&e->object25, (int16_t)e->param0,
@@ -6366,7 +6601,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * box centred on the entity — against Soma and feeds
              * the + 0x18/+ 0x1A counters the linked orbs consume. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object26_create(&e->object26);
                 /* Object26Create's two EntityCreateInRange(0x1B,
@@ -6403,7 +6638,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * gate and the sub_0803E238 angular step is exposed as
              * the angle accumulator. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object27_create(&e->object27, (uint8_t)e->param1);
                 continue;
@@ -6440,7 +6675,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * read are approximated by the player-near window and
              * the weapon hitbox overlap. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object2a_create(&e->object2a, e->param0, e->param1,
                                     (int32_t)e->x << 16,
@@ -6475,7 +6710,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * exported as special_43): a plain animated sprite —
              * one sub_0803F17C step per frame. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object2b_create(&e->object2b);
                 continue;
@@ -6489,7 +6724,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * exported as special_35): a plain animated sprite —
              * one sub_0803F17C step per frame. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object23_create(&e->object23);
                 continue;
@@ -6505,7 +6740,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * entity is Soma; the + 0x6D/+ 0x59 bytes and the
              * sub_0806D128 attack step are approximated. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object2d_create(&e->object2d);
                 continue;
@@ -6527,7 +6762,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * hitbox overlap, the three sub_080589A4 children are
              * counted and the song is reported. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object2e_create(&e->object2e);
                 continue;
@@ -6563,7 +6798,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * + 0xB and clears the mark on the + 0x42C bit-0x1000
              * trigger — the keys<<4 word maps it to R held. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object2f_create(&e->object2f,
                                     aria_pickup_state.special,
@@ -6585,7 +6820,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * advances + 0x14 by + 0x1A. The block is consumed
              * nowhere yet, like Object16's zoom. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object36_create(&e->object36, (int16_t)e->param0,
                                     false);
@@ -6606,7 +6841,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * sub_08059E4C particle children are counted, not
              * spawned. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object34_create(&e->object34, (int16_t)e->param0,
                                     (uint16_t)e->param1,
@@ -6628,7 +6863,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * triple. The children are counted, not spawned, like
              * Object34's particles. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object2c_create(&e->object2c);
                 continue;
@@ -6642,7 +6877,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * native routines are a bare bx lr, an inert
              * placeholder. Called for dispatch parity only. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object1a_create(&e->object1a);
                 continue;
@@ -6656,7 +6891,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * both native routines are a bare bx lr, an inert
              * placeholder. Called for dispatch parity only. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object1e_create(&e->object1e);
                 continue;
@@ -6670,7 +6905,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * Object27 orb sibling — same machine over the same
              * chandelier art, approximated identically. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object28_create(&e->object28, (uint8_t)e->param1);
                 continue;
@@ -6702,7 +6937,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * are room pixels minus the camera, the same approximation
              * the door uses for + 0x42/+ 0x46. */
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 int32_t sx = e->x - cam_x, sy = e->y - cam_y;
                 int32_t ssx = (int32_t)(soma->x >> 16) - cam_x;
@@ -6753,12 +6988,12 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * opening-adjacent params cannot double-run. */
             room_dialogue_bind();
             if (!e->spawned) {
-                /* sub_0800F4F8's second loop passes every record
-                 * with unk_7 & 0xF (the exported flags byte) to
-                 * sub_0800F1FC unconditionally at room load —
-                 * e->flags bit 0 bypasses the camera window. */
-                if (!(e->flags & 0xF) &&
-                    (e->x < cam_x - 80 || e->x > cam_x + 320))
+                /* entity_spawn_due carries sub_0800F4F8/sub_0800F5BC's
+                 * second loop: every record with unk_7 & 0xF (the
+                 * exported flags byte) goes to sub_0800F1FC
+                 * unconditionally at room load; the rest wait for the
+                 * camera window. */
+                if (!entity_spawn_due(e, room, cam_x, cam_y))
                     continue;
                 e->spawned = true;
                 AosObject20In in;
@@ -6838,7 +7073,7 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         }
         if (!door) continue;
         if (!e->spawned) {
-            if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+            if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
             e->spawned = true;
             aos_door_create(&e->door, layer, e->x, e->y, soma, cam_x, input);
             continue;
@@ -8306,17 +8541,64 @@ static void draw_object20_child(SDL_Renderer *renderer,
                                         : SDL_FLIP_NONE);
 }
 
+/* Draw the param0-30 whiteout's persisted per-scanline records
+ * (sub_08064518 -> 160x BgAffineSet -> the BG2 hblank affine
+ * window). The host has no affine pipeline and the BG2 tilemap is
+ * uncommitted, so this is an honest approximation, not native
+ * pixels:
+ *  - record i is the hblank block for scanline i (the native dest
+ *    records advance 16 bytes per call in emission order), drawn
+ *    as a 1px-high strip at screen row i; 160 records = VIEW_H.
+ *  - the strip's left edge is (int16_t)bar.x, the record's
+ *    on-screen display-center X; the case 4/5 per-bar X wedge
+ *    therefore shears the wipe edge diagonally.
+ *  - alpha is bar.intensity >> 8. Per the BgAffineSet source
+ *    layout the +0x10 word is the rotation angle (only its high
+ *    byte, field_14, is used); it is reused here as the white
+ *    alpha proxy because its 0 -> 0xFF -> 0 ramp matches the
+ *    whiteout's fade in/out.
+ * bar.y (the per-scanline display-center Y anchor), bgx/bgy (the
+ * 8.8 X/Y scale factors, not scroll offsets) and the rotation
+ * itself have no screen-space meaning without the affine
+ * transform and are dropped. Drawn inside the special-object
+ * pass, so the bars cover the already-drawn room but stay under
+ * the player sprite, HUD and later overlays — roughly the native
+ * BG2-below-OBJ layering; enemies/specials already drawn are
+ * covered, which the flattened pass cannot avoid. */
+static void draw_object20_wo_bars(SDL_Renderer *renderer,
+                                  const AriaEntity *e) {
+    if (!e->wo_bars_count) return;
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    for (unsigned i = 0; i < e->wo_bars_count && i < VIEW_H; ++i) {
+        const AosWoBar *b = &e->wo_bars[i];
+        uint8_t alpha = (uint8_t)(b->intensity >> 8);
+        if (!alpha) continue;
+        int x0 = (int16_t)b->x;
+        if (x0 >= VIEW_W) continue;
+        /* x0 < 0 still needs to reach the right edge. */
+        float w = x0 < 0 ? (float)(VIEW_W - x0) : (float)VIEW_W;
+        SDL_FRect strip = {(float)x0, (float)i, w, 1.0f};
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, alpha);
+        SDL_RenderFillRect(renderer, &strip);
+    }
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+}
+
 static void draw_object20_entity(SDL_Renderer *renderer,
                                  const AriaObjects *objects,
                                  const AriaEntity *e, int cam_x, int cam_y,
                                  unsigned step) {
+    /* The whiteout bars are screen-space (no camera) and draw
+     * under this entity's own sprite. */
+    draw_object20_wo_bars(renderer, e);
     /* Child sprites draw under the parent (native entity order is
      * unverified): the story family's +0x14 child14 and +0x18
      * link18 (param0 9/23/31) and the param0-26 companion's +0x18
      * child18. Positions/anims are the last values the ported
-     * variants persisted — see the variant headers for which are
-     * create-time approximations (the children's own update
-     * vectors are unported). */
+     * variants persisted — see the variant headers: the param0-31
+     * child29 chain has ported update vectors while child14/
+     * link18/child18 keep only the native sub_0805B748 anim step
+     * and intentionally stay at create-time placement. */
     switch (e->object20.family) {
     case AOS_OBJECT20_FAMILY_STORY: {
         const AosObject20Story *s = &e->object20.v.story;
@@ -8452,6 +8734,74 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                                   frame->w, frame->h};
                 SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
             }
+            continue;
+        }
+        if (e->id == 28) {
+            /* Object1C's marker child draws the same 0x08257964
+             * frame set Object1D's param0-1 variant exports as
+             * special_29_v1 (create always resolves palette
+             * descriptor 0x082052E8). The +0x35 frame-record index
+             * stays 0 while the type-0x1B children are unported,
+             * so anim 0 steps by the shared tick clock; the anchor
+             * is the entity's +0x42/+0x46 (0x78 floor-snapped),
+             * not the unused record x/y. */
+            if (e->object1c.deleted) continue;
+            const __typeof__(objects->special_objects[0]) *art28 = NULL;
+            for (int v = 0; v < SPECIAL_VARIANTS; ++v)
+                if (objects->special_variants[v].id == 29 &&
+                    objects->special_variants[v].param0 == 1 &&
+                    objects->special_variants[v].loaded) {
+                    art28 = &objects->special_variants[v];
+                    break;
+                }
+            if (!art28 || !art28->defs[0].count) continue;
+            unsigned total28 = 0;
+            for (unsigned f = 0; f < art28->defs[0].count; ++f)
+                total28 += art28->ticks[0][f];
+            if (!total28) continue;
+            unsigned t28 = (step / 4) % total28, i28 = 0;
+            while (i28 + 1 < art28->defs[0].count &&
+                   t28 >= art28->ticks[0][i28])
+                t28 -= art28->ticks[0][i28++];
+            const AriaFrame *frame28 = &art28->frames[0][i28];
+            if (!frame28->texture) continue;
+            SDL_FRect rect28 = {
+                (float)(e->object1c.pos_x + frame28->offset_x - cam_x),
+                (float)(e->object1c.pos_y + frame28->offset_y - cam_y),
+                frame28->w, frame28->h};
+            SDL_RenderTexture(renderer, frame28->texture, NULL, &rect28);
+            continue;
+        }
+        if (e->id == 29) {
+            /* Object1D: +0x65 indexes the still frame inside the
+             * variant's frame descriptor (0x08257BD8 = 12 records
+             * for v0, 0x08257964 = 26 for v1 — see aos_object1d.h),
+             * exported as the flat frame list across anim_N. Walk
+             * the anims in order to that index; there is no anim
+             * stepping (update is the shared sub_0803F17C no-op
+             * for this record shape). */
+            const __typeof__(objects->special_objects[0]) *art29 = NULL;
+            for (int v = 0; v < SPECIAL_VARIANTS; ++v)
+                if (objects->special_variants[v].id == 29 &&
+                    objects->special_variants[v].param0 == e->param0 &&
+                    objects->special_variants[v].loaded) {
+                    art29 = &objects->special_variants[v];
+                    break;
+                }
+            if (!art29) continue;
+            unsigned want = e->object1d.sel, seen = 0;
+            const AriaFrame *frame29 = NULL;
+            for (unsigned a = 0; a < AOS_ENEMY_MAX_ANIMS && !frame29; ++a)
+                for (unsigned f = 0; f < art29->defs[a].count; ++f, ++seen)
+                    if (seen == want) {
+                        frame29 = &art29->frames[a][f];
+                        break;
+                    }
+            if (!frame29 || !frame29->texture) continue;
+            SDL_FRect rect29 = {(float)(e->x + frame29->offset_x - cam_x),
+                                (float)(e->y + frame29->offset_y - cam_y),
+                                frame29->w, frame29->h};
+            SDL_RenderTexture(renderer, frame29->texture, NULL, &rect29);
             continue;
         }
         if (e->id == 7) {
@@ -10579,6 +10929,8 @@ int aria_runtime_main(int argc, char **argv) {
         AosSaveRoom save_room = {0};
         homing_room = &room;
         object10_save_ctx = NULL;
+        object1c_save_ctx = NULL;
+        object1c_save_path = NULL;
         /* --simulate-script replaces the constant --simulate-hold mask with a
          * per-frame held value walked from the parsed directives. */
         AriaSimDirective *sim_dirs = NULL;
@@ -10666,6 +11018,8 @@ int aria_runtime_main(int argc, char **argv) {
             follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
             homing_room = &room;
             object10_save_ctx = NULL;
+            object1c_save_ctx = NULL;
+            object1c_save_path = NULL;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
                             sim_new_input);
             homing_age();
@@ -12121,6 +12475,8 @@ int aria_runtime_main(int argc, char **argv) {
             }
             homing_room = &room;
             object10_save_ctx = has_active_save ? &active_save : NULL;
+            object1c_save_ctx = has_active_save ? &active_save : NULL;
+            object1c_save_path = has_active_save ? save_path : NULL;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
                             aria_input.new_input);
             if (have_quick_map)
@@ -12210,8 +12566,9 @@ int aria_runtime_main(int argc, char **argv) {
             if (hud_texture) SDL_SetTextureColorMod(hud_texture, mod, mod, mod);
         }
         SDL_RenderTexture(renderer, background, &src, &dst);
-        draw_save_point(renderer, &room, cam_x, cam_y,
-                        aos_save_room_player_inside(sx, sy), step);
+        /* The save point draws through its SPECIAL id-28 entity
+         * (Object1C marker child art) in draw_special_objects —
+         * the old fixed-position placeholder is retired. */
         draw_doors(renderer, &room, objects_ok ? &objects : NULL, step, cam_x, cam_y);
         if (objects_ok) draw_walls(renderer, &room, &objects, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_BLOOD, cam_x, cam_y);

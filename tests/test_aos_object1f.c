@@ -61,40 +61,51 @@ int main(void) {
     memset(&o, 0, sizeof o);
     o.state = 0;
     /* case 0, flag set -> flash, +0x14 = 0x74, -> 5. */
-    aos_object1f_think(&o, true, false, false, false, false);
+    aos_object1f_think(&o, true, false, false, false, false, false);
     assert(o.flash_2000 && o.frames_left == 0x74 && o.state == 5);
     /* case 5 -> 6, player +0x5A &= ~0x79 window. */
-    aos_object1f_think(&o, false, false, false, false, false);
+    aos_object1f_think(&o, false, false, false, false, false, false);
     assert(o.state == 6 && o.player_5a_clr79);
     /* case 6 counts to 0x40 then advances to 7. */
     o.timer = 0x3F;
-    aos_object1f_think(&o, false, false, false, false, false);
+    aos_object1f_think(&o, false, false, false, false, false, false);
     assert(o.state == 6);          /* old 0x3F is not > 0x3F */
-    aos_object1f_think(&o, false, false, false, false, false);
+    aos_object1f_think(&o, false, false, false, false, false, false);
     assert(o.state == 7);
     /* case 7 idle; case 8 counts +0x14 down every 3rd. */
     o.state = 8; o.timer = 0; o.frames_left = 0x30;
-    aos_object1f_think(&o, false, false, false, false, false);
+    aos_object1f_think(&o, false, false, false, false, false, false);
     assert(o.flags_a074_2 && o.frames_left == 0x2F);
     /* 0x24 decrements to 0x23 -> immediate loop to state 0. */
     o.timer = 0; o.frames_left = 0x24;
-    aos_object1f_think(&o, false, false, false, false, false);
+    aos_object1f_think(&o, false, false, false, false, false, false);
     assert(o.state == 0 && o.frames_left == 0x24);
 
-    /* case 1 substate 0 -> probe gate. */
+    /* case 1 substate 0 gates on inputData.newInput & 0x40
+     * (up_pressed), not the + 0x42C bit: the flag alone with
+     * the probe must not advance. */
     memset(&o, 0, sizeof o);
     o.state = 1; o.substate = 0;
-    aos_object1f_think(&o, true, true, false, false, false);
+    aos_object1f_think(&o, true, false, true, false, false, false);
+    assert(o.substate == 0);
+    aos_object1f_think(&o, false, true, true, false, false, false);
     assert(o.substate == 1 && o.timer == 3);
     /* substate 1, think_done -> song 0xF3, -> 2. */
-    aos_object1f_think(&o, false, false, true, false, false);
+    aos_object1f_think(&o, false, false, false, true, false, false);
     assert(o.think_song == 0xF3 && o.state == 2 && o.substate == 0);
     /* case 2 s8 -1 -> back to 0. */
-    aos_object1f_think(&o, false, false, false, true, false);
+    aos_object1f_think(&o, false, false, false, false, true, false);
     assert(o.state == 0);
     /* case 0 without flag -> 1 with A074 bit. */
-    aos_object1f_think(&o, false, false, false, false, false);
+    aos_object1f_think(&o, false, false, false, false, false, false);
     assert(o.state == 1 && o.flags_a074_2);
+
+    /* case 4 past 0x3E arms + 0x42C bit 0x40 and the
+     * sub_08012048(0x39) story event every frame. */
+    memset(&o, 0, sizeof o);
+    o.state = 4; o.timer = 0x3F;
+    aos_object1f_think(&o, false, false, false, false, false, false);
+    assert(o.flags_42c_40 && o.event_39 && o.misc_ops);
 
     /* Child updates: sub_08055CB4 ring init. */
     AosObject1FChild c;

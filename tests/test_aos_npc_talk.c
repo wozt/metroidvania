@@ -272,7 +272,9 @@ int main(void) {
            gseq.counter == 0xFF && gseq.index == 0);
     /* +0x18 variant: song on entry, sub_08066308 pick, cleared
      * on exit. cond_5b864 with 0x36 already consumed -> the
-     * queue pick: text 0x45, index 6, fallback RNG%9 = 4. */
+     * queue pick: text 0x45, index 6, cursor reseated to
+     * mode 5<<4 = 0x50, slot 0x50&0xF + 40 = 40 reads the
+     * committed 0x08118C85 table byte 0x09. */
     memset(&gd2, 0, sizeof gd2); gd2.state = 1; gd2.field18 = 1;
     memset(&gseq, 0, sizeof gseq);
     memset(&gpk, 0, sizeof gpk);
@@ -281,7 +283,8 @@ int main(void) {
     aos_npc_talk_66094(&gd2, 7, false, 0, &gseq, &gpk);
     assert(gd2.song_1b5 && gd2.text_id == 0x45 &&
            gseq.mode == 0x45 && gseq.index == 6 &&
-           gseq.fallback == 4 && gpk.cursor_18c == 0x50);
+           gseq.fallback == aos_guard_pick_table_118c85[40] &&
+           gpk.cursor_18c == 0x51);
     aos_npc_talk_66094(&gd2, 7, true, 0, &gseq, &gpk);
     assert(gd2.cleared_18 && gd2.field18 == 0);
 
@@ -580,14 +583,19 @@ int main(void) {
     gpk.cursor_18c = 0x11;
     aos_npc_talk_66308(&gseq, &gpk, &t14);
     assert(gseq.fallback == 10 && gpk.cursor_18c == 0x13);
-    /* NULL table: the queue keeps the RNG%9 fallback; no
-     * flags -> mode 0 == sl, cursor stays 0. */
+    /* NULL table field: the committed 0x08118C85 ROM table is
+     * used — no flags -> queue mode 0 == sl (unk133e8 = 0), the
+     * 0x00 cursor is kept, slot 0 reads row 0 byte 0 = 0x00. */
     memset(&gseq, 0, sizeof gseq);
     memset(&gpk, 0, sizeof gpk);
     gpk.rng_queue = 7;
     aos_npc_talk_66308(&gseq, &gpk, &t14);
-    assert(t14 == 0x45 && gseq.fallback == 7 &&
-           gpk.cursor_18c == 0);
+    assert(t14 == 0x45 && gseq.fallback ==
+           aos_guard_pick_table_118c85[0] &&
+           gpk.cursor_18c == 1);
+    /* The committed table's real bytes: row 5 (the
+     * sub_0805B864 queue mode) byte 1 = 0x01. */
+    assert(aos_guard_pick_table_118c85[41] == 0x01);
 
     puts("aos_npc_talk: ok");
     return 0;

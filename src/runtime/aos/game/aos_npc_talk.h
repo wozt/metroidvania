@@ -375,10 +375,10 @@ uint32_t aos_guard_seq_tick(AosGuardSeq *g,
  * `rng_queue` the two RandomNumberGenerator draws (consumed
  * as &1 on the flag-0x26 path and %9 in the queue block —
  * mutually exclusive paths, supplied upfront), and
- * `table_08118c85` the 0x38-byte ROM table. A NULL table
- * skips the cursor advance and byte picks, leaving the
- * sequence fallback at the RNG%9 value (documented
- * degradation — the table is not committed). */
+ * `table_08118c85` the 0x38-byte ROM table. The table is
+ * committed as aos_guard_pick_table_118c85 below: a NULL field
+ * selects it (native behavior); a non-NULL pointer overrides
+ * it (tests). */
 typedef struct {
     uint64_t unk33c;        /* +0x60 +0x33C bitfield, in/out */
     uint16_t flags37e;      /* gEwramData + 0x37E */
@@ -389,8 +389,17 @@ typedef struct {
     bool cond_5b864;        /* sub_0805B864() result */
     uint32_t rng_pick;      /* RNG draw for the &1 pick */
     uint32_t rng_queue;     /* RNG draw for the %9 fallback */
-    const uint8_t *table_08118c85;  /* 0x38-byte ROM table */
+    const uint8_t *table_08118c85;  /* 0x38-byte ROM table;
+                                     * NULL -> committed
+                                     * aos_guard_pick_table_118c85 */
 } AosGuardPickCtx;
+
+/* The decoded 0x08118C85 ROM table sub_08066308 memcpy's to the
+ * stack: 0x38 bytes = 7 rows of 8, row = queue mode 0-6, column
+ * = cursor low nibble 0-7; each byte becomes the +0x138F4
+ * sequence fallback. Exported so callers/tests can inspect or
+ * override the real bytes. */
+extern const uint8_t aos_guard_pick_table_118c85[0x38];
 
 /* Writes the picked +0x14 word to *text_id and mutates `seq`
  * (the gEwramData + 0x138F4 block) and `ctx` (the flag

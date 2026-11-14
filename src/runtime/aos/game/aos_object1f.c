@@ -67,8 +67,9 @@ void aos_object1f_update(AosObject1F *o, bool gate_open) {
 }
 
 void aos_object1f_think(AosObject1F *o, bool flags_42c_40,
-                        bool probe_ok, bool think_done,
-                        bool s8_3f4_neg, bool words_differ) {
+                        bool up_pressed, bool probe_ok,
+                        bool think_done, bool s8_3f4_neg,
+                        bool words_differ) {
     o->think_song = -1;
     o->flash_2000 = false;
     o->flags_42c_40 = false;
@@ -79,6 +80,7 @@ void aos_object1f_think(AosObject1F *o, bool flags_42c_40,
     o->player_5a_20 = false;
     o->player_5a_clr79 = false;
     o->misc_ops = false;
+    o->event_39 = false;
 
     switch (o->state) {
     case 0:
@@ -100,7 +102,9 @@ void aos_object1f_think(AosObject1F *o, bool flags_42c_40,
         break;
     case 1:
         if (o->substate == 0) {
-            if (flags_42c_40 && probe_ok) {
+            /* inputData.newInput & 0x40 (Up edge) + the probe —
+             * the ROM reads + 0x16 here, not the + 0x42C word. */
+            if (up_pressed && probe_ok) {
                 /* sub_0800C5A8(0), +0xB = 1, +0xD = 3. */
                 o->sound = 0;
                 o->substate = 1;
@@ -167,6 +171,7 @@ void aos_object1f_think(AosObject1F *o, bool flags_42c_40,
              * sub_080109B8, VRAM DMA setup, player pos copy,
              * sub_0800ECA0, sub_0801083C. */
             o->flags_42c_40 = true;
+            o->event_39 = true;
             o->misc_ops = true;
         }
         o->timer++;

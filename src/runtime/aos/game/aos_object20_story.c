@@ -1094,7 +1094,49 @@ static int update29(AosObject20Story *s, const AosObject20StoryIn *in,
 }
 
 /* ------------------------------------------------------------------
- * sub_0805C39C — the param0-29 +0x14 child's update.
+ * sub_0805C328 — the child29 state-3 record/effect helper.
+ * 8-byte records at 0x085267B8 indexed by +0x1A (0..3, wraps):
+ * each call bumps +0x18 and compares the OLD value against the
+ * record's +6 hword; on exceed it resets +0x18, fires
+ * sub_0803C7B4(record+0, record+4, entity+0x2C, 1), advances
+ * +0x1A — wrapping past 3 returns 0 (the caller parks the
+ * child at state 0x80) — and fires sub_0803CF34 on the NEW
+ * record before returning 1. approximated: the record table
+ * is injected (in->c328_table_085267b8); NULL keeps the
+ * pre-extraction c328_ok return-value stand-in.
+ * ------------------------------------------------------------------ */
+static bool c328_step(AosObject20Story *s, const AosObject20StoryIn *in,
+                      AosObject20StoryOut *out) {
+    const uint8_t *t = in->c328_table_085267b8;
+    if (!t)
+        return in->c328_ok;
+    int idx = (int16_t)s->child29.field1a;
+    if (idx < 0 || idx > 3)
+        idx = 0;
+    const uint8_t *rec = t + (unsigned)idx * 8;
+    uint16_t old18 = s->child29.field18;
+    s->child29.field18 = (uint16_t)(old18 + 1);
+    int32_t o = (int32_t)(int16_t)old18;        /* lsls/asrs */
+    uint32_t thresh = (uint32_t)rec[6] |
+                      ((uint32_t)rec[7] << 8);  /* ldrh +6 */
+    if (o <= (int32_t)thresh)                   /* ble: keep waiting */
+        return true;
+    s->child29.field18 = 0;
+    out->c328_c7b4 = true;
+    int nidx = (int)s->child29.field1a + 1;
+    s->child29.field1a = (int16_t)nidx;
+    if (nidx > 3) {
+        s->child29.field1a = 0;
+        return false;                           /* +0x1A wrapped */
+    }
+    rec = t + (unsigned)nidx * 8;
+    out->c328_cf34 = true;
+    return true;
+}
+
+/* ------------------------------------------------------------------
+ * sub_0805C39C — the param0-31 +0x14 child's update (create31's
+ * sub_0805B5E8(0xB) spawn installs it as the child's +0).
  * ------------------------------------------------------------------ */
 void aos_object20_story_child29_update(AosObject20Story *s,
                                        const AosObject20StoryIn *in,
@@ -1102,7 +1144,7 @@ void aos_object20_story_child29_update(AosObject20Story *s,
     (void)in;
     uint8_t st = s->child29.state;
     if (st == 0) {
-        out->anim_step_count++;             /* sub_0803F17C */
+        out->child_anim_step_count++;       /* sub_0803F17C */
         return;
     }
     if (st == 1) {
@@ -1114,21 +1156,43 @@ void aos_object20_story_child29_update(AosObject20Story *s,
             s->child29.ctr_c = 1;
         }
         if (s->child29.flags59 & 1) {
+            /* _0805C48E tail: +0xA = 2, +0xB = +0xC = 0. */
             s->child29.state = 2;
+            s->child29.sub_b = 0;
             s->child29.ctr_c = 0;
-            /* the ROM also clears +0xB — always 0 here. */
         } else {
-            out->anim_step_count++;         /* sub_0803F17C */
+            out->child_anim_step_count++;    /* sub_0803F17C */
         }
         return;
     }
     if (st == 2) {
         if (s->child29.ctr_c == 0) {
             /* Spawn the type-0xB grandchild at own +0x42 - 0xB /
-             * +0x46 - 0x10 with the 0xFFFF6000 velocity pair —
-             * approximated: the spawn is reported and the
-             * placement/velocity writes stay engine-side. */
+             * +0x46 - 0x10 with +0x48 = 0xFFFF6000, +0x4C =
+             * 0x2000, +0x50 = 0x100, +0x54 = 0x1000, +0x65 = 3
+             * and +0 = sub_0805C284; on a failed spawn the
+             * native still writes the child's +0x65/+0xC/+0xD
+             * below. The grandchild's own screen words are the
+             * +0x14 child's +0x42/+0x46 — the child14_*
+             * fields. approximated: the spawn is reported and
+             * gc.spawned stands in for the sub_0805B5E8
+             * pointer (in->spawn14_ok). */
             spawn1(out, 0xB);
+            if (in->spawn14_ok) {
+                s->gc.spawned = true;
+                s->gc.state = 0;
+                s->gc.sub_b = 0;
+                s->gc.ctr_c = 0;
+                s->gc.scr42 = (int16_t)(s->child14_scr42 - 0xB);
+                s->gc.scr46 = (int16_t)(s->child14_scr46 - 0x10);
+                s->gc.pos40 = 0;
+                s->gc.pos44 = 0;
+                s->gc.vel48 = (int32_t)0xFFFF6000;
+                s->gc.vel4c = 0x2000;
+                s->gc.acc50 = 0x100;
+                s->gc.acc54 = 0x1000;
+                s->gc.anim65 = 3;
+            }
             s->child29.anim65 = 2;          /* +0x65 = state(2) */
             out->ent65_set = true;
             out->ent65_val = 2;
@@ -1137,7 +1201,9 @@ void aos_object20_story_child29_update(AosObject20Story *s,
         }
         s->child29.timer_d = (uint8_t)(s->child29.timer_d - 1);
         if (s->child29.timer_d == 0xFF) {
+            /* _0805C48E tail: +0xA = 3, +0xB = +0xC = 0. */
             s->child29.state = 3;
+            s->child29.sub_b = 0;
             s->child29.ctr_c = 0;
         }
         return;
@@ -1148,13 +1214,164 @@ void aos_object20_story_child29_update(AosObject20Story *s,
             s->child29.field1a = 0;
             s->child29.ctr_c = 1;
         }
-        if (!in->c328_ok) {                 /* sub_0805C328 == 0 */
+        if (!c328_step(s, in, out)) {        /* sub_0805C328 == 0 */
+            /* _0805C48E tail: +0xA = 0x80, +0xB = +0xC = 0. */
             s->child29.state = 0x80;
+            s->child29.sub_b = 0;
             s->child29.ctr_c = 0;
         }
         return;
     }
     /* states >= 4 (incl. 0x80) return without work. */
+}
+
+/* ------------------------------------------------------------------
+ * sub_0805C218 — the param0-31 grandchild's floor-hit debris
+ * burst: 12 sub_0805B5E8(0xB) entities from the 0x08526758
+ * table (8-byte records), each with +0 = sub_0805CB08,
+ * +0x54 = 0x2000 and the record's +0x65/+0x42/+0x46/+0x48/
+ * +0x4C/+0xD fields. approximated: in->spawn14_ok stands in
+ * for each spawn's non-NULL result and a NULL
+ * in->debris_table_08526758 reports the burst without
+ * populating the debris (the table is not committed).
+ * ------------------------------------------------------------------ */
+static void gc_burst(AosObject20Story *s, const AosObject20StoryIn *in,
+                     AosObject20StoryOut *out) {
+    int16_t x = s->gc.scr42;
+    int16_t y = (int16_t)(s->gc.scr46 - 2);    /* _0805C1FE pair */
+    if (!in->spawn14_ok)
+        return;                     /* every spawn fails natively */
+    out->debris_spawn_count += 12;
+    if (!in->debris_table_08526758) {
+        out->debris_table_missing = true;
+        return;
+    }
+    const int8_t *t = in->debris_table_08526758;
+    for (unsigned i = 0; i < 12; ++i, t += 8) {
+        AosObject20GcDebris *d = &s->gc.debris[i];
+        d->active = true;
+        d->flags59 = 0;
+        d->scr42 = (int16_t)(x + t[1]);
+        d->scr46 = (int16_t)(y + t[2]);
+        d->pos40 = 0;
+        d->pos44 = 0;
+        d->vel48 = (int32_t)((int32_t)t[3] << 12);
+        d->vel4c = (int32_t)(-((int32_t)t[4] << 12));
+        d->acc54 = 0x2000;
+        d->timer_d = (uint8_t)t[5];
+        d->anim65 = (uint8_t)t[0];
+    }
+}
+
+/* ------------------------------------------------------------------
+ * sub_0805CB08 — one debris entity's update: the sub_080020A0
+ * floor probe on the +0x42/+0x46 screen words + A094 origin;
+ * a hit marks +0x59 |= 8 (the engine delete mark), a miss
+ * integrates +0x40/+0x44 by +0x48/+0x4C and +0x4C by +0x54.
+ * ------------------------------------------------------------------ */
+static void debris_update(AosObject20Story *s, unsigned i,
+                          const AosObject20StoryIn *in,
+                          AosObject20StoryOut *out) {
+    (void)out;
+    AosObject20GcDebris *d = &s->gc.debris[i];
+    if (!d->active || (d->flags59 & 8))
+        return;                     /* +0x59 bit 3 = deleted */
+    int32_t x = (int32_t)d->scr42 + (int32_t)(int16_t)in->a094_6;
+    int32_t y = (int32_t)d->scr46 + (int32_t)(int16_t)in->a094_a;
+    int32_t hit = in->probe_020a0
+        ? in->probe_020a0(x, y, in->probe_020a0_ctx) : 0;
+    if (hit != 0) {
+        d->flags59 |= 8;
+    } else {
+        d->pos40 += d->vel48;
+        d->pos44 += d->vel4c;
+        d->vel4c += d->acc54;
+    }
+}
+
+/* ------------------------------------------------------------------
+ * sub_0805C284 — the param0-31 grandchild's own update (+0).
+ * ------------------------------------------------------------------ */
+void aos_object20_story_gc_update(AosObject20Story *s,
+                                  const AosObject20StoryIn *in,
+                                  AosObject20StoryOut *out) {
+    if (!s->gc.spawned)
+        return;
+    if (s->gc.state == 0) {
+        /* _0805C2A8: probe world px = +0x42/+0x46 + A094
+         * origin; nonzero = ground hit -> the sub_0805C218
+         * burst + PlaySong(0xAA) + land at state 1. */
+        int32_t x = (int32_t)s->gc.scr42 +
+                    (int32_t)(int16_t)in->a094_6;
+        int32_t y = (int32_t)s->gc.scr46 +
+                    (int32_t)(int16_t)in->a094_a;
+        int32_t hit = in->probe_020a0
+            ? in->probe_020a0(x, y, in->probe_020a0_ctx) : 0;
+        if (hit != 0) {
+            gc_burst(s, in, out);
+            out->song = 0xAA;               /* PlaySong(0xAA) */
+            s->gc.state = 1;
+            s->gc.sub_b = 0;                /* old +0xA */
+            s->gc.ctr_c = 0;
+        } else {
+            /* _0805C2E8: integrate; +0x48 += +0x50, +0x4C +=
+             * +0x54; a positive new +0x48 clamps to the probe
+             * result (0 on this path). */
+            s->gc.pos40 += s->gc.vel48;
+            s->gc.pos44 += s->gc.vel4c;
+            s->gc.vel48 += s->gc.acc50;
+            s->gc.vel4c += s->gc.acc54;
+            if (s->gc.vel48 > 0)
+                s->gc.vel48 = hit;
+        }
+    } else {
+        /* _0805C30E: any nonzero state arms +0x65 = 8 once
+         * through +0xC — no integration, no anim step. */
+        if (s->gc.ctr_c == 0) {
+            s->gc.anim65 = 8;
+            s->gc.ctr_c = 1;
+        }
+    }
+    /* The debris are separate entities in the ROM; their
+     * sub_0805CB08 updates run every frame once spawned. */
+    for (unsigned i = 0; i < 12; ++i)
+        debris_update(s, i, in, out);
+}
+
+/* ------------------------------------------------------------------
+ * The child-entity update pass — see the header for the
+ * per-param0 dispatch.
+ * ------------------------------------------------------------------ */
+void aos_object20_story_children_update(AosObject20Story *s,
+                                        uint8_t param0,
+                                        const AosObject20StoryIn *in,
+                                        AosObject20StoryOut *out) {
+    switch (param0) {
+    case 9:
+        /* +0x14 child (record 5) and +0x18 link (record 1):
+         * both keep the sub_0805B748 update — a bare
+         * sub_0803F17C animation step. update9 already wrote
+         * their +0x58/+0x59/+0x6D picks and the link's +0x40
+         * follower sync. */
+        if (s->child14)
+            out->child_anim_step_count++;
+        if (s->link18)
+            out->child_anim_step_count++;
+        break;
+    case 23:
+        /* +0x14 escort child (record 1): same sub_0805B748
+         * anim step; nothing else tracks it natively. */
+        if (s->child14)
+            out->child_anim_step_count++;
+        break;
+    case 31:
+        if (s->child14)
+            aos_object20_story_child29_update(s, in, out);
+        aos_object20_story_gc_update(s, in, out);
+        break;
+    default:
+        break;
+    }
 }
 
 /* ------------------------------------------------------------------
@@ -1990,6 +2207,12 @@ int aos_object20_story_update(AosObject20Story *s, uint8_t param0,
     }
     if (ret == 0 && out->return_code != 0)
         ret = out->return_code;
+    /* The +0x14/+0x18 children are separate entities natively
+     * (the entity loop runs their own +0 update callbacks);
+     * composed here so the aggregate advances them once per
+     * parent frame. Order vs. the tail below is immaterial —
+     * the tail only reports input routing. */
+    aos_object20_story_children_update(s, param0, in, out);
     /* Tail: +0x42C bit 0 selects SetPlayerInput(1, ret) +
      * sub_0800C5A8(0), else sub_0800C5A8(1). */
     if (in->flag42c & 1) {

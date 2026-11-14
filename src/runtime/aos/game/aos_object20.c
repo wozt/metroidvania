@@ -18,6 +18,67 @@ static void out_reset(AosObject20Out *out) {
     out->c5a8 = -1;
     out->song = -1;
     out->npc_ret = -1;
+    /* Every family's -1 sentinels must hold even when that family
+     * did not run this call: the host reads all sub-Outs and a
+     * memset-0 sentinel reads as "fired" (>= 0), which self-deleted
+     * every non-dirs entity on its create frame and spammed
+     * spurious song/transaction/effect reports. The active
+     * family's own out_reset re-initializes the same values. */
+    out->dirs.window_text = -1;
+    out->dirs.song = -1;
+    out->dirs.b878 = -1;
+    out->dirs.cf0 = -1;
+    out->dirs.release_arg = -1;
+    out->dirs.jingle = -1;
+    out->dirs.ed24_a = -1;
+    out->dirs.c5a8 = -1;
+    out->dirs.setplayerinput = -1;
+    out->dirs.keep_arg = -1;
+    out->story.window_text = -1;
+    out->story.song = -1;
+    out->story.b878 = -1;
+    out->story.cf0 = -1;
+    out->story.d60 = -1;
+    out->story.e18 = -1;
+    out->story.eec = -1;
+    out->story.jingle = -1;
+    out->story.ev_121e0 = -1;
+    out->story.ed24_a = -1;
+    out->story.c5a8 = -1;
+    out->story.setplayerinput = -1;
+    out->story.call_127f0_off = -1;
+    out->story.call_1d028_a = -1;
+    out->story.call_3d004 = -1;
+    out->story.call_3d3a0 = -1;
+    out->story.f6c = -1;
+    out->story.release_arg = -1;
+    out->story.wo_disp4c = -1;
+    out->story.wo_disp48 = -1;
+    out->story.wo_unk4 = -1;
+    out->story.wo_unk6 = -1;
+    out->story.wo_rng = -1;
+    for (unsigned i = 0; i < 4; ++i) {
+        out->story.anim_a[i] = -1;
+        out->story.child_anim_a[i] = -1;
+        out->story.spawn_type[i] = -1;
+    }
+    out->slots.window_text = -1;
+    out->slots.b878 = -1;
+    out->slots.jingle = -1;
+    out->slots.release_arg = -1;
+    out->slots.rec_5b754 = -1;
+    out->slots.setplayerinput = -1;
+    out->slots.c5a8 = -1;
+    out->slots.sfx_13eec = -1;
+    out->slots.call_13cf0 = -1;
+    out->slots.call_00ea8 = -1;
+    for (unsigned i = 0; i < 4; ++i)
+        out->slots.anim_a[i] = -1;
+    out->shop.window_text = -1;
+    out->shop.b878 = -1;
+    out->shop.jingle = -1;
+    out->shop.song = -1;
+    out->shop.anim_a = -1;
 }
 
 static uint8_t family_of(int16_t param0) {

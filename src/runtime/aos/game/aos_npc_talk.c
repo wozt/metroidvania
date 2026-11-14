@@ -1,6 +1,21 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_npc_talk.h"
 
+/* 0x08118C85: the 0x38-byte queue-pick table memcpy'd to the stack
+ * by sub_08066308 — 7 rows of 8 bytes, one per queue mode 0-6
+ * (slot = (cursor & 0xF) + mode*8; the cursor low nibble only ever
+ * reaches 7 before the mode<<4 reseat, so every byte is reachable).
+ * Each byte lands in the +0x138F4 sequence fallback word. */
+const uint8_t aos_guard_pick_table_118c85[0x38] = {
+    0x00, 0x09, 0x00, 0x01, 0x04, 0x00, 0x08, 0x03, /* mode 0 */
+    0x07, 0x03, 0x09, 0x04, 0x07, 0x08, 0x09, 0x01, /* mode 1 */
+    0x05, 0x09, 0x03, 0x05, 0x09, 0x04, 0x07, 0x08, /* mode 2 */
+    0x06, 0x04, 0x09, 0x08, 0x03, 0x01, 0x02, 0x07, /* mode 3 */
+    0x08, 0x02, 0x09, 0x01, 0x03, 0x04, 0x08, 0x07, /* mode 4 */
+    0x09, 0x01, 0x02, 0x03, 0x04, 0x02, 0x03, 0x04, /* mode 5 */
+    0x09, 0x09, 0x03, 0x09, 0x09, 0x04, 0x09, 0x08  /* mode 6 */
+};
+
 static void talk_reset(AosNpcTalk *t) {
     t->arm_42c_1 = false;
     t->window_text = -1;
@@ -520,9 +535,9 @@ static bool pk_120ac(AosGuardPickCtx *c, unsigned bit) {
  * mode*8 into the 0x08118C85 table, byte -> sequence fallback,
  * cursor +1, reseated to mode<<4 when the low nibble hits 8. */
 static void pk_pick_step(AosGuardPickCtx *ctx, AosGuardSeq *seq,
-                         unsigned mode) {
+                         unsigned mode, const uint8_t *table) {
     unsigned slot = (ctx->cursor_18c & 0xF) + mode * 8;
-    seq->fallback = ctx->table_08118c85[slot];
+    seq->fallback = table[slot];
     ctx->cursor_18c = (uint8_t)(ctx->cursor_18c + 1);
     if ((ctx->cursor_18c & 0xF) == 8)
         ctx->cursor_18c = (uint8_t)(mode << 4);
@@ -595,19 +610,21 @@ void aos_npc_talk_66308(AosGuardSeq *seq, AosGuardPickCtx *ctx,
             mode = (ctx->flags37e & 0x40) ? 4 : 3;
         }
     }
+    /* The ROM table is committed; a NULL ctx field selects it
+     * (the pre-extraction RNG%9-only degradation is retired), a
+     * non-NULL pointer overrides it (tests). */
+    const uint8_t *pick_table = ctx->table_08118c85
+        ? ctx->table_08118c85 : aos_guard_pick_table_118c85;
     if (mode != (unsigned)(ctx->unk133e8 >> 4))
         ctx->cursor_18c = (uint8_t)(mode << 4);
-    if (!ctx->table_08118c85)
-        return;             /* documented degradation: the
-                             * RNG%9 fallback stays */
-    pk_pick_step(ctx, seq, mode);
+    pk_pick_step(ctx, seq, mode, pick_table);
     if (pk_12078(ctx, 0x39)) {
         while (seq->fallback == 7)
-            pk_pick_step(ctx, seq, mode);
+            pk_pick_step(ctx, seq, mode, pick_table);
     }
     if (pk_12078(ctx, 0x3D)) {
         while (seq->fallback == 9)
-            pk_pick_step(ctx, seq, mode);
+            pk_pick_step(ctx, seq, mode, pick_table);
     }
 }
 

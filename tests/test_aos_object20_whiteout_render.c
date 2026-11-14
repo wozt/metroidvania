@@ -176,8 +176,79 @@ int main(void) {
     assert(out.spawn_count == 1 &&
            out.spawns[0].kind == AOS_WO_SPAWN_TABLE_118B34 &&
            out.spawns[0].aux == 4);
+    /* The committed 0x08118B34 table decodes aux 4 to the
+     * sub_08063740 Thumb update pointer. */
+    assert(out.spawns[0].fn_addr == 0x08063741);
     assert(out.fade_pair && out.fade_s1 == 0xff);
     assert(out.purge_547);
+
+    /* State-2 scheduled spawn at +0x24 == 0x40: table word 0 ->
+     * sub_08063420. */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 2;
+    s.field_16 = 1;
+    s.field_24 = 0x40;
+    in = base_in();
+    step(&s, &in, &out);
+    assert(out.spawn_count == 1 &&
+           out.spawns[0].kind == AOS_WO_SPAWN_TABLE_118B34 &&
+           out.spawns[0].aux == 0 &&
+           out.spawns[0].fn_addr == 0x08063421);
+
+    /* ---- sub_0806447C cycle: the committed 0x08526924 table.
+     * State 4/5, odd +0x24 (no exit), +0x34 = 0 entry dwell 64:
+     * +0x36 must exceed 64 (old > dwell) to fire. ---- */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 4;
+    s.field_16 = 1;
+    s.field_24 = 0xa1;                /* odd, > 0x9F: no exit */
+    s.field_14 = 0xff;
+    s.field_1c = 0x100;
+    s.field_1e = 8;
+    s.field_2c = 0x0e;
+    s.field_34 = 0;
+    s.field_36 = 65;                  /* old 65 > dwell 64 -> fire */
+    in = base_in();
+    step(&s, &in, &out);
+    assert(out.cycle_6447c && out.cycle.ran);
+    assert(out.cycle.step);
+    assert(out.cycle.index == 0 && out.cycle.next_index == 1);
+    assert(out.cycle.data == 0x08119FDC && out.cycle.tile == 0 &&
+           out.cycle.dwell == 64);
+    /* next entry (index 1): tile 5, dwell 16; the sequence pair
+     * arms on it with arg0 = entity +0x2C. */
+    assert(out.cycle.next_data == 0x08119FDC &&
+           out.cycle.next_tile == 5 && out.cycle.next_dwell == 16);
+    assert(out.cycle.seq_arg0 == 0x0e);
+    assert(out.cycle.copy_3c918 && out.cycle.copy_3c7b4);
+    assert(out.cycle.seq_3d2d0 && out.cycle.seq_3cf34);
+    assert(s.field_34 == 1 && s.field_36 == 0);
+    /* Same frame next call: +0x36 restarted at 1, entry 1 dwell
+     * 16 — old 0 <= 16, no step but the counter moves. */
+    step(&s, &in, &out);
+    assert(out.cycle.ran && !out.cycle.step);
+    assert(s.field_36 == 1 && s.field_34 == 1);
+    /* Push +0x36 past entry-1's dwell: old 17 > 16 fires with
+     * index 1 -> next_index 2 (tile 6, dwell 16). */
+    s.field_36 = 17;
+    step(&s, &in, &out);
+    assert(out.cycle.step && out.cycle.index == 1 &&
+           out.cycle.next_index == 2 && out.cycle.tile == 5 &&
+           out.cycle.next_tile == 6);
+    /* +0x34 == 6 early-out: ran but +0x36 untouched, no step. */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 4;
+    s.field_16 = 1;
+    s.field_24 = 0xa1;
+    s.field_14 = 0xff;
+    s.field_1c = 0x100;
+    s.field_1e = 8;
+    s.field_34 = 6;
+    s.field_36 = 100;
+    in = base_in();
+    step(&s, &in, &out);
+    assert(out.cycle.ran && !out.cycle.step);
+    assert(s.field_34 == 6 && s.field_36 == 100);
 
     /* ---- states 6/7: +0x1C += 0x640/frame, +0xD wrap advances. -- */
     memset(&s, 0, sizeof s);

@@ -875,6 +875,22 @@ static const EntitySpec special15_variants[] = {
     ENTITY("special_15_v9", 0x081C15F4, 0x0826F8A4, 9, 0x0820ED60),
 };
 
+/* Id 29 (Object1DCreate, 0x080554F0): param0 (+ 0x30) selects between
+ * two sprite sets — param0 0 the story-gate display and any nonzero
+ * param0 the save-point-right display; rooms use only param0 0 and 1.
+ * Each set is a graphics descriptor resolved through sub_0803AFB8 /
+ * sub_0803B800 (LZ77 tile sheets 0x082052F0/0x082052E8), a palette
+ * descriptor banked by sub_0803C7B4 (bank 0 of 0x08119E14, ten banks,
+ * and bank 0 of 0x0820C384, five banks) and a frame descriptor drawn
+ * by sub_0803B924 (0x08257BD8, twelve entries, and 0x08257964, twelve
+ * animations over 26 frame records). The sub_0803AFB8 palette-slot
+ * lookup is dynamic, so the OBJ palette row each bank lands on is a
+ * runtime assignment; bank 0 is exported per create call. */
+static const EntitySpec special29_variants[] = {
+    ENTITY("special_29_v0", 0x082052F0, 0x08119E14, 0, 0x08257BD8),
+    ENTITY("special_29_v1", 0x082052E8, 0x0820C384, 0, 0x08257964),
+};
+
 static const EffectSpec effects[] = {
     {"flame", 0x081C15F4, 0x082099FC, 3, 0x0820ED60, 1, {0}, -1},
     {"blood", 0x081C15F4, 0x082099FC, 4, 0x0820ED60, 1, {13}, -1},
@@ -2206,6 +2222,11 @@ bool fusion_aos_export_objects(const FusionRom *rom,
          success && index < sizeof special07_variants / sizeof special07_variants[0];
          ++index)
         success = export_entity(rom, &library, &special07_variants[index],
+                                "Object", &object_rows, error, error_size);
+    for (size_t index = 0;
+         success && index < sizeof special29_variants / sizeof special29_variants[0];
+         ++index)
+        success = export_entity(rom, &library, &special29_variants[index],
                                 "Object", &object_rows, error, error_size);
     for (size_t index = 0;
          success && index < sizeof effects / sizeof effects[0]; ++index)

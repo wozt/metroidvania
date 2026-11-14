@@ -1,3 +1,56 @@
+## Patch 1130 - Object1C/1D/1F integration, Object20 sentinel fix, spawn sweep
+
+- **Critical fix**: `aos_object20.c` `out_reset` now initializes every
+  family sub-Out's -1 sentinels. Previously only the active family's
+  module reset its own Out, so `object20_apply_out` read memset-0
+  sentinels (`release_arg >= 0`, `song >= 0`, `sfx_13eec >= 0`,
+  `ed24_a >= 0`) from inactive families — every non-dirs Object20
+  self-deleted on its create frame and no update routine ever ran in
+  a room. Verified: real songs (0x1040, 0x1B8) now fire and entities
+  survive to update.
+- **Object1C (SPECIAL id 28, save point)**: `aos_object1c.c/.h` ports
+  `Object1CCreate` 0x0805464C / `Object1CUpdate` 0x0805474C — all 11
+  reachable states of the 100-entry jump table — wired into
+  `update_entities`: Up-probe latch, save-screen setup report,
+  YES/NO cursor, real `SaveData_SaveSlotToSram` through
+  `aos_save_store` with the result fed back as next frame's input,
+  palette/affine/song outputs applied or reported. The old
+  `draw_save_point` placeholder is retired; the marker child draws
+  via the `special_29_v1` frame set (same 0x08257964 records).
+  Verified headless: probe latch, YES commit and NO decline paths.
+- **Object1D (id 29)**: the create `sum` is now computed natively as
+  the total of `screen_x` over the room transition table
+  (`AriaRoom.transitions`, the decoded +0x18 record array); all 28
+  room records spawn. `special_29_v0/v1` sprite sets exported and
+  drawn — v0's +0x65 still index walks the flat frame list.
+- **Object1F (id 31, opening gate)**: the think's case-1 substate-0
+  gate corrected to the Up edge (`newInput & 0x40`, distinct from
+  the +0x42C bit); `sub_08012048(0x39)` arms story event 0x39 into
+  `aria_events`; +0x42C writes fold into `global_flags`. Verified:
+  song 0xF3 + event 0x39 on the Up-press path.
+- **Object20 child update vectors**: the param0-31 chain is ported —
+  `sub_0805C39C` child29 state machine, `sub_0805C284` grandchild
+  gravity/floor probe, `sub_0805C218` 12-entity debris burst,
+  `sub_0805CB08` debris update, `sub_0805C328` record helper (tables
+  0x085267B8/0x08526758 injected). child14/link18/child18 keep only
+  the native `sub_0805B748` anim step — non-tracking is faithful.
+- **ROM tables committed** as decoded constants: guard picker
+  0x08118C85 (7x8, real bytes now drive `sub_08066308`), whiteout
+  cycle 0x08526924 (`sub_0806447C` ported, dwell-driven) and spawn
+  0x08118B34 (five Thumb update pointers recorded as `fn_addr`).
+- **Whiteout bars drawn**: `AosWoBar` records persist on
+  `AriaEntity` and `draw_object20_wo_bars` renders them as
+  approximated white strips (no affine pipeline; documented).
+- **Unconditional spawn generalized**: `entity_spawn_due` applies
+  `flags & 0xF` and the tall-room Y-window (`sub_0800F5BC`) to every
+  entity kind; kind-1 enemies spawn unconditionally per
+  `sub_0800F92C`. Verified: 21 enemies alive in area_08_room_019,
+  Y-window spawn in area_11_room_031.
+- Registries synced (`annotations.tsv` rows opening_scene,
+  multi_sprite_display, opening_gate, special_sprites,
+  portable_slots; `features.tsv` aria_opening_event,
+  aria_save_rooms_0479, aria_objects).
+
 ## Patch 1129 - Object20 table complete: update15, whiteout renderer, spawn/child fixes
 
 - `src/runtime/aos/game/aos_object20_slots.c` now ports the last

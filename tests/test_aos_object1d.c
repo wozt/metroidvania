@@ -2,6 +2,10 @@
 #include <assert.h>
 #include <stdio.h>
 
+/* The runtime feeds `sum` as the total of the room transitions'
+ * source screen X (the native + 0x18/+ 0x1C record checksum);
+ * these cases pin the create-side variant resolution for the
+ * sums that occur in exported rooms (+-1, 0, other). */
 int main(void) {
     AosObject1D o;
     bool deleted;

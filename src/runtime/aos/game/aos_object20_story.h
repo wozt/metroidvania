@@ -44,6 +44,22 @@
  * position/velocity words, the +0x42/+0x46 screen words,
  * +0x5C/+0x65/+0x6D animation selectors and the +0x58/+0x59
  * flag bytes. */
+/* One sub_0805C218 debris entity (update sub_0805CB08). */
+typedef struct {
+    bool active;
+    uint8_t flags59;    /* +0x59 — bit 3 is the native
+                         * +0x59 |= 8 delete mark */
+    uint8_t timer_d;    /* +0xD */
+    uint8_t anim65;     /* +0x65 */
+    int16_t scr42;      /* +0x42 screen X */
+    int16_t scr46;      /* +0x46 screen Y */
+    int32_t pos40;      /* +0x40 fine X */
+    int32_t pos44;      /* +0x44 fine Y */
+    int32_t vel48;      /* +0x48 */
+    int32_t vel4c;      /* +0x4C */
+    int32_t acc54;      /* +0x54 (= 0x2000 at spawn) */
+} AosObject20GcDebris;
+
 typedef struct {
     uint8_t state;      /* +0xA */
     uint8_t sub_b;      /* +0xB */
@@ -75,9 +91,13 @@ typedef struct {
      * record the sub_0805B5E8 spawn index — the private
      * 0x081186DC sprite-table record the child draws with
      * (5 for param0 9, 1 for param0 23, 0xB for param0 31).
-     * The children's own update vectors are unported, so the
-     * position is the create-time placement: the last reported
-     * child position, not a tracked one. */
+     * The sub_0805B5E8 children keep the default
+     * sub_0805B748 update (a bare sub_0803F17C animation
+     * step) unless the parent overwrites +0 — param0 31's
+     * child runs sub_0805C39C (child29 below) and its
+     * state-2 grandchild runs sub_0805C284 (gc below).
+     * aos_object20_story_children_update runs each living
+     * child's ported update vector. */
     bool child14;
     int16_t child14_scr42;      /* child +0x42 screen X */
     int16_t child14_scr46;      /* child +0x46 screen Y */
@@ -97,7 +117,8 @@ typedef struct {
     int32_t link18_vel48;       /* link +0x48 */
     int16_t link18_scr42;       /* link +0x42 */
     int16_t link18_scr46;       /* link +0x46 */
-    /* param0 29/31's +0x14 child runs sub_0805C39C; its own
+    /* param0 31's +0x14 child (create31's sub_0805B5E8(0xB)
+     * spawn) runs sub_0805C39C as its +0 update; its own
      * +0xA/+0xB/+0xC/+0xD/+0x18/+0x1A/+0x59/+0x65 live here. */
     struct {
         uint8_t state;      /* child +0xA */
@@ -109,6 +130,35 @@ typedef struct {
         uint8_t flags59;    /* child +0x59 */
         uint8_t anim65;     /* child +0x65 */
     } child29;
+    /* The param0-31 child29 state-2 grandchild: a separate
+     * sub_0805B5E8(0xB) entity whose +0 update vector is
+     * sub_0805C284 (gravity projectile + sub_080020A0 floor
+     * probe). On the first probe hit it runs sub_0805C218 —
+     * a 12-entity debris burst whose updates are
+     * sub_0805CB08 — plays PlaySong(0xAA) and parks at
+     * state 1 with +0x65 = 8. Fields mirror the native
+     * entity bytes; scr42/scr46 stay at the spawn values
+     * (these updates never rewrite them — whether the
+     * engine re-derives +0x42/+0x46 from +0x40/+0x44 is
+     * engine-side). */
+    struct {
+        bool spawned;       /* sub_0805B5E8(0xB) returned live */
+        uint8_t state;      /* +0xA: 0 falling, 1 landed */
+        uint8_t sub_b;      /* +0xB (set to old +0xA on land) */
+        uint8_t ctr_c;      /* +0xC (+0x65 = 8 arm) */
+        uint8_t anim65;     /* +0x65 */
+        int16_t scr42;      /* +0x42 screen X */
+        int16_t scr46;      /* +0x46 screen Y */
+        int32_t pos40;      /* +0x40 fine X */
+        int32_t pos44;      /* +0x44 fine Y */
+        int32_t vel48;      /* +0x48 */
+        int32_t vel4c;      /* +0x4C */
+        int32_t acc50;      /* +0x50 X accel */
+        int32_t acc54;      /* +0x54 Y accel */
+        /* The sub_0805C218 debris: 12 sub_0805B5E8(0xB)
+         * entities, each with +0 = sub_0805CB08. */
+        AosObject20GcDebris debris[12];
+    } gc;
     /* sub_08064518's own entity-byte sub-state (+0x14/+0x15/+0x16/
      * +0x18/+0x1C..+0x24/+0x2C/+0x34..+0x3C/+0x42/+0x46) — the
      * ported renderer owns these; field15 above mirrors
@@ -153,9 +203,13 @@ typedef struct {
     bool fade_done;         /* sub_0803D408() != 0 — param0 23/24/29 */
     int32_t rng_32df0;      /* sub_08032DF0() — param0 24 upd st1 */
     bool text_done;         /* sub_08067A04() != 0 */
-    /* param0 29 child29 sub_0805C328 support (0x085267B8
-     * records): `c328_ok` is its return value. */
+    /* param0 31 child29 sub_0805C328 support: the routine's
+     * 0x085267B8 record table (4 records of 8 bytes: +0 word,
+     * +4 hword, +6 hword frame threshold). NULL = table not
+     * committed: the injected `c328_ok` stands in for the
+     * routine's return value (documented degradation). */
     bool c328_ok;
+    const uint8_t *c328_table_085267b8;
     /* param0 19 create sub_08061FDC support: the raw
      * sub_0806E0D0 result — nonzero low byte keeps the entity
      * (+0x5C = 0x11), zero deletes it. */
@@ -192,6 +246,22 @@ typedef struct {
     /* param0 31 update sub_0806E140 floor probe result (bit 2
      * set skips the +0x44 += +0x4C slide). */
     uint32_t ret_6e140;
+    /* sub_080020A0 room/floor probe used by the param0-31
+     * grandchild update sub_0805C284 and its sub_0805CB08
+     * debris: called with world pixel coords (entity
+     * +0x42/+0x46 + A094[6]/[0xA]); nonzero = ground hit.
+     * NULL = probe unported, treated as 0 (documented
+     * degradation: nothing ever lands). */
+    int32_t (*probe_020a0)(int32_t x, int32_t y, void *ctx);
+    void *probe_020a0_ctx;
+    /* The 12-record spawn table at 0x08526758 (8-byte
+     * records: [0] -> +0x65, s8[1] -> +0x42 offset,
+     * s8[2] -> +0x46 offset, s8[3] << 12 -> +0x48,
+     * s8[4] << 12 negated -> +0x4C, [5] -> +0xD) consumed
+     * by sub_0805C218. NULL = table not committed: the
+     * burst is still reported through Out but no debris
+     * state is populated. */
+    const int8_t *debris_table_08526758;
 } AosObject20StoryIn;
 
 /* Outputs reset at the top of every call; each names a native
@@ -272,12 +342,15 @@ typedef struct {
                              * records emitted this call */
     AosWoBar wo_bars[AOS_WO_BAR_COUNT]; /* the per-scanline bar
                              * records (x/y/bgx/bgy/intensity) —
-                             * no BG2-affine consumer yet, data is
-                             * forwarded for the host */
+                             * persisted on the entity and drawn
+                             * as approximated white strips by
+                             * draw_object20_wo_bars (no affine
+                             * pipeline) */
     bool wo_palette_copy;   /* sub_0803C7B4 palette copy (state-0
                              * init of sub_08064518) */
     bool wo_cycle_6447c;    /* sub_0806447C cycler call — its
-                             * 0x08526924 table is uncommitted */
+                             * 0x08526924 table is committed in
+                             * aos_object20_whiteout_render.c */
     bool wo_purge_547;      /* sub_08000EA8(0x80) entity purge */
     bool wo_purge_flagged;  /* the +0x63/+0x58 flagged scan */
     bool wo_burst_63aec;    /* sub_08063AEC particle burst */
@@ -285,7 +358,7 @@ typedef struct {
     uint8_t wo_spawn_count; /* EntityCreateInRange/scripted spawn
                              * requests this call (kinds/args in
                              * the renderer module — the ROM spawn
-                             * tables are uncommitted) */
+                             * table 0x08118B34 is committed) */
     uint8_t wo_particle_count;
     bool fade_pair_wo;      /* sub_08064518's fade pair fired —
                              * sub_0803D18C + sub_0803CDF0 with the
@@ -350,6 +423,24 @@ typedef struct {
      * not the entity itself. */
     unsigned child_anim_count;
     int child_anim_a[4], child_anim_b[4], child_anim_c[4];
+    /* sub_0803F17C animation steps run on child entities by
+     * aos_object20_story_children_update (the sub_0805B748
+     * default child update). */
+    unsigned child_anim_step_count;
+    /* sub_0805B5E8(0xB) debris spawned by the param0-31
+     * grandchild's sub_0805C218 burst (0 or 12). */
+    unsigned debris_spawn_count;
+    /* The 0x08526758 debris table was not injected, so the
+     * burst reported its spawn count but left the debris
+     * fields unpopulated. */
+    bool debris_table_missing;
+    /* sub_0805C328's engine calls on a threshold crossing:
+     * sub_0803C7B4(record+0 word, record+4 hword, entity
+     * +0x2C byte, 1) then — when the +0x1A index does not
+     * wrap — sub_0803CF34(0, record+0, record+4, 0x10000,
+     * record+6, 0). Reported, not modelled. */
+    bool c328_c7b4;
+    bool c328_cf34;
     unsigned anim_step_count;   /* sub_0803F17C calls */
     /* sub_0805B5E8 spawn requests: up to 4 per call. */
     unsigned spawn_count;
@@ -402,13 +493,48 @@ int aos_object20_story_update(AosObject20Story *s,
                               const AosObject20StoryIn *in,
                               AosObject20StoryOut *out);
 
-/* sub_0805C39C: the param0-29 +0x14 child's own update —
+/* sub_0805C39C: the param0-31 +0x14 child's own update —
  * states 0/1 wait, state 2 spawns the type-0xB grandchild,
  * state 3 runs the sub_0805C328 record machine. `c328_ok` is
  * the injected sub_0805C328 result. */
 void aos_object20_story_child29_update(AosObject20Story *s,
                                        const AosObject20StoryIn *in,
                                        AosObject20StoryOut *out);
+
+/* sub_0805C284: the param0-31 child29 state-2 grandchild's
+ * own update — the +0x40/+0x44 velocity integration with
+ * +0x50/+0x54 acceleration, the sub_080020A0 floor probe on
+ * the +0x42/+0x46 screen words, and on the first hit the
+ * sub_0805C218 12-debris burst (each debris' update is
+ * sub_0805CB08, run here too since they are the burst's
+ * sub-entities) + PlaySong(0xAA) + the state-1 +0x65 = 8
+ * arm. No-op while gc.spawned is clear. */
+void aos_object20_story_gc_update(AosObject20Story *s,
+                                  const AosObject20StoryIn *in,
+                                  AosObject20StoryOut *out);
+
+/* The per-frame child-entity update pass the parent calls
+ * once for every living child of the given param0 — the
+ * native engine runs each child's own +0 updateFunc
+ * independently of the parent update:
+ *  - param0 9: the +0x14 child (record 5) and the +0x18
+ *    link (record 1) keep the sub_0805B748 update — a bare
+ *    sub_0803F17C animation step; update9 already wrote
+ *    their +0x58/+0x59/+0x6D picks and the link's +0x40
+ *    follower sync, so this only reports the anim steps.
+ *  - param0 23: the +0x14 escort child (record 1), same
+ *    sub_0805B748 anim step.
+ *  - param0 31: the +0x14 child29 (sub_0805C39C) plus the
+ *    state-2 grandchild chain (sub_0805C284 + the
+ *    sub_0805CB08 debris).
+ * param0 29 spawns no +0x14 child (verified against
+ * sub_0805BF4C/sub_0805C08C); param0 26's companion child
+ * is owned by aos_npc_talk (its +4 draw callback
+ * sub_08065C2C runs through aos_npc_talk_65c2c_child). */
+void aos_object20_story_children_update(AosObject20Story *s,
+                                        uint8_t param0,
+                                        const AosObject20StoryIn *in,
+                                        AosObject20StoryOut *out);
 
 /* sub_080628AC: the param0-30 whiteout/fade-to-white cinematic
  * update30 state 1 calls every frame. Entity +0xB is its case

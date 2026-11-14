@@ -42,10 +42,12 @@
  *
  * Engine effects that are not pure computation (entity spawns,
  * palette DMA, the sub_0806447C tile cycle, the entity-table
- * purge scans, PlaySong) are reported through Out; ROM data
- * tables they index (0x08118B34 spawn table, 0x08526924 cycle
- * table, 0x085268A8 tile-pick table) are not committed, so those
- * paths emit events only. sub_08065800 is NOT a callee of
+ * purge scans, PlaySong) are reported through Out; the decoded
+ * 0x08118B34 spawn-function table and the 0x08526924 cycle
+ * table are committed in the module so those paths carry real
+ * arguments — only the 0x085268A8 tile-pick table (sub_08065800,
+ * modelled separately in aos_seq_particles) stays uncommitted.
+ * sub_08065800 is NOT a callee of
  * sub_08064518 — it is invoked by sub_080628AC alongside it and
  * is already modelled as aos_seq_table_pick in
  * aos_seq_particles; documented here as a separate, covered path.
@@ -113,15 +115,19 @@ typedef struct {
 } AosWoBar;
 
 /* EntityCreateInRange / scripted-spawn requests. kind selects
- * which native spawn the host should perform; the ROM tables
- * they index are not committed so only the decoded arguments
- * travel here. */
+ * which native spawn the host should perform; the decoded
+ * arguments (including the committed 0x08118B34 update-function
+ * words) travel here. */
 enum {
     AOS_WO_SPAWN_TABLE_118B34 = 0, /* EntityCreateInRange(0x1B,
-                                    * 0x48, table118B34[idx]) —
+                                    * 0x48, table118B34[aux]) —
                                     * aux = table word index 0..4
-                                    * (the native ldm copies 5
-                                    * words to sp+0x1C..0x2F) */
+                                    * (the native ldm copies the
+                                    * same 5 words to
+                                    * sp+0x1C..0x2F and each site
+                                    * passes one as updateFunc);
+                                    * fn_addr carries the decoded
+                                    * Thumb update address */
     AOS_WO_SPAWN_FX_63DF8,         /* sub_080640A4 path (state-2
                                     * init, update sub_08063DF8) */
     AOS_WO_SPAWN_FX_64198,         /* sub_08064370 path; scr pos is
@@ -138,6 +144,9 @@ typedef struct {
     int16_t  scr_x;         /* child +0x42 where decoded, else 0 */
     int16_t  scr_y;         /* child +0x46 where decoded, else 0 */
     uint8_t  aux;           /* table word index for TABLE_118B34 */
+    uint32_t fn_addr;       /* decoded update-function address for
+                             * TABLE_118B34 (the table word itself),
+                             * 0 for the other kinds */
 } AosWoSpawn;
 
 /* sub_08063024 sparkle/particle spawn: entity type 0x1B range
@@ -170,9 +179,35 @@ typedef struct {
     uint32_t fade_s0;       /* 5th arg (stack [sp]) */
     uint32_t fade_s1;       /* 6th arg (stack [sp+4]) */
     bool     cycle_6447c;   /* sub_0806447C palette/tile cycler —
-                             * states 4/5 every frame; its
-                             * 0x08526924 table is uncommitted so
-                             * only the call is reported */
+                             * states 4/5 every frame; mirrors
+                             * cycle.ran (kept for callers that
+                             * only want the call flag) */
+    /* sub_0806447C decoded step — the 0x08526924 table is
+     * committed in the module; `step` reports the dwell-expiry
+     * branch with the consumed and next-entry fields below. The
+     * four engine calls are DMA/sequence writes reported as
+     * flags, matching the module's Out-event convention. */
+    struct {
+        bool     ran;        /* sub_0806447C invoked this call */
+        bool     step;       /* +0x36 dwell expired: copies +
+                              * sequence setup ran */
+        uint8_t  index;      /* +0x34 index consumed (0..5) */
+        uint8_t  next_index; /* +0x34 after the increment */
+        uint32_t data;       /* entry data pointer (0x08119FDC) */
+        uint16_t tile;       /* entry tile/record index */
+        uint16_t dwell;      /* entry dwell threshold */
+        uint32_t next_data;  /* post-increment entry (valid when
+                              * next_index <= 5) */
+        uint16_t next_tile;
+        uint16_t next_dwell;
+        uint8_t  seq_arg0;   /* entity +0x2C -> sub_0803CF34 arg0 */
+        bool     copy_3c918; /* sub_0803C918(data, tile, 1, 0) */
+        bool     copy_3c7b4; /* sub_0803C7B4(data, tile, 1, 0xE) */
+        bool     seq_3d2d0;  /* sub_0803D2D0(0, next_data,
+                              * next_tile, 0x10000, 0, next_dwell) */
+        bool     seq_3cf34;  /* sub_0803CF34(+0x2C, next_data,
+                              * next_tile, 0x10000, 0, next_dwell) */
+    } cycle;
     bool     purge_547;     /* sub_08000EA8(0x80): delete all
                              * entities whose +0x547 == 0x80 */
     bool     purge_flagged; /* the 0xE0-entry scan at state4/5

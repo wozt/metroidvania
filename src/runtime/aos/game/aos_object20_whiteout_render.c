@@ -23,6 +23,46 @@ static uint32_t wo_rng(uint32_t *state) {
     return *state;
 }
 
+/* ------------------------------------------------------------------
+ * Committed ROM tables.
+ *
+ * 0x08118B34: five words = five Thumb update-function pointers.
+ * Every spawn site ldm's the same 20-byte block to sp+0x1C..0x2F
+ * and passes ONE word as EntityCreateInRange(0x1B, 0x48, fn)'s
+ * updateFunc — the +0x20/+0x22 screen position is then written
+ * to the child's +0x42/+0x46. aux is the word index 0..4.
+ * ------------------------------------------------------------------ */
+static const uint32_t wo_spawn_table_118b34[5] = {
+    0x08063421, /* sub_08063420 — aux 0 (state-2 +0x24 == 0x40) */
+    0x08063559, /* sub_08063558 — aux 1 (state-2 +0x24 == 0x11F,
+                *          first spawn) */
+    0x08063601, /* sub_08063600 — aux 2 (+0x24 == 0x1FE and the
+                *          second 0x11F spawn) */
+    0x08063698, /* sub_08063698 — aux 3 (+0x24 == 0xC0) */
+    0x08063741, /* sub_08063740 — aux 4 (state4/5 init) */
+};
+
+/* 0x08526924: six 8-byte records {u32 data, u16 tile, u16 dwell}
+ * consumed by sub_0806447C. `data` is always 0x08119FDC — the
+ * same packed tile/palette blob the state-0 palette_copy loads
+ * through sub_0803C7B4; `tile` selects the 0x20-byte record
+ * inside it (sub_0803C918/0803C7B4 index data + 4 + tile*0x20)
+ * and `dwell` is the +0x36 threshold. */
+typedef struct {
+    uint32_t data;
+    uint16_t tile;
+    uint16_t dwell;
+} WoCycleEntry;
+
+static const WoCycleEntry wo_cycle_table_8526924[6] = {
+    {0x08119FDC, 0, 64},
+    {0x08119FDC, 5, 16},
+    {0x08119FDC, 6, 16},
+    {0x08119FDC, 7, 16},
+    {0x08119FDC, 8, 16},
+    {0x08119FDC, 9, 16},
+};
+
 /* __modsi3/__divsi3 semantics: C truncated division. The native
  * divisor is entity +0xD; a zero divisor would fault in the ROM,
  * so the port treats mod-by-zero as "no match" and documents it. */
@@ -57,6 +97,8 @@ static void wo_spawn(AosWoRenderOut *out, uint8_t kind,
     sp->scr_x = x;
     sp->scr_y = y;
     sp->aux = aux;
+    sp->fn_addr = (kind == AOS_WO_SPAWN_TABLE_118B34 && aux < 5)
+        ? wo_spawn_table_118b34[aux] : 0;
 }
 
 static void wo_particle(AosWoRenderOut *out, int32_t x, int32_t y,
@@ -88,6 +130,57 @@ static void wo_fx64198_pos(const AosWoRender *s,
                            int16_t *x, int16_t *y) {
     *x = (int16_t)((int8_t)s->field_26 - 0x30 + (int32_t)s->field_20);
     *y = (int16_t)((int8_t)s->field_27 + 8 + (int32_t)s->field_22);
+}
+
+/* sub_0806447C: the +0x34/+0x36 palette-cycle driver. +0x34
+ * indexes the six 8-byte records at 0x08526924 (values above 5
+ * early-out BEFORE the dwell counter moves). Each call stores
+ * +0x36+1 then compares the OLD counter (sign-extended) against
+ * the entry dwell with a signed ble: the block runs when
+ * (s16)old > dwell, i.e. every dwell+2 calls. On expiry it
+ * resets +0x36, copies tile records through sub_0803C918
+ * (slot 0) and sub_0803C7B4 (slot 0xE) from the OLD index's
+ * entry, increments +0x34, and — only while the new index is
+ * <= 5 — arms the sequence pair sub_0803D2D0(channel 0) and
+ * sub_0803CF34(channel +0x2C) on the NEW index's entry with
+ * scale 0x10000 and speed = dwell. The four engine calls are
+ * DMA/sequence writes, reported as Out flags. */
+static void wo_cycle_6447c(AosWoRender *s, AosWoRenderOut *out) {
+    out->cycle_6447c = true;
+    out->cycle.ran = true;
+    uint8_t idx = s->field_34;
+    if (idx > 5)
+        return;                     /* bhi _08064506: early out,
+                                     * +0x36 untouched */
+    const WoCycleEntry *e = &wo_cycle_table_8526924[idx];
+    int16_t old = (int16_t)s->field_36;
+    s->field_36 = (uint16_t)(old + 1);
+    if (old <= (int16_t)e->dwell)
+        return;                     /* ble _08064506 */
+    s->field_36 = 0;
+    out->cycle.step = true;
+    out->cycle.index = idx;
+    out->cycle.data = e->data;
+    out->cycle.tile = e->tile;
+    out->cycle.dwell = e->dwell;
+    out->cycle.copy_3c918 = true;   /* sub_0803C918(data,tile,1,0) */
+    out->cycle.copy_3c7b4 = true;   /* sub_0803C7B4(data,tile,1,0xE) */
+    uint8_t next = (uint8_t)(idx + 1);
+    s->field_34 = next;
+    out->cycle.next_index = next;
+    if (next > 5)
+        return;                     /* no sequence pair at 6 */
+    const WoCycleEntry *n = &wo_cycle_table_8526924[next];
+    out->cycle.next_data = n->data;
+    out->cycle.next_tile = n->tile;
+    out->cycle.next_dwell = n->dwell;
+    out->cycle.seq_arg0 = s->field_2c;   /* entity +0x2C byte */
+    out->cycle.seq_3d2d0 = true;    /* sub_0803D2D0(0, n->data,
+                                     * n->tile, 0x10000, 0,
+                                     * n->dwell) */
+    out->cycle.seq_3cf34 = true;    /* sub_0803CF34(+0x2C, n->data,
+                                     * n->tile, 0x10000, 0,
+                                     * n->dwell) */
 }
 
 void aos_wo_render_update(AosWoRender *s,
@@ -436,7 +529,7 @@ void aos_wo_render_update(AosWoRender *s,
          * to sub_080650CE. */
         if (!exited) {
             s->field_24 = (int16_t)(s->field_24 + 1);
-            out->cycle_6447c = true;
+            wo_cycle_6447c(s, out);     /* _08064F64 tail call */
         }
         break;
 

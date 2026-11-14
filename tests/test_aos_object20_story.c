@@ -29,6 +29,21 @@ static AosObject20StoryIn base_in(void) {
     return in;
 }
 
+/* Injected sub_080020A0 floor probes for the param0-31
+ * grandchild/debris updates. */
+static int32_t probe_zero(int32_t x, int32_t y, void *ctx) {
+    (void)x; (void)y; (void)ctx;
+    return 0;
+}
+static int32_t probe_one(int32_t x, int32_t y, void *ctx) {
+    (void)x; (void)y; (void)ctx;
+    return 1;
+}
+static int32_t probe_mixed(int32_t x, int32_t y, void *ctx) {
+    (void)x; (void)y; (void)ctx;
+    return 1;
+}
+
 /* update30 state 1's sub_080628AC whiteout writes the gEwramData
  * +4/+6 counters back through Out; the runtime keeps them as
  * globals, so the test threads them into the next call's In. */
@@ -749,7 +764,7 @@ int main(void) {
     memset(&out, 0, sizeof out);
     in = base_in();
     aos_object20_story_child29_update(&s, &in, &out);
-    assert(out.anim_step_count == 1);
+    assert(out.child_anim_step_count == 1);
     /* state 1: clears +0x59 bit 1 once, waits for bit 0 —
      * anim step while waiting, advance when bit 0 set. */
     s.child29.state = 1;
@@ -758,7 +773,7 @@ int main(void) {
     aos_object20_story_child29_update(&s, &in, &out);
     assert((s.child29.flags59 & 2) == 0);
     assert(s.child29.state == 1);
-    assert(out.anim_step_count == 1);   /* bit 0 still clear */
+    assert(out.child_anim_step_count == 1); /* bit 0 still clear */
     s.child29.flags59 = 0x1;
     aos_object20_story_child29_update(&s, &in, &out);
     assert(s.child29.state == 2);
@@ -775,6 +790,56 @@ int main(void) {
     in.c328_ok = false;
     aos_object20_story_child29_update(&s, &in, &out);
     assert(s.child29.state == 0x80);
+
+    /* state 3 with the injected 0x085267B8 table: the
+     * sub_0805C328 counter/threshold/index state machine.
+     * Records: {u32 arg, u16 arg, u16 threshold} x4. */
+    static const uint8_t c328_tab[4 * 8] = {
+        1, 0, 0, 0, 0x10, 0, 2, 0,   /* rec0 thresh 2 */
+        2, 0, 0, 0, 0x11, 0, 1, 0,   /* rec1 thresh 1 */
+        3, 0, 0, 0, 0x12, 0, 0, 0,   /* rec2 thresh 0 */
+        4, 0, 0, 0, 0x13, 0, 0, 0,   /* rec3 thresh 0 */
+    };
+    memset(&s, 0, sizeof s);
+    s.child29.state = 3;
+    in = base_in();
+    in.c328_table_085267b8 = c328_tab;
+    /* below threshold: +0x18 counts, no effects, stays 3. */
+    memset(&out, 0, sizeof out);
+    aos_object20_story_child29_update(&s, &in, &out);
+    assert(s.child29.state == 3 && s.child29.field18 == 1 &&
+           s.child29.field1a == 0);
+    assert(!out.c328_c7b4 && !out.c328_cf34);
+    aos_object20_story_child29_update(&s, &in, &out);
+    aos_object20_story_child29_update(&s, &in, &out);
+    assert(s.child29.field18 == 3);
+    /* 4th call: old 3 > thresh 2 -> reset, C7B4 + CF34 on
+     * rec1, +0x1A -> 1. */
+    memset(&out, 0, sizeof out);
+    aos_object20_story_child29_update(&s, &in, &out);
+    assert(s.child29.state == 3 && s.child29.field18 == 0 &&
+           s.child29.field1a == 1);
+    assert(out.c328_c7b4 && out.c328_cf34);
+    /* rec1 thresh 1: two waits then a crossing. */
+    aos_object20_story_child29_update(&s, &in, &out);
+    aos_object20_story_child29_update(&s, &in, &out);
+    assert(s.child29.field1a == 1 && s.child29.field18 == 2);
+    memset(&out, 0, sizeof out);
+    aos_object20_story_child29_update(&s, &in, &out);
+    assert(s.child29.field1a == 2 && out.c328_cf34);
+    /* rec2 thresh 0: one wait then crossing -> rec3. */
+    aos_object20_story_child29_update(&s, &in, &out);
+    memset(&out, 0, sizeof out);
+    aos_object20_story_child29_update(&s, &in, &out);
+    assert(s.child29.field1a == 3 && out.c328_cf34);
+    /* rec3 thresh 0: one wait then crossing wraps +0x1A ->
+     * sub_0805C328 returns 0 -> child parks at 0x80. */
+    aos_object20_story_child29_update(&s, &in, &out);
+    memset(&out, 0, sizeof out);
+    aos_object20_story_child29_update(&s, &in, &out);
+    assert(s.child29.state == 0x80 && s.child29.field1a == 0 &&
+           s.child29.sub_b == 0 && s.child29.ctr_c == 0);
+    assert(out.c328_c7b4 && !out.c328_cf34);
 
     /* ---- shared create gates. ---- */
     memset(&s, 0, sizeof s);
@@ -815,6 +880,193 @@ int main(void) {
     assert(out.unk414_write);
     assert(out.unk414_val == ((0x1F & ~0x10u) | 5u));
     assert(out.c5a8 == 1);
+
+    /* ---- children_update: the per-child update vectors.
+     * param0 9's +0x14/+0x18 children keep the sub_0805B748
+     * anim-step update; param0 23's escort child the same;
+     * param0 31 runs child29 (sub_0805C39C) + the grandchild
+     * chain (sub_0805C284/sub_0805CB08). ---- */
+    memset(&s, 0, sizeof s);
+    s.child14 = true; s.link18 = true;
+    in = base_in();
+    memset(&out, 0, sizeof out);
+    aos_object20_story_children_update(&s, 9, &in, &out);
+    assert(out.child_anim_step_count == 2);
+    s.link18 = false;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_children_update(&s, 9, &in, &out);
+    assert(out.child_anim_step_count == 1);
+    /* param0 23 escort child: one anim step. */
+    memset(&s, 0, sizeof s);
+    s.child14 = true;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_children_update(&s, 23, &in, &out);
+    assert(out.child_anim_step_count == 1);
+    /* param0 29 has no child: nothing runs. */
+    memset(&s, 0, sizeof s);
+    s.child14 = true;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_children_update(&s, 29, &in, &out);
+    assert(out.child_anim_step_count == 0 &&
+           out.anim_step_count == 0);
+    /* param0 31 child29 state 0: the child's own anim step. */
+    memset(&s, 0, sizeof s);
+    s.child14 = true;
+    s.child29.state = 0;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_children_update(&s, 31, &in, &out);
+    assert(out.child_anim_step_count == 1);
+
+    /* child29 state 2 spawns the sub_0805C284 grandchild:
+     * +0x42/+0x46 = the child's screen words - 0xB/-0x10,
+     * +0x48 = 0xFFFF6000, +0x4C = 0x2000, +0x50 = 0x100,
+     * +0x54 = 0x1000, +0x65 = 3. */
+    memset(&s, 0, sizeof s);
+    s.child14 = true;
+    s.child14_scr42 = 0x70;
+    s.child14_scr46 = 0x60;
+    s.child29.state = 2;
+    s.child29.ctr_c = 0;
+    in = base_in();
+    in.spawn14_ok = true;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_child29_update(&s, &in, &out);
+    assert(s.gc.spawned);
+    assert(s.gc.state == 0 && s.gc.anim65 == 3);
+    assert(s.gc.scr42 == (int16_t)(0x70 - 0xB));
+    assert(s.gc.scr46 == (int16_t)(0x60 - 0x10));
+    assert(s.gc.vel48 == (int32_t)0xFFFF6000);
+    assert(s.gc.vel4c == 0x2000);
+    assert(s.gc.acc50 == 0x100 && s.gc.acc54 == 0x1000);
+    /* failed spawn: gc stays inert but the child still arms. */
+    memset(&s, 0, sizeof s);
+    s.child29.state = 2; s.child29.ctr_c = 0;
+    in.spawn14_ok = false;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_child29_update(&s, &in, &out);
+    assert(!s.gc.spawned && s.child29.timer_d == 0x1F);
+
+    /* gc_update state 0, probe miss: velocity integration
+     * with the +0x50/+0x54 acceleration and the positive
+     * +0x48 -> 0 clamp (the probe result on this path). */
+    memset(&s, 0, sizeof s);
+    s.gc.spawned = true;
+    s.gc.state = 0;
+    s.gc.scr42 = 0x40; s.gc.scr46 = 0x40;
+    s.gc.vel48 = 0x10; s.gc.vel4c = 0x20;
+    s.gc.acc50 = 0x100; s.gc.acc54 = 0x1000;
+    in = base_in();
+    in.probe_020a0 = probe_zero;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_gc_update(&s, &in, &out);
+    assert(s.gc.pos40 == 0x10 && s.gc.pos44 == 0x20);
+    /* vel48 = 0x10 + 0x100 = 0x110 > 0 -> clamped to the
+     * probe result (0) on the same frame; vel4c keeps its
+     * acceleration. */
+    assert(s.gc.vel48 == 0 && s.gc.vel4c == 0x1020);
+    memset(&out, 0, sizeof out);
+    aos_object20_story_gc_update(&s, &in, &out);
+    assert(s.gc.vel48 == 0);
+    assert(s.gc.state == 0 && out.song == 0);   /* no PlaySong */
+
+    /* gc_update state 0, probe hit: the sub_0805C218 burst +
+     * PlaySong(0xAA) + land at state 1. */
+    static const int8_t debris_tab[12 * 8] = {
+        /* rec0: +0x65=3, dx=1, dy=-2, vx=1<<12, vy=-(2<<12), d=0x20 */
+        3, 1, -2, 1, 2, 0x20, 0, 0,
+        /* rec1..11: distinct fields to verify indexing */
+        4, -3, 5, -1, 3, 0x10, 0, 0,
+        5, 0, 0, 2, -4, 0x08, 0, 0,
+        6, 7, -7, 4, 1, 0x04, 0, 0,
+        7, -8, 9, -2, -2, 0x02, 0, 0,
+        8, 10, -10, 1, 1, 0x01, 0, 0,
+        9, -11, 11, -3, -3, 0x00, 0, 0,
+        10, 12, -12, 2, 2, 0x30, 0, 0,
+        11, -13, 13, -4, -4, 0x28, 0, 0,
+        12, 14, -14, 3, 3, 0x18, 0, 0,
+        13, -15, 15, -5, -5, 0x08, 0, 0,
+        14, 16, -16, 5, 5, 0x38, 0, 0,
+    };
+    memset(&s, 0, sizeof s);
+    s.gc.spawned = true;
+    s.gc.state = 0;
+    s.gc.scr42 = 0x50; s.gc.scr46 = 0x50;
+    in = base_in();
+    in.probe_020a0 = probe_one;
+    in.spawn14_ok = true;
+    in.debris_table_08526758 = debris_tab;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_gc_update(&s, &in, &out);
+    assert(s.gc.state == 1 && s.gc.sub_b == 0 && s.gc.ctr_c == 0);
+    assert(out.song == 0xAA);
+    assert(out.debris_spawn_count == 12);
+    assert(!out.debris_table_missing);
+    /* rec0: scr = (0x50+1, 0x50-2-2) — the burst y arg is
+     * +0x46 - 2 before the record offsets. */
+    assert(s.gc.debris[0].active);
+    assert(s.gc.debris[0].scr42 == (int16_t)(0x50 + 1));
+    assert(s.gc.debris[0].scr46 == (int16_t)(0x50 - 2 - 2));
+    assert(s.gc.debris[0].vel48 == (int32_t)(1 << 12));
+    assert(s.gc.debris[0].vel4c == (int32_t)(-(2 << 12)));
+    assert(s.gc.debris[0].acc54 == 0x2000);
+    assert(s.gc.debris[0].timer_d == 0x20);
+    assert(s.gc.debris[0].anim65 == 3);
+    /* rec1: s8 fields sign-extend. */
+    assert(s.gc.debris[1].scr42 == (int16_t)(0x50 - 3));
+    assert(s.gc.debris[1].scr46 == (int16_t)(0x50 - 2 + 5));
+    assert(s.gc.debris[1].vel48 == -(int32_t)(1 << 12));
+    assert(s.gc.debris[1].vel4c == -(int32_t)(3 << 12));
+    /* NULL table: burst still reports the 12 spawns. */
+    memset(&s, 0, sizeof s);
+    s.gc.spawned = true;
+    in.debris_table_08526758 = NULL;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_gc_update(&s, &in, &out);
+    assert(out.debris_spawn_count == 12);
+    assert(out.debris_table_missing);
+    assert(!s.gc.debris[0].active);
+
+    /* landed state: +0x65 = 8 arms once through +0xC; the
+     * debris keep updating (probe hit marks +0x59 |= 8,
+     * a miss integrates). */
+    memset(&s, 0, sizeof s);
+    s.gc.spawned = true;
+    s.gc.state = 1;
+    s.gc.scr42 = 0x40; s.gc.scr46 = 0x40;
+    s.gc.debris[0].active = true;
+    s.gc.debris[0].scr42 = 0x40; s.gc.debris[0].scr46 = 0x40;
+    s.gc.debris[0].vel48 = 0x10; s.gc.debris[0].vel4c = 0x20;
+    s.gc.debris[0].acc54 = 0x100;
+    in = base_in();
+    in.probe_020a0 = probe_mixed;  /* gc hit? state 1 skips
+                                    * the probe; debris see
+                                    * their own args */
+    memset(&out, 0, sizeof out);
+    aos_object20_story_gc_update(&s, &in, &out);
+    assert(s.gc.anim65 == 8 && s.gc.ctr_c == 1);
+    /* probe_mixed returns nonzero -> debris marked done. */
+    assert(s.gc.debris[0].flags59 & 8);
+    /* miss path: clear the mark, probe returns 0. */
+    s.gc.debris[0].flags59 = 0;
+    in.probe_020a0 = probe_zero;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_gc_update(&s, &in, &out);
+    assert(!(s.gc.debris[0].flags59 & 8));
+    assert(s.gc.debris[0].pos40 == 0x10);
+    assert(s.gc.debris[0].pos44 == 0x20);
+    assert(s.gc.debris[0].vel4c == 0x120);
+    assert(s.gc.debris[0].vel48 == 0x10);   /* +0x48 untouched */
+
+    /* children_update param0 31 runs child29 + gc together. */
+    memset(&s, 0, sizeof s);
+    s.child14 = true;
+    s.child29.state = 0;
+    s.gc.spawned = true; s.gc.state = 1; s.gc.ctr_c = 1;
+    in = base_in();
+    memset(&out, 0, sizeof out);
+    aos_object20_story_children_update(&s, 31, &in, &out);
+    assert(out.child_anim_step_count == 1);       /* child29 st0 */
+    assert(s.gc.anim65 == 8 || s.gc.ctr_c == 1);
 
     puts("aos_object20_story: all tests passed");
     return 0;

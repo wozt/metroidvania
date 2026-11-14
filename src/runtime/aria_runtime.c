@@ -3671,20 +3671,25 @@ int aria_runtime_main(int argc, char **argv) {
         /* sub_08067934 writes WIN0V=0xC0C1 (empty) and the real bounds
          * only land when sub_08067A04's state 2 runs — which the
          * +0xB==0 suspend hold delays by 0x40 frames. window_shown is
-         * that visible-window point. */
-        if (opening.active && opening_actors.soul_notice == 0 &&
+         * that visible-window point. The whole opening/epilogue window
+         * stack is suppressed while the pause menu owns the screen,
+         * like the room-dialogue and save-prompt draws below: the
+         * entity loop is suspended, so a shown window would otherwise
+         * stay frozen on top of the native pause pages. */
+        if (!soul_menu.open && opening.active &&
+            opening_actors.soul_notice == 0 &&
             opening_actors.window_shown && !epilogue_window_hold)
             draw_opening_backdrop(renderer, &opening, &opening_rom,
                                   &opening_portrait_texture,
                                   &opening_portrait_id);
-        if (opening_soul_text_ready &&
+        if (!soul_menu.open && opening_soul_text_ready &&
             (opening_actors.soul_notice == 1 || opening_actors.soul_notice == 2))
             draw_opening_soul_notice(renderer, &opening_soul_notice,
                                      (uint32_t)step);
         /* sub_08067A04's close states retire the window once the script's
          * end command lands; the backdrop gate above already hides it, so
          * the glyph pass must not linger through the return pan. */
-        else if (opening.active && opening_text_ready &&
+        else if (!soul_menu.open && opening.active && opening_text_ready &&
                  opening_actors.window_shown && !epilogue_window_hold)
             draw_opening_text(renderer, &opening, &opening_tiles,
                               opening_window_ready ? &opening_window : NULL,

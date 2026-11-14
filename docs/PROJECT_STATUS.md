@@ -1,3 +1,42 @@
+## Patch 1146 - opening/epilogue window stack gated out of the pause menu
+
+- **Root cause of the remaining pause overlay.** Patch 1144 gated the
+  Object20 room-dialogue window and the Object1C save prompt, but the
+  opening/epilogue window stack still drew unconditionally after the
+  pause pages in `aria_runtime.c`'s render order:
+  `draw_opening_backdrop`, `draw_opening_soul_notice` and
+  `draw_opening_text` (the `else if` glyph pass). The update loop
+  suspends the entity loop while `soul_menu.open` (`++step;
+  continue`), so `opening.active`, `opening_actors.window_shown` and
+  the text-ready flags stay frozen at whatever they were when START
+  was pressed — an opening or epilogue window mid-display keeps
+  compositing its frame and glyphs on top of every native pause page.
+- **Fix.** All three opening draws now carry the same `!soul_menu.open`
+  gate as the room-dialogue and save-prompt draws below them, so the
+  pause page owns final composition while the menu is open; the frozen
+  opening state resumes untouched when it closes. No opening actor,
+  event or text state was modified.
+- **Audit of the remaining post-pause draw sources.** After the pause
+  pages the only draws are the (now gated) opening stack, the gated
+  room dialogue and save prompt, and `draw_debug` — the latter is
+  SDL debug text behind the debug/pause diagnostic modes, not part of
+  the normal capture path. The `0x362 + entry` hub info line is native
+  `aos_pause_graphics_render_hub` output, not an overlay, and the
+  `draw_soul_menu` fallback only fires when every native page render
+  fails (verified unreachable with the real ROM: hub, soul set,
+  equipment, item use, ability, config, sleep and enemy pages all
+  render through `aos_pause_graphics`).
+- **Runtime evidence.** Interactive Xvfb session with the real ROM
+  (`--area 0 --room 14`): START opens the hub and UP/DOWN + A
+  navigates sub-pages. The hub capture matches the native reference
+  (`/tmp/pause_hub` comparison: mean 0.6, 41 px over threshold) and
+  the equipment page renders its native layout; no opening, dialogue,
+  save-prompt or stray glyphs composite over either page.
+- **Unrelated native-fidelity gaps preserved** (unchanged by this
+  fix): OBJ icon layers, title/frame strips, fade envelopes, enemy
+  soul message decorations, and the Sleep enter-path window
+  rectangles documented in Patch 1144.
+
 ## Patch 1144 - save-screen tiles, ambient audio channel, pause overlay fix, opening homing
 
 - **Save screen native frame**: `sub_08054280`'s seven BG0

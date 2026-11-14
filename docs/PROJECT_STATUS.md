@@ -1,3 +1,59 @@
+## Patch 1115 - `--simulate-script`: per-frame input for headless runs
+
+- `fusion_aria_runtime --simulate N --simulate-script FILE` replaces
+  the constant `--simulate-hold` mask with directives read once
+  before the frame loop: `hold MASK [FRAMES]`, `tap MASK FRAMES`,
+  `release`, `wait FRAMES` (`#` comments; MASK is a strtoul base-0
+  `AOS_KEY_*` mask). Timed spans override the base mask and the
+  base resumes when a span ends, so coverage runs can walk, jump
+  and idle in sequence without SDL.
+- Malformed directives fail before simulating (exit 2); the final
+  summary prints the directive count and final held mask.
+
+## Patch 1114 - Object14 (SPECIAL id 20) ported as `aos_object14`
+
+- New module `src/runtime/aos/game/aos_object14.c/.h` ports
+  `Object14Create` (0x08052870) and `Object14Update` (0x080528C4)
+  plus all three dispatch-table variants at 0x08526408:
+  `sub_08051E60` (param0 0, gated five-state pulsing emitter),
+  `sub_08052340` (param0 1, four-state charge/release with the
+  singleton claim and song pair 0x136) and `sub_0805262C`
+  (param0 2, RNG-driven spinner with the wall-bounce probe).
+  `sub_080527E4` is exposed as `aos_object14_child_update`.
+- Faithful ports include the `sub_08051BF8`/`sub_08052208`
+  floor-and-wall probe movers (ArcTan2 + `sub_080686CC` steering),
+  the `sub_08051CC4` six-child burst (counted), the
+  `sub_0806D490`/`sub_0806D3D8` drag/integrate pair, the
+  `sub_0806E3F8` player-distance aim tail feeding the
+  `sub_080428F0` presets, the `sub_08022088`/`sub_080220B4`
+  singleton claim/release, the `sub_0803E654` palette roll with
+  the EntityDelete path and the `sub_0803E6BC` palette free.
+- Injected/approximated: `GetEntityRoomX/YPositionInteger` as
+  + 0x40/+ 0x44 whole pixels, the `sub_08001E58`/`sub_080020D8`/
+  `sub_080020A0`/`sub_08001F3C` tile and wall queries as probe
+  kinds, the + 0x14 collision bits, + 0x4BE gate, + 0x13190
+  self-link, RNG rolls and palette slot as env inputs,
+  `sub_0803E058` affine as counted calls, `sub_08021278`/
+  `sub_0802138C`/`sub_0804277C`/`sub_0803B9D0` as counters, and
+  the children's `sub_08052834`/`sub_08052868`/`sub_0805286C`
+  callbacks stay unported with the children.
+- Dispatch integration landed in the same cycle:
+  `AriaEntity.object14` plus the `e->id == 20` case in
+  `update_entities` (camera-gated spawn, `obj14_probe` maps the
+  tile/wall queries onto `aos_collision`, approximations:
+  + 0x4BE/+ 0x14/+ 0x13190 clear, fixed palette slot, children as
+  sparkles, draw anchor synced from + 0x40/+ 0x44). `--simulate`
+  now reports id 20 spawned in area_07 rooms 001/025/033
+  (room 017's records stay gated out of the 400-frame walk).
+- `tests/test_aos_object14.c` covers all three variants: state-0
+  init and flag writes, the palette-failure delete, mid-state
+  transitions, probe hit/miss branches, the RNG rolls, the song
+  outputs, the singleton claim/release, the player snap and the
+  child-callback re-anchor. Registered as `aos_object14` CTest;
+  green. `data/native_parity/annotations.tsv` gained
+  `aos.objects.rotating_emitter` and the seven ported routines
+  left `aos_unassigned_routines.tsv`.
+
 ## Patch 1113 - Object14 (SPECIAL id 20) identified
 
 - The 20 dead records are native **Object14** (entity id 0x14):

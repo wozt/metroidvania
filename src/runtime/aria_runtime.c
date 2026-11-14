@@ -29,6 +29,7 @@
 #include "aos/game/aos_object11.h"
 #include "aos/game/aos_object12.h"
 #include "aos/game/aos_object13.h"
+#include "aos/game/aos_object14.h"
 #include "aos/game/aos_object19.h"
 #include "aos/game/aos_object1a.h"
 #include "aos/game/aos_object1b.h"
@@ -473,6 +474,7 @@ typedef struct {
     AosObject11 object11;   /* object 0x11: save-point remover marker */
     AosObject12 object12;   /* object 0x12: param-driven animated sprite */
     AosObject13 object13;   /* object 0x13: swinging chandelier trigger */
+    AosObject14 object14;   /* object 0x14: param0 probe/emitter */
     AosObject19 object19;   /* object 0x19: rectangular patrol mover */
     AosObject1b object1b;   /* object 0x1B: spin-synced object */
     AosObject15 object15;   /* object 0x15: story cutscene director */
@@ -4196,6 +4198,28 @@ static bool spawn_special_boss_soul(AriaRoom *room, const AriaEntity *entity,
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
  * spawn once per room visit; native enemies include hidden producers such
  * as the Ghost's, whose children retain their producer slot. */
+/* Object14's injected engine queries (aos_object14.h): the
+ * sub_08001E58 floor walk maps to aos_floor_depth with use_mode,
+ * the sub_080020D8 point test to the cell's floor bit and the
+ * sub_080020A0/sub_08001F3C wall pair to the bit-1 wall cell and
+ * aos_collision_special. */
+static int obj14_probe(void *ctx, int kind, int32_t a, int32_t b,
+                       int32_t c) {
+    const AosCollision *layer = ctx;
+    switch (kind) {
+    case AOS_OBJ14_PROBE_TILE:
+        return aos_floor_depth(layer, a, b, (int)c, true);
+    case AOS_OBJ14_PROBE_POINT:
+        return (aos_collision_cell(layer, a, b) & 1) != 0;
+    case AOS_OBJ14_PROBE_WALL_A:
+        return (aos_collision_cell(layer, a, b) & 2) != 0;
+    case AOS_OBJ14_PROBE_WALL_B:
+        return aos_collision_special(layer, a, b);
+    default:
+        return 0;
+    }
+}
+
 static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                            int cam_x, int cam_y, AosForcedInput *input, AriaCombat *combat) {
     if (deferred_sound_pending) {
@@ -4977,6 +5001,60 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 if (word >= 0 && word < AOS_WALL_EVENT_WORDS)
                     aria_events[word] |= 1u << (e->param1 & 31);
             }
+            continue;
+        }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 20) {
+            /* Object14Create/Object14Update (sUnk_084F0DF8[20] /
+             * sUnk_084F0ED8[20]): the param0-selected moving probe
+             * object; the sprite triple exports as special_20.
+             * The + 0x4BE gate, the + 0x14 collision writers and
+             * the + 0x13190 self-link are approximated clear/false
+             * (the player snap stays off), the palette allocator
+             * is a fixed slot, the tile/wall queries map onto
+             * aos_collision through obj14_probe and the six
+             * sub_08051CC4 children collapse to counted sparkles. */
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                bool deleted;
+                aos_object14_create(&e->object14, (int16_t)e->param0,
+                                    (int32_t)e->x << 16,
+                                    (int32_t)e->y << 16, true, &deleted);
+                if (deleted) e->spawned = false;
+                continue;
+            }
+            AosObject14Env o14env = {
+                .gate_4be = 0,
+                .collide14 = 0,
+                .linked_self = false,
+                .player_x = soma ? soma->x : 0,
+                .player_y = soma ? soma->y : 0,
+                .room_ox = (uint16_t)cam_x,
+                .room_oy = (uint16_t)cam_y,
+                .rng_a = aos_random(),
+                .rng_b = aos_random(),
+                .palette_slot = 0,
+                .probe = obj14_probe,
+                .probe_ctx = layer,
+            };
+            if (!aos_object14_update(&e->object14, &o14env))
+                e->spawned = false;
+            if (e->object14.song >= 0) {
+                sound = e->object14.song;
+                printf("Object14 %zu: song 0x%X\n", i,
+                       e->object14.song);
+            }
+            if (e->object14.song_stop >= 0)
+                printf("Object14 %zu: song stop 0x%X\n", i,
+                       e->object14.song_stop);
+            for (unsigned c = 0; c < e->object14.child_count &&
+                 room->effect_count < MAX_EFFECTS; ++c)
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = false,
+                    .x = e->x, .y = e->y};
+            /* Keep the draw anchor on the simulated position. */
+            e->x = (int)(e->object14.pos_x >> 16);
+            e->y = (int)(e->object14.pos_y >> 16);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 25) {
@@ -8955,9 +9033,135 @@ static bool reload_equipped_weapon(uint8_t item, AosSoma *soma,
     return true;
 }
 
+/* --simulate-script FILE: a per-frame held-input script for --simulate.
+ * One directive per line ('#' starts a comment, blank lines are ignored):
+ *   hold MASK [FRAMES]  base held mask MASK from this frame until the next
+ *                       hold/release; with FRAMES, a timed span that holds
+ *                       MASK for FRAMES frames without changing the base
+ *   tap MASK FRAMES     timed span holding MASK for FRAMES frames
+ *   release             base held mask 0 from this frame on
+ *   wait FRAMES         timed span holding 0 for FRAMES frames
+ * MASK is a strtoul base-0 AOS_KEY_* mask like --simulate-hold's. Timed
+ * spans override the base mask and the base resumes when a span ends, so
+ * "hold MASK" followed by "wait N" idles for N frames then walks again.
+ * Positions are implicit: each timed directive consumes its frames and the
+ * next directive starts where the previous one ended. */
+typedef struct {
+    long pos;       /* first frame the directive applies to */
+    long end;       /* timed span end (pos + frames); unused for state */
+    unsigned held;  /* AOS_KEY_* mask: timed span value or new base mask */
+    bool timed;     /* true: held applies inside [pos, end); false: sets base */
+} AriaSimDirective;
+
+/* Parse the script once; returns 0 on success, 2 on a malformed file. */
+static int load_sim_script(const char *path, AriaSimDirective **out,
+                           size_t *count_out) {
+    FILE *fp = fopen(path, "r");
+    if (!fp) {
+        fprintf(stderr, "Cannot open simulate script %s: %s\n",
+                path, strerror(errno));
+        return 2;
+    }
+    AriaSimDirective *dirs = NULL;
+    size_t count = 0, capacity = 0;
+    long cursor = 0, lineno = 0;
+    char line[256];
+    while (fgets(line, sizeof line, fp)) {
+        ++lineno;
+        char *hash = strchr(line, '#');
+        if (hash) *hash = '\0';
+        char *tok[3];
+        int ntok = 0;
+        bool bad = false;
+        char *p = line;
+        for (;;) {
+            while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') ++p;
+            if (!*p) break;
+            if (ntok == 3) { bad = true; break; }
+            tok[ntok++] = p;
+            while (*p && *p != ' ' && *p != '\t' && *p != '\r' && *p != '\n')
+                ++p;
+            if (*p) *p++ = '\0';
+        }
+        if (bad) {
+            fprintf(stderr, "%s:%ld: too many fields in simulate script\n",
+                    path, lineno);
+            goto fail;
+        }
+        if (!ntok) continue;
+        bool timed = false, ok = true;
+        unsigned held = 0;
+        long frames = 0;
+        if (!strcmp(tok[0], "hold")) {
+            if (ntok < 2 || ntok > 3) ok = false;
+            else {
+                char *end = NULL;
+                unsigned long mask = strtoul(tok[1], &end, 0);
+                if (*end || mask > 0xFFFFul) ok = false;
+                else held = (unsigned)mask;
+                if (ok && ntok == 3) {
+                    char *fend = NULL;
+                    frames = strtol(tok[2], &fend, 10);
+                    if (*fend || frames < 0) ok = false;
+                    else timed = true;
+                }
+            }
+        } else if (!strcmp(tok[0], "tap")) {
+            if (ntok != 3) ok = false;
+            else {
+                char *end = NULL;
+                unsigned long mask = strtoul(tok[1], &end, 0);
+                char *fend = NULL;
+                frames = strtol(tok[2], &fend, 10);
+                if (*end || mask > 0xFFFFul || *fend || frames < 0) ok = false;
+                else { held = (unsigned)mask; timed = true; }
+            }
+        } else if (!strcmp(tok[0], "release")) {
+            if (ntok != 1) ok = false;
+        } else if (!strcmp(tok[0], "wait")) {
+            if (ntok != 2) ok = false;
+            else {
+                char *fend = NULL;
+                frames = strtol(tok[1], &fend, 10);
+                if (*fend || frames < 0) ok = false;
+                else timed = true;   /* held stays 0 */
+            }
+        } else ok = false;
+        if (!ok) {
+            fprintf(stderr, "%s:%ld: bad simulate-script directive\n",
+                    path, lineno);
+            goto fail;
+        }
+        if (count == capacity) {
+            capacity = capacity ? capacity * 2 : 16;
+            AriaSimDirective *grown =
+                realloc(dirs, capacity * sizeof *dirs);
+            if (!grown) {
+                fprintf(stderr, "Out of memory reading simulate script\n");
+                goto fail;
+            }
+            dirs = grown;
+        }
+        AriaSimDirective *d = &dirs[count++];
+        d->pos = cursor;
+        d->timed = timed;
+        d->held = held;
+        d->end = timed ? cursor + frames : 0;
+        if (timed) cursor += frames;
+    }
+    fclose(fp);
+    *out = dirs;
+    *count_out = count;
+    return 0;
+fail:
+    free(dirs);
+    fclose(fp);
+    return 2;
+}
+
 static void usage(const char *name) {
     fprintf(stderr,
-            "Usage: %s [--check] [--simulate N [--simulate-hold MASK]] [--save slot.sav] [--save-target slot.sav]"
+            "Usage: %s [--check] [--simulate N [--simulate-hold MASK] [--simulate-script FILE]] [--save slot.sav] [--save-target slot.sav]"
             " [--consume-save] [--rom aria.gba] [--library index.tsv]\n"
             "       [--spawn X Y] [--moves MASK]\n"
             "       [--weapon none|INDEX] [--red-soul N] [--blue-soul N] [--yellow-soul N] [--hitboxes] [--no-overlays | --overlay-dir DIR] [--atk N] [--def N] [--hp N]\n"
@@ -8965,7 +9169,10 @@ static void usage(const char *name) {
             "       [--capture out.bmp FRAMES BUTTONS] [--input-map map.txt] [--debug-menu]\n"
             "       [--debug-input MASK,MASK,...: menu key edges, one per captured frame]\n"
             "       [--play-song N: PlaySong at the start] [--audio-wav out.wav] [--mute]\n"
-            "       (--area A --room R | room-folder)\n",
+            "       (--area A --room R | room-folder)\n"
+            "       --simulate-script FILE: per-frame held input; lines are\n"
+            "         hold MASK [FRAMES] | tap MASK FRAMES | release | wait FRAMES\n"
+            "         ('#' comments; MASK = AOS_KEY_* bits, strtoul base 0)\n",
             name);
 }
 
@@ -8980,6 +9187,7 @@ int aria_runtime_main(int argc, char **argv) {
     long area = -1, room_number = -1, capture_frames = 0;
     long simulate_frames = 0;
     unsigned simulate_hold = 0;   /* --simulate-hold: AOS_KEY_* bits held every frame */
+    const char *simulate_script_path = NULL;   /* --simulate-script: per-frame held input */
     unsigned long capture_buttons = 0;
     /* A new file owns no ability soul. In particular, Malphas' mid-air jump
      * must be collected before AOS_MOVE_AIR_JUMP becomes available. Saves and
@@ -9013,6 +9221,8 @@ int aria_runtime_main(int argc, char **argv) {
             simulate_frames = atol(argv[++i]);
         else if (!strcmp(argv[i], "--simulate-hold") && i + 1 < argc)
             simulate_hold = (unsigned)strtoul(argv[++i], NULL, 0);
+        else if (!strcmp(argv[i], "--simulate-script") && i + 1 < argc)
+            simulate_script_path = argv[++i];
         else if (!strcmp(argv[i], "--audit-transitions")) {
             aria_overlays_enabled = false;
             return audit_transitions();
@@ -9318,11 +9528,41 @@ int aria_runtime_main(int argc, char **argv) {
         AosSaveRoom save_room = {0};
         homing_room = &room;
         object10_save_ctx = NULL;
+        /* --simulate-script replaces the constant --simulate-hold mask with a
+         * per-frame held value walked from the parsed directives. */
+        AriaSimDirective *sim_dirs = NULL;
+        size_t sim_dir_count = 0;
+        if (simulate_script_path &&
+            load_sim_script(simulate_script_path, &sim_dirs,
+                            &sim_dir_count) != 0) {
+            aos_mp2k_engine_destroy(&mp2k);
+            free_room(&room);
+            return 2;
+        }
+        const bool use_sim_script = simulate_script_path != NULL;
+        size_t sim_next = 0;
+        long sim_timed_end = -1;
+        unsigned sim_timed_held = 0, sim_base = 0, sim_held = 0;
         for (long frame = 0; frame < simulate_frames; ++frame) {
             if (!moves_override) soma.moves = progress.abilities[0] & 0x1Fu;
             soma.abilities = progress.flags;
             soma.guardian_alive = false;
-            aos_soma_update(&soma, &layer, (uint16_t)simulate_hold, 0);
+            unsigned held = simulate_hold;
+            if (use_sim_script) {
+                while (sim_next < sim_dir_count &&
+                       sim_dirs[sim_next].pos <= frame) {
+                    const AriaSimDirective *d = &sim_dirs[sim_next++];
+                    if (d->timed) {
+                        sim_timed_held = d->held;
+                        sim_timed_end = d->end;
+                    } else {
+                        sim_base = d->held;
+                    }
+                }
+                held = frame < sim_timed_end ? sim_timed_held : sim_base;
+            }
+            sim_held = held;
+            aos_soma_update(&soma, &layer, (uint16_t)held, 0);
             bool door_held = false;
             for (size_t k = 0; k < room.entity_count && !door_held; ++k)
                 door_held = room.entities[k].kind == ARIA_KIND_SPECIAL &&
@@ -9333,7 +9573,7 @@ int aria_runtime_main(int argc, char **argv) {
                               room.entities[k].object02.holding));
             if (progress.accessory == 0x2A && !door_held &&
                 !(soma.flags & (AOS_FLAG_AIRBORNE | AOS_FLAG_WALL)) &&
-                (simulate_hold & (AOS_KEY_LEFT | AOS_KEY_RIGHT)) &&
+                (held & (AOS_KEY_LEFT | AOS_KEY_RIGHT)) &&
                 ((uint16_t)(soma.ticks - 1) & 7) == 0) {
                 if (++progress.experience > AOS_STATS_MAX_EXPERIENCE)
                     progress.experience = AOS_STATS_MAX_EXPERIENCE;
@@ -9376,6 +9616,9 @@ int aria_runtime_main(int argc, char **argv) {
         printf("Aria simulate: %ld frames, room %d/%d, spawn %d,%d, Soma %d,%d hp %d/%d\n",
                simulate_frames, room.area, room.number, spawn_x, spawn_y,
                (int)(soma.x >> 16), (int)(soma.y >> 16), soma.hp, soma.max_hp);
+        if (use_sim_script)
+            printf("Aria simulate: script %s: %zu directives, final held 0x%x\n",
+                   simulate_script_path, sim_dir_count, sim_held);
         printf("Aria simulate: %zu entities, %zu effects, %zu pickups; SPECIAL coverage:\n",
                room.entity_count, room.effect_count, room.pickup_count);
         for (int id = 0; id < 64; ++id) {
@@ -9397,6 +9640,7 @@ int aria_runtime_main(int argc, char **argv) {
         }
         printf("Aria simulate: SPECIAL %d/%d spawned, %d enemies alive\n",
                spawned_special, active_special, enemies_alive);
+        free(sim_dirs);
         aos_mp2k_engine_destroy(&mp2k);
         free_room(&room);
         return 0;

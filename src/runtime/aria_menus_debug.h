@@ -99,7 +99,7 @@ void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
 void draw_debug(SDL_Renderer *renderer, const DebugMenu *menu, bool paused,
                 const AriaRoom *room, const AosSoma *soma, long step);
 
-/* Room-loading helpers owned by aria_runtime.c that debug_teleport
+/* Room-loading helpers owned by aria_room_io.c that debug_teleport
  * borrows (same borrowed-helper pattern as aria_entities.h). */
 void free_room(AriaRoom *room);
 AosCollision room_layer(const AriaRoom *room);

@@ -172,12 +172,34 @@ extern AosRoomDialogue room_dialogue;
  * documented whiteout case — no room record uses param0 30). */
 static uint16_t object20_ewram_unk4;
 static uint16_t object20_ewram_unk6;
+/* gEwramData +0x60 u32 (EwramData_unk60.unk_60): the persistent
+ * progress-flags word the native game keeps in SRAM save slot 6 —
+ * sub_080137B8 loads it at boot, sub_08013788 writes it back,
+ * sub_080137FC does |= 3 then saves and reloads the slot through
+ * sub_080127F0. Bit 1 (word60 & 2) selects the cleared-game
+ * variants: the Object20Update prologue's +0x414 rewrite gate,
+ * sub_08013960's alternate per-area music tables and
+ * sub_080043CC's entity variant 3; bit 0 is read at
+ * code_08005894. The Object20 story family writes it: param0-31
+ * state 0x80 ORs bit 0 (then calls sub_08013788) and param0-23's
+ * sub_080137FC ORs bits 0-1. There is no runtime save-slot-6
+ * channel yet, so the word lives here for the session — it does
+ * not persist across save/load and starts at the fresh-state 0
+ * (documented gap). */
+static uint32_t object20_ewram_word60;
 /* gEwramData +8 RNG state + +0x7864 byte for the ported
  * sub_08064518 whiteout renderer (param0 30). The RNG state
  * round-trips through the story Out; +0x7864 has no other
  * consumer and stays 0. */
 static uint32_t object20_wo_rng;
 static uint8_t object20_wo_7864;
+/* The Object20 entity that opened the shared room dialogue
+ * window (its sub_08067934 call). The text machine is a single
+ * gEwramData + 0x60 global in the ROM, so only the opener may
+ * retire the window on a consumed done; pointer compare only,
+ * never dereferenced, so a stale record after a room change is
+ * harmless (the window is closed on transitions anyway). */
+static const AriaEntity *object20_dialogue_owner;
 /* sub_0805B5E8 child-spawn probe for the param0-26 companion
  * (in->npc.spawn_child is a bare function pointer): filled from
  * the same entity-pool approximation as story.spawn14_ok each
@@ -271,9 +293,17 @@ static int obj14_probe(void *ctx, int kind, int32_t a, int32_t b,
  *                gate passes while HP > 0.
  *   flag42c      gEwramData + 0x42C is aria_pickup_state.global_flags
  *                (aos_pickup.h documents the same address).
- *   byte8e, byte13266, word60, byte41b, byte414
+ *   byte8e, byte13266, byte41b, byte414
  *                gEwramData mode/pause bytes with no runtime channel;
  *                0 is the fresh-state value.
+ *   word60        gEwramData + 0x60 is EwramData_unk60.unk_60, the
+ *                SRAM slot-6 progress-flags word (sub_080137B8/
+ *                sub_08013788/sub_080137FC). Bit 1 gates the
+ *                cleared-game variants (prologue +0x414 rewrite,
+ *                sub_08013960 music tables, sub_080043CC entity
+ *                variant); bit 0 is read at code_08005894. Fed
+ *                from object20_ewram_word60 — session-scoped until
+ *                a save channel exists.
  *   word16        gEwramData + 0x16 is inputData.newInput — the GBA
  *                key mask newly pressed this frame (include/structs/
  *                ewram.h InputData). update_entities' new_input is
@@ -361,6 +391,7 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
                              uint16_t new_input, AosObject20In *in) {
     memset(in, 0, sizeof *in);
     in->word16 = new_input;    /* gEwramData + 0x16 inputData.newInput */
+    in->word60 = object20_ewram_word60; /* gEwramData + 0x60 flags */
     in->flag1327a = soma ? soma->hp : 0;
     in->flag42c = aria_pickup_state.global_flags;
     in->text_done = aos_room_dialogue_text_done(&room_dialogue);
@@ -516,24 +547,48 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         req.window_poll = npc_pre_state == 2;
         /* Gap: sub_08066094 state 2 loops back to state 1 which
          * re-opens the window — no sub_08067898 close is
-         * reported, so the bridge re-open stands in. */
+         * reported; the machine-close below retires the window
+         * on the consumed done instead. */
         break;
     }
     case AOS_OBJECT20_FAMILY_TALK_LOOP: {
         const AosNpcTalkLoop *g = &e->object20.v.talk_loop;
         if (g->window_text) req.window_text = (int)g->text_id;
         req.window_poll = npc_pre_state == 2;
-        /* Gap: sub_080666D4's state-2 close has no Out flag. */
+        /* Gap: sub_080666D4's state-2 close has no Out flag; the
+         * machine-close below covers it. */
         break;
     }
     default:
         break;
     }
+    /* sub_08067A04's state-6 exit is the frame its return goes
+     * nonzero: it runs sub_08067898 itself, so the native window
+     * closes inside the poll that reports done. The dirs, shop,
+     * npc-loop/guard/talk-loop and several story variants never
+     * call sub_08067898 — they rely on that machine close — while
+     * the bridge keeps the chrome up until an explicit close.
+     * Retire it here once the owning entity has consumed
+     * text_done (the flag its update just read through In) and
+     * requested neither a close nor a new window; explicit
+     * window_close paths still run first inside apply and make
+     * this a no-op, and a same-frame re-open keeps its window. */
+    bool dialogue_done_in = aos_room_dialogue_text_done(&room_dialogue);
     aos_room_dialogue_apply(&room_dialogue, new_input, &req);
+    if (req.window_text >= 0) {
+        object20_dialogue_owner = e;
+    } else if (dialogue_done_in && !req.window_close &&
+               object20_dialogue_owner == e &&
+               aos_room_dialogue_active(&room_dialogue)) {
+        aos_room_dialogue_close(&room_dialogue);
+    }
+    if (!aos_room_dialogue_active(&room_dialogue))
+        object20_dialogue_owner = NULL;
 
     /* gEwramData writes with runtime channels: +0x42C (shared and
-     * per-family reports) and +0x37E bit 0. The +0x417/+0x427/+0x414/
-     * +0x64/+0x60/+0x254CC/+0xA094+4/gUnk_03002CB0 writes and the
+     * per-family reports), +0x37E bit 0 and the +0x60 progress-flags
+     * word (object20_ewram_word60, below). The +0x417/+0x427/+0x414/
+     * +0x64/+0x254CC/+0xA094+4/gUnk_03002CB0 writes and the
      * sub_0800EB04/sub_080235C8/sub_0802DFF0/sub_0806666C/
      * sub_0800EF6C/sub_08013960/sub_08013CF0/sub_08013D60/
      * sub_08013E18/sub_08013EEC/sub_080121E0/sub_0800ED24/
@@ -552,6 +607,17 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
                         out->story.clear_42c | out->shop.clear_42c |
                         out->slots.clear_42c;
     if (out->story.flags37e_clear1) aria_pickup_state.special &= ~1;
+    /* gEwramData +0x60 progress-flags word writes: param0-31's
+     * state-0x80 tail ORs bit 0 (or_60_word) then calls
+     * sub_08013788 — a pure SRAM slot-6 write of the unchanged
+     * word, no host channel needed. param0-23's sub_080137FC does
+     * |= 3 plus the same SRAM write and a save-slot reload through
+     * sub_080127F0(currentSaveSlot, 1) — the reload has no runtime
+     * save channel and stays unforwarded; only the bit-writes
+     * land here. write_64_0a (+0x64 = 0x0A) is the sibling scene
+     * byte, not this word. */
+    if (out->story.or_60_word) object20_ewram_word60 |= 1;
+    if (out->story.call_137fc) object20_ewram_word60 |= 3;
     if (out->story.wo_unk4 >= 0) object20_ewram_unk4 = (uint16_t)out->story.wo_unk4;
     if (out->story.wo_unk6 >= 0) object20_ewram_unk6 = (uint16_t)out->story.wo_unk6;
     if (out->story.wo_rng >= 0) object20_wo_rng = (uint32_t)out->story.wo_rng;

@@ -43,6 +43,30 @@
   accumulation, +0x65 commits, loop wrap, once-end latch,
   pause/ended early-outs, +0x5B modes and the palette tail.
 
+## Patch 1134 - aria_runtime decomposition wave 5, word60 channel, dialogue soft-lock fix
+
+- **aria_runtime.c: ~13.4k -> ~3.4k lines** after wave 5:
+  `aria_weapons.c/.h` (weapon/equipment loaders) and
+  `aria_room_io.c/.h` (room music/load/overlays/transitions/camera
+  helpers, `find_spawn`) extracted verbatim. The file now holds the
+  frame loop, orchestration and shared state only.
+- **gEwramData+0x60 decoded and wired**: it is the persisted
+  progress-flags word (SRAM save slot 6), not a scene byte. The
+  Object20 `word60 & 2` cleared-game gate (prologue +0x414 rewrite,
+  alternate music tables) can now fire; `or_60_word`/`call_137fc`
+  write bits 1/3. Session-scoped — SRAM persistence remains open.
+- **Room-dialogue soft-lock fixed**: native sub_08067A04's done-poll
+  closes the window itself (state 6 -> sub_08067898); families that
+  never call it explicitly (dirs, shop, npc guard/talk) left the
+  window open forever and zeroed player input. The host now runs
+  `aos_room_dialogue_close` when the owning entity consumes
+  `text_done` without re-opening. Contract pinned in
+  test_aos_object20.c.
+- sub_08067934/sub_08067A04 confirmed as the shared open/poll bridge
+  for opening AND room dialogue — the open path was already wired
+  end-to-end.
+- Registries synced (`annotations.tsv` room_dialogue row).
+
 ## Patch 1132 - aria_runtime decomposition wave 3, Object1C child draw, whiteout bursts
 
 - **aria_runtime.c: ~13.4k -> ~4.9k lines.** Wave 3 extracted the two

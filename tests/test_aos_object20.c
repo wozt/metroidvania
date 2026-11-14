@@ -351,6 +351,73 @@ int main(void) {
     assert(o.deleted);
     assert(out.deleted);
 
+    /* ---- room-dialogue consumption contract: the runtime's
+     * shared bridge (aos_room_dialogue) feeds `in->text_done`
+     * back one frame after a window_poll completes, and the
+     * update_entities glue retires the window chrome on the
+     * frame an entity consumes that done without re-opening
+     * (sub_08067A04's state-6 exit runs sub_08067898 itself).
+     * These drives pin the module side of that contract: every
+     * dialogue family must leave its poll state on text_done so
+     * the glue's machine-close can fire. ---- */
+
+    /* param0 4 (dirs): state 0 arms window 0xF and counts +0xD
+     * down; state 1 polls and a done poll parks at 0x80. */
+    memset(&o, 0, sizeof o);
+    in = mk_in();
+    in.player_scr42 = 0x40;
+    assert(create_ok(&o, 4, &in, &out));
+    for (unsigned f = 0; f < 64 && o.v.dirs.state != 1; ++f)
+        assert(aos_object20_update(&o, &in, &out) >= 0);
+    assert(o.v.dirs.state == 1);
+    assert(aos_object20_update(&o, &in, &out) >= 0);   /* state-1 poll */
+    assert(out.dirs.window_poll);
+    in.text_done = true;
+    assert(aos_object20_update(&o, &in, &out) >= 0);
+    assert(o.v.dirs.state == 0x80);
+
+    /* param0 19 (shop sell): states 0->1->2 open window 0x1F,
+     * state 3 polls; a done poll releases through 0x80. */
+    memset(&o, 0, sizeof o);
+    in = mk_in();
+    in.story.ret_6e0d0 = 1;
+    in.shop.probe = 0;
+    assert(create_ok(&o, 19, &in, &out));
+    /* state 0 falls through into the state-1 proximity gate in
+     * the same call: 0 -> 1 -> 2. */
+    assert(aos_object20_update(&o, &in, &out) == 0);
+    assert(o.v.shop.state == 2);
+    assert(aos_object20_update(&o, &in, &out) == 0);   /* 2 -> 3,
+                                                       * opens 0x1F */
+    assert(o.v.shop.state == 3);
+    assert(out.shop.window_text == 0x1F);
+    in.text_done = true;
+    assert(aos_object20_update(&o, &in, &out) == 0);
+    assert(o.v.shop.state == 0x80);
+
+    /* param0 27 (guard): state 1's gate opens the picked +0x14
+     * text and state 2 exits on text_done (to state 3 under
+     * sub_0805B864, else back to 1) — either way it leaves the
+     * poll state so the machine-close fires. */
+    memset(&o, 0, sizeof o);
+    in = mk_in();
+    in.npc.flag12078 = (1ull << 0x20);
+    in.player_anim5c = 3;
+    assert(create_ok(&o, 27, &in, &out));
+    assert(aos_object20_update(&o, &in, &out) == 0);   /* 0 -> 1 */
+    in.npc.probe_inside = true;
+    in.word16 = 0x42;
+    in.npc.cond_5b864 = true;
+    assert(aos_object20_update(&o, &in, &out) == 0);   /* 1 -> 2,
+                                                       * opens text */
+    assert(o.v.guard.state == 2);
+    assert(o.v.guard.window_text);
+    assert(o.v.guard.text_id != 0);
+    in.text_done = true;
+    int guard_ret = aos_object20_update(&o, &in, &out);
+    assert(guard_ret == 0 || guard_ret == 0x10);
+    assert(o.v.guard.state != 2);
+
     printf("aos_object20 tests passed\n");
     return 0;
 }

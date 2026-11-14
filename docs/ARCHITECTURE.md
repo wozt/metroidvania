@@ -560,7 +560,9 @@ draw branches), `aria_entities.c` (the `update_entities` SPECIAL/kind
 dispatch, spawn/probe helpers and Object20 host glue),
 `aria_skills.c` (skills, soul attacks and the guardian),
 `aria_menus_debug.c` (native pause-page draws, soul menu, debug
-overlay) and `aria_opening.c` (opening text/portrait/backdrop/cue
+overlay), `aria_opening.c` (opening text/portrait/backdrop/cue
+helpers), `aria_weapons.c` (weapon/equipment loaders) and
+`aria_room_io.c` (room music/load/overlays/transitions/camera
 helpers).
 
 Responsibilities inside `src/runtime/aos/`:

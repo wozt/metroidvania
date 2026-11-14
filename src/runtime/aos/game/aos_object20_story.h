@@ -10,21 +10,25 @@
  * param0 23 create sub_08062260 / update sub_080623F0
  * param0 24            / update sub_08062664
  *           (create sub_080657B4 lives in aos_npc_talk)
- * param0 29            / update sub_0805C08C
- *           (create sub_0805BF4C is unported)
- * param0 31 create sub_0805C49C (create only; update
- *           sub_0805C628 is unported)
+ * param0 19 create sub_08061A00 (create only; the update is
+ *           the shop sell routine in aos_shop — the dispatcher
+ *           mirrors the shared state bytes into v.shop)
+ * param0 29 create sub_0805BF4C / update sub_0805C08C
+ * param0 30 create sub_0805B888 / update sub_0805B8F4
+ * param0 31 create sub_0805C49C / update sub_0805C628
  * These are the Chaotic Realm / Floating Garden story beats and
  * the area_11_room_023 boss-room sequences. The shared
  * Object20Create/Object20Update prologue (0x0805B42C/0x0805B510)
  * is folded into the entry points. The create dispatch follows
  * the native 0x08526658 table indices; callers pass the entity
  * param0 unchanged. */
-/* Integration status: faithful native-routine port kept as a
- * parity reference. It is unit-tested but NOT linked into
- * fusion_aria_runtime; classified partial in
- * data/native_parity/annotations.tsv until a real gameplay
- * path consumes it. */
+/* Integration status: consumed by the unified Object20
+ * dispatcher (aos_object20), which is wired into the id-32
+ * SPECIAL branch of update_entities in aria_runtime.c. Engine
+ * effects are reported through the Out struct; approximations
+ * are documented per-routine. classified partial in
+ * data/native_parity/annotations.tsv (no emulator comparison
+ * yet). */
 
 #ifndef AOS_OBJECT20_STORY_H
 #define AOS_OBJECT20_STORY_H
@@ -49,6 +53,10 @@ typedef struct {
     uint8_t flags58;    /* +0x58 */
     uint8_t flags59;    /* +0x59 */
     uint8_t anim5c;     /* +0x5C */
+    uint8_t field6e;    /* +0x6E (param0 31 upd st2 song pick) */
+    uint16_t field18;   /* +0x18 hword scroll counter (param0 30;
+                         * param0 9 uses +0x18 as the link pointer
+                         * through link18 instead) */
     int32_t pos40;      /* +0x40 fine X */
     int32_t pos44;      /* +0x44 fine Y */
     int32_t vel48;      /* +0x48 */
@@ -72,10 +80,11 @@ typedef struct {
     int32_t link18_vel48;       /* link +0x48 */
     int16_t link18_scr42;       /* link +0x42 */
     int16_t link18_scr46;       /* link +0x46 */
-    /* param0 29's +0x14 child runs sub_0805C39C; its own
-     * +0xA/+0xC/+0xD/+0x18/+0x1A/+0x59/+0x65 live here. */
+    /* param0 29/31's +0x14 child runs sub_0805C39C; its own
+     * +0xA/+0xB/+0xC/+0xD/+0x18/+0x1A/+0x59/+0x65 live here. */
     struct {
         uint8_t state;      /* child +0xA */
+        uint8_t sub_b;      /* child +0xB (param0 31 upd st4) */
         uint8_t ctr_c;      /* child +0xC */
         uint8_t timer_d;    /* child +0xD */
         uint16_t field18;   /* child +0x18 */
@@ -103,6 +112,7 @@ typedef struct {
     /* Variant probes. */
     int flag12078_26;       /* sub_08012078(0x26) — param0 9 create */
     int flag12078_27;       /* sub_08012078(0x27) — param0 10 create */
+    int flag12078_29;       /* sub_08012078(0x29) — param0 19 create */
     int flag12078_2b;       /* sub_08012078(0x2B) — param0 22 upd st0 */
     uint16_t flags37e;      /* gEwramData + 0x37E — param0 10 create,
                              * param0 29 upd st0 */
@@ -124,6 +134,22 @@ typedef struct {
     /* param0 29 child29 sub_0805C328 support (0x085267B8
      * records): `c328_ok` is its return value. */
     bool c328_ok;
+    /* param0 19 create sub_08061FDC support: the raw
+     * sub_0806E0D0 result — nonzero low byte keeps the entity
+     * (+0x5C = 0x11), zero deletes it. */
+    int32_t ret_6e0d0;
+    /* param0 30 update probes: sub_080628AC's return (nonzero
+     * completes the whiteout hand-off), sub_0803D06C's return
+     * (nonzero skips the gated block), sub_080009E4's return for
+     * the +0x18 scroll word and the two RandomNumberGenerator
+     * draws feeding the sub_08045B44 particle position. */
+    int ret_628ac;
+    int ret_3d06c;
+    int32_t ret_9e4;
+    uint32_t rng_p1, rng_p2;
+    /* param0 31 update sub_0806E140 floor probe result (bit 2
+     * set skips the +0x44 += +0x4C slide). */
+    uint32_t ret_6e140;
 } AosObject20StoryIn;
 
 /* Outputs reset at the top of every call; each names a native
@@ -166,6 +192,23 @@ typedef struct {
     uint8_t unk414_val;
     bool unk2cb0_feff;      /* gUnk_03002CB0 &= 0xFEFF */
     bool unk2cb0_or100;     /* gUnk_03002CB0 |= 0x100 */
+    bool unk2cb0_f1ff;      /* gUnk_03002CB0 &= 0xF1FF —
+                             * param0 30 update case 2 */
+    bool write_a074;        /* gEwramData + 0xA074 byte &= ~3 —
+                             * param0 30 update case 4 */
+    bool disp48_zero;       /* gDisplayRegisters + 0x48 hword = 0 */
+    bool call_ef6c;         /* sub_0800EF6C — param0 30 create */
+    bool call_628ac;        /* sub_080628AC invoked — param0 30
+                             * update case 1 (the whiteout
+                             * sequence itself is unported; its
+                             * result arrives via in->ret_628ac) */
+    bool call_9e4;          /* sub_080009E4(scroll) invoked */
+    bool call_3c7b4;        /* sub_0803C7B4(0x082099FC,5,1,0xE) */
+    bool call_11f44;        /* sub_08011F44(0x08522C54,0,0,0) */
+    bool call_11ad0;        /* sub_08011AD0(gEwramData + 0x60) */
+    bool call_45b44;        /* sub_08045B44 particle spawn */
+    int32_t p45b44_x;       /* sub_08045B44 arg0 (fine X) */
+    int32_t p45b44_y;       /* sub_08045B44 arg1 (fine Y) */
     /* Engine-side helpers reported, not modelled. */
     bool call_0eb04;
     bool call_235c8;
@@ -182,6 +225,13 @@ typedef struct {
     bool call_d154;
     bool call_d1f0;
     int call_1d028_a;       /* sub_0801D028 arg0, -1 none */
+    int32_t call_1d028_r3;  /* sub_0801D028 4th arg (r3) — only
+                             * meaningful when call_1d028_a is
+                             * set; the param0-30 scroll tail is
+                             * the only caller passing nonzero */
+    int call_3d004;         /* sub_0803D004 argument, -1 none */
+    int call_3d3a0;         /* sub_0803D3A0 argument, -1 none */
+    int f6c;                /* sub_08013F6C argument, -1 none */
     int release_arg;        /* sub_0805B66C argument, -1 none */
     bool call_6666c;        /* sub_0806666C guard-seq reset */
     bool dma_setup;         /* 0x040000D4/0x06004000/... chain —
@@ -211,12 +261,18 @@ typedef struct {
     bool player58_or_40;
     bool player58_or_20;
     bool player58_andnot_41;
+    bool player58_andnot_21; /* player +0x58 &= ~0x21 —
+                              * param0 30 update case 1 */
     bool player_scr42_set;
     int32_t player_scr42_val;
     bool player_pos40_set;
     int32_t player_pos40_val;
     bool player_pos44_set;
     int32_t player_pos44_val;
+    bool player_w48_zero;   /* player +0x48 word = 0 */
+    bool player_w4c_zero;   /* player +0x4C word = 0 */
+    bool player_w4a_zero;   /* player +0x4A hword = 0 */
+    bool player_w4e_zero;   /* player +0x4E hword = 0 */
     bool player_anim5c_inc; /* player +0x5C read for +1 copies */
     /* Own-entity writes beyond the state struct. */
     bool ent65_set;         /* +0x65 byte write */

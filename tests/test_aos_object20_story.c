@@ -141,11 +141,16 @@ int main(void) {
     in = base_in();
     in.flag42c = 0;
     assert(!aos_object20_story_create(&s, 23, &in, &out));
-    /* param0 24/29 creates are not this module's routines. */
+    /* param0 24 create is not this module's routine; param0 29
+     * create (sub_0805BF4C) is — with flag42c = 0 its 0x8000
+     * gate fails and the entity is marked for deletion. */
     memset(&s, 0, sizeof s);
     in = base_in();
     assert(!aos_object20_story_create(&s, 24, &in, &out));
+    memset(&s, 0, sizeof s);
+    in = base_in();
     assert(!aos_object20_story_create(&s, 29, &in, &out));
+    assert(s.flags59 & 0x8);
     /* update state 0: fade in, then sub_0803D408 -> helper. */
     memset(&s, 0, sizeof s);
     s.state = 0; s.sub_b = 1;
@@ -374,6 +379,270 @@ int main(void) {
     aos_object20_story_update(&s, 29, &in, &out);
     assert(out.unk2cb0_feff);
     assert(s.sub_b == 0 && s.sub_c == 1);
+
+    /* ---- param0 19: create sub_08061A00 (the shop sell
+     * spawn gate; update[19] is the shop routine). ---- */
+    memset(&s, 0, sizeof s);
+    in = base_in();
+    in.flag12078_29 = 0;
+    in.ret_6e0d0 = 1;               /* sub_0806E0D0 low byte live */
+    assert(aos_object20_story_create(&s, 19, &in, &out));
+    assert(s.scr42 == (int16_t)(0x150 - 0x40));
+    assert(s.vel48 == (int32_t)0xFFFF0000);
+    assert(s.anim5c == 0x11);
+    assert((s.flags58 & 0x20) != 0);
+    assert(out.set_42c & 1);
+    /* flag29 set marks +0x59 |= 8 -> delete. */
+    memset(&s, 0, sizeof s);
+    in = base_in();
+    in.flag12078_29 = 1;
+    in.ret_6e0d0 = 1;
+    assert(!aos_object20_story_create(&s, 19, &in, &out));
+    assert(s.flags59 & 0x8);
+    /* player x gate: 0x40 + 0 <= 0x7F fails. */
+    memset(&s, 0, sizeof s);
+    in = base_in();
+    in.a094_6 = 0;
+    in.player_scr42 = 0x40;
+    in.ret_6e0d0 = 1;
+    assert(!aos_object20_story_create(&s, 19, &in, &out));
+    /* dead sub_0806E0D0 probe: release(1) + delete. */
+    memset(&s, 0, sizeof s);
+    in = base_in();
+    in.ret_6e0d0 = 0;
+    assert(!aos_object20_story_create(&s, 19, &in, &out));
+    assert(out.release_arg == 1);
+
+    /* ---- param0 29: create sub_0805BF4C. ---- */
+    memset(&s, 0, sizeof s);
+    in = base_in();
+    in.flag42c = 0x8000;            /* +0x42C bit-0x8000 gate */
+    assert(aos_object20_story_create(&s, 29, &in, &out));
+    assert(s.scr42 == (int16_t)(0x40 - 0x40));
+    assert(s.scr46 == (int16_t)(0xBF - 0x30));
+    assert(s.flags58 & 0x40);
+    assert(out.player58_or_20);
+    assert(out.player_scr42_val == (int32_t)s.scr42 + 0x18);
+    assert(out.player_pos44_val == s.scr46);
+    assert(out.fade_3d18c && out.fade_3cdf0);
+    assert(out.dma_setup && out.unk2cb0_feff);
+    assert(out.set_42c & 1);
+    /* keep_5b754 false marks +0x59 |= 8 -> delete. */
+    memset(&s, 0, sizeof s);
+    in = base_in();
+    in.flag42c = 0x8000;
+    in.keep_5b754 = false;
+    assert(!aos_object20_story_create(&s, 29, &in, &out));
+    assert(s.flags59 & 0x8);
+
+    /* ---- param0 30: create sub_0805B888. ---- */
+    memset(&s, 0, sizeof s);
+    in = base_in();
+    assert(aos_object20_story_create(&s, 30, &in, &out));
+    assert(out.set_42c & 0x80021);
+    assert(out.call_ef6c);
+    assert(out.song == 0x1000);
+    assert(out.player_scr42_val == 0x78);
+    assert(out.player_pos44_val == 0x50);
+    assert(out.player_w4a_zero && out.player_w4e_zero);
+    assert(out.player58_or_20);
+
+    /* ---- param0 30: update sub_0805B8F4. ---- */
+    memset(&s, 0, sizeof s);
+    in = base_in();
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    /* state 0 -> 1 (the ROM's literal shared advance); the
+     * tail re-reads +0xA == 1 and parks the player. */
+    assert(s.state == 1);
+    assert(out.player_scr42_val == 0x78);
+    assert(out.player_w48_zero && out.player_w4c_zero);
+    assert(out.call_1d028_a == 0x33);
+    assert(out.set_42c & 0x20);
+    assert(out.anim_step_count == 0);   /* no F17C in this routine */
+    /* state 1 waits on the injected sub_080628AC result. */
+    in.ret_628ac = 0;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    assert(out.call_628ac);
+    assert(s.state == 1);
+    in.ret_628ac = 1;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    assert(s.state == 2);
+    assert(out.player58_andnot_21);
+    assert(out.cf0 == 0x20);
+    assert(out.call_3c7b4);
+    /* the completion call's tail already sees +0xA == 2: the
+     * scroll branch runs, +0x18 -> 0x200 and old +0xD == 0
+     * edge-spawns the particle. */
+    assert(s.field18 == 0x200);
+    assert(out.call_9e4 && out.call_45b44);
+    /* state 2 +0xB chain: 2CB0 clear -> DMA + window 0x25 ->
+     * fade -> 3D06C gate; +0x18 keeps scrolling and the shared
+     * tail keeps decrementing +0xD, so the particle edge
+     * (old +0xD & 0xF0 == 0) keeps firing while it counts
+     * 6..0 down — matching the ROM's burst behaviour. */
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    assert(out.unk2cb0_f1ff);
+    assert(s.sub_b == 1);
+    assert(out.call_45b44);
+    assert(s.field18 == 0x400);
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    assert(out.dma_setup && out.window_text == 0x25);
+    assert(s.sub_b == 2 && s.timer_d == 0xFF); /* tail -- */
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    assert(out.fade_3cdf0);
+    assert(s.sub_b == 3);
+    assert(s.field18 == 0x800);
+    /* +0xB == 3 with sub_0803D06C clear advances state. */
+    in.ret_3d06c = 0;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    assert(s.state == 3 && s.sub_b == 0);
+    assert(s.field18 == 0xA00);
+    /* state 3: poll not done, +0xB == 0 -> tail only. */
+    in.text_done = false;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    assert(out.window_poll);
+    assert(s.state == 3);
+    /* +0xB == 1 arms the +0xD 0x40 hold; the shared tail then
+     * decrements it once more this same call. */
+    s.sub_b = 1;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    assert(out.write_417 && out.write_417_val == 1);
+    assert(s.timer_d == 0x3E);
+    s.timer_d = 0;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    assert(out.write_417 && out.write_417_val == 0);
+    assert(s.sub_b == 2);
+    /* text done advances +0xA. */
+    in.text_done = true;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    assert(s.state == 4);
+    /* state 4 +0xB == 0 arms the fade + f6c. */
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    assert(out.fade_3cdf0);
+    assert(out.f6c == 0x1040);
+    assert(s.sub_b == 1 && s.sub_c == 0);
+    /* +0xD counts down through the shared tail (0x20 -> 0x1F
+     * this call). */
+    assert(s.timer_d == 0x1F);
+    /* +0xB == 1 with 3D06C clear runs the event block. */
+    in.ret_3d06c = 0;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    assert(out.call_3d004 == 0xE);
+    assert(out.call_3d3a0 == 0);
+    assert(out.write_a074);
+    assert(out.set_42c & 0x804000);
+    assert(out.call_11f44 && out.call_11ad0);
+    assert(out.disp48_zero);
+    assert(s.sub_b == 2);
+    /* the +0xB >= 2 hold fires once +0xD and +0xC both read 0
+     * (+0xC was cleared by the event block; +0xD counts down
+     * through the shared tail). */
+    s.timer_d = 0;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 30, &in, &out);
+    assert(out.f6c == 0x1040);
+    assert(s.sub_c == 1);
+
+    /* ---- param0 31: update sub_0805C628. ---- */
+    memset(&s, 0, sizeof s);
+    in = base_in();
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 31, &in, &out);
+    /* state 0: +0xD armed 0x80 then counted to 0x7F. */
+    assert(s.state == 0 && s.timer_d == 0x7F && s.sub_c == 1);
+    assert(out.anim_step_count == 1);
+    /* wrap -> fades + state 1. */
+    s.timer_d = 0;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 31, &in, &out);
+    assert(s.state == 1);
+    assert(out.fade_3d18c && out.fade_3cdf0);
+    /* state 1: cf0 once, fade gate clear -> advance. */
+    in.fade_done = false;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 31, &in, &out);
+    assert(out.cf0 == 0x21);
+    assert(s.state == 2);
+    assert(out.fade_out && out.dma_setup);
+    assert(out.unk2cb0_or100);
+    /* state 2 +0xB == 0 hold -> player park on wrap (skip the
+     * +0xC == 0 init by presetting the armed counter). */
+    memset(&s, 0, sizeof s);
+    s.state = 2; s.sub_c = 1; s.timer_d = 0;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 31, &in, &out);
+    assert(out.player_scr42_val == 0xD0 - 0x40);
+    assert(out.player_pos44_val == 0xBF - 0x30);
+    assert(s.sub_b == 1);
+    /* +0xB == 2 floor probe: bit2 clear slides +0x44, set
+     * does not. */
+    s.sub_b = 2; s.sub_c = 1; s.scr42 = 0x100;
+    s.pos44 = 0; s.vel4c = 0x10;
+    in.ret_6e140 = 0;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 31, &in, &out);
+    assert(s.pos44 == 0x10);
+    in.ret_6e140 = 4;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 31, &in, &out);
+    assert(s.pos44 == 0x10);
+    /* +0xB == 3 +0x59 release jumps +0xB by 2. */
+    s.sub_b = 3; s.flags59 = 1; s.anim6d = 0;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 31, &in, &out);
+    assert(s.sub_b == 5);
+    /* +0xB == 4 song picks + +0xB by 1 on the +0x59 release. */
+    s.sub_b = 4; s.field6e = 4;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 31, &in, &out);
+    assert(out.song == 0x1DF);
+    assert(s.sub_b == 5);
+    s.sub_b = 4; s.field6e = 8; s.flags59 = 0;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 31, &in, &out);
+    assert(out.song == 0xFC);
+    assert(s.sub_b == 4);
+    /* states 3-6: poll, child hand-off, f6c, finale. */
+    memset(&s, 0, sizeof s);
+    s.state = 3;
+    in.text_done = true;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 31, &in, &out);
+    assert(s.state == 4);
+    /* state 4 wrap: preset the armed counter at 0. */
+    s.sub_c = 1; s.timer_d = 0;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 31, &in, &out);
+    assert(s.state == 5);
+    assert(s.child29.state == 1);
+    assert(s.child29.sub_b == 0 && s.child29.ctr_c == 0);
+    s.child29.state = 0x80;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 31, &in, &out);
+    assert(out.f6c == 0x1040);
+    memset(&s, 0, sizeof s);
+    s.state = 6;
+    in.fade_done = false;
+    memset(&out, 0, sizeof out);
+    aos_object20_story_update(&s, 31, &in, &out);
+    assert(s.state == 0x80);
+    assert(out.jingle == 0x2D);
+    assert(out.unk2cb0_feff);
+    assert(out.window_close);
+    assert(out.write_64_0a);
 
     /* ---- child29 update (sub_0805C39C). ---- */
     memset(&s, 0, sizeof s);

@@ -166,25 +166,39 @@ int main(void) {
     assert(!create_ok(&o, 24, &in, &out));
     assert(o.deleted);
 
-    /* param0 29: native create[29] = sub_0805BF4C is unported —
-     * shared shell + unported report; update still routes to
-     * story update29 (sub_0805C08C). */
+    /* param0 29: native create[29] = sub_0805BF4C via the
+     * story module's case 29 — needs +0x42C bit 0x8000;
+     * update still routes to story update29 (sub_0805C08C). */
     memset(&o, 0, sizeof o);
     in = mk_in();
+    in.flag42c = 0x2000 | 0x8000;
     assert(create_ok(&o, 29, &in, &out));
     assert(o.family == AOS_OBJECT20_FAMILY_STORY);
-    assert(out.unported);
+    assert(!out.unported);
     assert(!o.deleted);
+    assert(out.story.fade_3d18c && out.story.fade_3cdf0);
+    assert(out.story.dma_setup && out.story.unk2cb0_feff);
     assert(aos_object20_update(&o, &in, &out) == 0);
     assert(out.story.set_42c & 0x20);
     assert(out.story.anim_step_count == 1);
+    /* without bit 0x8000 the create gate marks +0x59 |= 8. */
+    memset(&o, 0, sizeof o);
+    in = mk_in();
+    assert(!create_ok(&o, 29, &in, &out));
+    assert(o.deleted);
 
     /* ---- shop family: param0 19 sell / 20 buy. ---- */
     memset(&o, 0, sizeof o);
     in = mk_in();
+    in.story.ret_6e0d0 = 1;         /* sub_0806E0D0 low byte live */
     assert(create_ok(&o, 19, &in, &out));
     assert(o.family == AOS_OBJECT20_FAMILY_SHOP);
-    assert(out.unported);           /* create sub_08061A00 gap */
+    assert(!out.unported);          /* create sub_08061A00 ported */
+    assert(!o.deleted);
+    assert(out.story.set_42c & 1);
+    assert(o.v.shop.vel48 == (int32_t)0xFFFF0000);
+    assert(o.scr42 == (int16_t)(0x150 - 0x40));
+    assert(o.anim5c == 0x11);
     in.shop.probe = 0;              /* player +0x42 + A094[6] */
     assert(aos_object20_update(&o, &in, &out) == 0);
     assert(out.shop.b878 == 0x1040);
@@ -284,11 +298,35 @@ int main(void) {
     assert(o.v.talk_loop.mark_38);
     assert(o.v.talk_loop.release_0);
 
+    /* param0 30/31: story family — creates and updates are
+     * ported (sub_0805B888/5B8F4, sub_0805C49C/5C628). */
+    memset(&o, 0, sizeof o);
+    in = mk_in();
+    assert(create_ok(&o, 30, &in, &out));
+    assert(o.family == AOS_OBJECT20_FAMILY_STORY);
+    assert(!out.unported);
+    assert(!o.deleted);
+    assert(out.story.set_42c & 0x80021);
+    assert(out.story.song == 0x1000);
+    assert(aos_object20_update(&o, &in, &out) == 0);
+    assert(!out.unported);
+    assert(out.story.player_scr42_val == 0x78);
+
+    memset(&o, 0, sizeof o);
+    in = mk_in();
+    assert(create_ok(&o, 31, &in, &out));
+    assert(o.family == AOS_OBJECT20_FAMILY_STORY);
+    assert(!out.unported);
+    assert(!o.deleted);
+    assert(aos_object20_update(&o, &in, &out) == 0);
+    assert(!out.unported);
+    assert(out.story.anim_step_count == 1);
+
     /* ---- unported param0 values: shared shell + report. ---- */
     for (unsigned i = 0; i < sizeof all_params / sizeof all_params[0];
          ++i) {
         int16_t p = all_params[i];
-        if (p == 3 || (p >= 4 && p <= 10) || (p >= 19 && p <= 29))
+        if (p == 3 || (p >= 4 && p <= 10) || (p >= 19 && p <= 31))
             continue;   /* covered families */
         memset(&o, 0, sizeof o);
         in = mk_in();

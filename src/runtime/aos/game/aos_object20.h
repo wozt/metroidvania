@@ -13,7 +13,9 @@
  *           (aos_opening_event), NOT here.
  *   4-8     sub_0805F120..5FD65    sub_0805F268..5FDF1   aos_object20_dirs
  *   9,10    sub_0805FFDC/606C8     sub_08060248/607E4    aos_object20_story
- *   19      sub_08061A00           sub_08061ABC (sell)  aos_shop
+ *   19      sub_08061A00           sub_08061ABC (sell)  story create /
+ *           shop update (the shared state bytes are mirrored
+ *           into v.shop — see aos_object20_create)
  *   20      sub_08062040           sub_08061D10 (buy)   aos_shop
  *   21      sub_08062068           sub_08062074          aos_object20_story
  *   22      sub_08062244           sub_080620E8          aos_object20_story
@@ -24,12 +26,9 @@
  *   26      sub_08065CD8           sub_08065DB8          aos_npc_talk
  *   27      sub_08066024           sub_08066094          aos_npc_talk
  *   28      sub_08066828           sub_080666D4          aos_npc_talk
- *   29      sub_0805BF4C           sub_0805C08C          story update;
- *           create unported
- *   30      sub_0805B888           sub_0805B8F4          unported —
- *           inert, reported
- *   31      sub_0805C49C           sub_0805C628          story create /
- *           unported update — inert, reported
+ *   29      sub_0805BF4C           sub_0805C08C          aos_object20_story
+ *   30      sub_0805B888           sub_0805B8F4          aos_object20_story
+ *   31      sub_0805C49C           sub_0805C628          aos_object20_story
  *   other   (table reads past its end natively)         inert,
  *           reported
  *
@@ -38,10 +37,12 @@
  * [N-1] for its case N on param0 21-24 and create[31] for case
  * 29); callers now pass the entity param0 unchanged.
  *
- * Integration status: unit-tested dispatcher, NOT yet wired
- * into aria_runtime — the id-32 dispatch case and the
- * gEwramData/player bridge are the next step. classified
- * partial in data/native_parity/annotations.tsv. */
+ * Integration status: wired into aria_runtime (the id-32
+ * dispatch case and the gEwramData/player bridge landed with
+ * object20_fill_in/object20_apply_out); classified partial in
+ * data/native_parity/annotations.tsv — the param0-30
+ * sub_080628AC whiteout sequence and the param0-19/30/31
+ * engine probes are still injected, not bridged. */
 
 #ifndef AOS_OBJECT20_H
 #define AOS_OBJECT20_H
@@ -58,13 +59,14 @@
 enum {
     AOS_OBJECT20_FAMILY_OPENING = 0, /* param0 3: bespoke path */
     AOS_OBJECT20_FAMILY_DIRS,        /* param0 4-8 */
-    AOS_OBJECT20_FAMILY_STORY,       /* param0 9,10,21-24,29 */
+    AOS_OBJECT20_FAMILY_STORY,       /* param0 9,10,21-24,29-31
+                                      * (+19 create via story) */
     AOS_OBJECT20_FAMILY_SHOP,        /* param0 19 (sell), 20 (buy) */
     AOS_OBJECT20_FAMILY_GUIDE,       /* param0 25 */
     AOS_OBJECT20_FAMILY_LOOP,        /* param0 26 */
     AOS_OBJECT20_FAMILY_GUARD,       /* param0 27 */
     AOS_OBJECT20_FAMILY_TALK_LOOP,   /* param0 28 */
-    AOS_OBJECT20_FAMILY_INERT        /* param0 30,31, other */
+    AOS_OBJECT20_FAMILY_INERT        /* param0 other */
 };
 
 /* npc_talk-family injected probes that no variant In struct
@@ -100,12 +102,12 @@ typedef struct {
     uint8_t family;         /* AOS_OBJECT20_FAMILY_* */
     bool deleted;           /* EntityDelete requested */
     int return_code;        /* last update's ROM r0 result */
-    /* +0x42/+0x46 screen words, +0x59/+0x5C shared by the
-     * npc_talk/shop/unported variants whose ported state
+    /* +0x42/+0x46 screen words, +0x58/+0x59/+0x5C shared by
+     * the npc_talk/shop/unported variants whose ported state
      * structs do not carry them (dirs/story keep their own
      * copies inside their structs). */
     int16_t scr42, scr46;
-    uint8_t flags59, anim5c;
+    uint8_t flags58, flags59, anim5c;
     /* gEwramData +0x138F4 guard-sequence cursor block — a
      * global in the ROM; kept here as a single-consumer
      * approximation for the param0-28 text pick. */
@@ -117,7 +119,8 @@ typedef struct {
     bool guide_flag_417;
     union {
         AosObject20Dirs dirs;       /* param0 4-8 */
-        AosObject20Story story;     /* param0 9,10,21-24,29 */
+        AosObject20Story story;     /* param0 9,10,21-24,29-31
+                                     * (+19 create only) */
         AosNpcGuide guide;          /* param0 25 */
         AosNpcLoop npc_loop;        /* param0 26 */
         AosNpcGuard guard;          /* param0 27 */

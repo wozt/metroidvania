@@ -1,3 +1,114 @@
+## Patch 1124 - Remaining Object20 table routines ported (param0 19/29/30/31)
+
+- `src/runtime/aos/game/aos_object20_story.c/.h` now covers every
+  entry of the dumped 0x08526658 (create) / 0x085266D8 (update)
+  tables: create[19] sub_08061A00 (with its sub_08061FDC /
+  sub_0806E0D0 spawn probe ported and the probe result injected),
+  create[29] sub_0805BF4C, create[30] sub_0805B888, update[30]
+  sub_0805B8F4 and update[31] sub_0805C628. The state struct gained
+  the +0x6E song-pick byte, the +0x18 hword scroll counter used by
+  param0 30 and the +0x14 child's +0xB byte; In/Out report the new
+  engine calls (sub_0800EF6C, sub_08013F6C, sub_0803C7B4,
+  sub_0803D004/3D3A0, sub_08011F44/11AD0, sub_08045B44 particle,
+  the 2CB0 &= 0xF1FF and +0xA074 &= ~3 writes) and inject the
+  unported probes sub_080628AC (whiteout sequence), sub_0803D06C,
+  sub_080009E4, sub_0806E140 and the two particle RNG draws.
+- `aos_object20.c/.h`: param0 30/31 moved from INERT to STORY;
+  param0 29 create routes to the story module; param0 19 create
+  runs the story module's case 19 and mirrors the shared
+  +0xA..+0xD/+0x40/+0x48/+0x6D bytes into `v.shop` (plus the flat
+  +0x42/+0x46/+0x58/+0x59/+0x5C fields) so the already-ported shop
+  sell update sees the entity the ROM left behind — the union can
+  only hold one state struct, so the sync is explicit and
+  documented. The param0 table comment is updated; every table
+  entry now has a ported routine on at least one side.
+- Honest gaps: sub_080628AC (~350 asm lines, the param0-30
+  whiteout/fade-to-white sequence with its own sub_0806E0D0 /
+  sub_0803DD14 / sub_0803FD9C / sub_0803C918 / sub_0803F8A8 /
+  sub_08064518 / sub_08065800 helper chain) is NOT ported — its
+  return arrives via `in->ret_628ac`, so the param0-30 update
+  stalls in state 1 until the runtime bridge supplies it.
+  `object20_fill_in` zero-fills the new probes, so param0-19
+  creates currently take the sub_0806E0D0-failed delete path in
+  the live runtime; wiring the real probes is the next step for
+  the aria_runtime owner.
+- Tests: `tests/test_aos_object20_story.c` covers create19/29/30
+  and the update30 state machine (0-4 incl. the literal
+  double-advance in case 0, the 628AC gate, the +0xB chains, the
+  scroll/particle tail and the +0xD countdown) and update31
+  (states 0-6 incl. the +0xB 0-5 escort substeps, the 6E140 probe,
+  song picks and the child hand-off). `tests/test_aos_object20.c`
+  covers the new dispatcher routing for param0 19/29/30/31.
+- Validation: warning-clean standalone gcc builds of both modules
+  and both test binaries; both tests pass. Full CTest/dashboard
+  cycle deferred to the parent (CMakeLists/registries untouched).
+
+## Patch 1123 - Object20 SPECIAL id-32 wired into `aria_runtime`
+
+- `src/runtime/aria_runtime.c` now dispatches SPECIAL entity id 32
+  (native object 0x20) through the unified `aos_object20_create` /
+  `aos_object20_update` port: `AriaEntity` gained an `AosObject20`
+  state member, `update_entities` gained the id-32 branch with the
+  sibling camera spawn gate, and a file-static `AosRoomDialogue`
+  instance binds the `aos_room_dialogue_host.h` adapter — ROM text
+  resolution through `aos_intro_resources_entry`, glyph/speaker
+  rendering through the opening path's font/window-frame stack,
+  and a `room_dialogue_input_lock` bool that zeroes gameplay input
+  while the window is open (A/START still reach the poll through
+  `aria_input.new_input`). The ROM is opened lazily on first
+  resolve, so `--simulate` without `--rom` fails closed instead of
+  crashing; the window is also closed on room transitions.
+- `AosObject20In` is built field-by-field from real runtime state
+  where a source exists (Soma HP for +0x1327A, camera words for
+  +0xA094+6/+0xA, `aria_events` for the sub_08012078 flag bytes,
+  `aria_pickup_state.global_flags`/`special` for +0x42C/+0x37E,
+  `aos_random` for the RNG probes) and a large comment block
+  documents every field with no runtime channel. Out effects are
+  forwarded where a consumer exists: the window triple through
+  `aos_room_dialogue_apply`, +0x42C/+0x37E writes to
+  `aria_pickup_state`, PlaySong/sub_0805B878 requests through
+  `aos_audio_play_song`, SetPlayerInput to the forced-input slot,
+  releases/deletes retire the record, and variant position fields
+  sync `e->x`/`e->y` only when nonzero. Songs play directly because
+  the `update_entities` sound return is ignored by both callers.
+- Documented approximations/gaps: `keep_5b754` and the sprite
+  probes are approximated (no native graphics probe), the npc
+  window poll for the loop/guard/talk_loop families is driven by
+  the pre-update +0xA state (one frame of latency, same as the
+  In-struct `text_done`), the param0-27 text pick feeds back the
+  stored id (native pickers unported), the param0-26 companion
+  child is not spawned, the shop record model and sub_0800ED24
+  transaction are reported not applied, player-entity writes and
+  most gEwramData side effects are printed, and param0 3 stays
+  owned by the bespoke opening path (`handled_externally`, record
+  consumed without updates). param0 30/31 remain inert/unported.
+- Verified with `--simulate 600` (no crashes): area_00_room_000
+  (4 id-32 records spawned, params 3/26/27/28), area_02_room_005
+  (param 25, 1 spawned), area_11_room_011 (param 22, 1 spawned),
+  area_11_room_23 (params 23/24/29, 3 spawned), area_06_room_011
+  (param 7, 1 spawned) and area_05_room_006 (param 21 — 0 spawned
+  at the default spawn because the record sits at room pixel 0,0
+  outside the camera gate; 1 spawned with `--spawn 16 100`).
+  Classified partial: wired and smoke-verified, not
+  emulator-compared.
+
+## Patch 1122 - All Object20 private-table sprites exported
+
+- `src/assets/aos/objects.c` now emits the nine unexported records
+  of Object20's private 12-record sprite table at 0x081186DC as
+  `Enemy/object20_actor_N` (N = 2, 3, 4, 5, 6, 7, 9, 10, 11), keyed
+  by the native record index that `sub_0805B754(e, idx)` /
+  `sub_0805B5E8(idx)` pass to `sub_0806E0D0` (bank always 0, verified
+  against the ROM code and the existing opening_actor_0/1/8
+  triples). Records 0, 1 and 8 keep their `opening_actor_*` names.
+- The `aria_objects` rebuild task version was bumped to 73 so the
+  extracted library regenerates; `fusion_importer
+  --aria-export-objects` now produces 1,958 sequences / 6,773 frames
+  including the new keys in
+  `assets/extracted/aria/sprites/objects/runtime` (gitignored) and
+  `enemy_frames.tsv`. Runtime loading/drawing of the new keys is the
+  next step.
+
 ## Patch 1121 - Unified Object20 param0 dispatcher (`aos_object20`)
 
 - New module `src/runtime/aos/game/aos_object20.c/.h` is the single

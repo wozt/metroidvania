@@ -63,6 +63,8 @@
 #include "aos/game/aos_object1d.h"
 #include "aos/game/aos_object1f.h"
 #include "aos/game/aos_object28.h"
+#include "aos/game/aos_object20.h"
+#include "aos/game/aos_room_dialogue.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/game/aos_game_lifecycle.h"
@@ -475,6 +477,7 @@ typedef struct {
     AosObject12 object12;   /* object 0x12: param-driven animated sprite */
     AosObject13 object13;   /* object 0x13: swinging chandelier trigger */
     AosObject14 object14;   /* object 0x14: param0 probe/emitter */
+    AosObject20 object20;   /* object 0x20: SPECIAL id 32 dispatcher */
     AosObject19 object19;   /* object 0x19: rectangular patrol mover */
     AosObject1b object1b;   /* object 0x1B: spin-synced object */
     AosObject15 object15;   /* object 0x15: story cutscene director */
@@ -963,6 +966,21 @@ static const AosProjectDoor *project_door_touched(const AriaRoom *room, int32_t 
  * `forced`; an editor spawn point places Soma's feet there (kept inside the
  * target). 1 when the room changed, 0 when an editor door's target cannot be
  * loaded (the room stays), -1 when a native exit fails. */
+/* Object20 room dialogue state — declared before take_exit, which
+ * closes the window on room changes. The host adapter that binds
+ * these is defined next to update_entities. */
+static AosIntroResources room_dialogue_resources;
+static AosIntroFont room_dialogue_font;
+static AosWindowFrame room_dialogue_window;
+static AosIntroTextTiles room_dialogue_tiles;
+static FusionRom room_dialogue_rom;
+static bool room_dialogue_rom_tried;
+static const char *room_dialogue_rom_path;
+static bool room_dialogue_ready;
+static bool room_dialogue_input_lock;
+static AosRoomDialogue room_dialogue;
+static AosRoomDialogueHost room_dialogue_host;
+
 static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **background,
                      AosSoma *soma, int cam_x, int cam_y, const AosProjectDoor *forced) {
     int32_t x = soma->x >> 16, y = soma->y >> 16;
@@ -1010,6 +1028,9 @@ static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **backg
     soma->y = (int32_t)((uint32_t)ay << 16) | (soma->y & 0xFFFF);
     printf("Room %d/%d -> %d/%d, arrival %d,%d\n", room->area, room->number, target.area,
            target.number, ax, ay);
+    /* A room dialogue window belongs to the room that opened it;
+     * native room loads retire the text state with the entities. */
+    aos_room_dialogue_close(&room_dialogue);
     free_room(room);
     *room = target;
     aos_object01_reset();   /* the + 0x1316C claim is per-room here */
@@ -4220,8 +4241,533 @@ static int obj14_probe(void *ctx, int kind, int32_t a, int32_t b,
     }
 }
 
+/* ------------------------------------------------------------------
+ * Object20 (SPECIAL entity id 32, native object 0x20) runtime wiring.
+ *
+ * aos_object20_create/aos_object20_update dispatch the entity +0x30
+ * param0 to the ported dirs/story/npc_talk/shop variants. The shared
+ * Object20Create gates and Object20Update prologue/tail read
+ * gEwramData globals; the mapping below names each In field's runtime
+ * source. Fields with no runtime equivalent are fed their neutral
+ * value and documented here — never an arbitrary gameplay constant:
+ *
+ *   flag1327a    gEwramData + 0x1327A is Soma's current HP word
+ *                (AosSoma.hp carries the same address): the create
+ *                gate passes while HP > 0.
+ *   flag42c      gEwramData + 0x42C is aria_pickup_state.global_flags
+ *                (aos_pickup.h documents the same address).
+ *   byte8e, byte13266, word16, word60, byte41b, byte414
+ *                gEwramData mode/pause bytes with no runtime channel;
+ *                0 is the fresh-state value.
+ *   text_done    the shared room dialogue's last sub_08067A04 result.
+ *   keep_5b754   sub_0805B754(e, arg) is a sprite-variant existence
+ *                probe (sub_0806E0D0 over the 0x081186DC records);
+ *                approximated true — the runtime draws the exported
+ *                special_32 art generically and cannot evaluate the
+ *                native graphics probe.
+ *   a094_4       the + 0xA094 + 4 scroll word has no runtime channel
+ *                (the camera is recomputed each frame); 0.
+ *   a094_6/a/a0  gEwramData + 0xA094 + 6/+ 0xA is the camera position
+ *                in room pixels (sub_0805CCE4 polls it against pixel
+ *                thresholds); a094_0 is the shop's room-width record,
+ *                approximated by room->width_screens.
+ *   player_*     the player entity (+0x13110) fields: +0x42 screen X
+ *                pixel, +0x40/+0x44 fine 16.16 position, +0x5C
+ *                animation byte (approximated by soma.anim.id, the
+ *                +0x6D selector — the runtime keeps no +0x5C), +0x58
+ *                bit 0x40 facing (soma.facing_left).
+ *
+ * Variant probes:
+ *   dirs flag12078_21..25 / story flag12078_26/27/2b and npc
+ *   cond_5b864: sub_08012078(i) reads the unk_33C bitfield, which the
+ *   runtime stores as aria_events (aos_wall_event). cond_5b864 is
+ *   sub_0805B864 = sub_08012078(0x3A).
+ *   story flags37e: gEwramData + 0x37E is aria_pickup_state.special.
+ *   story unk2cb0: gUnk_03002CB0 has no runtime channel; 0.
+ *   story spawn14_ok/spawn18_ok: the sub_0805B5E8 child-spawn probes,
+ *   approximated by remaining entity slots.
+ *   story rng_3e654/rng_32df0: RandomNumberGenerator draws (aos_random).
+ *   story fade_done: sub_0803D408() — the runtime has no blocking
+ *   room-fade channel for these sequences; true (no fade pending).
+ *   story c328_ok: the param0-29 sub_0805C328 record machine has no
+ *   runtime source; true keeps it running.
+ *   dirs probe_6e140: the sub_0806E140 collision probe is unmodelled;
+ *   0. dirs table_852682c: the ROM byte table is not committed; NULL
+ *   reads as the table-end sentinel, matching the module contract.
+ *   npc flag12078: bits 0..0x32 of the same aria_events bitfield.
+ *   npc probe_inside: sub_08068AD4's box test approximated by the
+ *   player screen position inside a 0x40x0x40 box centred on the
+ *   entity's screen position.
+ *   npc gate_4be: the gEwramData + 0x4BE pause word has no runtime
+ *   channel; 0 (clear, the in-game value).
+ *   npc picked_text: the param0-27 +0x14 pick — the native pickers
+ *   sub_08066308/sub_0806666C/sub_0806668C are unported, so the
+ *   entity's stored guard text id is fed back (documented gap).
+ *   npc rng/rng_bit: RandomNumberGenerator draws; rng_bit is RNG&1.
+ *   npc spawn_child: NULL — the param0-26 companion's +0x18 child
+ *   (update sub_08065C2C) is not spawned (documented gap).
+ *   npc cam_x/cam_y: the +0x42/+0x46 park words for the param0-25
+ *   follower spawn; cam_x/cam_y.
+ *   npc ent_pos40: the entity +0x40 fine X at create; e->x << 16.
+ *   shop input_busy: sub_080212C8() & 0x1E has no runtime channel; 0.
+ *   shop probe: player +0x42 + A094[6] collapses to the player's
+ *   room-pixel X.
+ *   shop dir: sub_0805B814's direction pick approximated by the
+ *   player/entity screen-X order.
+ *   shop ent_left_of_player: the +0x42 screen-X compare.
+ *   shop room_q3: the entity room-X record approximated by e->x >> 3.
+ *   shop record_left: the shop record +0x40 has no runtime source;
+ *   false.
+ * ------------------------------------------------------------------ */
+
+/* One shared room dialogue: the native routines never run two text
+ * windows at once and sub_08067934 re-open closes the previous one.
+ * The host adapter reuses the opening path's verified-ROM text
+ * resources, font and window frame; the ROM is opened lazily on the
+ * first resolve so --simulate without --rom fails closed (the open
+ * reports failure and the entity's poll keeps it unblocked). The
+ * state itself is declared before take_exit (which closes the
+ * window on room changes); the host callbacks live here next to
+ * update_entities. */
+
+static bool room_dialogue_resolve(void *context, uint16_t id,
+                                  const uint8_t **script,
+                                  size_t *script_size) {
+    (void)context;
+    if (!room_dialogue_ready) {
+        if (!room_dialogue_rom_tried) {
+            room_dialogue_rom_tried = true;
+            if (room_dialogue_rom_path) {
+                char error[160];
+                (void)fusion_rom_open(FUSION_ASSET_GAME_ARIA,
+                                      room_dialogue_rom_path,
+                                      &room_dialogue_rom, error,
+                                      sizeof error);
+            }
+        }
+        if (room_dialogue_rom.data) {
+            char error[160];
+            room_dialogue_ready =
+                aos_intro_resources_init(&room_dialogue_resources,
+                                         &room_dialogue_rom, error,
+                                         sizeof error) &&
+                aos_intro_font_init(&room_dialogue_font, &room_dialogue_rom,
+                                    error, sizeof error) &&
+                aos_window_frame_init(&room_dialogue_window,
+                                      &room_dialogue_rom, 1, error,
+                                      sizeof error);
+        }
+    }
+    if (!room_dialogue_ready) return false;
+    /* Same text-table fetch as resolve_opening_text, widened to the
+     * uint16_t ids the room variants pass to sub_08067934. */
+    return aos_intro_resources_entry(&room_dialogue_resources, 1, id,
+                                     script, script_size);
+}
+
+static bool room_dialogue_open_window(void *context, uint16_t id) {
+    (void)context;
+    (void)id;
+    /* Gap (aos_room_dialogue_host.h): sub_08067934's WIN0H/WIN0V/
+     * DISPCNT writes and the sub_0805AFC0 open animation have no
+     * standalone primitive; the dialogue frame is composed whenever
+     * the bridge reports the window open — the same approximation
+     * the opening path uses. */
+    return room_dialogue_ready;
+}
+
+/* Mirrors rebuild_opening_text: speaker row through the small
+ * context-B font at (40,100), body glyphs at (40,116) on 12-pixel
+ * rows, into the room dialogue's own tile canvas. */
+static void room_dialogue_render(void *context,
+                                 const AosRoomDialogue *dlg,
+                                 uint32_t frame) {
+    (void)context;
+    (void)frame;    /* the wait-marker blink uses the draw frame */
+    const AosOpeningEvent *event = aos_room_dialogue_event(dlg);
+    if (!event || !room_dialogue_ready) return;
+    aos_intro_text_tiles_clear(&room_dialogue_tiles);
+    const char *speaker = aos_opening_event_speaker_name(event->speaker);
+    bool ok =
+        aos_intro_font_render_small_span(&room_dialogue_font,
+                                         &room_dialogue_tiles, 0, 48, 88,
+                                         8, (const uint8_t *)speaker,
+                                         strlen(speaker));
+    for (unsigned line = 0; ok && line < AOS_OPENING_LINES; ++line)
+        ok = aos_intro_font_render_span(&room_dialogue_font,
+                                        &room_dialogue_tiles, 0,
+                                        line * 12, 176, 8,
+                                        event->glyphs[line],
+                                        event->glyph_counts[line]);
+    if (!ok)
+        fprintf(stderr, "Aria room dialogue text render failed\n");
+}
+
+static void room_dialogue_close_window(void *context) {
+    (void)context;
+    /* Gap: no sub_08067898 primitive; the frame tiles persist until
+     * the next open overwrites them, as native VRAM does. */
+}
+
+static void room_dialogue_lock(void *context, bool locked) {
+    (void)context;
+    room_dialogue_input_lock = locked;
+}
+
+static void room_dialogue_bind(void) {
+    static bool bound;
+    if (bound) return;
+    bound = true;
+    room_dialogue_host.context = NULL;
+    room_dialogue_host.resolve_text = room_dialogue_resolve;
+    room_dialogue_host.open_window = room_dialogue_open_window;
+    room_dialogue_host.render = room_dialogue_render;
+    room_dialogue_host.close_window = room_dialogue_close_window;
+    room_dialogue_host.set_input_lock = room_dialogue_lock;
+    aos_room_dialogue_init(&room_dialogue);
+    aos_room_dialogue_set_host(&room_dialogue, &room_dialogue_host);
+}
+
+static bool object20_flag12078(int bit) {
+    return aos_wall_event(aria_events, bit);
+}
+
+/* Build the shared + variant In block for one entity update. `pre`
+ * carries the npc family's pre-update state byte so the window poll
+ * approximation can read it (see the branch comment). */
+static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
+                             const AosSoma *soma, int cam_x, int cam_y,
+                             AosObject20In *in) {
+    memset(in, 0, sizeof *in);
+    in->flag1327a = soma ? soma->hp : 0;
+    in->flag42c = aria_pickup_state.global_flags;
+    in->text_done = aos_room_dialogue_text_done(&room_dialogue);
+    in->keep_5b754 = true;      /* sprite-variant probe approximation */
+    in->a094_6 = (uint16_t)cam_x;
+    in->a094_a = (uint16_t)cam_y;
+    in->a094_0 = (uint16_t)room->width_screens;
+    if (soma) {
+        in->player_scr42 = (int32_t)(soma->x >> 16) - cam_x;
+        in->player_pos40 = soma->x;
+        in->player_pos44 = soma->y;
+        in->player_anim5c = soma->anim.id;
+        in->player_flags58 = soma->facing_left ? 0x40 : 0;
+    }
+    /* dirs probes (param0 4-8): the flag bytes and the unmodelled
+     * collision probe / uncommitted ROM table stay neutral. */
+    in->dirs.flag12078_21 = object20_flag12078(0x21) ? 1 : 0;
+    in->dirs.flag12078_22 = object20_flag12078(0x22) ? 1 : 0;
+    in->dirs.flag12078_23 = object20_flag12078(0x23) ? 1 : 0;
+    in->dirs.flag12078_24 = object20_flag12078(0x24) ? 1 : 0;
+    in->dirs.flag12078_25 = object20_flag12078(0x25) ? 1 : 0;
+    /* story probes (param0 9/10/19/21-24/29-31). ret_6e0d0 is the
+     * param0-19-style sprite-variant gate; a nonzero low byte keeps
+     * the entity, matching keep_5b754's approximation (the
+     * object20_actor_* records are exported). The param0-30/31
+     * cinematic probes (ret_628ac whiteout, ret_3d06c, ret_9e4,
+     * rng_p1/rng_p2, ret_6e140) have no runtime channel and stay
+     * neutral: update30 waits in state 1 and update31's floor
+     * probe reports clear — no room record uses param0 30/31. */
+    in->story.flag12078_26 = object20_flag12078(0x26) ? 1 : 0;
+    in->story.flag12078_27 = object20_flag12078(0x27) ? 1 : 0;
+    in->story.flag12078_29 = object20_flag12078(0x29) ? 1 : 0;
+    in->story.flag12078_2b = object20_flag12078(0x2B) ? 1 : 0;
+    in->story.flags37e = aria_pickup_state.special;
+    in->story.spawn14_ok = room->entity_count < MAX_ENTITIES;
+    in->story.spawn18_ok = room->entity_count < MAX_ENTITIES;
+    in->story.rng_3e654 = (int)aos_random();
+    in->story.rng_32df0 = (int32_t)aos_random();
+    in->story.fade_done = true;
+    in->story.c328_ok = true;
+    in->story.ret_6e0d0 = 1;
+    /* shop probes (param0 19/20). */
+    in->shop.input_busy = 0;
+    in->shop.probe = soma ? (int16_t)(soma->x >> 16) : 0;
+    in->shop.a094_6 = (int16_t)cam_x;
+    in->shop.a094_0 = (int16_t)room->width_screens;
+    in->shop.dir = 0;
+    if (soma) {
+        int psx = (int)(soma->x >> 16) - cam_x;
+        int esx = e->x - cam_x;
+        in->shop.dir = psx < esx ? -1 : psx > esx ? 1 : 0;
+        in->shop.ent_left_of_player = esx < psx;
+    }
+    in->shop.room_q3 = e->x >> 3;
+    /* npc probes (param0 25-28). */
+    for (int bit = 0; bit <= 0x32; ++bit)
+        if (object20_flag12078(bit))
+            in->npc.flag12078 |= 1ull << bit;
+    if (soma) {
+        int psx = (int)(soma->x >> 16) - cam_x;
+        int psy = (int)(soma->y >> 16) - cam_y;
+        int esx = e->x - cam_x;
+        int esy = e->y - cam_y;
+        in->npc.probe_inside =
+            (uint16_t)(psx - esx + 0x20) <= 0x40 &&
+            (uint16_t)(psy - esy + 0x20) <= 0x40;
+    }
+    in->npc.cond_5b864 = object20_flag12078(0x3A);
+    in->npc.picked_text = (uint8_t)e->object20.v.guard.text_id;
+    in->npc.rng = aos_random();
+    in->npc.rng_bit = (uint8_t)(aos_random() & 1);
+    in->npc.cam_x = (uint16_t)cam_x;
+    in->npc.cam_y = (uint16_t)cam_y;
+    in->npc.ent_pos40 = (int32_t)e->x << 16;
+}
+
+/* Forward one update's Out effects. The window triple goes through
+ * the shared room dialogue first (open -> poll -> close, the native
+ * order inside a single update); the rest follow the sibling
+ * branches' conventions. */
+static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
+                               AriaCombat *combat, AosForcedInput *input,
+                               uint16_t new_input, int npc_pre_state) {
+    /* sub_08067934/sub_08067A04/sub_08067898 triple. The npc_talk
+     * families keep their window requests inside the variant state
+     * structs instead of a normalized Out: the poll frames are the
+     * state-2 updates the ported routines run sub_08067A04 in
+     * (npc_loop/guard/talk_loop), and the guide's state-0x80 exit is
+     * the window close (its native tail runs sub_08013960/
+     * sub_08012048/sub_0805B66C — the close itself is approximated). */
+    AosRoomDialogueRequest req = {-1, false, false};
+    switch (e->object20.family) {
+    case AOS_OBJECT20_FAMILY_DIRS:
+        req.window_text = out->dirs.window_text;
+        req.window_poll = out->dirs.window_poll;
+        break;
+    case AOS_OBJECT20_FAMILY_STORY:
+        req.window_text = out->story.window_text;
+        req.window_poll = out->story.window_poll;
+        req.window_close = out->story.window_close;
+        break;
+    case AOS_OBJECT20_FAMILY_SHOP:
+        req.window_text = out->shop.window_text;
+        req.window_poll = out->shop.window_poll;
+        break;
+    case AOS_OBJECT20_FAMILY_GUIDE: {
+        const AosNpcGuide *g = &e->object20.v.guide;
+        if (g->window_open) { req.window_text = 0x28; }
+        req.window_poll = g->text_poll;
+        req.window_close = g->state_80;
+        break;
+    }
+    case AOS_OBJECT20_FAMILY_LOOP: {
+        const AosNpcLoop *g = &e->object20.v.npc_loop;
+        if (g->window_text) req.window_text = g->text_id;
+        /* sub_08065DB8 state 2 polls sub_08067A04; the poll runs
+         * the frame after the open, when the pre-update state
+         * was still 2. */
+        req.window_poll = npc_pre_state == 2;
+        req.window_close = g->window_close;
+        break;
+    }
+    case AOS_OBJECT20_FAMILY_GUARD: {
+        const AosNpcGuard *g = &e->object20.v.guard;
+        if (g->window_text) req.window_text = g->text_id;
+        req.window_poll = npc_pre_state == 2;
+        /* Gap: sub_08066094 state 2 loops back to state 1 which
+         * re-opens the window — no sub_08067898 close is
+         * reported, so the bridge re-open stands in. */
+        break;
+    }
+    case AOS_OBJECT20_FAMILY_TALK_LOOP: {
+        const AosNpcTalkLoop *g = &e->object20.v.talk_loop;
+        if (g->window_text) req.window_text = (int)g->text_id;
+        req.window_poll = npc_pre_state == 2;
+        /* Gap: sub_080666D4's state-2 close has no Out flag. */
+        break;
+    }
+    default:
+        break;
+    }
+    aos_room_dialogue_apply(&room_dialogue, new_input, &req);
+
+    /* gEwramData writes with runtime channels: +0x42C (shared and
+     * per-family reports) and +0x37E bit 0. The +0x417/+0x427/+0x414/
+     * +0x64/+0x60/+0x254CC/+0xA094+4/gUnk_03002CB0 writes and the
+     * sub_0800EB04/sub_080235C8/sub_0802DFF0/sub_0806666C/
+     * sub_0800EF6C/sub_08013960/sub_08013CF0/sub_08013D60/
+     * sub_08013E18/sub_08013EEC/sub_080121E0/sub_0800ED24/
+     * sub_0800C5A8/sub_0800C778/
+     * sub_0803F2C8/sub_0803F17C/sub_0803E058/sub_0803E654/
+     * sub_0805B5E8/sub_0805B66C/sub_08067804/sub_0803D18C/
+     * sub_0803CDF0/sub_0803D270/sub_0803CED4/sub_0801D028/
+     * sub_080127F0 engine calls, the DMA chains and the animation/
+     * spawn requests have no runtime consumer and are reported in
+     * the module headers; the shop transaction (sub_0800ED24) is
+     * printed because it is gameplay-visible. */
+    uint32_t set42c = out->set_42c | out->dirs.set_42c |
+                      out->story.set_42c | out->shop.set_42c;
+    uint32_t clear42c = out->clear_42c | out->dirs.clear_42c |
+                        out->story.clear_42c | out->shop.clear_42c;
+    if (out->story.flags37e_clear1) aria_pickup_state.special &= ~1;
+    if (set42c || clear42c) {
+        aria_pickup_state.global_flags |= set42c;
+        aria_pickup_state.global_flags &= ~clear42c;
+    }
+
+    /* Songs: PlaySong arguments from every family's report — the
+     * shared shell's song, the dirs/story song fields and the
+     * sub_0805B878 helpers (which are PlaySong itself, confirmed
+     * in code_08050A3C.s). The shop song/jingle fields are
+     * sub_08013CF0/sub_08012048 calls, reported below instead.
+     * The update_entities `sound` return is ignored by both
+     * callers, so the requests play directly like the wall
+     * branch's report.sound. */
+    const int *song_fields[] = {
+        &out->song, &out->dirs.song, &out->story.song, &out->shop.b878,
+        &out->dirs.b878, &out->story.b878,
+    };
+    for (size_t s = 0; s < sizeof song_fields / sizeof song_fields[0]; ++s) {
+        int song = *song_fields[s];
+        if (song >= 0) {
+            aos_audio_play_song((uint16_t)song);
+            printf("Object20 %d: song 0x%X\n", e->id, song);
+        }
+    }
+    /* npc_talk family's own song/sfx pulses (the variant structs
+     * carry them as bools naming the native call). */
+    switch (e->object20.family) {
+    case AOS_OBJECT20_FAMILY_GUIDE: {
+        const AosNpcGuide *g = &e->object20.v.guide;
+        if (g->song_1040) { aos_audio_play_song(0x1040);
+                            printf("Object20 %d: song 0x1040\n", e->id); }
+        if (g->player_x_clamped || g->player_facing_set ||
+            g->flag_3b7_set || g->flag_3b7_clear || g->wrote_417)
+            printf("Object20 %d: guide player/global write "
+                   "(clamp=%d facing=%d 3b7=%d/%d 417=%d)\n",
+                   e->id, g->player_x_clamped ? 1 : 0,
+                   g->player_facing_set ? 1 : 0,
+                   g->flag_3b7_set ? 1 : 0, g->flag_3b7_clear ? 1 : 0,
+                   g->wrote_417 ? 1 : 0);
+        break;
+    }
+    case AOS_OBJECT20_FAMILY_LOOP: {
+        const AosNpcLoop *g = &e->object20.v.npc_loop;
+        if (g->song_26) { aos_audio_play_song(0x26);
+                          printf("Object20 %d: song 0x26\n", e->id); }
+        if (g->sound_1041) { aos_audio_play_song(0x1041);
+                             printf("Object20 %d: song 0x1041\n", e->id); }
+        if (g->sfx_26 || g->ev_1e || g->wrote_254cc || g->froze_player ||
+            g->armed_42c_0 || g->cleared_42c_200 || g->facing_mirror)
+            printf("Object20 %d: loop npc effect pulse\n", e->id);
+        break;
+    }
+    case AOS_OBJECT20_FAMILY_GUARD: {
+        const AosNpcGuard *g = &e->object20.v.guard;
+        if (g->song_26) { aos_audio_play_song(0x26);
+                          printf("Object20 %d: song 0x26\n", e->id); }
+        if (g->song_1b5) { aos_audio_play_song(0x1B5);
+                           printf("Object20 %d: song 0x1B5\n", e->id); }
+        if (g->sound_1040) { aos_audio_play_song(0x1040);
+                             printf("Object20 %d: song 0x1040\n", e->id); }
+        if (g->sound_1041) { aos_audio_play_song(0x1041);
+                             printf("Object20 %d: song 0x1041\n", e->id); }
+        if (g->sfx_26_entry || g->ev_1d || g->wrote_254cc ||
+            g->froze_player || g->armed_42c_200 ||
+            g->cleared_42c_200 || g->facing_mirror || g->cleared_18)
+            printf("Object20 %d: guard npc effect pulse\n", e->id);
+        break;
+    }
+    case AOS_OBJECT20_FAMILY_TALK_LOOP: {
+        const AosNpcTalkLoop *g = &e->object20.v.talk_loop;
+        if (g->cleared_42c_200 || g->froze_player || g->armed_42c_1 ||
+            g->mark_38)
+            printf("Object20 %d: talk-loop npc effect pulse\n", e->id);
+        break;
+    }
+    default:
+        break;
+    }
+    /* Held/directional sound requests with no direct channel. */
+    if (out->shop.sound_2b) printf("Object20 %d: held sound 0x2B\n", e->id);
+    if (out->shop.release_sound_2b)
+        printf("Object20 %d: release sound 0x2B\n", e->id);
+    if (out->shop.transaction) {
+        printf("Object20 %d: shop transaction arg2 0x%X (unforwarded)\n",
+               e->id, (unsigned)out->shop.transaction_arg2);
+    }
+    if (out->story.ed24_a >= 0) {
+        printf("Object20 %d: story transaction ed24(0x%X, 0x%X) "
+               "(unforwarded)\n", e->id, out->story.ed24_a,
+               (unsigned)out->story.ed24_b);
+    }
+    if (out->fade_out || out->story.fade_out || out->story.fade_3d18c ||
+        out->story.fade_3cdf0)
+        printf("Object20 %d: fade request (unforwarded)\n", e->id);
+
+    /* SetPlayerInput(enable, arg): the runtime's forced-input slot.
+     * The second argument is approximated as the held mask (0 locks
+     * the player, matching the freeze the talk sequences ask for). */
+    int setplayerinput = out->setplayerinput >= 0 ? out->setplayerinput
+                            : out->dirs.setplayerinput >= 0
+                                ? out->dirs.setplayerinput
+                            : out->story.setplayerinput;
+    if (setplayerinput >= 0 && input) {
+        input->active = true;
+        input->held = (uint16_t)(out->setplayerinput >= 0
+                                     ? out->setplayerinput_arg
+                                     : out->dirs.setplayerinput >= 0
+                                         ? out->dirs.setplayerinput_arg
+                                         : out->story.setplayerinput_arg);
+    }
+
+    /* Player-entity writes (story family): +0x40/+0x44 are 16.16
+     * room pixels, +0x42 is a screen pixel. The runtime keeps no
+     * player +0x58 byte (facing_left carries only bit 0x40 and the
+     * and-not masks cannot be expressed), and the +0x40/+0x44
+     * writes arrive as absolute 16.16 values whose screen-vs-room
+     * space is ambiguous in the port — reported, not applied,
+     * until a native comparison pins the semantics down. */
+    const AosObject20StoryOut *so = &out->story;
+    if (so->player_scr42_set || so->player_pos40_set ||
+        so->player_pos44_set || so->player58_or_40 ||
+        so->player58_or_20 || so->player58_andnot_41 ||
+        so->player58_andnot_21 || so->player_w48_zero ||
+        so->player_w4c_zero || so->player_w4a_zero ||
+        so->player_w4e_zero || so->player_anim5c_inc)
+        printf("Object20 %d: player write scr42=%d pos40=0x%X "
+               "pos44=0x%X flags58 or40=%d or20=%d andnot41=%d "
+               "andnot21=%d animinc=%d\n",
+               e->id, so->player_scr42_set ? (int)so->player_scr42_val : -1,
+               so->player_pos40_set ? (unsigned)so->player_pos40_val : 0u,
+               so->player_pos44_set ? (unsigned)so->player_pos44_val : 0u,
+               so->player58_or_40 ? 1 : 0, so->player58_or_20 ? 1 : 0,
+               so->player58_andnot_41 ? 1 : 0,
+               so->player58_andnot_21 ? 1 : 0,
+               so->player_anim5c_inc ? 1 : 0);
+
+    /* Release/delete requests: sub_0805B66C releases the entity back
+     * to the pool and EntityDelete removes it; both retire the record
+     * for this room visit. */
+    bool npc_released = false;
+    switch (e->object20.family) {
+    case AOS_OBJECT20_FAMILY_LOOP:
+        npc_released = e->object20.v.npc_loop.release_0;
+        break;
+    case AOS_OBJECT20_FAMILY_GUARD:
+        npc_released = e->object20.v.guard.release_0;
+        break;
+    case AOS_OBJECT20_FAMILY_TALK_LOOP:
+        npc_released = e->object20.v.talk_loop.release_0;
+        break;
+    case AOS_OBJECT20_FAMILY_GUIDE:
+        npc_released = e->object20.v.guide.release;
+        break;
+    default:
+        break;
+    }
+    if (out->deleted || out->npc_deleted || npc_released ||
+        out->shop.release || out->shop.frames_release ||
+        out->story.release_arg >= 0 || out->dirs.release_arg >= 0) {
+        e->object20.deleted = true;
+    }
+    (void)combat;
+}
+
 static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
-                           int cam_x, int cam_y, AosForcedInput *input, AriaCombat *combat) {
+                           int cam_x, int cam_y, AosForcedInput *input, AriaCombat *combat,
+                           uint16_t new_input) {
     if (deferred_sound_pending) {
         deferred_sound_pending = false;
         aos_audio_play_song(deferred_sound);
@@ -6103,6 +6649,97 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     .vy = -0x1000};
             continue;
         }
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 32) {
+            /* Object20Create (0x0805B42C) / Object20Update
+             * (0x0805B510): the param0-dispatched room-object
+             * family — dirs/story/shop gates, NPC talk loops and
+             * the shops. In-field mapping and Out forwarding live
+             * in object20_fill_in/object20_apply_out above; the
+             * window triple goes through the shared room
+             * dialogue (aos_room_dialogue_apply). param0 3 stays
+             * owned by the bespoke opening path: the dispatcher
+             * reports handled_externally and the record is
+             * consumed without updates so area_00_room_000's
+             * opening-adjacent params cannot double-run. */
+            room_dialogue_bind();
+            if (!e->spawned) {
+                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                e->spawned = true;
+                AosObject20In in;
+                object20_fill_in(room, e, soma, cam_x, cam_y, &in);
+                AosObject20Out out;
+                if (!aos_object20_create(&e->object20, e->param0, &in,
+                                         &out))
+                    e->object20.deleted = true;
+                if (out.unported)
+                    printf("Object20 %zu: param0 %d unported variant "
+                           "(inert)\n", i, e->param0);
+                if (!e->object20.deleted)
+                    object20_apply_out(e, &out, combat, input,
+                                       new_input, -1);
+                continue;
+            }
+            if (e->object20.deleted ||
+                e->object20.family == AOS_OBJECT20_FAMILY_OPENING)
+                continue;
+            /* The npc window poll needs the pre-update +0xA state:
+             * state 2 of the loop/guard/talk_loop machines is the
+             * sub_08067A04 frame (see object20_apply_out). */
+            int npc_pre_state = -1;
+            switch (e->object20.family) {
+            case AOS_OBJECT20_FAMILY_LOOP:
+                npc_pre_state = e->object20.v.npc_loop.state;
+                break;
+            case AOS_OBJECT20_FAMILY_GUARD:
+                npc_pre_state = e->object20.v.guard.state;
+                break;
+            case AOS_OBJECT20_FAMILY_TALK_LOOP:
+                npc_pre_state = e->object20.v.talk_loop.state;
+                break;
+            default:
+                break;
+            }
+            AosObject20In in;
+            object20_fill_in(room, e, soma, cam_x, cam_y, &in);
+            AosObject20Out out;
+            aos_object20_update(&e->object20, &in, &out);
+            /* Synchronize the entity's room-pixel position from
+             * the variant state the ported routines maintain
+             * (+0x40/+0x44 fine 16.16 -> e->x/e->y pixels). The
+             * In block carries no own-entity position input, so a
+             * zero field means "not written yet" — the record's
+             * spawn position is kept rather than zeroed. */
+            int32_t o20_px = 0, o20_py = 0;
+            switch (e->object20.family) {
+            case AOS_OBJECT20_FAMILY_DIRS:
+                o20_px = e->object20.v.dirs.pos40;
+                o20_py = e->object20.v.dirs.pos44;
+                break;
+            case AOS_OBJECT20_FAMILY_STORY:
+                o20_px = e->object20.v.story.pos40;
+                o20_py = e->object20.v.story.pos44;
+                break;
+            case AOS_OBJECT20_FAMILY_SHOP:
+                o20_px = e->object20.v.shop.pos40;
+                break;
+            case AOS_OBJECT20_FAMILY_GUIDE:
+                o20_px = e->object20.v.guide.x;
+                break;
+            case AOS_OBJECT20_FAMILY_LOOP:
+                o20_px = e->object20.v.npc_loop.x;
+                break;
+            case AOS_OBJECT20_FAMILY_GUARD:
+                o20_px = e->object20.v.guard.x;
+                break;
+            default:
+                break;
+            }
+            if (o20_px) e->x = o20_px >> 16;
+            if (o20_py) e->y = o20_py >> 16;
+            object20_apply_out(e, &out, combat, input, new_input,
+                               npc_pre_state);
+            continue;
+        }
         if (!door) continue;
         if (!e->spawned) {
             if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
@@ -7908,6 +8545,7 @@ static bool debug_teleport(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture *
     fresh.weapon = soma->weapon;
     fresh.facing_left = soma->facing_left;
     *soma = fresh;
+    aos_room_dialogue_close(&room_dialogue);
     free_room(room);
     *room = target;
     aos_object01_reset();
@@ -9427,6 +10065,12 @@ int aria_runtime_main(int argc, char **argv) {
         return ok ? 0 : 1;
     }
 
+    /* The Object20 room dialogue resolves its text through the same
+     * verified-ROM resources as the opening; the ROM path is kept
+     * for the lazy open inside room_dialogue_resolve so both the
+     * SDL and --simulate paths can bind it. */
+    room_dialogue_rom_path = rom_path;
+
     if (simulate_frames > 0) {
         /* Headless gameplay tick: the same data loads as the SDL runtime
          * (renderer NULL, so no textures) and the player, stats, save-room
@@ -9565,6 +10209,7 @@ int aria_runtime_main(int argc, char **argv) {
         size_t sim_next = 0;
         long sim_timed_end = -1;
         unsigned sim_timed_held = 0, sim_base = 0, sim_held = 0;
+        unsigned sim_prev_held = 0;
         for (long frame = 0; frame < simulate_frames; ++frame) {
             if (!moves_override) soma.moves = progress.abilities[0] & 0x1Fu;
             soma.abilities = progress.flags;
@@ -9584,7 +10229,13 @@ int aria_runtime_main(int argc, char **argv) {
                 held = frame < sim_timed_end ? sim_timed_held : sim_base;
             }
             sim_held = held;
-            aos_soma_update(&soma, &layer, (uint16_t)held, 0);
+            /* Edge input for the room-dialogue poll: raw held
+             * transitions, computed before the dialogue input
+             * lock zeroes the gameplay mask below. */
+            uint16_t sim_new_input = (uint16_t)(held & ~sim_prev_held);
+            sim_prev_held = held;
+            unsigned held_eff = room_dialogue_input_lock ? 0 : held;
+            aos_soma_update(&soma, &layer, (uint16_t)held_eff, 0);
             bool door_held = false;
             for (size_t k = 0; k < room.entity_count && !door_held; ++k)
                 door_held = room.entities[k].kind == ARIA_KIND_SPECIAL &&
@@ -9595,7 +10246,7 @@ int aria_runtime_main(int argc, char **argv) {
                               room.entities[k].object02.holding));
             if (progress.accessory == 0x2A && !door_held &&
                 !(soma.flags & (AOS_FLAG_AIRBORNE | AOS_FLAG_WALL)) &&
-                (held & (AOS_KEY_LEFT | AOS_KEY_RIGHT)) &&
+                (held_eff & (AOS_KEY_LEFT | AOS_KEY_RIGHT)) &&
                 ((uint16_t)(soma.ticks - 1) & 7) == 0) {
                 if (++progress.experience > AOS_STATS_MAX_EXPERIENCE)
                     progress.experience = AOS_STATS_MAX_EXPERIENCE;
@@ -9630,7 +10281,8 @@ int aria_runtime_main(int argc, char **argv) {
             follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
             homing_room = &room;
             object10_save_ctx = NULL;
-            update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
+            update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
+                            sim_new_input);
             homing_age();
             aos_enemy_set_soul_attacks(NULL, 0);
         }
@@ -10646,6 +11298,14 @@ int aria_runtime_main(int argc, char **argv) {
                                       ? aria_input.player_new_input
                                       : aos_button_config_remap(&progress.buttons,
                                                                 aria_input.player_new_input);
+            /* Object20 room dialogue locks gameplay input while its
+             * window is open (the host's set_input_lock callback);
+             * A/START still reach the poll through
+             * aria_input.new_input inside update_entities. */
+            if (room_dialogue_input_lock) {
+                player_held = 0;
+                player_new = 0;
+            }
             /* Ability souls 0-4 map directly to Soma's five movement flags.
              * A newly collected ability is enabled by aos_pickup_collect_soul;
              * the pause Ability page can then toggle it. Diagnostic --moves
@@ -11076,7 +11736,8 @@ int aria_runtime_main(int argc, char **argv) {
             }
             homing_room = &room;
             object10_save_ctx = has_active_save ? &active_save : NULL;
-            update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat);
+            update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
+                            aria_input.new_input);
             if (have_quick_map)
                 for (size_t wi = 0; wi < room.entity_count; ++wi) {
                     AriaEntity *wall_e = &room.entities[wi];
@@ -11972,6 +12633,23 @@ int aria_runtime_main(int argc, char **argv) {
             draw_opening_text(renderer, &opening, &opening_tiles,
                               opening_window_ready ? &opening_window : NULL,
                               (uint32_t)step);
+        /* Object20 room dialogue: the shared bridge's window uses
+         * the same font/frame stack as the opening text. The render
+         * callback only refreshes the tile canvas while dirty, and
+         * the draw reuses draw_opening_text's pixel pass — both
+         * no-op without a ready ROM in --simulate (which never
+         * reaches this path anyway). */
+        if (aos_room_dialogue_active(&room_dialogue)) {
+            aos_room_dialogue_render(&room_dialogue, (uint32_t)step);
+            const AosOpeningEvent *rd_event =
+                aos_room_dialogue_event(&room_dialogue);
+            if (rd_event)
+                draw_opening_text(renderer, rd_event, &room_dialogue_tiles,
+                                  room_dialogue_ready
+                                      ? &room_dialogue_window
+                                      : NULL,
+                                  (uint32_t)step);
+        }
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);

@@ -138,6 +138,20 @@ static const EntitySpec entities[] = {
     ENTITY("opening_actor_0", 0x08208304, 0x0820C598, 0, 0x082589FC),
     ENTITY("opening_actor_1", 0x082052F8, 0x0820C52C, 0, 0x08258050),
     ENTITY("opening_actor_8", 0x081CBF64, 0x0820A518, 0, 0x08215CBC),
+    /* The remaining records of Object20's private 0x081186DC table
+     * (sub_0805B754/sub_0805B5E8 index it with the record number and
+     * always pass palette bank 0 to sub_0806E0D0). Records 0, 1 and 8
+     * keep their opening_actor_* names above; the suffix is the native
+     * record index so the runtime can draw any Object20 variant. */
+    ENTITY("object20_actor_2", 0x082062FC, 0x0820C550, 0, 0x0825847C),
+    ENTITY("object20_actor_3", 0x08207300, 0x0820C574, 0, 0x082587BC),
+    ENTITY("object20_actor_4", 0x081FB2BC, 0x0820C090, 0, 0x08253D60),
+    ENTITY("object20_actor_5", 0x0825921C, 0x0825C344, 0, 0x0825E01C),
+    ENTITY("object20_actor_6", 0x081F42A4, 0x0820C028, 0, 0x08252748),
+    ENTITY("object20_actor_7", 0x081186C8, 0x0820C028, 0, 0x08252748),
+    ENTITY("object20_actor_9", 0x081F424C, 0x0820BE3C, 0, 0x0824C910),
+    ENTITY("object20_actor_10", 0x081CC00C, 0x0820A95C, 0, 0x0821FA5C),
+    ENTITY("object20_actor_11", 0x08262394, 0x082665C8, 0, 0x08267FFC),
     ENTITY("bat", 0x081F422C, 0x0820BD4C, 0, 0x0824B2C4),
     STATIC("zombie", 0x081CBF8C, 0x0820A62C, 0, 0x082178B8, 2, 0, 13),
     /* The Skeleton: its walker probes 0x08528948 (sub_0806CAF8 mode 12), the

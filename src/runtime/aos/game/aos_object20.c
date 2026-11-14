@@ -23,7 +23,8 @@ static void out_reset(AosObject20Out *out) {
 static uint8_t family_of(int16_t param0) {
     if (param0 >= 4 && param0 <= 8) return AOS_OBJECT20_FAMILY_DIRS;
     if (param0 == 9 || param0 == 10 ||
-        (param0 >= 21 && param0 <= 24) || param0 == 29)
+        (param0 >= 21 && param0 <= 24) ||
+        (param0 >= 29 && param0 <= 31))
         return AOS_OBJECT20_FAMILY_STORY;
     if (param0 == 19 || param0 == 20) return AOS_OBJECT20_FAMILY_SHOP;
     if (param0 == 25) return AOS_OBJECT20_FAMILY_GUIDE;
@@ -312,19 +313,10 @@ bool aos_object20_create(AosObject20 *o, int16_t param0,
             out->deleted = o->deleted;
             return ok;
         }
-        if (param0 == 29) {
-            /* Native create[29] = sub_0805BF4C is unported
-             * anywhere, so the shared shell runs with an
-             * unported report. (create[31] = sub_0805C49C is
-             * ported as the story module's case 31.) */
-            bool ok = shell_create(o, in, out, true);
-            o->deleted = !ok;
-            out->deleted = o->deleted;
-            return ok;
-        }
-        /* param0 9/10/21/22/23 route to the story module with
-         * the native table index unchanged (its create dispatch
-         * now matches 0x08526658); 24/29 were handled above. */
+        /* param0 9/10/21/22/23/29/30/31 route to the story
+         * module with the native table index unchanged (its
+         * create dispatch now matches 0x08526658); 24 was
+         * handled above. */
         AosObject20StoryIn sin = story_in(in);
         bool ok = aos_object20_story_create(&o->v.story,
                                             (uint8_t)param0, &sin,
@@ -350,12 +342,34 @@ bool aos_object20_create(AosObject20 *o, int16_t param0,
             return shell_create_tail(o, in, out);
         }
         /* param0 19: native create[19] = sub_08061A00 (the shop
-         * sell spawn gate) is not ported — shared shell with an
-         * unported report. */
+         * sell spawn gate) is ported in the story module — the
+         * Object20 create-table owner — while update[19]
+         * stays the shop sell routine. The create runs on
+         * v.story through the shared shell, then the state
+         * bytes both layouts share (+0xA/+0xB/+0xC/+0xD,
+         * +0x40/+0x48, +0x6D) are mirrored into v.shop and the
+         * flat +0x42/+0x46/+0x58/+0x59/+0x5C fields so the
+         * shop update sees the entity the ROM left behind. */
         {
-            bool ok = shell_create(o, in, out, true);
-            o->deleted = !ok;
+            AosObject20StoryIn sin = story_in(in);
+            bool ok = aos_object20_story_create(&o->v.story, 19,
+                                                &sin, &out->story);
+            o->v.shop.state  = o->v.story.state;
+            o->v.shop.menu   = o->v.story.sub_b;
+            o->v.shop.cursor = o->v.story.sub_c;
+            o->v.shop.timer  = o->v.story.timer_d;
+            o->v.shop.pos40  = o->v.story.pos40;
+            o->v.shop.vel48  = o->v.story.vel48;
+            o->v.shop.flag6d = o->v.story.anim6d;
+            o->scr42   = o->v.story.scr42;
+            o->scr46   = o->v.story.scr46;
+            o->flags58 = o->v.story.flags58;
+            o->flags59 = o->v.story.flags59;
+            o->anim5c  = o->v.story.anim5c;
+            o->deleted = !ok || o->v.story.deleted;
             out->deleted = o->deleted;
+            o->return_code = out->story.return_code;
+            out->return_code = o->return_code;
             return ok;
         }
     case AOS_OBJECT20_FAMILY_GUIDE:
@@ -388,11 +402,10 @@ bool aos_object20_create(AosObject20 *o, int16_t param0,
         }
     case AOS_OBJECT20_FAMILY_INERT:
     default:
-        /* param0 30/31 have real but unported native routines
-         * (create sub_0805B888/sub_0805C49C, update
-         * sub_0805B8F4/sub_0805C628); every other value reads
-         * past the 32-entry tables natively. The shared shell
-         * runs and the gap is reported; the entity stays inert. */
+        /* Every in-table param0 now has a ported create and/or
+         * update; values past the 32-entry tables read garbage
+         * natively. The shared shell runs and the gap is
+         * reported; the entity stays inert. */
         {
             bool ok = shell_create(o, in, out, true);
             o->deleted = !ok;

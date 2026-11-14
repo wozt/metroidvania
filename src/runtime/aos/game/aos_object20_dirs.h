@@ -10,11 +10,11 @@
  * param0-7 update arms with seq18 = 4. The shared
  * Object20Create/Object20Update prologue (0x0805B42C/0x0805B510)
  * is folded into the entry points. */
-/* Integration status: faithful native-routine port kept as a
- * parity reference. It is unit-tested but NOT linked into
- * fusion_aria_runtime; classified partial in
- * data/native_parity/annotations.tsv until a real gameplay
- * path consumes it. */
+/* Integration status: consumed by the unified Object20
+ * dispatcher (aos_object20), wired into the id-32 SPECIAL
+ * branch of update_entities in aria_runtime.c. classified
+ * partial in data/native_parity/annotations.tsv (no emulator
+ * comparison yet). */
 
 #ifndef AOS_OBJECT20_DIRS_H
 #define AOS_OBJECT20_DIRS_H

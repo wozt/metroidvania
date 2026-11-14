@@ -493,9 +493,10 @@ static void update_opening_flames(AosOpeningActors *actors) {
 }
 
 /* sub_0805D410 state 5 at timer 0xD0 on entity[0x1c]: the dying mark,
- * sub_0806D578's flame, sub_0805E9F0's six winged pieces (the first six
- * records of 0x08526802), sub_0805EAFC's soul orb and SE_0x6B all fire
- * together; the body then runs generic_death's 0x28-frame blink. */
+ * sub_0806D578's flame, sub_0805E9F0's seven winged pieces (its
+ * sb=6..0 loop consumes all seven records of 0x08526802),
+ * sub_0805EAFC's soul orb and SE_0x6B all fire together; the body
+ * then runs generic_death's 0x28-frame blink. */
 static void begin_skeleton_death(AosOpeningActors *actors) {
     AosOpeningEntity body = {
         .x = actors->x[2],
@@ -503,7 +504,7 @@ static void begin_skeleton_death(AosOpeningActors *actors) {
         .entity_type = 8,
         .mirrored = true,
     };
-    append_debris(actors, &body, 6);
+    append_debris(actors, &body, 7);
     append_opening_flame(actors, actors->x[2], actors->y[2] - 0x60000);
     actors->skeleton_death = 0x28;
 }

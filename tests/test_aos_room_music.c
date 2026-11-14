@@ -70,6 +70,31 @@ int main(void) {
     music.boss_mode = true;
     aos_room_music_enter(&music, 5, 0, &save);
     assert(music.current_song == 0x14);
+    /* A room enter whose tracked song is not the one playing re-issues
+     * it: the +0x254CC ambient (here song 38 on the same player, the
+     * opening guard's sub_08013EEC(0x26)) occupied player 0 after the
+     * tracker claimed song 2 was current. The enter stops the foreign
+     * song like the native transition teardown (sub_08013F38) and
+     * restarts the area song; a genuinely playing song is left alone. */
+    aos_audio_reset();
+    AosAudioSongInfo ambient_table[39] = {0};
+    ambient_table[2] = (AosAudioSongInfo){0, 50, 0};
+    ambient_table[38] = (AosAudioSongInfo){0, 100, 0};
+    assert(aos_audio_set_song_table(ambient_table, 39));
+    AosRoomMusic stale = {0};
+    assert(!aos_room_music_change(&stale, 2));
+    aos_audio_play_song(38);
+    assert(aos_audio_state()->players[0].song == 38);
+    aos_audio_clear();
+    assert(!aos_room_music_enter(&stale, 0, 3, &plain));
+    assert(aos_audio_requested(AOS_AUDIO_STOP_SONG, 38) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 2) == 1);
+    assert(stale.current_song == 2);
+    assert(aos_audio_state()->players[0].song == 2);
+    aos_audio_clear();
+    assert(aos_room_music_enter(&stale, 0, 4, &plain));
+    assert(aos_audio_count() == 1 &&
+           aos_audio_requested(AOS_AUDIO_COMMAND, 0x1011));
     puts("aos room music tests passed");
     return 0;
 }

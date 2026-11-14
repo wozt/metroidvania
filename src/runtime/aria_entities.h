@@ -64,10 +64,16 @@ typedef struct {
 
 /* The room's entity pass: SPECIAL/kind dispatch, pickups, walls,
  * Object20 dialogue/shop glue and the deferred sparkle sound. Called
- * once per frame from each room loop in aria_runtime.c. */
+ * once per frame from each room loop in aria_runtime.c.
+ * `new_input` is the frame's edge word and `held_input` the held word
+ * of the global inputData pair the native entities read — both are
+ * the PRE-SetPlayerInput values: the port's forced-input slot only
+ * substitutes the gameplay mask, so callers must not pass
+ * player_held_input/player_new_input here. */
 int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     int cam_x, int cam_y, AosForcedInput *input,
-                    AriaCombat *combat, uint16_t new_input);
+                    AriaCombat *combat, uint16_t new_input,
+                    uint16_t held_input);
 
 /* The BG1 scroll offset accumulated by the ported sub_0800ED24
  * transactions (aos/core/aos_scroll), as a delta in integer pixels
@@ -92,6 +98,14 @@ void aria_scroll_tilemap_bind(const FusionRom *rom);
 void homing_register(int index);
 bool object10_item_owned(void *ctx, uint16_t item);
 void room_dialogue_bind(void);
+
+/* Object1C's SetPlayerInput(1, 0x40) host channel: freezes Soma's
+ * player_* input words while the save sequence runs WITHOUT touching
+ * the global held/new words the entity dispatch reads (the shared
+ * AosForcedInput slot would mask them — that divergence deadlocked
+ * the YES/NO prompt). The runtime consults it beside
+ * room_dialogue_input_lock; update_entities re-arms it every frame. */
+void aria_object1c_input_lock(bool locked);
 
 /* Object1C child animation table (sub_0803F17C's injected sequences):
  * rebuilt from the loaded special_28_v<bank> art on each objects

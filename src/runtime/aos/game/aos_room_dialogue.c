@@ -56,6 +56,12 @@ bool aos_room_dialogue_failed(const AosRoomDialogue *dlg) {
     return dlg && dlg->failed;
 }
 
+void aos_room_dialogue_ewram_state(const AosRoomDialogue *dlg,
+                                   uint8_t *byte415, uint8_t *byte416) {
+    if (byte415) *byte415 = dlg ? dlg->ewram_415 : 0;
+    if (byte416) *byte416 = dlg ? dlg->ewram_416 : 0;
+}
+
 bool aos_room_dialogue_open(AosRoomDialogue *dlg, uint16_t text_id) {
     if (!dlg || !dlg->host || !dlg->host->resolve_text) {
         if (dlg) dlg->failed = true;
@@ -91,6 +97,13 @@ bool aos_room_dialogue_open(AosRoomDialogue *dlg, uint16_t text_id) {
     dlg->window_shown = false;
     dlg->text_done = false;
     dlg->failed = false;
+    /* sub_08067934's gEwramData +0x416 store: the typewriter arm
+     * starts set, so the first print polls reveal one glyph each
+     * through the +0x414 nibble-4 branch until an A-edge clears
+     * it (_08067BC4/_08067BD8, _08068076). */
+    dlg->ewram_416 = 1;
+    dlg->song = -1;
+    dlg->palette_write = false;
     if (dlg->host->set_input_lock)
         dlg->host->set_input_lock(dlg->host->context, true);
     dlg->input_locked = true;
@@ -99,6 +112,8 @@ bool aos_room_dialogue_open(AosRoomDialogue *dlg, uint16_t text_id) {
 
 bool aos_room_dialogue_poll(AosRoomDialogue *dlg, uint16_t new_input) {
     if (!dlg || !dlg->window_open) return false;
+    dlg->song = -1;
+    dlg->palette_write = false;
     /* sub_08067A04's window-open states call sub_08067804(+3) once
      * per poll: +0x41B climbs 0->0x24 and WIN0V grows from the empty
      * bounds sub_08067934 wrote. The script machine keeps running
@@ -116,7 +131,60 @@ bool aos_room_dialogue_poll(AosRoomDialogue *dlg, uint16_t new_input) {
         dlg->text_done = true;
         return true;
     }
-    aos_opening_event_update(&dlg->event, new_input);
+    /* sub_08067A04's print-state glyph check (_08067BC4/_08067BD8)
+     * runs on every literal glyph byte the parse loop reaches:
+     * +0x415 = (new_input bit 1) ? 0 : +0x416, and a nonzero +0x416
+     * takes the +0x414 nibble-4 branch (sl=0) which ends the poll
+     * — the typewriter step, one glyph per frame. While +0x416 is
+     * clear the same check falls through with sl=1 and the loop
+     * keeps consuming glyph bytes, so the whole remaining run
+     * prints in this one poll: the fast-forward. `was_waiting`
+     * is the +0x414 nibble==1 proxy for the _08068076 tail below
+     * (the wait state is the only state that re-arms +0x416). */
+    bool was_waiting = dlg->event.waiting;
+    if (!was_waiting) {
+        /* Per-poll approximation of the per-glyph-byte +0x415
+         * copy; in the rip case +0x416 is already 0 so the latch
+         * lands 0 either way. */
+        dlg->ewram_415 = (new_input & AOS_KEY_B) ? 0 : dlg->ewram_416;
+        if (dlg->ewram_416 != 0) {
+            /* nibble|=4 branch: park after this frame's glyph. */
+            aos_opening_event_update(&dlg->event, new_input);
+        } else {
+            /* +0x416 == 0: the native print loop does not stop at
+             * glyph bytes, so it consumes commands and glyphs
+             * until the next state command (wait/end/page). Run
+             * the machine with no input to the same boundary;
+             * the budget only guards a malformed script. */
+            size_t budget = dlg->event.script_size + 8;
+            do {
+                aos_opening_event_update(&dlg->event, 0);
+                if (dlg->event.malformed) dlg->failed = true;
+            } while (dlg->event.active && !dlg->event.waiting &&
+                     budget-- != 0);
+        }
+    } else {
+        aos_opening_event_update(&dlg->event, new_input);
+    }
+    /* _08068076 tail: on A-edge frames +0x416 is rewritten — 1
+     * while the post-case nibble sits at the wait state (that
+     * branch also plays song 0x132, writes the OBJ palette tiles
+     * and clears +0x414 bit 4; the palette/VRAM work stays
+     * unported and is reported through song/palette_write), 0
+     * otherwise. The wait may have been entered before this poll
+     * (was_waiting) or reached by this poll's own parse — the
+     * native tail reads the nibble after the case work, so both
+     * count. An A-edge during printing is what disarms the
+     * typewriter and fast-forwards the rest of the page. */
+    if (new_input & AOS_KEY_A) {
+        if (was_waiting || dlg->event.waiting) {
+            dlg->ewram_416 = 1;
+            dlg->song = 0x132;
+            dlg->palette_write = true;
+        } else {
+            dlg->ewram_416 = 0;
+        }
+    }
     if (dlg->event.malformed) dlg->failed = true;
     if (!dlg->event.active) {
         /* control 10 ended the script, or the parser rejected it.

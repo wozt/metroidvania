@@ -312,19 +312,20 @@ static bool object20_dialogue_gate;
  * 0x1F00) and feeds in->story.unk2cb0 for the param0-23/24/29
  * reads. Session-scoped like the +0x414 channel. */
 static uint16_t object20_disp_cnt = 0x1F00;
-/* gEwramData +0x416 byte (gEwramData +0x60 + 0x3B6): sub_08067934
- * (window open) stores 1; sub_08067A04's tail (_08068076)
- * rewrites it on A-edge poll frames — 1 while the +0x414 low
- * nibble sits at state 1 (that branch also plays song 0x132,
- * writes the OBJ palette and clears +0x414 bit 4 — palette/VRAM
- * work stays unported), 0 otherwise. Its native readers are
- * inside sub_08067A04's case-1 text path (_08067BC4/_08067BD8):
- * !(newInput & 2) copies it into +0x415 and a nonzero value
- * takes the state-nibble |= 4 fast-forward branch — the text
- * machine the room-dialogue bridge owns through AosOpeningEvent,
- * so the channel keeps the byte's lifecycle observable.
- * Session-scoped. */
-static uint8_t object20_ewram_416;
+/* gEwramData +0x416/+0x415 bytes (gEwramData +0x60 + 0x3B6/+0x3B5):
+ * sub_08067934 (window open) stores +0x416 = 1;
+ * sub_08067A04's tail (_08068076) rewrites it on A-edge poll
+ * frames — 1 while the +0x414 low nibble sits at state 1 (that
+ * branch also plays song 0x132, writes the OBJ palette and
+ * clears +0x414 bit 4 — palette/VRAM work stays unported), 0
+ * otherwise. Its native readers are inside sub_08067A04's
+ * case-1 text path (_08067BC4/_08067BD8): !(newInput & 2)
+ * copies it into +0x415 and a nonzero value takes the
+ * state-nibble |= 4 fast-forward branch. AosRoomDialogue owns
+ * both bytes end-to-end (open arm, typewriter arm, wait
+ * re-arm, B-mask into +0x415) and reports the song/palette
+ * side effects; the entity bridge forwards polls to it, so no
+ * parallel channel is kept here. */
 /* gEwramData +0x64 byte (EwramData_unk60.unk_64): read every
  * frame by sub_0803427C — value 0xE selects the delayed-camera
  * ring-buffer path that fills the +0x13118 entity record's
@@ -1264,7 +1265,8 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         object20_ewram_417 = 0;      /* sub_08067934's +0x417 clear */
         object20_dialogue_gate = false;
         /* The rest of sub_08067934's gEwramData setup stores: the
-         * +0x414 bit-4 clear, +0x416 = 1 (text-cmd6's +0x415 copy
+         * +0x414 bit-4 clear, +0x416 = 1 (owned by
+         * AosRoomDialogue's open arm — the text-cmd6 +0x415 copy
          * reads it inside the unported nibble machine), the
          * gUnk_03002CB0 &= 0xFEFF display-control mask and the
          * +0x42C |= 0x21 (talk-active/display bits) — all land
@@ -1272,7 +1274,6 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
          * native call order. +0x418/+0x41A are also cleared but
          * have no channel yet. */
         object20_ewram_414 &= (uint8_t)~0x10u;
-        object20_ewram_416 = 1;
         object20_disp_cnt &= 0xFEFFu;
         aria_pickup_state.global_flags |= 0x21u;
     }
@@ -1380,17 +1381,14 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
      * while the +0x414 low nibble sits at state 1 (that branch
      * also plays song 0x132, writes the OBJ palette and clears
      * +0x414 bit 4; the palette work stays unported), 0
-     * otherwise. The host's +0x414 nibble is the family-written
-     * byte, not the native machine state, so the state==1 test
-     * reads the channel literally — documented approximation. */
-    if (req.window_poll && !poll_suppressed && (new_input & 1)) {
-        if ((object20_ewram_414 & 0xFu) == 1) {
-            object20_ewram_416 = 1;
-            object20_ewram_414 &= (uint8_t)~0x10u;
-        } else {
-            object20_ewram_416 = 0;
-        }
-    }
+     * otherwise. AosRoomDialogue owns the +0x416 lifecycle;
+     * only the +0x414 bit-4 clear still lands on this channel.
+     * The host's +0x414 nibble is the family-written byte, not
+     * the native machine state, so the state==1 test reads the
+     * channel literally — documented approximation. */
+    if (req.window_poll && !poll_suppressed && (new_input & 1) &&
+        (object20_ewram_414 & 0xFu) == 1)
+        object20_ewram_414 &= (uint8_t)~0x10u;
 
     /* gEwramData writes with runtime channels: +0x42C (shared and
      * per-family reports plus the window open/close 0x21 pair
@@ -2034,11 +2032,16 @@ void object1c_anim_bind(const AriaObjects *objects) {
 
 int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                            int cam_x, int cam_y, AosForcedInput *input, AriaCombat *combat,
-                           uint16_t new_input) {
+                           uint16_t new_input, uint16_t held_input) {
     if (deferred_sound_pending) {
         deferred_sound_pending = false;
         aos_audio_play_song(deferred_sound);
     }
+    /* Object1C's player-input lock is re-armed by the SPECIAL id-28
+     * branch below each frame (native SetPlayerInput has no memory);
+     * clearing it here keeps one frame of latency like the shared
+     * forced-input slot. */
+    aria_object1c_input_lock(false);
     int sound = 0;
     /* unk_A074_0: while the level-up display's counter sits in
      * [2, 0x3C], the native entity update loop is suspended; the
@@ -3530,8 +3533,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * the record's param0/param1. The sub_08068AD4 probe is
              * the same screen-space box family as Object1F's but
              * with rect (0x68,0x80,0x20,0x37): the player screen
-             * position inside it. buttons_16 is the held mask
-             * (+0x16: Up 0x40, A/B bits 0-1) and buttons_14 the
+             * position inside it. buttons_16 is the global held
+             * mask (+0x16: Up 0x40, A/B bits 0-1, the new
+             * held_input parameter — inputData.heldInput, NOT the
+             * player-forced soma->held) and buttons_14 the
              * new-input edge mask (+0x14: A bit 0, Right/Left
              * 0x10/0x20) — the edge/level split is documented but
              * unverified in aos_object1c.h. sub_08021304 is
@@ -3540,7 +3545,11 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * is reported. save_result feeds back the previous
              * frame's actual aos_save_store result (0 until the
              * first commit — SRAM writes are synchronous and
-             * effectively infallible). The child routines
+             * effectively infallible). SetPlayerInput(1, 0x40)
+             * goes through aria_object1c_input_lock, the
+             * player-only channel, so the YES/NO reads keep the
+             * real pad; state 99 stays unlocked (the native
+             * room-sync reload that would reset it is unported). The child routines
              * (sub_080544E8/0x08055070/0x0805514C/...) run in
              * aos_object1c_children_update below; only the
              * marker's drawFunc commits draw (the other kinds'
@@ -3586,8 +3595,13 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             int32_t py = (int32_t)(soma->y >> 16) - cam_y;
             in1c.player_x = (int16_t)px;
             in1c.player_y = (int16_t)py;
-            in1c.buttons_16 = soma->held;
-            in1c.buttons_14 = new_input;
+            in1c.buttons_16 = held_input;   /* +0x16 heldInput: the
+                                             * global pad word, NOT
+                                             * soma->held (the
+                                             * player-only words
+                                             * freeze during the
+                                             * sequence) */
+            in1c.buttons_14 = new_input;    /* +0x14 newInput edge */
             in1c.player_busy = false;   /* sub_08021304 ~ done */
             in1c.save_slot = 0;         /* +0x428: slot 0 until a
                                          * slot-select UI exists */
@@ -3597,11 +3611,19 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 sound = out1c.song;
                 printf("Object1C %zu: song 0x%X\n", i, out1c.song);
             }
-            if (out1c.forced_keys >= 0) {
-                /* SetPlayerInput(1, 0x40): lock player input while
-                 * the save flow owns the pad. */
-                input->active = true;
-                input->held = (uint16_t)out1c.forced_keys;
+            if (out1c.forced_keys >= 0 && e->object1c.state != 99) {
+                /* SetPlayerInput(1, 0x40): natively this writes only
+                 * the playerHeldInput/playerNewInput words, leaving
+                 * the global heldInput/newInput the entity itself
+                 * reads untouched. The shared forced slot would
+                 * substitute the pad before aos_input_update and
+                 * mask exactly those reads (the YES/NO prompt could
+                 * never see A/B — the reported save-room freeze), so
+                 * the host routes it through the player-only lock
+                 * instead. State 99 (dormant) is exempt: native
+                 * keeps forcing there and relies on the unported
+                 * room-sync reload to reset the entity. */
+                aria_object1c_input_lock(true);
             }
             aria_pickup_state.global_flags |= out1c.flags42c_set;
             aria_pickup_state.global_flags &= ~out1c.flags42c_clear;
@@ -3612,8 +3634,12 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                        out1c.save_mode_set | out1c.save_mode_clear);
             }
             if (out1c.save_setup)
+                /* sub_08054280's tile/text upload is unported; the
+                 * host draws the same "Save the game? / Yes / No"
+                 * prompt through the room-dialogue window stack
+                 * (draw_object1c_save_prompt in aria_runtime.c). */
                 printf("Object1C %zu: save screen setup "
-                       "(sub_08054280) — UI not ported\n", i);
+                       "(sub_08054280) — host prompt shown\n", i);
             if (out1c.save_block_refresh)
                 printf("Object1C %zu: +0x60 save block refresh "
                        "(sub_08012688/0x080135C0)\n", i);
@@ -3661,10 +3687,15 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 aos_object1c_children_update(&e->object1c, &cin2,
                                               &cout2);
                 /* +0x59 bit 3 marks children for post-draw
-                 * deletion natively; the host deletes here. */
+                 * deletion natively; the host deletes here. The
+                 * active guard is required: child_delete only
+                 * clears +0x59's slot flag, not the bit-3 mark, so
+                 * an unguarded rescan would spin on the same
+                 * child forever once the beam sequence runs. */
                 for (unsigned ci = 0;
                      ci < e->object1c.child_count;) {
-                    if (e->object1c.children[ci].flags59 & 8) {
+                    if (e->object1c.children[ci].active &&
+                        (e->object1c.children[ci].flags59 & 8)) {
                         aos_object1c_child_delete(&e->object1c, ci);
                         continue;
                     }

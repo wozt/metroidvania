@@ -69,6 +69,26 @@ bool aos_room_music_enter(AosRoomMusic *music, int area, int room,
     if (!music->special_song && (music->events_37e & 4) && area == 5 &&
         (room == 6 || room == 0xE))
         song = music->special_song = 0x25;
+    /* Native room loads run the transition teardown first:
+     * sub_0806C354's sub_08013D30/sub_08013F38 release the held sounds
+     * and stop the +0x254CC ambient song, so the area song owns its
+     * player when sub_08013960_inline_0 runs. The port's room swap is
+     * instant and has no transition stages; an untracked song still
+     * occupying the target player's slot is the ambient the teardown
+     * would have stopped (the opening's Object20 guard plants 0x26
+     * through sub_08013EEC). Issue its STOP_SONG and, when the stale
+     * tracker claimed that same song was current, re-arm the change so
+     * the area song actually restarts instead of early-returning. */
+    AosAudioSongInfo target;
+    if (aos_audio_song_info(song, &target)) {
+        const AosAudioPlayerState *player =
+            &aos_audio_state()->players[target.player];
+        if (player->active && player->song != song &&
+            player->song != music->current_song) {
+            aos_audio_play_song((uint16_t)(player->song | STOP_SONG));
+            if (music->current_song == song) music->current_song = 0;
+        }
+    }
     bool playing = aos_room_music_change(music, song);
     if (!playing && music->stop_player_0) aos_audio_play_song(MUSIC_PLAYER_STOP_0);
     return playing;

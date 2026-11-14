@@ -1,3 +1,51 @@
+## Patch 1142 - save prompt, pause graphics, room music, text fast-forward, opening spawn pass
+
+- **Opening duplicate Mina/Arikado fixed**: `update_entities` is
+  skipped for the whole opening scene, so room 0/0's flag-gated
+  Object20 records (param0 26/27/28) first spawned *after* the
+  scene committed event 0x20 — their native create gates
+  (`sub_08066024`/`sub_08065CD8`/`sub_08066828`) would have kept
+  them deleted. One pure spawn pass now runs right after room
+  load (native `sub_0800F4F8`/`sub_0800F5BC` order) so the gates
+  evaluate pre-opening state; verified by captures — a single
+  Mina/Arikado, records `del=1`, and room revisit with bit 0x20
+  set spawns the persistent NPCs live like native. Skeleton
+  death debris consumes all seven records of `0x08526802`
+  (`sub_0805E9F0`'s `sb=6..0` loop).
+- **Save-room prompt ported**: Object1C reuses the room-dialogue
+  window/font stack for `sub_08054280`'s setup — text 0x34A
+  "Save the game?", 0x34B "Yes", 0x34D "No" with a host chevron.
+  Up enters, A/B confirm through a player-only input lock (the
+  native `SetPlayerInput` masks player words only — the earlier
+  global mask deadlocked YES/NO). YES commits via
+  `SaveData_SaveSlotToSram`; songs 0xEF/0xF0 cover
+  failure/decline. Slot selection, native tile/DMA visuals and
+  the hand cursor stay unported (`in1c.save_slot = 0`).
+- **Pause graphics fixes**: `place_text` no longer rewrites BG0
+  entries for glyph-empty cells and soul-ownership markers draw
+  after the description window per `sub_0804D1DC`; a pre-existing
+  `test_aos_pause_graphics` failure is fixed. The earlier
+  "palette corruption" was a capture-tool bug (`write_ppm`
+  emitted R for B), not the renderer — verified against live
+  palette RAM; hub render ~96% pixel-identical to native.
+- **Room music after the opening**: `aos_room_music_enter` now
+  stops an untracked different MP2K occupant (the guard NPC's
+  ambient song 0x26 via `+0x254CC`) with native stop semantics
+  and force-restarts the room song — the root cause of the
+  post-cutscene silence in the first room.
+- **Text typewriter / fast-forward**: `AosRoomDialogue` owns
+  `+0x415`/`+0x416` end-to-end — open arms the typewriter (one
+  glyph/poll), A while typing clears the arm so the next poll
+  rips to the next wait/end, an A edge on the same poll as a
+  wait state re-arms (post-case check) and reports song 0x132 +
+  `palette_write`, B masks `+0x415`. The duplicate entity-side
+  `+0x416` channel was removed; `+0x414`/`+0x417` writes verified
+  against `sub_08067934`/`sub_08067A04` (`(b & ~0x10) | 5`,
+  bit-4 clears).
+- Registries synced (`aos.objects.room_dialogue`,
+  `aos.saves.portable_slots`, `aos.souls.equipment_menu`,
+  `aos.audio.play_song`, `aos.events.opening_scene`).
+
 ## Patch 1133 - Object1C child animation advance (sub_0803F17C chain)
 
 - **Native frame-step chain ported** in `aos_object1c.c/.h`:

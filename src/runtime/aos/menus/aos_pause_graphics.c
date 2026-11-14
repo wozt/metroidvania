@@ -518,8 +518,17 @@ static bool place_text(AosPauseGraphics *graphics, const AosNativeText *text,
     unsigned destination_x = x / 8u, destination_y = y / 8u;
     for (unsigned row = 0; row < tile_height; ++row)
         for (unsigned column = 0; column < tile_width; ++column) {
-            unsigned tile = (*next_tile)++;
             size_t source = ((size_t)row * 32 + column) * 32;
+            const uint8_t *glyph = graphics->text_tiles.data + source;
+            /* Like the native windowed cell commit, only cells holding
+             * glyph pixels consume a tile: empty span cells keep the
+             * existing map entry (and its palette) instead of being
+             * rewritten as blank text tiles over strips and frames. */
+            bool empty = true;
+            for (unsigned byte = 0; byte < 32; ++byte)
+                if (glyph[byte]) { empty = false; break; }
+            if (empty) continue;
+            unsigned tile = (*next_tile)++;
             unsigned map_x = destination_x + column;
             unsigned map_y = destination_y + row;
             uint8_t *destination =
@@ -529,7 +538,6 @@ static bool place_text(AosPauseGraphics *graphics, const AosNativeText *text,
                 memcpy(destination,
                        graphics->bg0_chars + (size_t)(previous & 0x3FF) * 32,
                        32);
-                const uint8_t *glyph = graphics->text_tiles.data + source;
                 for (unsigned byte = 0; byte < 32; ++byte) {
                     uint8_t low = glyph[byte] & 0x0F;
                     uint8_t high = glyph[byte] & 0xF0;
@@ -1483,21 +1491,8 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
     put_tiles(graphics, 3, 0xE, 0x1200, 0x19);
     put_tiles(graphics, 3, 0xF, 0x1240, 0x19);
     put_tiles(graphics, 3, 0x10, 0x1280, 0x19);
-    /* sub_0804D1DC tail: owned markers at column 0x1C rows 0xE/0x10 —
-     * 0x134E bottom in soul view off, 0x134D top in soul view on,
-     * dashes on the other row; unowned or absent souls dash both. */
     bool has_soul = values->soul_type || values->soul_index;
     bool owned = has_soul && values->soul_owned;
-    if (owned && !values->soul_view) {
-        graphics->bg0_map[0x10 * 32 + 0x1C] = 0x134E;
-        put_dashes(graphics, 0x1C, 0xE, 1);
-    } else if (owned && values->soul_view) {
-        graphics->bg0_map[0xE * 32 + 0x1C] = 0x134D;
-        put_dashes(graphics, 0x1C, 0x10, 1);
-    } else {
-        put_dashes(graphics, 0x1C, 0xE, 1);
-        put_dashes(graphics, 0x1C, 0x10, 1);
-    }
     /* sub_0804CDF4 tail: the soul icon at column 0x18 rows 1-2 —
      * 0x399/0x3A9 bars without a soul, dashes when unowned, and the
      * 0xCC0/0xCD0 strips when owned. */
@@ -1531,6 +1526,21 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
                               found ? (uint16_t)(0x2CE + enemy) : 0x34E,
                               false, 56, 120, 198, 3, &next_tile)) {
         return false;
+    }
+    /* sub_0804D1DC tail: owned markers at column 0x1C rows 0xE/0x10 —
+     * 0x134E bottom in soul view off, 0x134D top in soul view on,
+     * dashes on the other row; unowned or absent souls dash both.
+     * Native order draws them after the description window so they
+     * stay visible over the text. */
+    if (owned && !values->soul_view) {
+        graphics->bg0_map[0x10 * 32 + 0x1C] = 0x134E;
+        put_dashes(graphics, 0x1C, 0xE, 1);
+    } else if (owned && values->soul_view) {
+        graphics->bg0_map[0xE * 32 + 0x1C] = 0x134D;
+        put_dashes(graphics, 0x1C, 0x10, 1);
+    } else {
+        put_dashes(graphics, 0x1C, 0xE, 1);
+        put_dashes(graphics, 0x1C, 0x10, 1);
     }
     composite(graphics, rgba);
     return true;

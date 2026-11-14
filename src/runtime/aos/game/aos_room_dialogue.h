@@ -108,6 +108,30 @@ struct AosRoomDialogue {
     bool input_locked;          /* set_input_lock(true) outstanding */
     bool text_done;             /* last sub_08067A04-style result */
     bool failed;                /* resolve/open/render failure seen */
+    /* gEwramData +0x415/+0x416: sub_08067A04's print-state skip
+     * latch pair (_08067BC4/_08067BD8 copy, _08067A44 nibble-4
+     * countdown). +0x416 is the typewriter arm: sub_08067934
+     * stores 1 on open and the _08068076 tail rewrites it on
+     * A-edge frames (1 while the poll ran in the wait state,
+     * 0 otherwise). While armed, each literal glyph byte parks
+     * the print loop through the +0x414 nibble-4 branch — one
+     * glyph per poll; once an A-edge clears it, the native loop
+     * consumes the whole remaining glyph run in one poll, which
+     * the bridge models as a fast-forward to the next wait/end.
+     * +0x415 is the per-glyph latch the nibble-4 countdown
+     * decrements; its only writers copy +0x416 (masked to 0 when
+     * new_input bit 1 is set), so it stays 0/1 and the parked
+     * state self-clears within one poll — modelled here as the
+     * armed poll revealing a single glyph. Session-scoped like
+     * the native bytes; reset to the armed value on each open. */
+    uint8_t ewram_415;
+    uint8_t ewram_416;
+    /* _08068076 tail reports for the state-1 A-edge branch: it
+     * plays song 0x132 and writes the OBJ palette pair. The audio
+     * and palette consumers are unported, so the poll reports them
+     * here (-1 / false on polls where the branch did not fire). */
+    int song;
+    bool palette_write;
 };
 
 void aos_room_dialogue_init(AosRoomDialogue *dlg);
@@ -129,6 +153,10 @@ const AosOpeningEvent *aos_room_dialogue_event(const AosRoomDialogue *dlg);
  * into the entity In.text_done on the following update. */
 bool aos_room_dialogue_text_done(const AosRoomDialogue *dlg);
 bool aos_room_dialogue_failed(const AosRoomDialogue *dlg);
+/* gEwramData +0x415/+0x416 snapshot of the print-state skip latch
+ * pair for diagnostics and tests; NULL outputs are ignored. */
+void aos_room_dialogue_ewram_state(const AosRoomDialogue *dlg,
+                                   uint8_t *byte415, uint8_t *byte416);
 
 /* sub_08067934(text_id): resolve the script, initialise the text
  * machine, open the window chrome and take the modal input lock.

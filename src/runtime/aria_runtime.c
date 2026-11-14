@@ -224,6 +224,9 @@ static bool room_dialogue_rom_tried;
 static const char *room_dialogue_rom_path;
 static bool room_dialogue_ready;
 static bool room_dialogue_input_lock;
+/* Object1C save sequence's SetPlayerInput(1, 0x40) equivalent —
+ * player_* words only, armed per frame by update_entities. */
+static bool object1c_input_lock;
 AosRoomDialogue room_dialogue;
 static AosRoomDialogueHost room_dialogue_host;
 
@@ -435,6 +438,116 @@ static void room_dialogue_close_window(void *context) {
 static void room_dialogue_lock(void *context, bool locked) {
     (void)context;
     room_dialogue_input_lock = locked;
+}
+
+void aria_object1c_input_lock(bool locked) {
+    object1c_input_lock = locked;
+}
+
+/* Object1C save prompt (sub_08054280): the native routine uploads the
+ * window/tile graphics and prints three text-table entries — 0x34A
+ * "Save the game?" at text pos (0,1), 0x34B "Yes " at (0x10,1) and
+ * 0x34D " No " at (0x18,1) — then sub_0805444C draws the selection
+ * cursor. The tile upload, the +0xA074 mode bytes and the cursor
+ * sprites stay unported; this draws the same three native strings
+ * through the room-dialogue window stack (6px cells like the native
+ * text canvas) and marks +0x16's selection with a host chevron —
+ * an honest approximation, not the native hand cursor. */
+static bool object1c_save_strings_ready;
+static uint8_t object1c_save_question[64];
+static uint8_t object1c_save_yes[16];
+static uint8_t object1c_save_no[16];
+static size_t object1c_save_question_n, object1c_save_yes_n,
+            object1c_save_no_n;
+
+static bool object1c_save_strings_load(void) {
+    if (object1c_save_strings_ready) return true;
+    if (!room_dialogue_ready) return false;
+    static const struct {
+        uint16_t id;
+        uint8_t *out;
+        size_t *count;
+        size_t cap;
+    } entries[] = {
+        {0x34A, object1c_save_question, &object1c_save_question_n, 64},
+        {0x34B, object1c_save_yes, &object1c_save_yes_n, 16},
+        {0x34D, object1c_save_no, &object1c_save_no_n, 16},
+    };
+    for (unsigned i = 0; i < sizeof entries / sizeof entries[0]; ++i) {
+        AosOpeningEvent ev;
+        if (!decode_opening_soul_entry(&room_dialogue_resources,
+                                       entries[i].id, &ev))
+            return false;
+        *entries[i].count =
+            flatten_opening_text(&ev, entries[i].out, entries[i].cap);
+    }
+    object1c_save_strings_ready = true;
+    return true;
+}
+
+static void draw_object1c_save_prompt(SDL_Renderer *renderer,
+                                      const AriaRoom *room,
+                                      uint32_t frame) {
+    (void)frame;
+    if (!renderer || !room || !room_dialogue_ready ||
+        !object1c_save_strings_load())
+        return;
+    const AriaEntity *dlg = NULL;
+    for (size_t i = 0; i < room->entity_count; ++i) {
+        const AriaEntity *e = &room->entities[i];
+        /* The window is up while the entity sits in the open /
+         * confirm / decline-exit states (1-3); the commit path
+         * resets the text window on entry to 0x14 and the dormant
+         * state 99 keeps it closed. */
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 28 && e->spawned &&
+            !e->object1c.deleted && e->object1c.state >= 1 &&
+            e->object1c.state <= 3) {
+            dlg = e;
+            break;
+        }
+    }
+    if (!dlg) return;
+    static AosIntroTextTiles tiles;
+    aos_intro_text_tiles_clear(&tiles);
+    bool ok =
+        aos_intro_font_render_span(&room_dialogue_font, &tiles, 0, 12,
+                                   176, 8, object1c_save_question,
+                                   object1c_save_question_n) &&
+        aos_intro_font_render_span(&room_dialogue_font, &tiles, 96, 12,
+                                   80, 8, object1c_save_yes,
+                                   object1c_save_yes_n) &&
+        aos_intro_font_render_span(&room_dialogue_font, &tiles, 144, 12,
+                                   32, 8, object1c_save_no,
+                                   object1c_save_no_n);
+    if (!ok) {
+        fprintf(stderr, "Aria save prompt text render failed\n");
+        return;
+    }
+    for (unsigned y = 88; y < 160; ++y)
+        for (unsigned x = 8; x < 232; ++x) {
+            uint16_t color;
+            if (!aos_window_frame_dialogue_pixel(&room_dialogue_window,
+                                                 &tiles, x, y, &color))
+                continue;
+            SDL_SetRenderDrawColor(renderer,
+                                   (uint8_t)((color & 31u) * 255u / 31u),
+                                   (uint8_t)(((color >> 5) & 31u) * 255u / 31u),
+                                   (uint8_t)(((color >> 10) & 31u) * 255u / 31u),
+                                   255);
+            SDL_RenderPoint(renderer, (float)x, (float)y);
+        }
+    /* Host selection cursor: a chevron left of the +0x16-selected
+     * word (1 = "Yes ", 0 = " No "). Canvas x 96/144 map to screen
+     * x 136/184 through the dialogue window's +40 offset. */
+    int cx = dlg->object1c.save_sel ? 128 : 176;
+    int cy = 131;
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    for (int t = 0; t < 2; ++t) {
+        SDL_RenderLine(renderer, (float)(cx - 3 + t), (float)(cy - 4),
+                       (float)(cx + 1 + t), (float)cy);
+        SDL_RenderLine(renderer, (float)(cx + 1 + t), (float)cy,
+                       (float)(cx - 3 + t), (float)(cy + 4));
+    }
 }
 
 void room_dialogue_bind(void) {
@@ -990,7 +1103,8 @@ int aria_runtime_main(int argc, char **argv) {
              * lock zeroes the gameplay mask below. */
             uint16_t sim_new_input = (uint16_t)(held & ~sim_prev_held);
             sim_prev_held = held;
-            unsigned held_eff = room_dialogue_input_lock ? 0 : held;
+            unsigned held_eff = (room_dialogue_input_lock ||
+                                 object1c_input_lock) ? 0 : held;
             aos_soma_update(&soma, &layer, (uint16_t)held_eff, 0);
             bool door_held = false;
             for (size_t k = 0; k < room.entity_count && !door_held; ++k)
@@ -1040,7 +1154,7 @@ int aria_runtime_main(int argc, char **argv) {
             object1c_save_ctx = NULL;
             object1c_save_path = NULL;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
-                            sim_new_input);
+                            sim_new_input, sim_held);
             homing_age();
             aos_enemy_set_soul_attacks(NULL, 0);
         }
@@ -1601,6 +1715,21 @@ int aria_runtime_main(int argc, char **argv) {
     follow_camera(&room, spawn_x, spawn_y, &cam_x, &cam_y);
     /* Native Aria input state is tracked separately from SDL. */
     AosForcedInput forced = {0};
+    /* Room load runs the entity spawn pass (sub_0800F4F8 /
+     * sub_0800F5BC) before the first frame: records whose flag
+     * byte passes spawn immediately and their creates evaluate
+     * the event gates with the pre-opening state. The opening
+     * branch below skips update_entities for the whole scene and
+     * epilogue camera pan, so without this pass the Object20
+     * param0 26/27/28 records would first spawn after the scene
+     * commits event 0x20 — their native create gates
+     * (sub_08066024/sub_08065CD8/sub_08066828) would keep them
+     * and they would draw a second Mina/Arikado over the scripted
+     * actors that sub_0805F008 leaves in the room. Newly spawned
+     * records continue without an update, so this call is a pure
+     * spawn pass; window-gated records still wait for the camera. */
+    update_entities(&room, &layer, &soma, cam_x, cam_y, &forced,
+                    &combat, 0, 0);
     AosSaveRoom save_room = {0};
     bool announced_death = false;
     static AosGameOver death;
@@ -2113,7 +2242,7 @@ int aria_runtime_main(int argc, char **argv) {
              * window is open (the host's set_input_lock callback);
              * A/START still reach the poll through
              * aria_input.new_input inside update_entities. */
-            if (room_dialogue_input_lock) {
+            if (room_dialogue_input_lock || object1c_input_lock) {
                 player_held = 0;
                 player_new = 0;
             }
@@ -2550,7 +2679,7 @@ int aria_runtime_main(int argc, char **argv) {
             object1c_save_ctx = has_active_save ? &active_save : NULL;
             object1c_save_path = has_active_save ? save_path : NULL;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
-                            aria_input.new_input);
+                            aria_input.new_input, aria_input.held_input);
             /* --dialogue-trace: log the shared room dialogue's window
              * open/close frames so scripted-input runs can measure the
              * pulse->window latency without pixel probing. Debug
@@ -3577,6 +3706,9 @@ int aria_runtime_main(int argc, char **argv) {
                                       : NULL,
                                   (uint32_t)step);
         }
+        /* Object1C's save YES/NO prompt (sub_08054280): same window
+         * stack, no-op while no save statue is mid-sequence. */
+        draw_object1c_save_prompt(renderer, &room, (uint32_t)step);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);
@@ -3591,6 +3723,23 @@ int aria_runtime_main(int argc, char **argv) {
                    opening_actors.soul_notice,
                    aos_opening_actors_blocks_script(&opening_actors) ? 1u : 0u,
                    opening.position, opening.waiting ? 1u : 0u);
+            if (getenv("ARIA_DEBUG_ENT")) {
+                for (size_t k = 0; k < room.entity_count; ++k) {
+                    const AriaEntity *de = &room.entities[k];
+                    if (de->kind != ARIA_KIND_SPECIAL || de->id != 32)
+                        continue;
+                    printf("  ent%zu p0=%d spawned=%d del=%d fam=%u @%d,%d\n", k,
+                           de->param0, de->spawned ? 1 : 0,
+                           de->object20.deleted ? 1 : 0,
+                           (unsigned)de->object20.family, de->x, de->y);
+                }
+                for (int a = 0; a < AOS_OPENING_ACTOR_COUNT; ++a)
+                    printf("  actor%d vis=%d @%d,%d anim=%u\n", a,
+                           opening_actors.visible[a] ? 1 : 0,
+                           (int)(opening_actors.x[a] >> 16),
+                           (int)(opening_actors.y[a] >> 16),
+                           (unsigned)opening_actors.animation[a]);
+            }
             running = false;
         }
         SDL_RenderPresent(renderer);

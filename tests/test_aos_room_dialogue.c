@@ -255,6 +255,122 @@ int main(void) {
     aos_room_dialogue_close(&dlg);
     assert(!aos_room_dialogue_shown(&dlg));
 
+    /* +0x415/+0x416 print-state latch (_08067BC4/_08067BD8,
+     * _08068076): open arms +0x416; each armed print poll writes
+     * +0x415 = (new_input & 2) ? 0 : +0x416 and reveals one glyph;
+     * an A-edge while printing clears +0x416 and the next poll
+     * fast-forwards the rest of the page; an A-edge at the wait
+     * re-arms it. */
+    aos_room_dialogue_init(&dlg);
+    aos_room_dialogue_set_host(&dlg, &host);
+    req = (AosRoomDialogueRequest){0x15, true, false};
+    aos_room_dialogue_apply(&dlg, 0, &req);
+    assert(aos_room_dialogue_active(&dlg));
+    {
+        uint8_t b415 = 0xEE, b416 = 0xEE;
+        aos_room_dialogue_ewram_state(&dlg, &b415, &b416);
+        assert(b416 == 1);          /* sub_08067934's +0x416 store */
+    }
+    /* First poll (inside apply): armed typewriter step, 'B' only. */
+    assert(aos_room_dialogue_event(&dlg)->glyph_counts[0] == 1);
+    /* A-edge during printing: still one glyph this frame (+0x416
+     * was armed when the glyph check ran), then the tail clears
+     * the arm — script_b's 'y' lands, 'e' is still pending. */
+    assert(!aos_room_dialogue_poll(&dlg, AOS_KEY_A));
+    assert(aos_room_dialogue_event(&dlg)->glyph_counts[0] == 2);
+    {
+        uint8_t b415 = 0, b416 = 1;
+        aos_room_dialogue_ewram_state(&dlg, &b415, &b416);
+        assert(b416 == 0);          /* _08068076 A-edge rewrite */
+        assert(b415 == 1);          /* +0x415 copied +0x416=1:
+                                     * the check ran before the
+                                     * tail cleared the arm */
+    }
+    /* Disarmed: the next poll rips through 'e' to the wait in one
+     * frame — the native sl=1 loop continuation. */
+    assert(!aos_room_dialogue_poll(&dlg, 0));
+    assert(aos_room_dialogue_event(&dlg)->glyph_counts[0] == 3);
+    assert(aos_room_dialogue_event(&dlg)->waiting);
+    assert(!aos_room_dialogue_text_done(&dlg));
+    /* A-edge at the wait releases it and re-arms +0x416; script_b
+     * ends right after, so the poll reports done. */
+    assert(aos_room_dialogue_poll(&dlg, AOS_KEY_A));
+    assert(aos_room_dialogue_text_done(&dlg));
+    {
+        uint8_t b415 = 0, b416 = 0;
+        aos_room_dialogue_ewram_state(&dlg, &b415, &b416);
+        assert(b416 == 1);          /* wait-state A-edge re-arm */
+    }
+    aos_room_dialogue_close(&dlg);
+
+    /* B-edge (new_input bit 1) masks the +0x415 copy to 0 but does
+     * not disarm +0x416 — the typewriter keeps its one-glyph
+     * cadence. */
+    req.window_text = 0x15;
+    req.window_poll = true;
+    aos_room_dialogue_apply(&dlg, 0, &req);
+    assert(aos_room_dialogue_active(&dlg));
+    assert(aos_room_dialogue_event(&dlg)->glyph_counts[0] == 1);
+    assert(!aos_room_dialogue_poll(&dlg, AOS_KEY_B));
+    {
+        uint8_t b415 = 1, b416 = 0;
+        aos_room_dialogue_ewram_state(&dlg, &b415, &b416);
+        assert(b415 == 0);          /* (new_input & 2) ? 0 : +0x416 */
+        assert(b416 == 1);          /* B is not the A-edge: arm kept */
+    }
+    /* Still armed: the next poll reveals only the third glyph —
+     * the typewriter cadence is unchanged. */
+    assert(!aos_room_dialogue_poll(&dlg, 0));
+    assert(aos_room_dialogue_event(&dlg)->glyph_counts[0] == 3);
+    assert(!aos_room_dialogue_event(&dlg)->waiting);
+    {
+        uint8_t b415 = 0, b416 = 0;
+        aos_room_dialogue_ewram_state(&dlg, &b415, &b416);
+        assert(b415 == 1);          /* unmasked copy while armed */
+        assert(b416 == 1);
+    }
+    aos_room_dialogue_close(&dlg);
+
+    /* The state-1 tail branch also fires when the wait is reached
+     * by this poll's own parse: the native _08068076 tail reads the
+     * post-case nibble, so an A-edge landing on the command-5 frame
+     * still re-arms +0x416 and reports song 0x132 / the OBJ palette
+     * write (consumers unported). script_a is 'H','i',wait,end. */
+    req.window_text = 0x14;
+    req.window_poll = true;
+    aos_room_dialogue_apply(&dlg, 0, &req);
+    assert(aos_room_dialogue_active(&dlg));
+    assert(aos_room_dialogue_event(&dlg)->glyph_counts[0] == 1);
+    assert(dlg.song == -1 && !dlg.palette_write);
+    /* Armed typewriter step, then an A-edge disarms it. */
+    assert(!aos_room_dialogue_poll(&dlg, AOS_KEY_A));
+    assert(aos_room_dialogue_event(&dlg)->glyph_counts[0] == 2);
+    assert(dlg.song == -1 && !dlg.palette_write);
+    /* Disarmed rip with an A-edge: the parse stops at the command-5
+     * wait and the same frame's tail sees the wait state — +0x416
+     * re-arms instead of clearing. */
+    assert(!aos_room_dialogue_poll(&dlg, AOS_KEY_A));
+    assert(aos_room_dialogue_event(&dlg)->waiting);
+    {
+        uint8_t b415 = 0, b416 = 0;
+        aos_room_dialogue_ewram_state(&dlg, &b415, &b416);
+        assert(b416 == 1);
+    }
+    assert(dlg.song == 0x132 && dlg.palette_write);
+    /* A non-A poll clears the per-poll reports but keeps the arm. */
+    assert(!aos_room_dialogue_poll(&dlg, 0));
+    assert(dlg.song == -1 && !dlg.palette_write);
+    {
+        uint8_t b415 = 0, b416 = 0;
+        aos_room_dialogue_ewram_state(&dlg, &b415, &b416);
+        assert(b416 == 1);
+    }
+    /* The wait release reports the branch again and ends the script. */
+    assert(aos_room_dialogue_poll(&dlg, AOS_KEY_A));
+    assert(aos_room_dialogue_text_done(&dlg));
+    assert(dlg.song == 0x132 && dlg.palette_write);
+    aos_room_dialogue_close(&dlg);
+
     /* Missing host / missing resolver are handled, not crashed. */
     aos_room_dialogue_init(&dlg);
     req.window_text = 0x14;

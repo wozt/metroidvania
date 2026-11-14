@@ -355,10 +355,11 @@ static void test_trigger(void) {
     for (unsigned frame = 0; frame < 20; ++frame)
         assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
                AOS_OPENING_CUE_NONE);
-    /* Countdown update 3 sees +0xD==0xD0: sub_0805E9F0's six pieces,
-     * sub_0806D578's flame, sub_0805EAFC's soul orb, SE 0x6B and the
-     * 0x28-frame blink death all start; the body is not removed
-     * instantly. */
+    /* Countdown update 3 sees +0xD==0xD0: sub_0805E9F0's seven
+     * pieces (the sb=6..0 loop consumes all of 0x08526802),
+     * sub_0806D578's flame, sub_0805EAFC's soul orb, SE 0x6B and
+     * the 0x28-frame blink death all start; the body is not
+     * removed instantly. */
     assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
            AOS_OPENING_CUE_ENEMY_DEFEATED);
     assert(actors.skeleton_death == 0x28 && actors.soul_active &&
@@ -367,7 +368,7 @@ static void test_trigger(void) {
     for (unsigned piece = 0; piece < actors.debris_count; ++piece)
         if (actors.debris[piece].active &&
             actors.debris[piece].source_type == 8) ++death_pieces;
-    assert(death_pieces == 6);
+    assert(death_pieces == 7);
     int32_t soul_start_x = actors.soul_x;
     int32_t soul_start_y = actors.soul_y;
     for (unsigned frame = 0; frame < 64; ++frame)

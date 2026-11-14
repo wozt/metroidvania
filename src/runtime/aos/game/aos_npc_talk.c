@@ -231,6 +231,15 @@ unsigned aos_npc_talk_65c2c(int16_t x_px, uint16_t flags_37e,
     return count;
 }
 
+unsigned aos_npc_talk_65c2c_child(AosNpcLoop *g, uint16_t flags_37e,
+                                 void (*step)(void *ctx), void *ctx,
+                                 int16_t *targets) {
+    if (!g->child18)
+        return 0;
+    return aos_npc_talk_65c2c(g->child18_scr42, flags_37e,
+                              step, ctx, targets);
+}
+
 void aos_npc_talk_65cd8(AosNpcCompanion *c, bool flag_12078_20,
                         bool flag_12078_2e, bool keep_5b754,
                         int rng_bit, uint8_t player_anim5c,
@@ -251,6 +260,19 @@ void aos_npc_talk_65cd8(AosNpcCompanion *c, bool flag_12078_20,
         /* child +4 = sub_08065C2C, +0 = EntityUpdateNothing —
          * engine-side wiring. */
     }
+}
+
+void aos_npc_talk_65cd8_commit(const AosNpcCompanion *c,
+                               AosNpcLoop *g) {
+    g->child18 = c->child != 0;
+    if (!g->child18)
+        return;
+    g->child18_scr42 = c->child_x;
+    g->child18_scr46 = c->child_y;
+    g->child18_anim5c = c->child_anim;
+    /* The create's RNG&1 pick ran sub_0803F2C8(1|2,0,1) on the
+     * child: variant_a selects sequence 1, otherwise 2. */
+    g->child18_anim = c->variant_a ? 1 : 2;
 }
 void aos_npc_talk_65db8(AosNpcLoop *g, uint32_t flags,
                         bool text_done, int32_t player_x) {
@@ -312,8 +334,8 @@ void aos_npc_talk_65db8(AosNpcLoop *g, uint32_t flags,
 }
 
 uint32_t aos_npc_talk_66094(AosNpcGuard *g, uint32_t flags,
-                            uint8_t picked_text, bool text_done,
-                            int32_t player_x) {
+                            bool text_done, int32_t player_x,
+                            AosGuardSeq *seq, AosGuardPickCtx *pick) {
     g->cleared_42c_200 = g->sfx_26_entry = g->froze_player =
         g->armed_42c_200 = g->facing_mirror = g->window_text =
         g->ev_1d = g->sound_1040 = g->cleared_18 = g->song_1b5 =
@@ -330,7 +352,6 @@ uint32_t aos_npc_talk_66094(AosNpcGuard *g, uint32_t flags,
         if ((flags & 7) != 7) return g->ret; /* probe+mask+pause */
         g->armed_42c_200 = true;            /* +0x42C |= 0x200 */
         g->froze_player = true;
-        g->text_id = picked_text;
         /* facing: +0x58 = (own & ~0x41) | (self_x >= player_x ?
          * 0x40 : 0) — the ROM's inverted compare. */
         g->flags58 = (uint8_t)((g->flags58 & ~0x41u) |
@@ -342,9 +363,28 @@ uint32_t aos_npc_talk_66094(AosNpcGuard *g, uint32_t flags,
         g->ev_1d = true;                    /* sub_08013CF0(0x1D) */
         g->sound_1040 = true;               /* sub_0805B878(0x1040) */
         if (g->field18) {
-            g->song_1b5 = true;             /* PlaySong(0x1B6) +
-                                             * sub_08066308 — the
-                                             * variant path */
+            /* sub_080213BC + PlaySong(0x1B6) + sub_08066308 —
+             * the +0x18 variant pick. */
+            g->song_1b5 = true;
+            if (pick && seq) {
+                uint16_t t14 = 0;
+                aos_npc_talk_66308(seq, pick, &t14);
+                g->text_id = (uint8_t)t14;
+            }
+        } else if (pick && seq) {
+            if (flags & 8) {                /* sub_0805B864 */
+                aos_guard_seq_reset(seq);   /* sub_0806666C */
+                g->text_id = 0x44;
+            } else {
+                /* sub_0806668C: +0x14 = 0x36, sequence index
+                 * from flags 0x2E/0x26. */
+                uint8_t t8 = 0;
+                aos_guard_seq_pick(seq,
+                                   (uint8_t)((pick->unk33c >> 0x2E) & 1),
+                                   (uint8_t)((pick->unk33c >> 0x26) & 1),
+                                   &t8);
+                g->text_id = t8;
+            }
         }
     } else if (g->state == 2) {
         if (!text_done) return g->ret;
@@ -461,6 +501,114 @@ uint32_t aos_guard_seq_tick(AosGuardSeq *g,
     *out = xform(v);                 /* sub_08041434 -> +0x40C */
     g->counter = (uint16_t)(g->counter + 1);
     return 1;
+}
+
+/* sub_08066308 support: the unk_33C bitfield helpers. */
+static bool pk_12078(const AosGuardPickCtx *c, unsigned bit) {
+    return ((c->unk33c >> bit) & 1) != 0;
+}
+
+/* sub_080120AC: returns the bit and sets it when clear. */
+static bool pk_120ac(AosGuardPickCtx *c, unsigned bit) {
+    bool v = pk_12078(c, bit);
+    if (!v)
+        c->unk33c |= 1ull << bit;
+    return v;
+}
+
+/* One cursor step of the queue pick: slot = (cursor & 0xF) +
+ * mode*8 into the 0x08118C85 table, byte -> sequence fallback,
+ * cursor +1, reseated to mode<<4 when the low nibble hits 8. */
+static void pk_pick_step(AosGuardPickCtx *ctx, AosGuardSeq *seq,
+                         unsigned mode) {
+    unsigned slot = (ctx->cursor_18c & 0xF) + mode * 8;
+    seq->fallback = ctx->table_08118c85[slot];
+    ctx->cursor_18c = (uint8_t)(ctx->cursor_18c + 1);
+    if ((ctx->cursor_18c & 0xF) == 8)
+        ctx->cursor_18c = (uint8_t)(mode << 4);
+}
+
+void aos_npc_talk_66308(AosGuardSeq *seq, AosGuardPickCtx *ctx,
+                        uint16_t *text_id) {
+    *text_id = 0;
+    if (ctx->cond_5b864) {
+        /* sub_080120AC(0x36): set keeps +0x14 at 0 (the queue
+         * block still runs), clear picks 0x43. */
+        if (!pk_120ac(ctx, 0x36))
+            *text_id = 0x43;
+    } else if (pk_12078(ctx, 0x3B) && ctx->unk132ae[0] &&
+               ctx->unk132ae[1] && ctx->unk132ae[2]) {
+        /* sub_08012048(0x3B) re-set, text 0x45 and the
+         * +0x138F4 sequence programmed to mode 0x45/index 4/
+         * fallback 8. */
+        ctx->unk33c |= 1ull << 0x3B;
+        *text_id = 0x45;
+        aos_guard_seq_init(seq, 0x45, 4, 8);
+    } else if (pk_12078(ctx, 0x26)) {
+        if (!pk_120ac(ctx, 0x35)) {
+            *text_id = 0x30;
+        } else if (!(ctx->rng_pick & 1)) {
+            *text_id = 0x31;
+            aos_guard_seq_init(seq, 0x31, 0, 0);
+        }
+        /* 0x35 consumed + RNG&1 set: +0x14 stays 0 -> queue. */
+    } else if (pk_12078(ctx, 0x2E)) {
+        if (!pk_120ac(ctx, 0x34)) {
+            *text_id = 0x2F;
+        } else if (!pk_120ac(ctx, 0x37)) {
+            *text_id = 0x53;
+        }
+        /* 0x37 consumed: +0x14 stays 0 -> queue. */
+    } else if (pk_12078(ctx, 0x21)) {
+        if (!pk_120ac(ctx, 0x37))
+            *text_id = 0x53;
+    } else if (pk_12078(ctx, 0x20)) {
+        if (pk_120ac(ctx, 0x33))
+            *text_id = 0x2E;
+    }
+    if (*text_id != 0)
+        return;
+
+    /* Queue pick: +0x14 = 0x45, sequence mode 0x45/counter 0/
+     * index 4 (6 under sub_0805B864), fallback RNG%9. */
+    *text_id = 0x45;
+    seq->mode = 0x45;
+    seq->counter = 0;
+    seq->index = 4;
+    seq->fallback = (uint16_t)(ctx->rng_queue % 9);
+    unsigned mode = 0;                  /* r7 cleared on entry */
+    if (ctx->cond_5b864) {
+        mode = 5;
+        seq->index = 6;
+    } else if (pk_12078(ctx, 0x21)) {
+        if (!(ctx->flags37e & 0x10)) {
+            mode = 1;
+        } else if (!pk_12078(ctx, 0x24)) {
+            if (pk_12078(ctx, 0x3C)) {
+                mode = pk_12078(ctx, 0x3D) ? 3 : 6;
+            } else {
+                mode = 2;
+            }
+        } else if (!(ctx->flags37e & 0x02)) {
+            mode = 3;
+        } else {
+            mode = (ctx->flags37e & 0x40) ? 4 : 3;
+        }
+    }
+    if (mode != (unsigned)(ctx->unk133e8 >> 4))
+        ctx->cursor_18c = (uint8_t)(mode << 4);
+    if (!ctx->table_08118c85)
+        return;             /* documented degradation: the
+                             * RNG%9 fallback stays */
+    pk_pick_step(ctx, seq, mode);
+    if (pk_12078(ctx, 0x39)) {
+        while (seq->fallback == 7)
+            pk_pick_step(ctx, seq, mode);
+    }
+    if (pk_12078(ctx, 0x3D)) {
+        while (seq->fallback == 9)
+            pk_pick_step(ctx, seq, mode);
+    }
 }
 
 void aos_npc_talk_667dc(AosNpcTalkLoop *g, bool cond864,

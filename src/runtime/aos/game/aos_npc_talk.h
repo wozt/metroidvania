@@ -203,6 +203,20 @@ typedef struct {
     bool wrote_254cc;       /* +0x254CC pair writes */
     bool sfx_26;            /* sub_08013E18(0x26) */
     bool ev_1e;             /* sub_08013CF0(0x1E) */
+    /* +0x18 companion child (param0-26 create sub_08065CD8 via
+     * sub_0805B5E8(3)): nonzero = spawned. The child is a
+     * separate entity whose update vector is sub_08065C2C;
+     * the fields below are the child's +0x42/+0x46/+0x5C copy
+     * made at spawn, kept here so the dispatcher can run
+     * aos_npc_talk_65c2c_child — the same convention the
+     * story module uses for child14/link18. */
+    bool child18;
+    int16_t child18_scr42;  /* child +0x42 screen X */
+    int16_t child18_scr46;  /* child +0x46 screen Y */
+    uint8_t child18_anim5c; /* child +0x5C */
+    uint8_t child18_anim;   /* child +0x6D — the create's
+                             * sub_0803F2C8(1|2,0,1) sequence
+                             * pick (variant_a -> 1, else 2) */
 } AosNpcLoop;
 
 /* `flags` packs the injected globals: bit0 probe_inside,
@@ -213,17 +227,43 @@ typedef struct {
 void aos_npc_talk_65db8(AosNpcLoop *g, uint32_t flags,
                         bool text_done, int32_t player_x);
 
+/* sub_08065C2C bound to the param0-26 companion's +0x18 child:
+ * runs the sidestep writer on the child's +0x42 (the child18
+ * fields above) while the child exists; returns 0 with no
+ * child. `flags_37e` is gEwramData + 0x37E, `step` the injected
+ * sub_0803AC40 and `targets` an optional s16 out array. */
+unsigned aos_npc_talk_65c2c_child(AosNpcLoop *g, uint16_t flags_37e,
+                                 void (*step)(void *ctx), void *ctx,
+                                 int16_t *targets);
+
+/* Transfers a sub_08065CD8 spawn result into the param0-26
+ * loop state: when the +0x18 child exists its +0x42/+0x46/+0x5C
+ * copy (child +0x5C = own +0x5C + 1) lands in the child18
+ * fields so aos_npc_talk_65c2c_child can run the child's
+ * sub_08065C2C update. The native child is a separate entity;
+ * the loop struct only carries the fields the dispatcher
+ * needs, matching the story module's child14/link18
+ * convention. */
+void aos_npc_talk_65cd8_commit(const AosNpcCompanion *c,
+                               AosNpcLoop *g);
+
 /* sub_08066094: the guard NPC sequence — state 0 clears
  * +0x42C bit 0x200 and plays sub_08013EEC(0x26); state 1 gates on
  * the probe/+0x16 mask/+0x4BE pause, sets +0x42C bit 0x200,
- * freezes the player, picks the +0x14 text through the +0x18 /
- * sub_0805B864 branches (sub_08066308, sub_0806666C -> 0x44,
- * sub_0806668C — unported, text supplied by the caller), mirrors
+ * freezes the player, picks the +0x14 text through the ported
+ * pickers — sub_08066308 for the +0x18 variant (with
+ * sub_080213BC + PlaySong(0x1B6)), else sub_0806666C + text
+ * 0x44 under sub_0805B864 or sub_0806668C (text 0x36) — mirrors
  * facing, opens the window and plays sub_0805B878(0x1040);
  * state 2 polls, clears +0x18, plays the 0x1B5/0x26 songs and
  * either loops to state 1 (release) or advances to state 3 on
  * sub_0805B864; state 3 runs the +0xB escort sub-states and
- * returns 0x10 while waiting for the player 48 px ahead. */
+ * returns 0x10 while waiting for the player 48 px ahead.
+ *
+ * `seq` is the gEwramData + 0x138F4 guard-sequence block and
+ * `pick` the AosGuardPickCtx the pickers read; both may be
+ * NULL, in which case +0x14 keeps its stored value (the native
+ * pickers always run — documented degraded mode). */
 typedef struct {
     uint8_t state;      /* +0xA */
     uint8_t ctr_b;      /* +0xB */
@@ -251,13 +291,6 @@ typedef struct {
     bool release_0;         /* sub_0805B66C(0) */
     uint32_t ret;           /* ROM return value (0 or 0x10) */
 } AosNpcGuard;
-
-/* `flags`: bit0 probe_inside, bit1 +0x16 & 0x42, bit2 +0x4BE == 0,
- * bit3 sub_0805B864 result. `picked_text` is the +0x14 chosen by
- * the unported pickers; `player_x` the player +0x40. */
-uint32_t aos_npc_talk_66094(AosNpcGuard *g, uint32_t flags,
-                            uint8_t picked_text, bool text_done,
-                            int32_t player_x);
 
 /* sub_08066024: Object20 spawn gate — when flag 0x20 is set and
  * sub_0805B754(e, 0) keeps the entity, the follower variant runs
@@ -311,6 +344,67 @@ uint32_t aos_guard_seq_tick(AosGuardSeq *g,
                             const uint16_t *const *table,
                             uint32_t rng, AosGuardXform xform,
                             uint16_t *out);
+
+/* sub_08066308: the param0-27 +0x18-variant +0x14 text picker.
+ * It clears entity +0x14, then walks the sub_0805B864 /
+ * sub_08012078 / sub_080120AC (read-and-set) / sub_08012048
+ * flag chain — flag 0x36 under 5B864 (clear -> 0x43), the
+ * 0x3B + gEwramData+0x132AE..0x132B0 triplet (-> 0x45 plus a
+ * programmed +0x138F4 sequence), flag 0x26 with the 0x35
+ * consume and RNG&1 pick (0x30/0x31), flag 0x2E with 0x34/0x37
+ * (0x2F/0x53), flag 0x21 with 0x37 (0x53) and flag 0x20 with
+ * 0x33 (0x2E). Any branch leaving +0x14 == 0 falls into the
+ * queue pick: +0x14 = 0x45, the +0x138F4 sequence is
+ * reprogrammed (mode 0x45, counter 0, index 4 — or 6 under
+ * sub_0805B864 — fallback RNG%9), a mode 0-6 is selected from
+ * flags 0x21/0x24/0x3C/0x3D and gEwramData + 0x37E, the
+ * +0x1325C+0x18C cursor is reseated when the mode differs
+ * from unk133e8 >> 4, and the cursor walks the 0x38-byte ROM
+ * table at 0x08118C85 (slot = (cursor & 0xF) + mode*8, reset
+ * to mode<<4 when the low nibble reaches 8) writing each byte
+ * to the sequence fallback; flag 0x39 re-picks while the
+ * fallback is 7 and flag 0x3D re-picks while it is 9.
+ *
+ * `ctx` carries the injected engine state: `unk33c` is the
+ * gEwramData +0x60 +0x33C flag bitfield in/out (bit i =
+ * sub_08012078(i); sub_080120AC sets a clear bit, sub_08012048
+ * sets 0x3B), `flags37e` is gEwramData + 0x37E, `unk132ae` the
+ * +0x132AE..+0x132B0 triplet, `unk133e8` the +0x133E8 byte,
+ * `cursor_18c` the +0x1325C + 0x18C cursor in/out,
+ * `cond_5b864` the sub_0805B864 result, `rng_pick` /
+ * `rng_queue` the two RandomNumberGenerator draws (consumed
+ * as &1 on the flag-0x26 path and %9 in the queue block —
+ * mutually exclusive paths, supplied upfront), and
+ * `table_08118c85` the 0x38-byte ROM table. A NULL table
+ * skips the cursor advance and byte picks, leaving the
+ * sequence fallback at the RNG%9 value (documented
+ * degradation — the table is not committed). */
+typedef struct {
+    uint64_t unk33c;        /* +0x60 +0x33C bitfield, in/out */
+    uint16_t flags37e;      /* gEwramData + 0x37E */
+    uint8_t unk132ae[3];    /* gEwramData + 0x132AE..+0x132B0 */
+    uint8_t unk133e8;       /* gEwramData + 0x133E8 */
+    uint8_t cursor_18c;     /* gEwramData + 0x1325C + 0x18C,
+                             * in/out */
+    bool cond_5b864;        /* sub_0805B864() result */
+    uint32_t rng_pick;      /* RNG draw for the &1 pick */
+    uint32_t rng_queue;     /* RNG draw for the %9 fallback */
+    const uint8_t *table_08118c85;  /* 0x38-byte ROM table */
+} AosGuardPickCtx;
+
+/* Writes the picked +0x14 word to *text_id and mutates `seq`
+ * (the gEwramData + 0x138F4 block) and `ctx` (the flag
+ * bitfield and cursor). */
+void aos_npc_talk_66308(AosGuardSeq *seq, AosGuardPickCtx *ctx,
+                        uint16_t *text_id);
+
+/* `flags`: bit0 probe_inside, bit1 +0x16 & 0x42, bit2 +0x4BE == 0,
+ * bit3 sub_0805B864 result. `seq`/`pick` feed the ported text
+ * pickers documented on AosNpcGuard above; `player_x` the
+ * player +0x40. */
+uint32_t aos_npc_talk_66094(AosNpcGuard *g, uint32_t flags,
+                            bool text_done, int32_t player_x,
+                            AosGuardSeq *seq, AosGuardPickCtx *pick);
 
 /* sub_080666d4: repeating NPC dialogue — state 0 clears +0x42C
  * bit 0x200; state 1 gates on probe/+0x16 mask/+0x4BE pause,

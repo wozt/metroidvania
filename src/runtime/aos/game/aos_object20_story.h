@@ -36,6 +36,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "aos_object20_whiteout_render.h"
+
 /* Per-entity state, mirroring the native +0xA/+0xB/+0xC/+0xD
  * state bytes, the +0x13 pick, the +0x14/+0x18 entity links,
  * the +0x1C/+0x20 scroll pair, the +0x40/+0x44/+0x48/+0x4C
@@ -48,6 +50,9 @@ typedef struct {
     uint8_t sub_c;      /* +0xC */
     uint8_t timer_d;    /* +0xD */
     uint8_t field13;    /* +0x13 (param0 24 window pick) */
+    uint8_t field15;    /* +0x15 (param0 30 whiteout: the
+                         * sub_08064518 renderer's sub-state; the
+                         * sub_080628AC case-3 gate waits for 0xA) */
     uint8_t field65;    /* +0x65 (param0 9 text-done helper) */
     uint8_t anim6d;     /* +0x6D */
     uint8_t flags58;    /* +0x58 */
@@ -65,12 +70,24 @@ typedef struct {
     int32_t scr20;      /* +0x20 */
     int16_t scr42;      /* +0x42 screen X */
     int16_t scr46;      /* +0x46 screen Y */
-    /* +0x14 child entity (param0 9/24/29): nonzero = spawned. */
+    /* +0x14 child entity (param0 9/23/31): nonzero = spawned.
+     * scr42/scr46 are the child's +0x42/+0x46 screen pixels and
+     * record the sub_0805B5E8 spawn index — the private
+     * 0x081186DC sprite-table record the child draws with
+     * (5 for param0 9, 1 for param0 23, 0xB for param0 31).
+     * The children's own update vectors are unported, so the
+     * position is the create-time placement: the last reported
+     * child position, not a tracked one. */
     bool child14;
+    int16_t child14_scr42;      /* child +0x42 screen X */
+    int16_t child14_scr46;      /* child +0x46 screen Y */
+    uint8_t child14_record;     /* sub_0805B5E8 index = sprite
+                                 * record (0-11) */
     uint8_t child14_flags58;    /* child +0x58 */
     uint8_t child14_flags59;    /* child +0x59 */
     uint8_t child14_anim5c;     /* child +0x5C */
-    uint8_t child14_anim6d;     /* child +0x6D */
+    uint8_t child14_anim6d;     /* child +0x6D — last
+                                 * sub_0803F2C8 sequence pick */
     /* +0x18 linked follower (param0 9): nonzero = spawned. */
     bool link18;
     uint8_t link18_state_a;     /* link +0xA */
@@ -92,6 +109,11 @@ typedef struct {
         uint8_t flags59;    /* child +0x59 */
         uint8_t anim65;     /* child +0x65 */
     } child29;
+    /* sub_08064518's own entity-byte sub-state (+0x14/+0x15/+0x16/
+     * +0x18/+0x1C..+0x24/+0x2C/+0x34..+0x3C/+0x42/+0x46) — the
+     * ported renderer owns these; field15 above mirrors
+     * wo_render.field_15 for the sub_080628AC case-3 gate. */
+    AosWoRender wo_render;
     bool deleted;       /* EntityDelete requested */
 } AosObject20Story;
 
@@ -138,15 +160,35 @@ typedef struct {
      * sub_0806E0D0 result — nonzero low byte keeps the entity
      * (+0x5C = 0x11), zero deletes it. */
     int32_t ret_6e0d0;
-    /* param0 30 update probes: sub_080628AC's return (nonzero
-     * completes the whiteout hand-off), sub_0803D06C's return
+    /* param0 30 update probes: sub_0803D06C's return
      * (nonzero skips the gated block), sub_080009E4's return for
      * the +0x18 scroll word and the two RandomNumberGenerator
-     * draws feeding the sub_08045B44 particle position. */
-    int ret_628ac;
+     * draws feeding the sub_08045B44 particle position. The
+     * sub_080628AC whiteout itself is ported
+     * (aos_object20_whiteout_update); its external reads are the
+     * gEwramData +4/+6 halfwords (EwramData.unk_4/unk_6, the
+     * shared cinematic counters its cases ramp and its tail
+     * increments), written back through out->wo_unk4/wo_unk6, and
+     * the sub_08064518 renderer inputs below. */
     int ret_3d06c;
     int32_t ret_9e4;
     uint32_t rng_p1, rng_p2;
+    uint16_t ewram_unk4;    /* gEwramData + 4 u16 — whiteout ramp */
+    uint16_t ewram_unk6;    /* gEwramData + 6 u16 — tail counter */
+    int wo_field15;         /* +0x15 OVERRIDE after sub_08064518 —
+                             * the ported renderer advances
+                             * s->wo_render.field_15 itself; a
+                             * non-negative value here forces
+                             * s->field15 afterwards (test/probe
+                             * escape hatch, -1 = no override) */
+    uint32_t wo_rng;        /* gEwramData + 8 RNG state for
+                             * sub_08064518's jitter — read AND
+                             * written back through
+                             * out->wo_rng */
+    uint8_t wo_7864;        /* gEwramData + 0x7864 — bit 3 picks
+                             * the renderer's affine bank */
+    uint8_t field10;        /* entity +0x10 — copied into the
+                             * renderer's fx spawns */
     /* param0 31 update sub_0806E140 floor probe result (bit 2
      * set skips the +0x44 += +0x4C slide). */
     uint32_t ret_6e140;
@@ -200,8 +242,70 @@ typedef struct {
     bool call_ef6c;         /* sub_0800EF6C — param0 30 create */
     bool call_628ac;        /* sub_080628AC invoked — param0 30
                              * update case 1 (the whiteout
-                             * sequence itself is unported; its
-                             * result arrives via in->ret_628ac) */
+                             * sequence itself, ported as
+                             * aos_object20_whiteout_update) */
+    /* sub_080628AC whiteout engine effects. */
+    bool unk2cb0_zero;      /* gUnk_03002CB0 hword = 0 — case 0 */
+    bool unk2cb0_1e01;      /* gUnk_03002CB0 hword = 0x1E01 — case 1 */
+    bool wo_disp_init;      /* case 0: gDisplayRegisters +8/+0xA/
+                             * +0xC/+0xE/+0x10/+0x12 hwords = 0,
+                             * +0x48 = 0xFF, +0x4A = 0x1000,
+                             * +0x4C = 0x10 */
+    bool wo_disp_stage;     /* case 1: gDisplayRegisters +2 =
+                             * 0x1D09, +4 = 0x5E80 */
+    bool call_3dd14;        /* sub_0803DD14(0x16,1) + (6,2) */
+    bool call_3fd60;        /* sub_0803FD60 */
+    bool call_3fd9c;        /* sub_0803FD9C(0x08119890,0x6000000,0)
+                             * + (0x08119898,0x06008000,0) */
+    bool call_3c918;        /* sub_0803C918(0x08119FDC,0,0x10,0) */
+    bool call_3f8a8;        /* sub_0803F8A8(1,0x0815DE6C,0,0x30) +
+                             * (2,0x0815DDDC,0,0) */
+    bool call_64518;        /* sub_08064518 whiteout renderer —
+                             * ported in aos_object20_whiteout_render;
+                             * its bars/events report through the
+                             * wo_* fields below */
+    int64_t wo_rng;         /* gEwramData + 8 write-back from
+                             * sub_08064518's RNG, -1 none
+                             * (int64 so the full u32 state
+                             * survives) */
+    uint8_t wo_bars_drawn;  /* 0 or AOS_WO_BAR_COUNT BgAffineSet
+                             * records emitted this call */
+    AosWoBar wo_bars[AOS_WO_BAR_COUNT]; /* the per-scanline bar
+                             * records (x/y/bgx/bgy/intensity) —
+                             * no BG2-affine consumer yet, data is
+                             * forwarded for the host */
+    bool wo_palette_copy;   /* sub_0803C7B4 palette copy (state-0
+                             * init of sub_08064518) */
+    bool wo_cycle_6447c;    /* sub_0806447C cycler call — its
+                             * 0x08526924 table is uncommitted */
+    bool wo_purge_547;      /* sub_08000EA8(0x80) entity purge */
+    bool wo_purge_flagged;  /* the +0x63/+0x58 flagged scan */
+    bool wo_burst_63aec;    /* sub_08063AEC particle burst */
+    int16_t wo_burst_x, wo_burst_y;
+    uint8_t wo_spawn_count; /* EntityCreateInRange/scripted spawn
+                             * requests this call (kinds/args in
+                             * the renderer module — the ROM spawn
+                             * tables are uncommitted) */
+    uint8_t wo_particle_count;
+    bool fade_pair_wo;      /* sub_08064518's fade pair fired —
+                             * sub_0803D18C + sub_0803CDF0 with the
+                             * decoded args below */
+    int fade_pair_a3;
+    int fade_pair_s0;
+    int fade_pair_s1;
+    bool call_65800;        /* sub_08065800 0x085268A8 tile pick —
+                             * approximated: reported (the table is
+                             * not committed; sub_0803C918 is
+                             * draw-side) */
+    int wo_disp4c;          /* gDisplayRegisters +0x4C hword —
+                             * case 2 scroll ramp, -1 none */
+    int wo_disp48;          /* gDisplayRegisters +0x48 hword —
+                             * case 2 completion = 0x3F40, -1 none */
+    bool dma_setup_wo;      /* sub_080628AC case 5: 0x040000D4 ->
+                             * 0x0600E800/0x0600F000/0x0600F800,
+                             * 0x85000200 — approximated: one flag */
+    int wo_unk4;            /* gEwramData + 4 write-back, -1 none */
+    int wo_unk6;            /* gEwramData + 6 write-back, -1 none */
     bool call_9e4;          /* sub_080009E4(scroll) invoked */
     bool call_3c7b4;        /* sub_0803C7B4(0x082099FC,5,1,0xE) */
     bool call_11f44;        /* sub_08011F44(0x08522C54,0,0,0) */
@@ -305,6 +409,16 @@ int aos_object20_story_update(AosObject20Story *s,
 void aos_object20_story_child29_update(AosObject20Story *s,
                                        const AosObject20StoryIn *in,
                                        AosObject20StoryOut *out);
+
+/* sub_080628AC: the param0-30 whiteout/fade-to-white cinematic
+ * update30 state 1 calls every frame. Entity +0xB is its case
+ * index (0-6), +0xC/+0xD the arm/frame counters, +0x15 the
+ * sub_08064518 sub-state; the gEwramData +4/+6 counters arrive
+ * through in->ewram_unk4/ewram_unk6 and are written back through
+ * out->wo_unk4/wo_unk6. Returns the native sb (1 from case 6). */
+int aos_object20_whiteout_update(AosObject20Story *s,
+                                 const AosObject20StoryIn *in,
+                                 AosObject20StoryOut *out);
 
 /* sub_080601D4: the param0-9 text-done helper — +0x58 |= 0x40,
  * +0x5C = player +0x5C + 1, +0x65 = 0x12, child/link fixups. */

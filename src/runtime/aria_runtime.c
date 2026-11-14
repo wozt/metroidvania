@@ -160,6 +160,10 @@
  * flame descriptor 0x0820ED60 exports 23 animations, past the enemy
  * AOS_ENEMY_MAX_ANIMS of 64. */
 #define OBJECT_MAX_ANIMS 24
+/* Object20's private sprite records (Enemy/object20_actor_N) export
+ * up to 31 animation sequences (actors 6 and 7 reach anim_30), past
+ * OBJECT_MAX_ANIMS. */
+#define OBJECT20_ACTOR_ANIMS 32
 #define INDEX_SCHEMA "schema\tmetroidvania-sprite-index-v1"
 #define DEFAULT_ROOMS "assets/extracted/aria/rooms/runtime"
 #define DEFAULT_LIBRARY "assets/extracted/aria/sprites/soma/runtime/runtime_index.tsv"
@@ -478,6 +482,8 @@ typedef struct {
     AosObject13 object13;   /* object 0x13: swinging chandelier trigger */
     AosObject14 object14;   /* object 0x14: param0 probe/emitter */
     AosObject20 object20;   /* object 0x20: SPECIAL id 32 dispatcher */
+    int object20_anim;      /* last sub_0803F2C8 sequence pick, -1 none —
+                             * the draw pass's +0x6D approximation */
     AosObject19 object19;   /* object 0x19: rectangular patrol mover */
     AosObject1b object1b;   /* object 0x1B: spin-synced object */
     AosObject15 object15;   /* object 0x15: story cutscene director */
@@ -617,6 +623,7 @@ static bool load_room(const char *path, AriaRoom *room) {
                 goto failure;
             e->spawned = false;
             e->secret_mark = false;
+            e->object20_anim = -1;
             if (e->kind == ARIA_KIND_SPECIAL && e->id == AOS_OBJECT_SAVE_POINT)
                 room->room_flags |= AOS_ROOM_FLAG_SAVE;
             room->entity_count++;
@@ -826,7 +833,7 @@ static void apply_room_overlay(AriaRoom *room) {
         AriaEntity *e = &room->entities[room->entity_count++];
         *e = (AriaEntity){.kind = p->kind, .id = p->id, .x = p->x, .y = p->y,
                           .persistent_index = -1, .param0 = p->param0, .param1 = p->param1,
-                          .flags = p->flags, .spawner = -1};
+                          .flags = p->flags, .spawner = -1, .object20_anim = -1};
         if (e->kind == ARIA_KIND_SPECIAL && e->id == AOS_OBJECT_SAVE_POINT)
             room->room_flags |= AOS_ROOM_FLAG_SAVE;
     }
@@ -980,6 +987,26 @@ static bool room_dialogue_ready;
 static bool room_dialogue_input_lock;
 static AosRoomDialogue room_dialogue;
 static AosRoomDialogueHost room_dialogue_host;
+/* gEwramData +4/+6 whiteout counters for the Object20 param0-30
+ * sub_080628AC sequence (sub_08064518's renderer output, +0x15,
+ * stays -1: the renderer is unported so the sequence parks at its
+ * documented whiteout case — no room record uses param0 30). */
+static uint16_t object20_ewram_unk4;
+static uint16_t object20_ewram_unk6;
+/* gEwramData +8 RNG state + +0x7864 byte for the ported
+ * sub_08064518 whiteout renderer (param0 30). The RNG state
+ * round-trips through the story Out; +0x7864 has no other
+ * consumer and stays 0. */
+static uint32_t object20_wo_rng;
+static uint8_t object20_wo_7864;
+/* sub_0805B5E8 child-spawn probe for the param0-26 companion
+ * (in->npc.spawn_child is a bare function pointer): filled from
+ * the same entity-pool approximation as story.spawn14_ok each
+ * time object20_fill_in runs. */
+static bool object20_spawn_child_pool;
+static bool object20_spawn_child_probe(void) {
+    return object20_spawn_child_pool;
+}
 
 static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **background,
                      AosSoma *soma, int cam_x, int cam_y, const AosProjectDoor *forced) {
@@ -4480,6 +4507,13 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
     in->story.fade_done = true;
     in->story.c328_ok = true;
     in->story.ret_6e0d0 = 1;
+    in->story.ewram_unk4 = object20_ewram_unk4;
+    in->story.ewram_unk6 = object20_ewram_unk6;
+    in->story.wo_field15 = -1;
+    if (!object20_wo_rng) object20_wo_rng = aos_random();
+    in->story.wo_rng = object20_wo_rng;
+    in->story.wo_7864 = object20_wo_7864;
+    in->story.field10 = 0;   /* entity +0x10 unmodelled */
     /* shop probes (param0 19/20). */
     in->shop.input_busy = 0;
     in->shop.probe = soma ? (int16_t)(soma->x >> 16) : 0;
@@ -4507,12 +4541,27 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
             (uint16_t)(psy - esy + 0x20) <= 0x40;
     }
     in->npc.cond_5b864 = object20_flag12078(0x3A);
+    in->npc.flags37e = aria_pickup_state.special;
     in->npc.picked_text = (uint8_t)e->object20.v.guard.text_id;
     in->npc.rng = aos_random();
     in->npc.rng_bit = (uint8_t)(aos_random() & 1);
+    in->npc.rng_pick = aos_random();
+    in->npc.rng_queue = aos_random();
     in->npc.cam_x = (uint16_t)cam_x;
     in->npc.cam_y = (uint16_t)cam_y;
     in->npc.ent_pos40 = (int32_t)e->x << 16;
+    /* param0-26 companion child spawn probe (sub_0805B5E8(3)). */
+    object20_spawn_child_pool = room->entity_count < MAX_ENTITIES;
+    in->npc.spawn_child = object20_spawn_child_probe;
+    /* slots probes (param0 0-2, 11-18). player_w4c is the player
+     * +0x4C fine word — approximated by the fine Y velocity;
+     * ret_roomx by the room-pixel X; probe_68ad4 reuses the same
+     * 0x40-box approximation as npc.probe_inside; s16_4be has no
+     * channel (0). */
+    in->slots.player_w4c = soma ? soma->vy : 0;
+    in->slots.ret_roomx = soma ? (int)((soma->x >> 16) - cam_x) : 0;
+    in->slots.probe_68ad4 = in->npc.probe_inside;
+    in->slots.s16_4be = 0;
 }
 
 /* Forward one update's Out effects. The window triple goes through
@@ -4543,6 +4592,11 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     case AOS_OBJECT20_FAMILY_SHOP:
         req.window_text = out->shop.window_text;
         req.window_poll = out->shop.window_poll;
+        break;
+    case AOS_OBJECT20_FAMILY_SLOTS:
+        req.window_text = out->slots.window_text;
+        req.window_poll = out->slots.window_poll;
+        req.window_close = out->slots.window_close;
         break;
     case AOS_OBJECT20_FAMILY_GUIDE: {
         const AosNpcGuide *g = &e->object20.v.guide;
@@ -4597,10 +4651,26 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
      * the module headers; the shop transaction (sub_0800ED24) is
      * printed because it is gameplay-visible. */
     uint32_t set42c = out->set_42c | out->dirs.set_42c |
-                      out->story.set_42c | out->shop.set_42c;
+                      out->story.set_42c | out->shop.set_42c |
+                      out->slots.set_42c;
     uint32_t clear42c = out->clear_42c | out->dirs.clear_42c |
-                        out->story.clear_42c | out->shop.clear_42c;
+                        out->story.clear_42c | out->shop.clear_42c |
+                        out->slots.clear_42c;
     if (out->story.flags37e_clear1) aria_pickup_state.special &= ~1;
+    if (out->story.wo_unk4 >= 0) object20_ewram_unk4 = (uint16_t)out->story.wo_unk4;
+    if (out->story.wo_unk6 >= 0) object20_ewram_unk6 = (uint16_t)out->story.wo_unk6;
+    if (out->story.wo_rng >= 0) object20_wo_rng = (uint32_t)out->story.wo_rng;
+    if (out->story.wo_bars_drawn || out->story.wo_spawn_count ||
+        out->story.wo_particle_count || out->story.wo_purge_547 ||
+        out->story.wo_burst_63aec)
+        printf("Object20 %d: whiteout render bars=%u spawns=%u "
+               "particles=%u purge=%d/%d burst=%d (%d,%d) "
+               "(affine/spawn consumers unforwarded)\n",
+               e->id, out->story.wo_bars_drawn,
+               out->story.wo_spawn_count, out->story.wo_particle_count,
+               out->story.wo_purge_547, out->story.wo_purge_flagged,
+               out->story.wo_burst_63aec, out->story.wo_burst_x,
+               out->story.wo_burst_y);
     if (set42c || clear42c) {
         aria_pickup_state.global_flags |= set42c;
         aria_pickup_state.global_flags &= ~clear42c;
@@ -4761,6 +4831,26 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         out->shop.release || out->shop.frames_release ||
         out->story.release_arg >= 0 || out->dirs.release_arg >= 0) {
         e->object20.deleted = true;
+    }
+
+    /* The ported variants report each sub_0803F2C8 sequence pick in
+     * their family's Out anim list; the last pick of the call is the
+     * entity's +0x6D animation for the draw pass. The animation
+     * engine itself (sub_0803F17C frame stepping) is not ported, so
+     * e->object20_anim only selects the sequence — frames advance by
+     * wall clock like the sibling SPECIAL objects. The npc_talk
+     * families report no sequence picks and keep the create-time
+     * default. */
+    {
+        int anim = -1;
+        if (out->story.anim_count)
+            anim = out->story.anim_a[out->story.anim_count - 1];
+        if (out->dirs.anim_count)
+            anim = out->dirs.anim_a[out->dirs.anim_count - 1];
+        if (out->shop.anim_a >= 0)
+            anim = out->shop.anim_a;
+        if (anim >= 0)
+            e->object20_anim = anim;
     }
     (void)combat;
 }
@@ -6663,7 +6753,13 @@ static int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * opening-adjacent params cannot double-run. */
             room_dialogue_bind();
             if (!e->spawned) {
-                if (e->x < cam_x - 80 || e->x > cam_x + 320) continue;
+                /* sub_0800F4F8's second loop passes every record
+                 * with unk_7 & 0xF (the exported flags byte) to
+                 * sub_0800F1FC unconditionally at room load —
+                 * e->flags bit 0 bypasses the camera window. */
+                if (!(e->flags & 0xF) &&
+                    (e->x < cam_x - 80 || e->x > cam_x + 320))
+                    continue;
                 e->spawned = true;
                 AosObject20In in;
                 object20_fill_in(room, e, soma, cam_x, cam_y, &in);
@@ -6977,6 +7073,18 @@ static int pickup_art(const AosPickup *pickup) {
     return -1;
 }
 
+/* Object20's private 12-record sprite table at 0x081186DC: records
+ * 0/1/8 are the shared Enemy/opening_actor_* exports, records
+ * 2-7/9-11 are Enemy/object20_actor_N. Same layout as the shared
+ * object art but with OBJECT20_ACTOR_ANIMS sequences. */
+typedef struct {
+    AriaFrame frames[OBJECT20_ACTOR_ANIMS][MAX_FRAMES];
+    uint8_t ticks[OBJECT20_ACTOR_ANIMS][MAX_FRAMES];
+    AosAnimDef defs[OBJECT20_ACTOR_ANIMS];
+    AosAnimSet set;
+    bool loaded;
+} AriaObject20ActorArt;
+
 /* Object sequences of src/assets/aos/objects.c: WoodenDoor/style_N
  * (the door frame under each step of its palette cycle). */
 typedef struct {
@@ -7035,6 +7143,8 @@ typedef struct {
     } damage[AOS_DAMAGE_POPUP_GLYPHS], damage_guard;
     AriaFrame icons[ITEM_ICONS];    /* Icon/i<n>/anim_0 */
     AriaFrame walls[AOS_WALL_ENTRIES]; /* Enemy/wall_<n>/frame_<f>: an entry's frame */
+    AriaObject20ActorArt object20_actors[12]; /* Enemy/object20_actor_N,
+                                               * indexed by native record */
     uint8_t item_icon[3][59];       /* item, weapon, armor record -> icon */
     AosMoneyKind money[AOS_MONEY_KINDS];
     bool money_loaded;
@@ -7686,6 +7796,37 @@ static bool load_objects(const char *path, AriaObjects *objects, SDL_Renderer *r
             objects->opening_actors[actor].set.anims = objects->opening_actors[actor].defs;
             continue;
         }
+        /* Object20's private table records 2-7/9-11
+         * (Enemy/object20_actor_N); records 0/1/8 load above as
+         * opening_actor_*. Indexed by the native record number so
+         * the param0 -> record map stays a plain table lookup. */
+        int actor20, actor20_style;
+        if (sscanf(line, "Enemy/object20_actor_%d/anim_%d\t%d\t%d\t%d\t%d\t%511s",
+                   &actor20, &actor20_style, &frame, &ticks, &ox, &oy,
+                   frame_path) == 7) {
+            if (actor20 < 0 || actor20 >= 12 || actor20_style < 0 ||
+                actor20_style >= OBJECT20_ACTOR_ANIMS ||
+                frame != objects->object20_actors[actor20].defs[actor20_style].count ||
+                frame >= MAX_FRAMES || ticks < 1 || ticks > 255 ||
+                !load_frame(&objects->object20_actors[actor20]
+                                .frames[actor20_style][frame],
+                            frame_path, ox, oy, renderer)) {
+                ok = false;
+                break;
+            }
+            objects->object20_actors[actor20].ticks[actor20_style][frame] =
+                (uint8_t)ticks;
+            objects->object20_actors[actor20].defs[actor20_style].durations =
+                objects->object20_actors[actor20].ticks[actor20_style];
+            objects->object20_actors[actor20].defs[actor20_style].count++;
+            objects->object20_actors[actor20].loaded = true;
+            if (actor20_style + 1 > objects->object20_actors[actor20].set.count)
+                objects->object20_actors[actor20].set.count =
+                    (uint16_t)(actor20_style + 1);
+            objects->object20_actors[actor20].set.anims =
+                objects->object20_actors[actor20].defs;
+            continue;
+        }
         if (sscanf(line, "Enemy/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", enemy_name, &style, &frame,
                    &ticks, &ox, &oy, frame_path) == 7) {
             for (int id = 0; id < ENEMY_KINDS + VARIANT_ARTS + SKILL_ARTS; ++id) {
@@ -7851,6 +7992,11 @@ static void free_objects(AriaObjects *objects) {
             for (int j = 0; j < MAX_FRAMES; ++j)
                 if (objects->special_variants[v].frames[i][j].texture)
                     SDL_DestroyTexture(objects->special_variants[v].frames[i][j].texture);
+    for (int actor = 0; actor < 12; ++actor)
+        for (int i = 0; i < OBJECT20_ACTOR_ANIMS; ++i)
+            for (int j = 0; j < MAX_FRAMES; ++j)
+                if (objects->object20_actors[actor].frames[i][j].texture)
+                    SDL_DestroyTexture(objects->object20_actors[actor].frames[i][j].texture);
     for (int k = 0; k < AOS_EFFECT_KINDS; ++k)
         for (int i = 0; i < MAX_FRAMES; ++i)
             if (objects->effects[k].frames[i].texture)
@@ -8036,6 +8182,234 @@ static void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const Ari
  * update routines, so the first exported animation plays on a loop; ids
  * whose create exports raw still frames as separate animations show
  * animation 0's first frame for now. */
+/* Object20 (SPECIAL id 32) sprite selection. The param0-dispatched
+ * private 12-record table at 0x081186DC (sub_0805B754 /
+ * sub_0805B5E8 record picks) maps onto the exports as: records
+ * 0/1/8 -> Enemy/opening_actor_0/1/8, records 2-7/9-11 ->
+ * Enemy/object20_actor_N. param0 19 (the shopkeeper) has no
+ * dedicated export; its native triple resembles the Julius Belmont
+ * enemy art, the closest loaded match. param0 20/21/22/30 are
+ * invisible natively and param0 3 stays owned by the bespoke
+ * opening path, so neither draws here. */
+static int object20_sprite_record(int param0) {
+    switch (param0) {
+    case 4:
+    case 7:  return 5;
+    case 5:
+    case 8:
+    case 28: return 2;
+    case 6:  return 6;
+    case 9:  return 2;
+    case 10:
+    case 29:
+    case 31: return 7;
+    case 23:
+    case 24:
+    case 27: return 0;
+    case 25:
+    case 26: return 3;
+    default: return -1;
+    }
+}
+
+/* Create-time sub_0803F2C8 sequence per param0, used when no update
+ * reported a pick yet (the npc_talk families never report one).
+ * Sources: create9 (3,0,1), create10 (4,1,1), create19 (1,1,1),
+ * the param0-26 companion pick sub_0803F2C8(1|2,0,1) — the RNG
+ * branch is not persisted, arg 1 approximates — and the param0-28
+ * spawn gate sub_0803F2C8(e,6,0,1); the dirs creates all open on
+ * sequence 0. */
+static int object20_anim_default(int param0) {
+    switch (param0) {
+    case 9:  return 3;
+    case 10: return 4;
+    case 19: return 1;
+    case 26: return 1;
+    case 28: return 6;
+    default: return 0;
+    }
+}
+
+/* Resolve the private 0x081186DC table art for a raw record
+ * index (0-11): records 0/1/8 share the opening_actor exports,
+ * 2-7/9-11 are Enemy/object20_actor_N. The +0x14/+0x18 child
+ * sprites spawned through sub_0805B5E8(idx) use the index
+ * directly as the record — unlike the parent, which maps
+ * param0 through object20_sprite_record. */
+static bool object20_record_art(const AriaObjects *objects, int record,
+                                const AriaFrame (**frames)[MAX_FRAMES],
+                                const uint8_t (**ticks)[MAX_FRAMES],
+                                const AosAnimDef **defs, int *anims) {
+    if (record == 0 || record == 1 || record == 8) {
+        const __typeof__(objects->opening_actors[0]) *art =
+            &objects->opening_actors[record == 8 ? 2 : record];
+        if (!art->loaded) return false;
+        *frames = art->frames;
+        *ticks = art->ticks;
+        *defs = art->defs;
+        *anims = OBJECT_MAX_ANIMS;
+        return true;
+    }
+    if (record < 2 || record > 11) return false;
+    const AriaObject20ActorArt *art = &objects->object20_actors[record];
+    if (!art->loaded) return false;
+    *frames = art->frames;
+    *ticks = art->ticks;
+    *defs = art->defs;
+    *anims = OBJECT20_ACTOR_ANIMS;
+    return true;
+}
+
+/* The shared (step / 4) % total frame pick used by every
+ * Object20 sprite draw (sub_0803F17C frame stepping is not
+ * ported). */
+static const AriaFrame *object20_anim_frame(
+        const AriaFrame (*frames)[MAX_FRAMES],
+        const uint8_t (*ticks)[MAX_FRAMES], const AosAnimDef *defs,
+        int anim, unsigned step) {
+    unsigned total = 0;
+    for (unsigned f = 0; f < defs[anim].count; ++f)
+        total += ticks[anim][f];
+    if (!total) return NULL;
+    unsigned t = (step / 4) % total, index = 0;
+    while (index + 1 < defs[anim].count && t >= ticks[anim][index])
+        t -= ticks[anim][index++];
+    return &frames[anim][index];
+}
+
+/* Draw one Object20 child sprite at its persisted +0x42/+0x46
+ * screen-pixel position (no camera subtraction — the native
+ * child words are already screen-relative). `flip` is the
+ * child's +0x58 bit-6 facing. */
+static void draw_object20_child(SDL_Renderer *renderer,
+                                const AriaObjects *objects, int record,
+                                int anim, int scr_x, int scr_y,
+                                bool flip, unsigned step) {
+    const AriaFrame (*frames)[MAX_FRAMES];
+    const uint8_t (*ticks)[MAX_FRAMES];
+    const AosAnimDef *defs;
+    int anims;
+    if (!object20_record_art(objects, record, &frames, &ticks, &defs,
+                             &anims))
+        return;
+    if (anim < 0 || anim >= anims || !defs[anim].count)
+        anim = 0;
+    if (anim < 0 || anim >= anims || !defs[anim].count) return;
+    const AriaFrame *frame = object20_anim_frame(frames, ticks, defs,
+                                                 anim, step);
+    if (!frame || !frame->texture) return;
+    SDL_FRect rect = {(float)(scr_x + frame->offset_x),
+                      (float)(scr_y + frame->offset_y),
+                      frame->w, frame->h};
+    SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0,
+                             NULL, flip ? SDL_FLIP_HORIZONTAL
+                                        : SDL_FLIP_NONE);
+}
+
+static void draw_object20_entity(SDL_Renderer *renderer,
+                                 const AriaObjects *objects,
+                                 const AriaEntity *e, int cam_x, int cam_y,
+                                 unsigned step) {
+    /* Child sprites draw under the parent (native entity order is
+     * unverified): the story family's +0x14 child14 and +0x18
+     * link18 (param0 9/23/31) and the param0-26 companion's +0x18
+     * child18. Positions/anims are the last values the ported
+     * variants persisted — see the variant headers for which are
+     * create-time approximations (the children's own update
+     * vectors are unported). */
+    switch (e->object20.family) {
+    case AOS_OBJECT20_FAMILY_STORY: {
+        const AosObject20Story *s = &e->object20.v.story;
+        if (s->child14)
+            draw_object20_child(renderer, objects, s->child14_record,
+                                s->child14_anim6d, s->child14_scr42,
+                                s->child14_scr46,
+                                (s->child14_flags58 & 0x40) != 0, step);
+        if (s->link18)
+            /* The +0x18 follower's sub_0805B5E8 spawn index is
+             * always record 1 (param0 9 only). */
+            draw_object20_child(renderer, objects, 1, s->link18_anim6d,
+                                s->link18_scr42, s->link18_scr46,
+                                (s->link18_flags58 & 0x40) != 0, step);
+        break;
+    }
+    case AOS_OBJECT20_FAMILY_LOOP: {
+        const AosNpcLoop *g = &e->object20.v.npc_loop;
+        if (g->child18)
+            /* sub_0805B5E8(3) -> record 3; the child's own +0x58
+             * is not persisted — the parent's facing byte is the
+             * approximation. */
+            draw_object20_child(renderer, objects, 3, g->child18_anim,
+                                g->child18_scr42, g->child18_scr46,
+                                (g->flags58 & 0x40) != 0, step);
+        break;
+    }
+    default:
+        break;
+    }
+    const AriaFrame (*frames)[MAX_FRAMES] = NULL;
+    const uint8_t (*ticks)[MAX_FRAMES] = NULL;
+    const AosAnimDef *defs = NULL;
+    int anims = 0;
+    if (e->param0 == 19) {
+        const __typeof__(objects->enemies[0]) *art =
+            &objects->enemies[AOS_ENEMY_BELMONT];
+        if (!art->loaded) return;
+        frames = art->frames;
+        ticks = art->ticks;
+        defs = art->defs;
+        anims = AOS_ENEMY_MAX_ANIMS;
+    } else {
+        int record = object20_sprite_record(e->param0);
+        if (record < 0) return;
+        if (record == 0 || record == 1 || record == 8) {
+            const __typeof__(objects->opening_actors[0]) *art =
+                &objects->opening_actors[record == 8 ? 2 : record];
+            if (!art->loaded) return;
+            frames = art->frames;
+            ticks = art->ticks;
+            defs = art->defs;
+            anims = OBJECT_MAX_ANIMS;
+        } else {
+            const AriaObject20ActorArt *art =
+                &objects->object20_actors[record];
+            if (!art->loaded) return;
+            frames = art->frames;
+            ticks = art->ticks;
+            defs = art->defs;
+            anims = OBJECT20_ACTOR_ANIMS;
+        }
+    }
+    int anim = e->object20_anim;
+    if (anim < 0 || anim >= anims || !defs[anim].count)
+        anim = object20_anim_default(e->param0);
+    if (anim < 0 || anim >= anims || !defs[anim].count) return;
+    const AriaFrame *frame = object20_anim_frame(frames, ticks, defs,
+                                                 anim, step);
+    if (!frame || !frame->texture) return;
+    /* +0x58 bit 6 is the native facing byte the npc creates mirror
+     * from the player compare; flip like the emitted opening
+     * entities do. dirs/story keep their copy inside the variant
+     * state, the other families report it on the flat field. */
+    uint8_t f58 = e->object20.flags58;
+    switch (e->object20.family) {
+    case AOS_OBJECT20_FAMILY_DIRS:
+        f58 = e->object20.v.dirs.flags58;
+        break;
+    case AOS_OBJECT20_FAMILY_STORY:
+        f58 = e->object20.v.story.flags58;
+        break;
+    default:
+        break;
+    }
+    SDL_FRect rect = {(float)(e->x + frame->offset_x - cam_x),
+                      (float)(e->y + frame->offset_y - cam_y),
+                      frame->w, frame->h};
+    SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL,
+                             (f58 & 0x40) ? SDL_FLIP_HORIZONTAL
+                                         : SDL_FLIP_NONE);
+}
+
 static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                                  const AriaObjects *objects, int cam_x, int cam_y,
                                  unsigned step) {
@@ -8050,6 +8424,17 @@ static void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (e->id == 19 && e->object13.deleted) continue;
         if (e->id == 47 && e->object2f.deleted) continue;
         if (e->id == 36 && e->object24.hidden) continue;
+        if (e->id == 32) {
+            /* Object20: the param0-selected record of its private
+             * sprite table (records 0/1/8 share the opening_actor
+             * exports) plus the child sprites the ported variants
+             * persist — story child14/link18 and the param0-26
+             * companion child18 (see draw_object20_entity). */
+            if (!e->object20.deleted)
+                draw_object20_entity(renderer, objects, e, cam_x, cam_y,
+                                     step);
+            continue;
+        }
         if (e->id == 1) {
             /* Object01's children are the sprites: draw the exported
              * still at each record coordinate (room pixels). */

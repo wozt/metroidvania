@@ -56,8 +56,9 @@ static unsigned facing_bit6(uint8_t flags58) {
  * ------------------------------------------------------------------ */
 static void create4(AosObject20Dirs *s, const AosObject20DirsIn *in,
                     AosObject20DirsOut *out) {
-    /* _0805F142: flag12078(0x21) set OR player +0x42 <= 0x80. */
-    if (in->flag12078_21 != 0 || in->player_scr42 <= 0x80) {
+    /* _0805F13C: flag12078(0x21) set OR player +0x42 > 0x80
+     * (cmp #0x80, ble survives). */
+    if (in->flag12078_21 != 0 || in->player_scr42 > 0x80) {
         s->flags59 |= 0x8;
         return;
     }

@@ -22,6 +22,11 @@ static void out_reset(AosObject20StoryOut *out) {
     out->call_3d3a0 = -1;
     out->f6c = -1;
     out->release_arg = -1;
+    out->wo_disp4c = -1;
+    out->wo_disp48 = -1;
+    out->wo_unk4 = -1;
+    out->wo_unk6 = -1;
+    out->wo_rng = -1;
     for (unsigned i = 0; i < 4; ++i) {
         out->anim_a[i] = -1;
         out->child_anim_a[i] = -1;
@@ -99,6 +104,15 @@ static void create9(AosObject20Story *s, const AosObject20StoryIn *in,
     s->child14_flags58 = facing_invert(s->flags58);
     s->child14_anim5c = (uint8_t)(s->anim5c + 1);
     s->child14_flags59 |= 0x10;
+    /* Persist the child's screen placement and sprite record for
+     * the draw pass: child +0x42 = own +0x42 + 0x13,
+     * child +0x46 = own +0x46 (documented above); the sub_0805B5E8
+     * index 5 is the private-table record. child +0x6D = 5 from
+     * the sub_0803F2C8(child,5,0,0) pick. */
+    s->child14_scr42 = (int16_t)(s->scr42 + 0x13);
+    s->child14_scr46 = s->scr46;
+    s->child14_record = 5;
+    s->child14_anim6d = 5;
     out->call_3e654 = true;                 /* sub_0803E654(1) */
     if (in->rng_3e654 < 0) {
         s->deleted = true;
@@ -129,6 +143,9 @@ static void create9(AosObject20Story *s, const AosObject20StoryIn *in,
     s->link18_scr46 = s->scr46;
     s->link18_vel48 = (int32_t)0xFFFFA000;
     s->link18_flags58 &= ~0x41u;
+    s->link18_anim6d = 0;           /* F2C8(link,0,0,1) pick;
+                                     * the +0x18 spawn index is
+                                     * always record 1. */
     out->set_42c |= 1;
 }
 
@@ -177,6 +194,7 @@ static int update9(AosObject20Story *s, const AosObject20StoryIn *in,
                 if (s->sub_c == 1) {
                     if (s->child14) {
                         child_anim3(out, 6, 0, 0);   /* child,6,0,0 */
+                        s->child14_anim6d = 6;  /* child +0x6D */
                         /* child +0x58 = facing_invert(child +0x58). */
                         s->child14_flags58 =
                             facing_invert(s->child14_flags58);
@@ -190,6 +208,7 @@ static int update9(AosObject20Story *s, const AosObject20StoryIn *in,
                             /* approximated: sub_0803F2C8(child,7,0,1)
                              * targets the +0x14 entity. */
                             child_anim3(out, 7, 0, 1);
+                            s->child14_anim6d = 7;
                         }
                         s->sub_c = 3;
                         s->timer_d = 8;
@@ -343,6 +362,7 @@ static int update9(AosObject20Story *s, const AosObject20StoryIn *in,
                     /* approximated: sub_0803F2C8(link,1,0,1)
                      * targets the +0x18 entity. */
                     child_anim3(out, 1, 0, 1);
+                    s->link18_anim6d = 1;
                 }
                 s->link18_state_a = 0;
             } else {
@@ -388,6 +408,7 @@ void aos_object20_story_601d4(AosObject20Story *s,
         s->link18_pos40 = s->pos40 + 0x600000;
         child_anim3(out, 1, 0, 1);          /* approximated:
             sub_0803F2C8(link,1,0,1) targets +0x18. */
+        s->link18_anim6d = 1;
     }
     s->flags58 |= 0x40;
 }
@@ -860,8 +881,14 @@ static void create23(AosObject20Story *s, const AosObject20StoryIn *in,
     }
     /* child +0x42 = own +0x42 + 0x60; child +0x46 = own +0x46 + 1;
      * child +0x58 &= ~0x41; F2C8(child,1,0,1) — approximated:
-     * the child record writes stay engine-side. */
+     * the child record writes stay engine-side. The screen
+     * placement and the sub_0805B5E8(1) record are persisted
+     * for the draw pass. */
     child_anim3(out, 1, 0, 1);
+    s->child14_scr42 = (int16_t)(s->scr42 + 0x60);
+    s->child14_scr46 = (int16_t)(s->scr46 + 1);
+    s->child14_record = 1;
+    s->child14_anim6d = 1;
     out->set_42c |= 1;
     out->dma_setup = true;
     out->fade_3d18c = true;                 /* 3D18C/3CDF0(0x1F..,0) */
@@ -986,8 +1013,14 @@ static void create31(AosObject20Story *s, const AosObject20StoryIn *in,
      * F2C8(child,0,0,1); sub_0803F17C(parent — the ROM passes r7,
      * the parent entity); child +0 = sub_0805C39C. approximated:
      * the child screen placement and update-vector install stay
-     * engine-side; child29 state is initialized below. */
+     * engine-side; child29 state is initialized below. The
+     * placement and the sub_0805B5E8(0xB) record are persisted
+     * on the shared child14 fields for the draw pass. */
     child_anim3(out, 0, 0, 1);
+    s->child14_scr42 = (int16_t)(0x78 - in->a094_6);
+    s->child14_scr46 = (int16_t)(0xB0 - in->a094_a);
+    s->child14_record = 0xB;
+    s->child14_anim6d = 0;
     out->anim_step_count++;
     memset(&s->child29, 0, sizeof s->child29);
     s->child29.state = 0;
@@ -1230,6 +1263,197 @@ static void create30(AosObject20Story *s, const AosObject20StoryIn *in,
 }
 
 /* ------------------------------------------------------------------
+ * sub_080628AC — the param0-30 whiteout/fade-to-white cinematic,
+ * called every frame by update30 state 1 (_0805B958). Its state
+ * lives on the entity: +0xB is the case index (0-6, values above
+ * 6 fall to the tail), +0xC/+0xD the arm/frame counters shared
+ * with update30, +0x15 the sub_08064518 sub-state the case-3 gate
+ * waits for (== 0xA). The gEwramData +4/+6 halfwords
+ * (EwramData.unk_4/unk_6) are the shared cinematic counters:
+ * case 0 holds both at 0 every call, cases 2-5 ramp +4 and the
+ * _08062B40 tail increments +6 unconditionally. Returns sb: 1
+ * only from case 6.
+ *
+ * sub_08064518 (the ~1500-line whiteout-bar renderer — BgAffineSet
+ * loops, PlaySong, palette DMA, its own +0x14/+0x15/+0x16/+0x18/
+ * +0x1C..+0x24/+0x2C/+0x36/+0x3C sub-state machine) and
+ * sub_08065800 (the 0x085268A8 tile pick through sub_0803C918,
+ * already modelled as aos_seq_table_pick in aos_seq_particles —
+ * the table itself is not committed) are engine-side: reported
+ * through Out. The only effect the whiteout state machine reads
+ * from 64518 is the +0x15 byte, injected per call through
+ * in->wo_field15. sub_0806E0D0 is not on this path (it is the
+ * param0-19 sprite-variant loader, already injected as
+ * in->ret_6e0d0).
+ * ------------------------------------------------------------------ */
+static void whiteout_64518(AosObject20Story *s,
+                           const AosObject20StoryIn *in,
+                           AosObject20StoryOut *out) {
+    out->call_64518 = true;
+    out->call_65800 = true;     /* sub_08065800 follows every call */
+    /* sub_08064518 ported in aos_object20_whiteout_render: the
+     * +0x15 sub-state machine, RNG jitter, bar geometry, fades,
+     * spawns and purges. s->wo_render carries the entity bytes
+     * (+0x14/+0x15/+0x16/+0x18/+0x1C..+0x24/+0x2C/+0x34..+0x3C/
+     * +0x42/+0x46); +0xD stays shared with sub_080628AC exactly
+     * like the native byte. s->field15 mirrors field_15 for the
+     * case-3 gate; in->wo_field15 remains a post-call override. */
+    AosWoRenderIn win;
+    memset(&win, 0, sizeof win);
+    win.rng = in->wo_rng;
+    win.ewram_7864 = in->wo_7864;
+    win.field10 = in->field10;
+    AosWoRenderOut wout;
+    aos_wo_render_update(&s->wo_render, &win, &wout);
+    s->field15 = s->wo_render.field_15;
+    if (in->wo_field15 >= 0)
+        s->field15 = (uint8_t)in->wo_field15;
+    /* Forward the renderer's reports: the RNG state round-trips,
+     * PlaySong lands on the shared song channel, and the bar
+     * records/events are exposed for the host (no BG2-affine or
+     * spawn-table consumer exists yet — documented gap). */
+    out->wo_rng = (int64_t)(uint32_t)wout.rng;
+    out->wo_bars_drawn = wout.bars_drawn;
+    if (wout.bars_drawn)
+        memcpy(out->wo_bars, wout.bars, sizeof out->wo_bars);
+    out->wo_palette_copy = wout.palette_copy;
+    out->wo_cycle_6447c = wout.cycle_6447c;
+    out->wo_purge_547 = wout.purge_547;
+    out->wo_purge_flagged = wout.purge_flagged;
+    out->wo_burst_63aec = wout.burst_63aec;
+    out->wo_burst_x = wout.burst_x;
+    out->wo_burst_y = wout.burst_y;
+    out->wo_spawn_count = wout.spawn_count;
+    out->wo_particle_count = wout.particle_count;
+    if (wout.song >= 0)
+        out->song = wout.song;
+    if (wout.fade_pair) {
+        out->fade_pair_wo = true;
+        out->fade_pair_a3 = (int)wout.fade_a3;
+        out->fade_pair_s0 = (int)wout.fade_s0;
+        out->fade_pair_s1 = (int)wout.fade_s1;
+    }
+}
+
+int aos_object20_whiteout_update(AosObject20Story *s,
+                                 const AosObject20StoryIn *in,
+                                 AosObject20StoryOut *out) {
+    out->call_628ac = true;
+    int result = 0;
+    uint16_t unk4 = in->ewram_unk4;
+    uint16_t unk6 = in->ewram_unk6;
+    bool unk4_written = false;
+    switch (s->sub_b) {
+    case 0: /* _080628F0: display init, then the +0xD wrap arm. */
+        if (s->sub_c == 0) {
+            s->timer_d = 4;
+            s->sub_c = 1;
+        }
+        out->unk2cb0_zero = true;    /* gUnk_03002CB0 hword = 0 */
+        out->wo_disp_init = true;    /* gDisplayRegisters +8/+0xA/
+                                      * +0xC/+0xE/+0x10/+0x12 = 0,
+                                      * +0x48 = 0xFF, +0x4A = 0x1000,
+                                      * +0x4C = 0x10 */
+        unk4 = 0;
+        unk6 = 0;
+        unk4_written = true;
+        s->timer_d = (uint8_t)(s->timer_d - 1);
+        if (s->timer_d == 0xFF) {
+            out->fade_out = true;    /* sub_0803D270 + sub_0803CED4 */
+            s->sub_b = 1;
+        }
+        break;
+    case 1: /* _0806295C: one-time layer/palette setup. */
+        out->unk2cb0_1e01 = true;   /* gUnk_03002CB0 = 0x1E01 */
+        out->wo_disp_stage = true;  /* disp +2 = 0x1D09, +4 = 0x5E80 */
+        out->call_3dd14 = true;     /* sub_0803DD14(0x16,1) + (6,2) */
+        out->call_3fd60 = true;
+        out->call_3fd9c = true;     /* (0x08119890,0x6000000,0) +
+                                     * (0x08119898,0x06008000,0) */
+        out->call_3c918 = true;     /* (0x08119FDC,0,0x10,0) */
+        out->call_3f8a8 = true;     /* (1,0x0815DE6C,0,0x30) +
+                                     * (2,0x0815DDDC,0,0) */
+        s->sub_b = 2;
+        break;
+    case 2: /* _080629E8: the +4 scroll ramp; display +0x4C mirrors
+             * 0x10 - (unk_4 >> 1) and the ramp ends when that
+             * halfword reads 0. */
+        whiteout_64518(s, in, out);
+        {
+            uint32_t v = 0x10u - (uint32_t)(unk4 >> 1);
+            out->wo_disp4c = (int16_t)v;    /* strh — low halfword */
+            if ((uint16_t)v == 0) {
+                out->wo_disp48 = (int16_t)(0xFDu << 6); /* 0x3F40 */
+                unk4 = 0;
+                unk4_written = true;
+                s->sub_b = 3;
+            } else if ((s->timer_d & 7) == 0) {
+                unk4 = (uint16_t)(unk4 + 1);
+                unk4_written = true;
+            }
+        }
+        s->timer_d++;
+        break;
+    case 3: /* _08062A40: gated on +0x15 == 0xA, then the +4 ramp
+             * to 0x33. */
+        whiteout_64518(s, in, out);
+        if (s->field15 == 0xA) {
+            uint16_t old = unk4;
+            unk4 = (uint16_t)(unk4 + 1);
+            unk4_written = true;
+            if (old > 0x32) {
+                unk4 = 0;
+                s->sub_b = 4;
+            }
+        }
+        break;
+    case 4: /* _08062A70: the +4 ramp to 0x81 ends in the fade
+             * pair and the (0x1F,0x1F,0x1F,0x10000) fades. */
+        whiteout_64518(s, in, out);
+        {
+            uint16_t old = unk4;
+            unk4 = (uint16_t)(unk4 + 1);
+            unk4_written = true;
+            if (old > 0x80) {
+                out->fade_out = true;        /* 3D270 + 3CED4 */
+                out->fade_3d18c = true;      /* args 0x1F,0x1F,0x1F,
+                                               * 0x80 << 9 */
+                out->fade_3cdf0 = true;
+                unk4 = 0;
+                s->sub_b = 5;
+            }
+        }
+        break;
+    case 5: /* _08062AD0: the +4 ramp to 0x41 ends in the
+             * 0x040000D4 register chain. */
+        whiteout_64518(s, in, out);
+        {
+            uint16_t old = unk4;
+            unk4 = (uint16_t)(unk4 + 1);
+            unk4_written = true;
+            if (old > 0x40) {
+                out->dma_setup_wo = true;   /* -> 0x0600E800,
+                    * 0x0600F000, 0x0600F800, 0x85000200 */
+                s->sub_b = 6;
+            }
+        }
+        break;
+    case 6: /* _08062B3C */
+        result = 1;
+        break;
+    default:
+        break;                 /* +0xB > 6: tail only, sb stays 0 */
+    }
+    /* _08062B40 tail: the EwramData +6 halfword increments on
+     * every call, whatever the case did. */
+    unk6 = (uint16_t)(unk6 + 1);
+    out->wo_unk6 = (int)unk6;
+    if (unk4_written)
+        out->wo_unk4 = (int)unk4;
+    return result;
+}
+
+/* ------------------------------------------------------------------
  * param0 30 — update sub_0805B8F4 (native update[30]).
  * +0xA states 0-4 drive the arena-entry cinematic; every call
  * runs the shared tail (_0805BBB6): a freshly-read +0xA <= 1
@@ -1263,12 +1487,11 @@ static int update30(AosObject20Story *s, const AosObject20StoryIn *in,
             break;
         case 1:
             /* _0805B958: +0xC arms once, then sub_080628AC (the
-             * whiteout sequence — unported, its return is
-             * injected) gates the completion block. */
+             * whiteout sequence, ported above) gates the
+             * completion block on its case-6 result. */
             if (s->sub_c == 0)
                 s->sub_c = 1;
-            out->call_628ac = true;
-            if (in->ret_628ac != 0) {
+            if (aos_object20_whiteout_update(s, in, out) != 0) {
                 s->field18 = 0;             /* +0x18 hword = 0 */
                 out->player58_andnot_21 = true; /* &= ~0x21 */
                 out->cf0 = 0x20;            /* sub_08013CF0(0x20) */

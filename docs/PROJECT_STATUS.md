@@ -1,3 +1,246 @@
+## Patch 1129 - Object20 table complete: update15, whiteout renderer, spawn/child fixes
+
+- `src/runtime/aos/game/aos_object20_slots.c` now ports the last
+  unported table routine, update[15] `sub_08060F98` (~340 lines,
+  all 12 +0xB cases, the 0x80 exit sequence and the rsbs-mask
+  semantics). Every Object20 create/update table entry
+  (param0 0-31) is now ported; `unported` only fires for
+  out-of-table param0.
+- `src/runtime/aos/game/aos_object20_whiteout_render.c/.h` ports
+  `sub_08064518`, the ~1500-line whiteout bar renderer behind the
+  param0-30 cinematic: the +0x15 sub-state machine (0->2->3->5/4
+  ->7->8->9->0xA), the 160-record BgAffineSet bar geometry, RNG
+  jitter, fades, spawns and entity purges. `whiteout_64518` in
+  `aos_object20_story.c` drives it through `s->wo_render`; the
+  +0x15 case-3 gate now advances natively instead of relying on
+  the injected `wo_field15` probe (kept as an override).
+  `ewram_unk4/6`, the RNG state (`wo_rng`) and `wo_7864` round-trip
+  through `AosObject20StoryIn/Out` and runtime statics; the bar
+  records and spawn/particle events are forwarded in the Out for
+  the host but have no BG2-affine/spawn-table consumer yet.
+- `src/runtime/aos/game/aos_object20_dirs.c` create4
+  (`sub_0805F120`) player-position gate fixed: the ROM deletes on
+  player +0x42 > 0x80 (`cmp #0x80, ble` survives); the port had
+  the comparison inverted. Tests updated.
+- `src/runtime/aria_runtime.c` implements the native
+  unconditional-spawn path for Object20 records: `e->flags & 0xF`
+  (sub_0800F4F8's second loop) bypasses the camera window, so
+  flags=1 records create at room load. The four previously
+  zero-spawn rooms now match native: area_00_room_026 (param0 4)
+  and area_08_room_001 (param0 10, still soul-gated) and
+  area_05_room_006 (param0 21 dead record) spawn; area_03_room_014
+  (param0 6, flags=0) keeps the faithful camera gate and spawns on
+  a leftward walk.
+- Object20 child sprites draw: `child14`/`link18` (param0 9/23),
+  companion `child18` (param0 26, spawn probe now wired) and
+  `child29` (param0 31) persist screen positions/records in the
+  ported state and render through `draw_object20_child`.
+
+## Patch 1128 - Object20 npc_talk: guard text pickers and companion child
+
+- `src/runtime/aos/game/aos_npc_talk.c/.h` now ports the
+  param0-27 +0x14 pickers that fed the caller-supplied
+  `picked_text` approximation. `aos_npc_talk_66308` is a faithful
+  port of sub_08066308: the sub_0805B864 / sub_08012078 /
+  sub_080120AC (read-and-set) / sub_08012048 flag chain
+  (0x36/0x43, the 0x3B + gEwramData+0x132AE..0x132B0 triplet ->
+  0x45, flag 0x26 with the 0x35 consume and RNG&1 -> 0x30/0x31,
+  flag 0x2E with 0x34/0x37 -> 0x2F/0x53, flag 0x21 with 0x37 ->
+  0x53, flag 0x20 with 0x33 -> 0x2E) and the queue block that
+  programs the +0x138F4 sequence (mode 0x45, index 4/6,
+  fallback RNG%9), selects queue mode 0-6 from flags
+  0x21/0x24/0x3C/0x3D and gEwramData+0x37E, reseats the
+  +0x1325C+0x18C cursor on mode change vs unk133e8>>4 and walks
+  the 0x38-byte ROM table at 0x08118C85 with the flag-0x39/0x3D
+  repick loops on fallback 7/9. The new `AosGuardPickCtx` injects
+  the unk_33C bitfield in/out, +0x37E, the +0x132AE triplet,
+  +0x133E8, the cursor, both RNG draws, the sub_0805B864 result
+  and the table pointer; a NULL table keeps the RNG%9 fallback
+  (documented degradation — the table is not committed).
+  `aos_npc_talk_66094` lost the `picked_text` parameter
+  (signature is now `(AosNpcGuard *, uint32_t flags, bool
+  text_done, int32_t player_x, AosGuardSeq *, AosGuardPickCtx *)`)
+  and runs the real pickers: sub_08066308 for the +0x18 variant,
+  else sub_0806666C + 0x44 under sub_0805B864 or the already
+  ported sub_0806668C (text 0x36). Wiring the parent must do:
+  keep one persistent `AosGuardPickCtx` (the unk_33C bitfield
+  and cursor are global native state — OR `in->npc.flag12078`
+  into `ctx.unk33c` each call so sub_080120AC/12048 writes
+  persist), supply `flags37e` = `aria_pickup_state.special`,
+  `cond_5b864` = flag 0x3A, fresh `rng_pick`/`rng_queue` draws,
+  `unk132ae`/`unk133e8` (no runtime channel yet — 0), and the
+  0x08118C85 table bytes; pass `&o->guard_seq` as `seq` and drop
+  the `in->npc.picked_text` feed in `object20_fill_in` /
+  `update_npc` (aos_object20.c/.h and aria_runtime.c untouched
+  here — the call site needs the new arguments).
+- GAP 2: `AosNpcLoop` gained the param0-26 companion's +0x18
+  child state (`child18`, `child18_scr42/46`, `child18_anim5c`)
+  following the story module's child14/link18 convention.
+  `aos_npc_talk_65cd8_commit` transfers the sub_08065CD8 spawn
+  result into those fields and `aos_npc_talk_65c2c_child` runs
+  the child's sub_08065C2C sidestep update (already ported as
+  `aos_npc_talk_65c2c`) on the child's +0x42 while it exists.
+  The parent wires `aos_npc_talk_65cd8_commit(&c, &o->v.npc_loop)`
+  after the create26 call and invokes `aos_npc_talk_65c2c_child`
+  per frame with `aria_pickup_state.special` as `flags_37e`.
+- Tests: `tests/test_aos_npc_talk.c` covers every 66308 flag
+  branch, all queue-mode selections, cursor reseat/wrap and both
+  repick loops, the NULL-table degradation, the 66094 picker
+  wiring (6668C -> 0x36, 6666C -> 0x44, 66308 -> 0x45) and the
+  child commit/update.
+
+## Patch 1127 - Object20 slot-table routines ported (param0 0/1/2/11-18)
+
+- New module `src/runtime/aos/game/aos_object20_slots.c/.h`
+  ports the remaining unported entries of the dumped
+  0x08526658 (create) / 0x085266D8 (update) tables, following
+  the aos_object20_story convention of folding the shared
+  Object20Create gates/tail and Object20Update prologue/tail
+  into the entry points. Native sources:
+  `third_party/cvaos/asm/code/code_08050A3C.s` (sub_0805BCB4,
+  sub_0805BE64, sub_0805BF24, sub_0805BF48, sub_0805CB6C,
+  sub_0805CB70) and `code_08060B98.s` (sub_08060B98 through
+  sub_08061994).
+- Ported creates: param0 0 sub_0805BF24 (+0x42C |= 1, window
+  0xC), param0 1 sub_0805BF48 and param0 2 sub_0805CB6C (both
+  `bx lr` — gates/tail only), param0 11 sub_08060B98 (record-4
+  sub_0805B754 spawn with the +0x42C bit-0x10000 delete gate),
+  param0 12 sub_08060D48, param0 13 sub_08061874, param0 14
+  sub_080618C8, param0 15 sub_08060F24, param0 16 sub_08061668
+  (+0x3E |= 4), param0 17 sub_08061924 (`bx lr`) and param0 18
+  sub_08061978. The sub_0805B754 record index (4 for param0 11,
+  1 for param0 12/15/16) is reported through
+  `out->rec_5b754`; its +0x5C = 0x11 / +0x59 |= 2 success
+  side-effects are modelled in the state struct.
+- Ported updates: param0 0 sub_0805BCB4 (the +0xB 1-7 cinematic
+  substate machine with the 0x200/0x10 return flags), param0 1
+  sub_0805BE64 (room-X gated window chain plus the
+  gUnk_03002CB0 &= 0xFEFF / |= 0x100 tail), param0 2
+  sub_0805CB70 (`bx lr`), param0 11 sub_08060C20 (window 0x16,
+  +0xD countdown and room-X > 0xB6 -> return 0x20), param0 12
+  sub_08060DC4 (window 0x19, +0xB==1 approach block and the
+  +0xB==4 +0xC/+0xD 0x40 hold -> return 0x40), param0 13
+  sub_08061890 (window 0x1A), param0 14 sub_080618E4 (window
+  0x1B, done poll marks +0x59 |= 8), param0 16 sub_080616F8
+  (the sub_08068AD4/word16-0x42/+0x4BE probe chain parking the
+  player velocity words), param0 17 sub_08061928 (window 0x17)
+  and param0 18 sub_08061994 (window 0x18, 0x80 release).
+- Honest gap: update[15] sub_08060F98 (~840 asm lines, the
+  param0-15 arena/boss intro — 12-case +0xB machine over the
+  0x081188E4 record table with sub_080212C8 input probes,
+  sub_08061824/sub_08068AD4/sub_0806E140 entity probes, raw
+  PlaySong args and __modsi3) is NOT ported; the entry reports
+  `out->unported`, runs the shared prologue/tail and keeps the
+  entity inert. Its helper list is documented at the dispatch
+  site in the .c.
+- `AosObject20SlotsIn` injects the shared gate/prologue reads,
+  sub_08067A04, the per-call sub_0805B754 keep result, the
+  A094 room-origin words, the player entity probes
+  (+0x42/+0x40/+0x4C/+0x58) and the param0-16
+  sub_08068AD4/sub_080212C8-adjacent inputs; `AosObject20SlotsOut`
+  reports every native call/write including the
+  GetEntityRoomXPositionInteger call count and the
+  gUnk_03002CB0 flag writes.
+- Tests: `tests/test_aos_object20_slots.c` covers every ported
+  create and update, including the param0-0 substate edges
+  (+0xB==3 poll skip, the 0x200/0x10 returns), the param0-11/12
+  record probes and +0x417 writes, the param0-16 probe chain
+  and the deferred param0-15 `unported` report. The module is
+  not yet routed by aos_object20 — dispatcher wiring is the
+  parent integration step.
+
+## Patch 1126 - sub_080628AC whiteout sequence ported
+
+- `src/runtime/aos/game/aos_object20_story.c/.h` now ports
+  sub_080628AC, the ~350-line whiteout/fade-to-white cinematic
+  that update30 (sub_0805B8F4) state 1 calls every frame: the
+  +0xB case machine 0-6 is literal — case 0's display init and
+  +0xD wrap arm, case 1's one-time layer/palette setup
+  (gUnk_03002CB0 = 0x1E01, the sub_0803DD14/3FD60/3FD9C/3C918/
+  3F8A8 calls), case 2's `0x10 - (unk_4 >> 1)` display ramp,
+  case 3's +0x15 == 0xA gate, cases 4/5's `unk_4` ramps into
+  the fade pair and the 0x040000D4 register chain, and case 6's
+  `sb = 1` completion. The gEwramData +4/+6 halfwords
+  (EwramData.unk_4/unk_6) are threaded through
+  `in->ewram_unk4/ewram_unk6` and written back via
+  `out->wo_unk4/wo_unk6`; entity +0x15 is the new `field15`.
+- update30 case 1 calls `aos_object20_whiteout_update` directly
+  instead of reading the injected `in->ret_628ac` probe (the
+  field is removed); `out->call_628ac` still reports the call.
+  The runtime no longer stalls in state 1 on a neutral probe —
+  the sequence now runs its real ~500-frame state machine.
+- Honest gaps: sub_08064518 (the ~1500-line whiteout-bar
+  renderer with its own +0x14/+0x15/+0x16/+0x18/+0x1C..+0x24/
+  +0x2C/+0x36/+0x3C sub-state machine) and sub_08065800 (the
+  0x085268A8 tile pick — the table is not committed) are
+  engine-side and reported via `out->call_64518/call_65800`;
+  the only effect the whiteout machine reads from 64518, the
+  +0x15 byte, is injected per call through `in->wo_field15`
+  (-1 keeps `s->field15`), so the runtime must supply it for
+  the case-3 gate to open. All display/palette/DMA effects are
+  reported through Out flags, not applied. sub_0806E0D0 is not
+  on this path (it is the param0-19 loader, still injected as
+  `in->ret_6e0d0`). No emulator comparison yet; classified
+  partial.
+- Verification: `tests/test_aos_object20_story.c` drives the
+  real sequence end-to-end (case 0-6 transitions, the +0x15
+  gate, counter write-backs, the case-6 hand-off into update30
+  state 2) plus direct case-6/out-of-range calls; the binary
+  passes (`aos_object20_story: all tests passed`). The full
+  build remains blocked by the sibling in-progress
+  `aos_npc_talk_66094` signature change noted in Patch 1125.
+  `aria_runtime.c` needs no signature change but its probe
+  comment (the `ret_628ac` mention near object20_fill_in)
+  and a `wo_field15`/`ewram_unk*` bridge are follow-ups for
+  the runtime owner; `data/` registries are left to the
+  integrating commit per the cycle rules.
+
+## Patch 1125 - Object20 SPECIAL id-32 sprites drawn in `aria_runtime`
+
+- `src/runtime/aria_runtime.c` now renders SPECIAL entity id 32
+  (Object20): `load_objects` reads the nine `Enemy/object20_actor_N`
+  records (N = 2, 3, 4, 5, 6, 7, 9, 10, 11 — actors 6/7 carry 31
+  sequences, past `OBJECT_MAX_ANIMS`) into a new
+  `objects->object20_actors[12]` table indexed by the native record
+  number; records 0/1/8 keep resolving through the shared
+  `opening_actor_*` exports. `free_objects` releases the new
+  textures.
+- `draw_special_objects` gained an id-32 branch: `object20_sprite_record`
+  maps param0 to the private 12-record table at 0x081186DC
+  ({4:5, 5:2, 6:6, 7:5, 8:2, 9:2, 10:7, 23:0, 24:0, 25:3, 26:3,
+  27:0, 28:2, 29:7, 31:7}; param0 19 uses the Julius Belmont enemy
+  art as the closest export to the native shop triple; param0
+  20/21/22/30 stay invisible and param0 3 stays with the bespoke
+  opening path). The sprite draws at the entity's synced
+  `e->x`/`e->y` with the exported frame offsets, flipped on the
+  +0x58 bit-6 facing byte.
+- Animation: the ported variants report each sub_0803F2C8 sequence
+  pick in their family Out; `object20_apply_out` stashes the last
+  pick on the new `AriaEntity.object20_anim` field (initialized -1
+  at both room-load paths). `object20_anim_default` covers the
+  create-time sequences (param0 9->3, 10->4, 19->1, 26->1
+  approximating the RNG 1|2 pick, 28->6, others->0). Frame advance
+  uses the sibling `(step / 4) % total` wall-clock convention
+  because sub_0803F17C frame stepping (+0x6E/+0x6F) is not ported.
+- Honest gaps: Object20 child sprites are not drawn — the ported
+  state keeps no persistent child positions (story child14/link18
+  carry only flag/anim bytes and a fine-X word, child29 and the
+  param0-26 companion child report no coordinates, the escort
+  followers are unmodelled). param0-19's Belmont substitution is an
+  approximation until the real shop triple is exported. Facing,
+  per-entity animation phase and child art remain approximations;
+  no emulator comparison yet.
+- Verification: `aria_runtime.c` compiles warning-free with the
+  fusion_aria_runtime flags (`-fsyntax-only` and `-c` clean). The
+  full `cmake --build build` and the `--simulate` smoke runs are
+  BLOCKED by unrelated in-progress edits in the shared tree
+  (`aos_npc_talk_66094` gained `AosGuardSeq`/`AosGuardPickCtx`
+  parameters that `aos_object20.c` and `tests/test_aos_npc_talk.c`
+  do not yet pass); rerun the build and the room simulations once
+  that work lands. `data/native_parity/annotations.tsv` row
+  `aos.objects.special_sprites` documents the new coverage and its
+  approximations. Classified partial.
+
 ## Patch 1124 - Remaining Object20 table routines ported (param0 19/29/30/31)
 
 - `src/runtime/aos/game/aos_object20_story.c/.h` now covers every

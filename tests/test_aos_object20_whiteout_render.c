@@ -1,0 +1,285 @@
+/* Unit tests for src/runtime/aos/game/aos_object20_whiteout_render.c —
+ * the sub_08064518 whiteout bar/tile renderer port. Covers the
+ * +0x15 jump-table states 0-10, the 160-bar BgAffineSet geometry,
+ * the state-2 jitter/schedule, the state-4/5 wipe-out exit and
+ * the RNG round-trip through Out. */
+#include "../src/runtime/aos/game/aos_object20_whiteout_render.h"
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+
+static AosWoRenderIn base_in(void) {
+    AosWoRenderIn in;
+    memset(&in, 0, sizeof in);
+    in.rng = 0x12345678;         /* arbitrary LCG seed */
+    in.ewram_7864 = 0;
+    in.field10 = 0;
+    return in;
+}
+
+static void step(AosWoRender *s, AosWoRenderIn *in, AosWoRenderOut *out) {
+    aos_wo_render_update(s, in, out);
+    in->rng = out->rng;          /* gEwramData+8 round-trips */
+    in->ewram_7864 |= out->tail_7864_or1 ? 1 : 0;
+}
+
+int main(void) {
+    AosWoRender s;
+    AosWoRenderIn in;
+    AosWoRenderOut out;
+
+    /* ---- state 0: one-shot init then a 17-frame hold that ends
+     * in PlaySong(0x166) and +0x15 += 2 -> 2. ---- */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 0;
+    in = base_in();
+    step(&s, &in, &out);
+    assert(out.hblank_setup && out.tail_7864_or1);
+    assert(out.bars_drawn == AOS_WO_BAR_COUNT);
+    assert(out.palette_copy);            /* sub_0803C7B4 once */
+    assert(s.field_20 == 0xb8 && s.field_22 == 0x70);
+    assert(s.field_1c == 0xb0 && s.field_1e == 0xb0);
+    assert(s.scr_42 == 0xb8 && s.scr_46 == 0x70);
+    assert(s.field_2c == 0x0e && s.field_24 == 0x0f);
+    assert(s.field_16 == 1);
+    /* bar i: x=+0x20, y=+0x22-i, bgx/bgy=+0x1C/+0x1E,
+     * intensity = +0x14 << 8 = 0. */
+    assert(out.bars[0].x == 0xb8 && out.bars[0].y == 0x70);
+    assert(out.bars[159].y == (uint16_t)(0x70 - 159));
+    assert(out.bars[0].bgx == 0xb0 && out.bars[0].bgy == 0xb0);
+    assert(out.bars[0].intensity == 0);
+    assert(out.song == -1);
+    /* 16 more frames: +0x24 0xF -> -1 is 16 decrements; the 17th
+     * call (this one already consumed the first) finishes. */
+    for (int i = 0; i < 15; ++i) {
+        step(&s, &in, &out);
+        assert(out.bars_drawn == AOS_WO_BAR_COUNT);
+        assert(out.song == -1);
+    }
+    step(&s, &in, &out);                  /* +0x24 hits -1 */
+    assert(out.song == 0x166);            /* PlaySong(0xB3 << 1) */
+    assert(s.field_15 == 2);
+    assert(s.field_24 == 0 && s.field_16 == 0);
+
+    /* ---- state 1: pure tail, no bars. ---- */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 1;
+    in = base_in();
+    step(&s, &in, &out);
+    assert(out.bars_drawn == 0);
+    assert(out.tail_7864_or1);
+
+    /* ---- state 2: init spawns + 0x29E-frame countdown. ---- */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 2;
+    in = base_in();
+    step(&s, &in, &out);
+    /* init loads +0x24 = 0x29E but the same call's tail
+     * decrements it -> 0x29D. */
+    assert(s.field_24 == 0x29d && s.field_16 == 1 && s.state_d == 1);
+    assert(out.spawn_count == 2);
+    assert(out.spawns[0].kind == AOS_WO_SPAWN_FX_63DF8);
+    assert(out.spawns[1].kind == AOS_WO_SPAWN_FX_64198);
+    /* FX_64198 child pos: s8(+0x26)-0x30 + +0x20, s8(+0x27)+8 +
+     * +0x22 — computed BEFORE this frame's RNG block, so the
+     * zeroed state gives (-0x30, +8) offsets off zero origins. */
+    assert(out.spawns[1].scr_x == (int16_t)(0 - 0x30 + 0));
+    assert(out.spawns[1].scr_y == (int16_t)(0 + 8 + 0));
+    assert(out.bars_drawn == AOS_WO_BAR_COUNT);
+    /* +0x24 == 0x29D is ODD -> jitter path active; the two RNG
+     * draws must have moved the LCG state. */
+    /* Run until +0x24 wraps to -1: 0x29F calls total, one done. */
+    int frames = 1;
+    while (s.field_15 == 2) {
+        step(&s, &in, &out);
+        ++frames;
+        assert(frames < 1000);
+    }
+    assert(s.field_15 == 3);
+    assert(s.field_24 == 0 && s.field_16 == 0 && s.state_d == 0);
+    assert(frames == 0x29f);
+    /* Spot-check a scheduled event: +0x24 == 0x40 spawns table
+     * word 0; == 0x30/0x20 fire fades. Re-run state 2 watching
+     * for the fade at +0x24 == 0x30 (frame index 0x29E-0x30). */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 2;
+    s.field_16 = 1;                  /* skip re-init spawns */
+    s.field_24 = 0x31;
+    in = base_in();
+    step(&s, &in, &out);
+    assert(!out.fade_pair);           /* 0x31 -> 0x30 after dec? no:
+                                       * events test pre-dec value
+                                       * 0x31, not 0x30 */
+    step(&s, &in, &out);              /* now +0x24 == 0x30 */
+    assert(out.fade_pair);
+    assert(out.fade_s0 == 0x10000 && out.fade_s1 == 0x20);
+    assert(s.field_24 == 0x2f);
+
+    /* ---- state 3: +0x1C ramps on odd +0xD until 0xD0 -> +0x15=5. */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 3;
+    s.field_16 = 1;                    /* skip the one-shot init,
+                                        * which would zero +0xD */
+    s.field_1c = 0xcf;
+    s.field_1e = 0x40;
+    s.state_d = 1;                    /* odd -> increments this call */
+    in = base_in();
+    step(&s, &in, &out);
+    assert(out.bars_drawn == AOS_WO_BAR_COUNT);
+    assert(s.field_1c == 0xd0 && s.field_1e == 0x41);
+    assert(s.field_15 == 3);           /* exits NEXT odd +0xD */
+    assert(s.state_d == 2);            /* incremented after test */
+    step(&s, &in, &out);               /* +0xD = 2: even, no ramp */
+    assert(s.field_1c == 0xd0 && s.state_d == 3);
+    step(&s, &in, &out);               /* +0xD = 3: odd, f1c==0xD0 */
+    assert(s.field_15 == 5 && s.field_16 == 0 && s.field_18 == 0);
+
+    /* ---- states 4/5: init once, then the wipe-out. Drive the
+     * exit directly: even +0x24 with +0x14 already <= 0xC0. ---- */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 5;
+    s.field_16 = 1;
+    s.field_24 = 0xa2;                /* > 0x9F, even */
+    s.field_14 = 0xc0;                /* (u8)(0xC0-1)=0xBF <= 0xBF */
+    s.field_1c = 0x100;
+    s.field_1e = 8;
+    in = base_in();
+    step(&s, &in, &out);
+    assert(out.bars_drawn == AOS_WO_BAR_COUNT);
+    assert(!out.cycle_6447c);          /* exit frame skips 6447C */
+    assert(s.field_15 == 7);           /* 5 + 2 */
+    assert(s.field_3c & 2);
+    assert(s.field_24 == 0 && s.field_18 == 0 && s.state_d == 0);
+    /* odd +0x24 in the >0x9F region: no exit, +0x1C/+0x1E ramp. */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 4;
+    s.field_16 = 1;
+    s.field_24 = 0xa1;
+    s.field_14 = 0xff;
+    s.field_1c = 0x100;
+    s.field_1e = 8;
+    in = base_in();
+    step(&s, &in, &out);
+    assert(s.field_15 == 4);
+    assert(s.field_1c == 0x180 && s.field_1e == 4);
+    assert(s.field_24 == 0xa2);
+    assert(out.cycle_6447c);
+    /* state4/5 init frame: spawn idx4 + fade(0xFF) + purge_547. */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 4;
+    in = base_in();
+    step(&s, &in, &out);
+    assert(s.field_16 == 1 && s.field_38 == 5);
+    /* +0x14 init 0 is immediately re-decremented by the same
+     * frame's +0x24 % 5 == 0 block (u8 wrap) -> 0xFF. */
+    assert(s.field_14 == 0xff);
+    assert(out.spawn_count == 1 &&
+           out.spawns[0].kind == AOS_WO_SPAWN_TABLE_118B34 &&
+           out.spawns[0].aux == 4);
+    assert(out.fade_pair && out.fade_s1 == 0xff);
+    assert(out.purge_547);
+
+    /* ---- states 6/7: +0x1C += 0x640/frame, +0xD wrap advances. -- */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 6;
+    s.field_1c = 0x1000;
+    s.state_d = 0;                    /* 0 - 1 wraps to 0xFF */
+    in = base_in();
+    step(&s, &in, &out);
+    assert(s.field_1c == 0x1640);
+    assert(s.state_d == 0 && s.field_15 == 7); /* wrapped -> +1 */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 7;
+    s.field_1c = 0xff00;               /* <= 0xFFFE -> += 0x640,
+                                        * strh wraps to 0x0540 */
+    s.state_d = 1;                     /* 1 - 1 = 0: no wrap,
+                                        * no advance */
+    in = base_in();
+    step(&s, &in, &out);
+    assert(s.field_1c == 0x0540);
+    assert(s.state_d == 0 && s.field_15 == 7);
+    step(&s, &in, &out);                /* 0 - 1 = 0xFF -> advance */
+    assert(s.field_15 == 8 && s.state_d == 0);
+
+    /* ---- state 8: ramps +0x1E by 0x180 while +0xD == 0; clamps
+     * at 0x4000 -> +0x15 = 9, +0xD = 0x10. ---- */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 8;
+    s.state_d = 0;
+    s.field_1c = 0x3000;
+    s.field_1e = 0x3f00;
+    in = base_in();
+    step(&s, &in, &out);
+    assert(s.field_1c == 0x4000);      /* 0x3000+0x2000 sat */
+    assert(s.field_1e == 0x4000);      /* 0x3F00+0x180 > 0x4000 */
+    assert(s.field_15 == 9 && s.state_d == 0x10);
+    /* state_d != 0 path: plain decrement, no ramp. */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 8;
+    s.state_d = 5;
+    s.field_1e = 0x100;
+    in = base_in();
+    step(&s, &in, &out);
+    assert(s.state_d == 4 && s.field_1e == 0x100);
+
+    /* ---- state 9: +0xD wrap -> +0x15 = 0xA (the gate value). --- */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 9;
+    s.state_d = 1;                     /* 1-1=0: no wrap yet */
+    in = base_in();
+    step(&s, &in, &out);
+    assert(s.state_d == 0 && s.field_15 == 9);
+    assert(out.bars_drawn == 0);        /* state 9 draws no bars */
+    step(&s, &in, &out);                /* 0-1=0xFF -> advance */
+    assert(s.state_d == 0 && s.field_15 == 0x0a);
+
+    /* ---- state 10: terminal hold, +0x1E = 0x4000/0x3000 by
+     * old +0xD bit 2. ---- */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 10;
+    s.state_d = 4;                     /* bit2 set */
+    in = base_in();
+    step(&s, &in, &out);
+    assert(out.bars_drawn == AOS_WO_BAR_COUNT);
+    assert(s.field_1e == 0x4000 && s.state_d == 5);
+    s.state_d = 1;
+    step(&s, &in, &out);
+    assert(s.field_1e == 0x3000 && s.state_d == 2);
+
+    /* ---- +0x15 > 10: tail only. ---- */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 11;
+    in = base_in();
+    step(&s, &in, &out);
+    assert(out.bars_drawn == 0);
+    assert(out.tail_7864_or1 && out.hblank_setup);
+
+    /* ---- RNG determinism: same seed -> same jitter bytes. ---- */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 2;
+    s.field_16 = 1;
+    s.field_24 = 0x29e;                /* odd -> mask1/base1 */
+    in = base_in();
+    step(&s, &in, &out);
+    uint8_t jx1 = s.field_26, jy1 = s.field_27;
+    memset(&s, 0, sizeof s);
+    s.field_15 = 2;
+    s.field_16 = 1;
+    s.field_24 = 0x29e;
+    in = base_in();
+    step(&s, &in, &out);
+    assert(s.field_26 == jx1 && s.field_27 == jy1);
+    /* mask/base path: +0x24 <= 0xFF (even clears bytes, so use
+     * odd value 0xFD) -> base 2 mask 3. */
+    memset(&s, 0, sizeof s);
+    s.field_15 = 2;
+    s.field_16 = 1;
+    s.field_24 = 0xfd;
+    in = base_in();
+    step(&s, &in, &out);
+    /* field_26 = 2 - (rng&3) as u8: in {0xFF,0,1,2} */
+    assert(s.field_26 == 0xff || s.field_26 <= 2);
+
+    puts("test_aos_object20_whiteout_render: OK");
+    return 0;
+}

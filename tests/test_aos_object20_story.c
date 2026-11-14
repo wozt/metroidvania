@@ -25,7 +25,21 @@ static AosObject20StoryIn base_in(void) {
     in.player_anim5c = 3;
     in.fade_done = false;
     in.c328_ok = true;
+    in.wo_field15 = -1;         /* +0x15 keep: sub_08064518 unported */
     return in;
+}
+
+/* update30 state 1's sub_080628AC whiteout writes the gEwramData
+ * +4/+6 counters back through Out; the runtime keeps them as
+ * globals, so the test threads them into the next call's In. */
+static void update30_whiteout(AosObject20Story *s,
+                              AosObject20StoryIn *in,
+                              AosObject20StoryOut *out) {
+    aos_object20_story_update(s, 30, in, out);
+    if (out->wo_unk4 >= 0)
+        in->ewram_unk4 = (uint16_t)out->wo_unk4;
+    if (out->wo_unk6 >= 0)
+        in->ewram_unk6 = (uint16_t)out->wo_unk6;
 }
 
 int main(void) {
@@ -460,24 +474,85 @@ int main(void) {
     assert(out.call_1d028_a == 0x33);
     assert(out.set_42c & 0x20);
     assert(out.anim_step_count == 0);   /* no F17C in this routine */
-    /* state 1 waits on the injected sub_080628AC result. */
-    in.ret_628ac = 0;
+    /* state 1 runs the ported sub_080628AC whiteout. Case 0
+     * re-pins the cinematic counters and wraps +0xD into case
+     * 1; +0xD entered state 1 at 7 (state 0's arm), so eight
+     * calls. */
+    for (int i = 0; i < 8; ++i) {
+        memset(&out, 0, sizeof out);
+        update30_whiteout(&s, &in, &out);
+        assert(s.state == 1);
+        assert(out.call_628ac);
+        assert(out.unk2cb0_zero && out.wo_disp_init);
+        assert(out.wo_unk4 == 0 && out.wo_unk6 == 1);
+    }
+    assert(s.sub_b == 1);
+    /* case 1: the one-time layer/palette setup. */
     memset(&out, 0, sizeof out);
-    aos_object20_story_update(&s, 30, &in, &out);
-    assert(out.call_628ac);
-    assert(s.state == 1);
-    in.ret_628ac = 1;
+    update30_whiteout(&s, &in, &out);
+    assert(s.sub_b == 2);
+    assert(out.unk2cb0_1e01 && out.wo_disp_stage);
+    assert(out.call_3dd14 && out.call_3fd60 && out.call_3fd9c &&
+           out.call_3c918 && out.call_3f8a8);
+    assert(out.wo_unk6 == 2);
+    /* case 2 ramps ewram_unk4 every eighth frame; the display
+     * mirror 0x10 - (unk_4 >> 1) hits 0 at unk_4 == 0x20. */
+    int guard = 0;
+    while (s.sub_b == 2 && guard++ < 400) {
+        memset(&out, 0, sizeof out);
+        update30_whiteout(&s, &in, &out);
+        assert(out.call_64518 && out.call_65800);
+        assert(out.wo_disp4c >= 0);
+    }
+    assert(s.sub_b == 3);
+    assert(out.wo_disp48 == 0x3F40);
+    assert(in.ewram_unk4 == 0);
+    /* case 3 gates on +0x15 == 0xA (the unported sub_08064518
+     * sub-state, injected through wo_field15). */
+    for (int i = 0; i < 4; ++i) {
+        memset(&out, 0, sizeof out);
+        update30_whiteout(&s, &in, &out);
+        assert(s.sub_b == 3);
+        assert(out.wo_unk4 < 0);    /* +4 untouched while gated */
+    }
+    in.wo_field15 = 0xA;
+    guard = 0;
+    while (s.sub_b == 3 && guard++ < 100) {
+        memset(&out, 0, sizeof out);
+        update30_whiteout(&s, &in, &out);
+    }
+    assert(s.sub_b == 4);
+    /* case 4 ramps to old +4 > 0x80: the fade pair fires. */
+    guard = 0;
+    while (s.sub_b == 4 && guard++ < 200) {
+        memset(&out, 0, sizeof out);
+        update30_whiteout(&s, &in, &out);
+    }
+    assert(s.sub_b == 5);
+    assert(out.fade_out && out.fade_3d18c && out.fade_3cdf0);
+    /* case 5 ramps to old +4 > 0x40: the DMA chain fires, then
+     * case 6 returns 1 and update30 completes the hand-off. */
+    guard = 0;
+    while (s.sub_b == 5 && guard++ < 100) {
+        memset(&out, 0, sizeof out);
+        update30_whiteout(&s, &in, &out);
+    }
+    assert(s.sub_b == 6);
+    assert(out.dma_setup_wo);
     memset(&out, 0, sizeof out);
-    aos_object20_story_update(&s, 30, &in, &out);
+    update30_whiteout(&s, &in, &out);
     assert(s.state == 2);
     assert(out.player58_andnot_21);
     assert(out.cf0 == 0x20);
     assert(out.call_3c7b4);
     /* the completion call's tail already sees +0xA == 2: the
-     * scroll branch runs, +0x18 -> 0x200 and old +0xD == 0
-     * edge-spawns the particle. */
+     * scroll branch runs and +0x18 -> 0x200; the whiteout left
+     * +0xD at 0xF9 so the particle edge does not fire yet. */
     assert(s.field18 == 0x200);
-    assert(out.call_9e4 && out.call_45b44);
+    assert(out.call_9e4 && !out.call_45b44);
+    /* preset +0xD small so the shared tail's particle edge is
+     * exercised as the injected-probe run did. */
+    s.timer_d = 6;
     /* state 2 +0xB chain: 2CB0 clear -> DMA + window 0x25 ->
      * fade -> 3D06C gate; +0x18 keeps scrolling and the shared
      * tail keeps decrementing +0xD, so the particle edge
@@ -555,6 +630,30 @@ int main(void) {
     aos_object20_story_update(&s, 30, &in, &out);
     assert(out.f6c == 0x1040);
     assert(s.sub_c == 1);
+
+    /* sub_080628AC direct: case 6 returns 1, +0xB > 6 returns 0
+     * with only the +6 tail increment (u16 wrap). Direct calls
+     * bypass out_reset, so the -1 sentinels are set by hand. */
+    memset(&s, 0, sizeof s);
+    s.sub_b = 6;
+    in = base_in();
+    in.ewram_unk6 = 0xFFFE;
+    memset(&out, 0, sizeof out);
+    out.wo_disp4c = out.wo_disp48 = out.wo_unk4 = out.wo_unk6 = -1;
+    assert(aos_object20_whiteout_update(&s, &in, &out) == 1);
+    assert(out.call_628ac);
+    assert(out.wo_unk6 == 0xFFFF);
+    in.ewram_unk6 = 0xFFFF;
+    memset(&out, 0, sizeof out);
+    out.wo_disp4c = out.wo_disp48 = out.wo_unk4 = out.wo_unk6 = -1;
+    assert(aos_object20_whiteout_update(&s, &in, &out) == 1);
+    assert(out.wo_unk6 == 0);
+    s.sub_b = 7;
+    memset(&out, 0, sizeof out);
+    out.wo_disp4c = out.wo_disp48 = out.wo_unk4 = out.wo_unk6 = -1;
+    assert(aos_object20_whiteout_update(&s, &in, &out) == 0);
+    assert(out.wo_unk6 == 0);
+    assert(out.wo_unk4 < 0);
 
     /* ---- param0 31: update sub_0805C628. ---- */
     memset(&s, 0, sizeof s);

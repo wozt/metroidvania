@@ -32,6 +32,8 @@ static uint8_t family_of(int16_t param0) {
     if (param0 == 27) return AOS_OBJECT20_FAMILY_GUARD;
     if (param0 == 28) return AOS_OBJECT20_FAMILY_TALK_LOOP;
     if (param0 == 3) return AOS_OBJECT20_FAMILY_OPENING;
+    if (param0 >= 0 && param0 <= 2) return AOS_OBJECT20_FAMILY_SLOTS;
+    if (param0 >= 11 && param0 <= 18) return AOS_OBJECT20_FAMILY_SLOTS;
     return AOS_OBJECT20_FAMILY_INERT;
 }
 
@@ -76,6 +78,34 @@ static AosObject20StoryIn story_in(const AosObject20In *in) {
     s.player_pos44 = in->player_pos44;
     s.player_anim5c = in->player_anim5c;
     s.player_flags58 = in->player_flags58;
+    return s;
+}
+
+static AosObject20SlotsIn slots_in(const AosObject20In *in) {
+    AosObject20SlotsIn s;
+    memset(&s, 0, sizeof s);
+    s.flag1327a = in->flag1327a;
+    s.flag42c = in->flag42c;
+    s.byte8e = in->byte8e;
+    s.byte13266 = in->byte13266;
+    s.word16 = in->word16;
+    s.word60 = in->word60;
+    s.byte41b = in->byte41b;
+    s.byte414 = in->byte414;
+    s.text_done = in->text_done;
+    s.keep_5b754 = in->keep_5b754;
+    s.a094_6 = in->a094_6;
+    s.a094_a = in->a094_a;
+    s.player_scr42 = in->player_scr42;
+    s.player_pos40 = in->player_pos40;
+    s.player_flags58 = in->player_flags58;
+    s.player_w4c = in->slots.player_w4c;
+    s.ret_roomx = in->slots.ret_roomx;
+    s.probe_68ad4 = in->slots.probe_68ad4;
+    s.s16_4be = in->slots.s16_4be;
+    /* sub_0806E140 floor probe — same native routine the story
+     * family's ret_6e140 reports; share the channel. */
+    s.probe_6e140 = in->story.ret_6e140;
     return s;
 }
 
@@ -224,9 +254,10 @@ static bool create26_65cd8(AosObject20 *o, const AosObject20In *in,
     o->anim5c = c.anim5c;
     o->scr42 = c.spawn_x;
     o->scr46 = c.spawn_y;
-    /* API gap: the companion's +0x18 child entity and its
-     * sub_08065C2C update vector have no field in AosNpcLoop;
-     * c.child/c.child_* are reported nowhere persistent. */
+    /* Transfer the +0x18 companion child spawn result into the
+     * loop state so aos_npc_talk_65c2c_child can run its
+     * sub_08065C2C update (child18_* fields). */
+    aos_npc_talk_65cd8_commit(&c, &o->v.npc_loop);
     if (c.marked)
         out->npc_marked = true;
     return shell_create_tail(o, in, out);
@@ -400,12 +431,23 @@ bool aos_object20_create(AosObject20 *o, int16_t param0,
             out->deleted = o->deleted;
             return ok;
         }
+    case AOS_OBJECT20_FAMILY_SLOTS:
+        {
+            AosObject20SlotsIn sin = slots_in(in);
+            bool ok = aos_object20_slots_create(&o->v.slots,
+                                                (uint8_t)param0, &sin,
+                                                &out->slots);
+            o->deleted = !ok || o->v.slots.deleted;
+            out->deleted = o->deleted;
+            o->return_code = out->slots.return_code;
+            out->return_code = o->return_code;
+            return ok;
+        }
     case AOS_OBJECT20_FAMILY_INERT:
     default:
-        /* Every in-table param0 now has a ported create and/or
-         * update; values past the 32-entry tables read garbage
-         * natively. The shared shell runs and the gap is
-         * reported; the entity stays inert. */
+        /* Values past the 32-entry tables read garbage natively.
+         * The shared shell runs and the gap is reported; the
+         * entity stays inert. */
         {
             bool ok = shell_create(o, in, out, true);
             o->deleted = !ok;
@@ -527,16 +569,36 @@ static int update_npc(AosObject20 *o, const AosObject20In *in,
         aos_npc_talk_65db8(&o->v.npc_loop,
                            npc_flags_65db8(in), in->text_done,
                            in->player_pos40);
+        /* sub_08065C2C: the companion's +0x18 child sidestep
+         * update bound to child18_scr42; returns 0 with no
+         * child. The sub_0803AC40 step callback is unported —
+         * NULL leaves the child's position math inert
+         * (documented gap). */
+        (void)aos_npc_talk_65c2c_child(&o->v.npc_loop,
+                                       in->npc.flags37e,
+                                       NULL, NULL, NULL);
         ret = 0;
         break;
     case AOS_OBJECT20_FAMILY_GUARD:
         /* update[27] = sub_08066094, returns 0 or 0x10. */
         update_prologue(in, out, (int8_t)o->v.guard.state);
+        /* The ported pickers (sub_08066308 chain) read the
+         * persistent pick ctx: unk33c accumulates the
+         * sub_08012078/120AC/12048 bitfield writes, the
+         * +0x1325C+0x18C cursor persists across calls. The
+         * 0x08118C85 table is not committed — NULL keeps the
+         * documented RNG%9 fallback. */
+        o->guard_pick.unk33c |= in->npc.flag12078;
+        o->guard_pick.flags37e = in->npc.flags37e;
+        o->guard_pick.cond_5b864 = in->npc.cond_5b864;
+        o->guard_pick.rng_pick = in->npc.rng_pick;
+        o->guard_pick.rng_queue = in->npc.rng_queue;
         ret = (int)aos_npc_talk_66094(&o->v.guard,
                                     npc_flags_66094(in),
-                                    in->npc.picked_text,
                                     in->text_done,
-                                    in->player_pos40);
+                                    in->player_pos40,
+                                    &o->guard_seq,
+                                    &o->guard_pick);
         break;
     case AOS_OBJECT20_FAMILY_TALK_LOOP:
         /* update[28] = sub_080666D4; the ROM calls
@@ -598,6 +660,17 @@ int aos_object20_update(AosObject20 *o, const AosObject20In *in,
     case AOS_OBJECT20_FAMILY_GUARD:
     case AOS_OBJECT20_FAMILY_TALK_LOOP:
         return update_npc(o, in, out);
+    case AOS_OBJECT20_FAMILY_SLOTS: {
+        AosObject20SlotsIn sin = slots_in(in);
+        int ret = aos_object20_slots_update(&o->v.slots,
+                                            (uint8_t)o->param0,
+                                            &sin, &out->slots);
+        o->deleted = o->v.slots.deleted;
+        out->deleted = o->deleted;
+        o->return_code = ret;
+        out->return_code = ret;
+        return ret;
+    }
     case AOS_OBJECT20_FAMILY_INERT:
     default:
         /* Unported variant body: the shared prologue/tail still

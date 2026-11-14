@@ -81,6 +81,7 @@ int main(void) {
     memset(&o, 0, sizeof o);
     in = mk_in();
     in.npc.flag12078 = 0;   /* dirs probes live in in.dirs */
+    in.player_scr42 = 0x40; /* create4 gate: <= 0x80 survives */
     assert(create_ok(&o, 4, &in, &out));
     assert(o.family == AOS_OBJECT20_FAMILY_DIRS);
     assert(!o.deleted);
@@ -322,11 +323,12 @@ int main(void) {
     assert(!out.unported);
     assert(out.story.anim_step_count == 1);
 
-    /* ---- unported param0 values: shared shell + report. ---- */
+    /* ---- unported/out-of-table param0 values: shared shell +
+     * report. Every in-table param0 (0-31) now resolves a family. */
     for (unsigned i = 0; i < sizeof all_params / sizeof all_params[0];
          ++i) {
         int16_t p = all_params[i];
-        if (p == 3 || (p >= 4 && p <= 10) || (p >= 19 && p <= 31))
+        if (p >= 0 && p <= 31)
             continue;   /* covered families */
         memset(&o, 0, sizeof o);
         in = mk_in();

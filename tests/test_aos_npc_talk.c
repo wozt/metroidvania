@@ -221,44 +221,68 @@ int main(void) {
 
     /* sub_08066094: guard NPC sequence. */
     AosNpcGuard gd2;
+    AosGuardSeq gseq;
+    AosGuardPickCtx gpk;
     memset(&gd2, 0, sizeof gd2);
-    uint32_t rr = aos_npc_talk_66094(&gd2, 0, 0, false, 0);
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    uint32_t rr = aos_npc_talk_66094(&gd2, 0, false, 0,
+                                     &gseq, &gpk);
     assert(gd2.cleared_42c_200 && gd2.sfx_26_entry &&
            gd2.state == 1 && rr == 0);
     /* gates block state 1. */
-    rr = aos_npc_talk_66094(&gd2, 1, 0, false, 0);
+    rr = aos_npc_talk_66094(&gd2, 1, false, 0, &gseq, &gpk);
     assert(!gd2.froze_player && gd2.state == 1);
-    /* full gates: freeze, facing (inverted), window, state 2. */
+    /* full gates: freeze, facing (inverted), window, state 2.
+     * flags 7 (5B864 clear) runs sub_0806668C: +0x14 = 0x36,
+     * sequence index 1 with flags 0x2E/0x26 clear. */
     gd2.x = 0x100000; /* 16 px */
-    rr = aos_npc_talk_66094(&gd2, 7, 0x44, false, 0x200000);
+    rr = aos_npc_talk_66094(&gd2, 7, false, 0x200000,
+                            &gseq, &gpk);
     assert(gd2.armed_42c_200 && gd2.froze_player &&
-           gd2.window_text && gd2.text_id == 0x44 &&
+           gd2.window_text && gd2.text_id == 0x36 &&
            gd2.state == 2 && gd2.sound_1040 && gd2.ev_1d);
+    assert(gseq.mode == 0x36 && gseq.index == 1);
     /* self_x < player_x -> bit6 clear (inverted compare). */
     assert((gd2.flags58 & 0x40) == 0);
     /* poll pending keeps state 2; done -> songs + release loop. */
-    rr = aos_npc_talk_66094(&gd2, 7, 0, false, 0);
+    rr = aos_npc_talk_66094(&gd2, 7, false, 0, &gseq, &gpk);
     assert(gd2.state == 2 && !gd2.song_1b5);
-    rr = aos_npc_talk_66094(&gd2, 7, 0, true, 0);
+    rr = aos_npc_talk_66094(&gd2, 7, true, 0, &gseq, &gpk);
     assert(gd2.song_1b5 && gd2.wrote_254cc && gd2.song_26 &&
            gd2.sound_1041 && gd2.release_0 && gd2.state == 1);
-    /* b864 set on exit -> state 3 escort substates. */
+    /* flags&8 on exit -> state 3 escort substates. */
     memset(&gd2, 0, sizeof gd2); gd2.state = 2;
-    rr = aos_npc_talk_66094(&gd2, 15, 0, true, 0);
+    rr = aos_npc_talk_66094(&gd2, 15, true, 0, &gseq, &gpk);
     assert(gd2.state == 3);
-    rr = aos_npc_talk_66094(&gd2, 0, 0, false, 0);
+    rr = aos_npc_talk_66094(&gd2, 0, false, 0, NULL, NULL);
     assert(gd2.ctr_b == 1 && gd2.timer_d == 0x10 && rr == 0x10);
     /* player far ahead (self + 0x300000 < player_x) advances. */
     gd2.x = 0;
-    rr = aos_npc_talk_66094(&gd2, 0, 0, false, 0x400000);
+    rr = aos_npc_talk_66094(&gd2, 0, false, 0x400000, NULL, NULL);
     assert(gd2.ctr_b == 2 && rr == 0x10);
-    rr = aos_npc_talk_66094(&gd2, 0, 0, false, 0);
+    rr = aos_npc_talk_66094(&gd2, 0, false, 0, NULL, NULL);
     assert(gd2.release_0 && gd2.state == 1);
-    /* +0x18 variant: song on entry, cleared on exit. */
+    /* non-variant pick under sub_0805B864: sub_0806666C reset
+     * + text 0x44. */
+    memset(&gd2, 0, sizeof gd2); gd2.state = 1;
+    memset(&gseq, 0, sizeof gseq); gseq.mode = 0x99;
+    rr = aos_npc_talk_66094(&gd2, 15, false, 0, &gseq, &gpk);
+    assert(gd2.text_id == 0x44 && gseq.mode == 0 &&
+           gseq.counter == 0xFF && gseq.index == 0);
+    /* +0x18 variant: song on entry, sub_08066308 pick, cleared
+     * on exit. cond_5b864 with 0x36 already consumed -> the
+     * queue pick: text 0x45, index 6, fallback RNG%9 = 4. */
     memset(&gd2, 0, sizeof gd2); gd2.state = 1; gd2.field18 = 1;
-    aos_npc_talk_66094(&gd2, 7, 0x30, false, 0);
-    assert(gd2.song_1b5);
-    aos_npc_talk_66094(&gd2, 7, 0, true, 0);
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.cond_5b864 = true; gpk.rng_queue = 4;
+    gpk.unk33c = 1ull << 0x36;
+    aos_npc_talk_66094(&gd2, 7, false, 0, &gseq, &gpk);
+    assert(gd2.song_1b5 && gd2.text_id == 0x45 &&
+           gseq.mode == 0x45 && gseq.index == 6 &&
+           gseq.fallback == 4 && gpk.cursor_18c == 0x50);
+    aos_npc_talk_66094(&gd2, 7, true, 0, &gseq, &gpk);
     assert(gd2.cleared_18 && gd2.field18 == 0);
 
     /* sub_08066024 spawn gate. */
@@ -350,6 +374,220 @@ int main(void) {
     memset(&sg2, 0, sizeof sg2);
     aos_npc_talk_66828(&sg2, true, true, true);
     assert(sg2.variant && sg2.anim_step && (sg2.flags58 & 0x40));
+
+    /* sub_08065CD8 commit + sub_08065C2C child update. */
+    AosNpcLoop cl;
+    memset(&cl, 0, sizeof cl);
+    assert(aos_npc_talk_65c2c_child(&cl, 0, step_count, NULL,
+                                    tg) == 0);
+    memset(&cp, 0, sizeof cp); cp.spawn_x = 3; cp.spawn_y = 4;
+    aos_npc_talk_65cd8(&cp, true, true, true, 0, 3, spawn_ok);
+    aos_npc_talk_65cd8_commit(&cp, &cl);
+    assert(cl.child18 && cl.child18_scr42 == 3 &&
+           cl.child18_scr46 == 4 && cl.child18_anim5c == 5);
+    step_calls = 0;
+    assert(aos_npc_talk_65c2c_child(&cl, 0x12, step_count, NULL,
+                                    tg) == 3);
+    assert(step_calls == 3 && tg[0] == -13 && tg[1] == 19 &&
+           tg[2] == -5);
+    /* no child: commit clears the flag. */
+    memset(&cp, 0, sizeof cp);
+    aos_npc_talk_65cd8_commit(&cp, &cl);
+    assert(!cl.child18);
+
+    /* sub_08066308: flag-chain picks. Table: slot i -> i, so
+     * mode m slot s reads m*8+s. */
+    static const uint8_t ptab[0x38] = {
+        0, 1, 2, 3, 4, 5, 6, 7,
+        8, 9, 10, 11, 12, 13, 14, 15,
+        16, 17, 18, 19, 20, 21, 22, 23,
+        24, 25, 26, 27, 28, 29, 30, 31,
+        32, 33, 34, 35, 36, 37, 38, 39,
+        40, 41, 42, 43, 44, 45, 46, 47,
+        48, 49, 50, 51, 52, 53, 54, 55
+    };
+    uint16_t t14;
+    /* 5B864 + 0x36 clear: 120AC consumes -> 0x43. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.cond_5b864 = true; gpk.table_08118c85 = ptab;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x43 && (gpk.unk33c & (1ull << 0x36)));
+    /* 5B864 + 0x36 set: queue pick, mode 5/index 6. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.cond_5b864 = true; gpk.table_08118c85 = ptab;
+    gpk.unk33c = 1ull << 0x36; gpk.rng_queue = 11;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x45 && gseq.mode == 0x45 && gseq.index == 6 &&
+           gpk.cursor_18c == 0x51);
+    /* mode 5 cursor 0x50: slot (0x50&0xF)+40 = 40 -> tab[40]=40. */
+    assert(gseq.fallback == 40);
+    /* flag 0x3B + triplet -> 0x45 with seq(0x45,4,8). */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab;
+    gpk.unk33c = 1ull << 0x3B;
+    gpk.unk132ae[0] = 1; gpk.unk132ae[1] = 2; gpk.unk132ae[2] = 3;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x45 && gseq.mode == 0x45 && gseq.index == 4 &&
+           gseq.fallback == 8 && gseq.counter == 0);
+    /* flag 0x3B without the triplet falls through to 0x26;
+     * 0x35 consumed + RNG&1 clear -> 0x31 + seq init. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab;
+    gpk.unk33c = (1ull << 0x3B) | (1ull << 0x26) | (1ull << 0x35);
+    gpk.rng_pick = 0;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x31 && gseq.mode == 0x31 && gseq.index == 0 &&
+           gseq.fallback == 0);
+    /* flag 0x26, 0x35 clear -> 0x30 (and 0x35 gets set). */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab;
+    gpk.unk33c = 1ull << 0x26;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x30 && (gpk.unk33c & (1ull << 0x35)));
+    /* flag 0x26, 0x35 set + RNG&1 -> queue pick (mode 0,
+     * cursor 0x03 -> slot 3 -> tab[3]=3). */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab;
+    gpk.unk33c = (1ull << 0x26) | (1ull << 0x35);
+    gpk.rng_pick = 1; gpk.rng_queue = 2;
+    gpk.cursor_18c = 0x03;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x45 && gseq.fallback == 3 &&
+           gpk.cursor_18c == 0x04);
+    /* flag 0x2E: 0x34 clear -> 0x2F. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab;
+    gpk.unk33c = 1ull << 0x2E;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x2F);
+    /* flag 0x2E, 0x34 set + 0x37 clear -> 0x53. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab;
+    gpk.unk33c = (1ull << 0x2E) | (1ull << 0x34);
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x53 && (gpk.unk33c & (1ull << 0x37)));
+    /* flag 0x21 alone, 0x37 clear -> 0x53. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab;
+    gpk.unk33c = 1ull << 0x21;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x53);
+    /* flag 0x20 + 0x33 -> 0x2E; 0x33 clear -> queue. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab;
+    gpk.unk33c = (1ull << 0x20) | (1ull << 0x33);
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x2E);
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab;
+    gpk.unk33c = 1ull << 0x20;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x45);
+    /* queue mode 0 (no flags): sl = unk133e8>>4 = 0 == mode,
+     * so the cursor is NOT reseated; slot (0x03&0xF)+0 = 3. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab; gpk.rng_queue = 0;
+    gpk.cursor_18c = 0x03;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x45 && gpk.cursor_18c == 0x04 &&
+           gseq.fallback == 3);
+    /* flag21 with 0x37 already set -> queue; 37E&0x10 clear
+     * picks mode 1, cursor reseats to 0x10 (sl = 0), slot 8. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab; gpk.rng_queue = 0;
+    gpk.unk33c = (1ull << 0x21) | (1ull << 0x37);
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x45 && gpk.cursor_18c == 0x11 &&
+           gseq.fallback == 8);
+    /* flag21 + 37E 0x10 + flag24 clear + 3C/3D -> modes. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab; gpk.rng_queue = 0;
+    gpk.flags37e = 0x10;
+    gpk.unk33c = (1ull << 0x21) | (1ull << 0x37) |
+                 (1ull << 0x3C) | (1ull << 0x3D);
+    gpk.cursor_18c = 0;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    /* mode 3: cursor 0x30, slot 0x30&0xF + 24 = 24 -> tab[24]=24 */
+    assert(gpk.cursor_18c == 0x31 && gseq.fallback == 24);
+    /* flag3C set, 3D clear -> mode 6. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab; gpk.rng_queue = 0;
+    gpk.flags37e = 0x10;
+    gpk.unk33c = (1ull << 0x21) | (1ull << 0x37) |
+                 (1ull << 0x3C);
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    /* mode 6: cursor 0x60, slot 0 + 48 = 48 -> tab[48]=48 */
+    assert(gpk.cursor_18c == 0x61 && gseq.fallback == 48);
+    /* flag3C clear -> mode 2: cursor 0x20, slot 0+16=16 -> 16. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab; gpk.rng_queue = 0;
+    gpk.flags37e = 0x10;
+    gpk.unk33c = (1ull << 0x21) | (1ull << 0x37);
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(gpk.cursor_18c == 0x21 && gseq.fallback == 16);
+    /* flag24 set + 37E&2 clear -> mode 3; &2+0x40 -> mode 4. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab; gpk.rng_queue = 0;
+    gpk.flags37e = 0x12;   /* 0x10 set, 0x02 set, 0x40 clear */
+    gpk.unk33c = (1ull << 0x21) | (1ull << 0x37) | (1ull << 0x24);
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    /* 37E&2 set, 0x40 clear -> mode 3 */
+    assert(gpk.cursor_18c == 0x31 && gseq.fallback == 24);
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab; gpk.rng_queue = 0;
+    gpk.flags37e = 0x52;   /* 0x10|0x40|0x02 */
+    gpk.unk33c = (1ull << 0x21) | (1ull << 0x37) | (1ull << 0x24);
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    /* mode 4: cursor 0x40, slot 0+32=32 -> tab[32]=32 */
+    assert(gpk.cursor_18c == 0x41 && gseq.fallback == 32);
+    /* repick loop: flag 0x39 re-picks while the fallback is 7.
+     * No other flags -> queue mode 0 == sl, cursor keeps 0x07;
+     * slot 7 -> tab[7]=7 -> loop; cursor wraps to 0x00 (low
+     * nibble hit 8) -> slot 0 -> tab[0]=0 exits. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab; gpk.rng_queue = 0;
+    gpk.unk33c = 1ull << 0x39;
+    gpk.cursor_18c = 0x07;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(gseq.fallback == 0 && gpk.cursor_18c == 0x01);
+    /* flag 0x3D re-picks while the fallback is 9: sl = 1 ==
+     * mode 1 keeps the 0x11 cursor; slot 9 -> tab[9]=9 ->
+     * repick slot 10 -> tab[10]=10. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.table_08118c85 = ptab; gpk.rng_queue = 0;
+    gpk.unk33c = (1ull << 0x21) | (1ull << 0x37) | (1ull << 0x3D);
+    gpk.unk133e8 = 0x10;         /* sl = 1 == mode -> keep */
+    gpk.cursor_18c = 0x11;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(gseq.fallback == 10 && gpk.cursor_18c == 0x13);
+    /* NULL table: the queue keeps the RNG%9 fallback; no
+     * flags -> mode 0 == sl, cursor stays 0. */
+    memset(&gseq, 0, sizeof gseq);
+    memset(&gpk, 0, sizeof gpk);
+    gpk.rng_queue = 7;
+    aos_npc_talk_66308(&gseq, &gpk, &t14);
+    assert(t14 == 0x45 && gseq.fallback == 7 &&
+           gpk.cursor_18c == 0);
 
     puts("aos_npc_talk: ok");
     return 0;

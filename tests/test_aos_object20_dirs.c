@@ -21,7 +21,11 @@ static AosObject20DirsIn mk_in(void) {
 static void mk(AosObject20Dirs *s, AosObject20DirsIn *in,
                AosObject20DirsOut *out, uint8_t param0) {
     memset(s, 0, sizeof *s);
-    assert(aos_object20_dirs_create(s, param0, in, out));
+    int32_t saved = in->player_scr42;
+    if (param0 == 4) in->player_scr42 = 0x40; /* create4 gate <= 0x80 */
+    bool ok = aos_object20_dirs_create(s, param0, in, out);
+    in->player_scr42 = saved;
+    assert(ok);
 }
 
 int main(void) {
@@ -50,6 +54,7 @@ int main(void) {
     in = mk_in();
     in.byte13266 = 1;
     in.flag42c = 0x8000;            /* gate passes now */
+    in.player_scr42 = 0x40;         /* <= 0x80 survives create4 */
     memset(&s, 0, sizeof s);
     assert(aos_object20_dirs_create(&s, 4, &in, &out));
 
@@ -60,7 +65,7 @@ int main(void) {
     assert(out.unported && !s.deleted);
 
     /* ---- param0 4 create ---- */
-    in = mk_in();
+    in = mk_in(); in.player_scr42 = 0x40;  /* <= 0x80 survives */
     mk(&s, &in, &out, 4);
     assert(!s.deleted);
     assert(s.scr42 == 0xA0 && s.scr46 == 0xC0);
@@ -79,10 +84,10 @@ int main(void) {
     memset(&s, 0, sizeof s);
     assert(!aos_object20_dirs_create(&s, 4, &in, &out));
     assert(s.flags59 & 8);
-    in = mk_in(); in.player_scr42 = 0x80;  /* <= 0x80 -> mark */
+    in = mk_in(); in.player_scr42 = 0x81;  /* > 0x80 -> mark */
     memset(&s, 0, sizeof s);
     assert(!aos_object20_dirs_create(&s, 4, &in, &out));
-    in = mk_in(); in.keep_5b754 = false;
+    in = mk_in(); in.keep_5b754 = false; in.player_scr42 = 0x40;
     memset(&s, 0, sizeof s);
     assert(!aos_object20_dirs_create(&s, 4, &in, &out));
     assert(out.keep_arg == 5);

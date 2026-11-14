@@ -51,6 +51,7 @@
 #include <stdint.h>
 
 #include "aos_object20_dirs.h"
+#include "aos_object20_slots.h"
 #include "aos_object20_story.h"
 #include "aos_npc_talk.h"
 #include "aos_shop.h"
@@ -66,6 +67,7 @@ enum {
     AOS_OBJECT20_FAMILY_LOOP,        /* param0 26 */
     AOS_OBJECT20_FAMILY_GUARD,       /* param0 27 */
     AOS_OBJECT20_FAMILY_TALK_LOOP,   /* param0 28 */
+    AOS_OBJECT20_FAMILY_SLOTS,       /* param0 0-2, 11-18 */
     AOS_OBJECT20_FAMILY_INERT        /* param0 other */
 };
 
@@ -78,11 +80,18 @@ typedef struct {
     bool probe_inside;      /* sub_08068AD4 proximity probe hit */
     int16_t gate_4be;       /* gEwramData + 0x4BE s16 pause word */
     bool cond_5b864;        /* sub_0805B864 result */
-    uint8_t picked_text;    /* +0x14 pick for param0 27 — the
-                             * native pickers sub_08066308/
-                             * sub_0806666C/sub_0806668C are
-                             * unported, so the caller supplies
-                             * the chosen text id. */
+    uint16_t flags37e;      /* gEwramData + 0x37E — param0-26
+                             * companion child + param0-27
+                             * pick ctx */
+    uint32_t rng_pick;      /* RNG draw for the param0-27
+                             * flag-0x26 &1 pick */
+    uint32_t rng_queue;     /* RNG draw for the param0-27
+                             * queue %9 fallback */
+    uint8_t picked_text;    /* DEPRECATED: the param0-27 +0x14
+                             * pick now runs the ported
+                             * sub_08066308 picker through
+                             * guard_pick; kept for callers
+                             * that still fill it. */
     uint32_t rng;           /* RandomNumberGenerator (param0 28) */
     uint32_t rng_bit;       /* RNG&1 pick (param0 26 create) */
     bool (*spawn_child)(void);  /* sub_0805B5E8 child-spawn probe
@@ -112,6 +121,10 @@ typedef struct {
      * global in the ROM; kept here as a single-consumer
      * approximation for the param0-28 text pick. */
     AosGuardSeq guard_seq;
+    /* gEwramData +0x33C flag bitfield + +0x1325C+0x18C cursor
+     * for the ported param0-27 text pickers (sub_08066308);
+     * persistent across calls like the ROM globals. */
+    AosGuardPickCtx guard_pick;
     /* param0-25 guide in/out bytes the native code keeps in
      * gEwramData/player state across calls (sub_08065A5C's
      * player bit-6 and the +0x417 byte). */
@@ -126,6 +139,7 @@ typedef struct {
         AosNpcGuard guard;          /* param0 27 */
         AosNpcTalkLoop talk_loop;   /* param0 28 */
         AosShop shop;               /* param0 19/20 */
+        AosObject20Slots slots;     /* param0 0-2, 11-18 */
     } v;
 } AosObject20;
 
@@ -167,6 +181,7 @@ typedef struct {
     AosObject20StoryIn story;
     AosShopInput shop;
     AosObject20NpcIn npc;
+    AosObject20SlotsIn slots;
 } AosObject20In;
 
 /* Outputs reset at the top of every call. The per-family variant
@@ -178,6 +193,7 @@ typedef struct {
     AosObject20DirsOut dirs;
     AosObject20StoryOut story;
     AosShopOut shop;
+    AosObject20SlotsOut slots;
     /* Shared-shell outputs (npc_talk/shop/unported families). */
     uint32_t set_42c;       /* bits OR-ed into gEwramData + 0x42C */
     uint32_t clear_42c;     /* bits AND-NOT-ed out of + 0x42C */

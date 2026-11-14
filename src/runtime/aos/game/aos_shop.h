@@ -46,10 +46,11 @@ typedef struct {
      * slot*0x84, stride 0x84): the buy menu reads the record's
      * +0x40 fine-X (unk_524) against the player's +0x40 and
      * rewrites the record's +0x58 flags (unk_53C) as
-     * (old & ~0x41) | side<<6. Entity +0x11's native source
-     * (spawn record / link propagation) is unmodelled, so the
-     * host binds the record view — typically the shopkeeper's
-     * own entity record. */
+     * (old & ~0x41) | side<<6. Entity +0x11's only native
+     * writers are child spawns copying a parent's +0x10; root
+     * entities keep the post-clear 0 and bind entityData[0] —
+     * the player record — so the host resolves the record
+     * through the entityData mirror's slot11 (0 = player). */
     int32_t player_pos40;   /* player entity +0x40 fine X */
     int32_t record_pos40;   /* record +0x40 fine X */
     uint8_t record_flags58; /* record +0x58 flags byte */
@@ -83,7 +84,9 @@ typedef struct {
      * apply sub_0800D288. transaction_arg1 is param_1 (the
      * 16.16 x velocity; param_2 is always 0). The native
      * return (0 when gated, 1 when run) is discarded by the
-     * callers, so only the fired request is reported. */
+     * callers, so only the fired request is reported; the
+     * runtime consumer replays it through aos/core/aos_scroll
+     * (sub_0800ED24 -> sub_0803FBBC/sub_08000F60/sub_0800D288). */
     bool transaction;
     uint32_t transaction_arg1;
     int anim_a, anim_b, anim_c; /* sub_0803F2C8(e, a, b, c), -1 none */

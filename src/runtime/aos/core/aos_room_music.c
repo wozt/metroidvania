@@ -16,6 +16,16 @@ enum {
 static const uint16_t soma_songs[AREA_COUNT] = {2, 8, 7, 5, 6, 9, 1, 3, 10, 4, 11, 12, 12};
 static const uint16_t julius_songs[AREA_COUNT] = {20, 8, 7, 5, 6, 9, 2, 3, 10, 4, 11, 12, 12};
 
+/* gEwramData + 0x60 unk_60 word, mirrored from the save's
+ * progress_flags by the entity-update fill path (same channel as
+ * object20_ewram_word60). sub_08013960 picks sUnk_084F1086 only when
+ * currentCharacter != 0 AND this word's bit 1 is set. */
+static uint32_t room_music_progress_flags;
+
+void aos_room_music_set_progress(uint32_t progress_flags) {
+    room_music_progress_flags = progress_flags;
+}
+
 /* sub_08013960_inline_0: a new song stops the previous one. */
 bool aos_room_music_change(AosRoomMusic *music, uint16_t song) {
     if (!music) return false;
@@ -43,7 +53,13 @@ bool aos_room_music_enter(AosRoomMusic *music, int area, int room,
     }
     aos_audio_play_song(SONG_LOUD);
     if (area < 0 || area >= AREA_COUNT) return false;
-    uint16_t song = music->julius ? julius_songs[area] : soma_songs[area];
+    /* sub_08013960: (currentCharacter == 0) || !(unk_60 & 2) picks
+     * sUnk_084F106C; otherwise sUnk_084F1086. music->julius carries
+     * currentCharacter != 0; the bit-1 conjunct comes from the
+     * published progress word. */
+    uint16_t song = (music->julius && (room_music_progress_flags & 2u))
+                        ? julius_songs[area]
+                        : soma_songs[area];
     music->special_song = 0;
     if (area == 4 && room == 0xA) song = music->special_song = 0x2A;
     if (!music->special_song && area == 7 && room == 0x21) song = music->special_song = 0x27;

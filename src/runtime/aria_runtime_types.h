@@ -246,6 +246,37 @@ typedef struct {
     int link_parent;        /* Object26 child: parent entity index + 1, 0 = none */
 } AriaEntity;
 
+/* Host model of one gEwramData + 0x4E4 entityData[] record
+ * (EwramData_EntityData, third_party/cvaos/include/structs/
+ * ewram.h, native stride 0x84, entityData[0xE0]). Only the
+ * fields ported consumers read are kept; offsets noted are
+ * record-relative. Table index 0 is the player entity (native
+ * slot 0 — sub_0801487C's EntityCreateInRange(0,0)); indices
+ * 1..MAX_ENTITIES mirror room->entities[0..MAX_ENTITIES-1] in
+ * room order. The native 0x1B-based slot numbering and the
+ * +0x10/+0x11 byte values are approximated by the host indices:
+ * slot10/slot11 name table indices, where 0 is the player
+ * record — matching the native post-clear +0x11 == 0 default
+ * that resolves to entityData[0]. */
+typedef struct {
+    bool active;            /* updateFunc != NULL natively */
+    uint8_t state;          /* +0xA state byte */
+    int32_t pos40;          /* +0x40 fine X, 16.16 (unk_524) */
+    int32_t pos44;          /* +0x44 fine Y, 16.16 (unk_528) */
+    uint8_t flags20;        /* +0x20 record flags byte
+                             * (unk_504_8.unk_504) */
+    uint8_t flags58;        /* +0x58 flags byte (unk_53C) */
+    uint8_t flags59;        /* +0x59 flags byte (unk_53D): bit 1
+                             * (unk_53D_1) marks the screen-locked
+                             * entities sub_08000F60 compensates
+                             * during BG scroll transactions; no
+                             * ported writer sets it yet */
+    uint8_t slot10;         /* +0x10 own slot index */
+    uint8_t slot11;         /* +0x11 bound-record slot index */
+} AriaEntityDataRecord;
+
+#define ARIA_ENTITY_DATA_RECORDS (MAX_ENTITIES + 1)
+
 typedef struct {
     int area, number;
     int width_screens, height_screens, width_cells, height_cells;

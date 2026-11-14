@@ -56,10 +56,17 @@ int main(void) {
     music.events_37e = 0x20;
     aos_room_music_enter(&music, 7, 0x23, &plain);
     assert(music.current_song == 3);
-    /* Julius plays the other table; the boss mode plays song 0x14. */
+    /* Julius plays the other table only with the cleared-game
+     * progress bit (sub_08013960's currentCharacter != 0 && unk_60
+     * & 2 conjunct); the boss mode plays song 0x14. */
     music.julius = true;
     aos_room_music_enter(&music, 0, 3, &plain);
+    assert(music.current_song == 2);   /* bit 1 clear: Soma table */
+    aos_room_music_set_progress(2);
+    aos_room_music_enter(&music, 0, 3, &plain);
     assert(music.current_song == 20);
+    aos_room_music_set_progress(0);
+    music.julius = false;
     music.boss_mode = true;
     aos_room_music_enter(&music, 5, 0, &save);
     assert(music.current_song == 0x14);

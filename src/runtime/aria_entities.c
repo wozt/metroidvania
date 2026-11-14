@@ -62,6 +62,7 @@
 #include "aos/game/aos_room_dialogue.h"
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
+#include "aos/core/aos_scroll.h"
 #include "aos/game/aos_game_lifecycle.h"
 #include "aos/intro/aos_intro_font.h"
 #include "aos/intro/aos_intro_resources.h"
@@ -197,6 +198,40 @@ static uint32_t object20_ewram_word60;
  * the byte exceeds the call's param0 (1). Session-scoped like
  * the word60 channel: no other ported writer feeds it. */
 static uint8_t object20_ewram_427;
+/* gEwramData bgInfo[4] scroll state (+0xA078): the ported
+ * sub_0803FBBC/sub_08000F60/sub_0800D288 behind every
+ * sub_0800ED24 call (aos/core/aos_scroll). The Object20 shop sell
+ * sequence, the escort families and the story/cinematic variants
+ * all issue the same gated BG1 scroll transaction; it lands here
+ * instead of only being reported. BG1 rebinds once per room to
+ * the room's screen counts (the pBgMetadata->unk_0/unk_1 map-size
+ * gates — the same counts follow_camera clamps against) and the
+ * follow_camera position, which is the runtime's BG1-scroll
+ * approximation; transaction deltas then accumulate on it.
+ * Still unmodelled and reported through AosScrollOut: the
+ * per-frame camera-follow scroll (follow_camera recomputes
+ * cam_x/cam_y statelessly, so nothing reads the offsets back
+ * yet), the BG2/BG3 layer records (unk_18/unk_14/unk_16), the
+ * unk_60.unk_33C[3]/unk_4CC_0 flag word, the entityData +0x59
+ * bit-1 scroll-compensation flag (entityData[] is mirrored but
+ * +0x59 has no ported writer, so the sub_08000F60 pass shifts
+ * nothing yet), and the native
+ * display effects (BG map tile-row rebuild, hblank/affine/
+ * scanline layer FX). */
+static AosScroll aria_scroll;
+static int aria_scroll_room_area = -1;
+static int aria_scroll_room_number = -1;
+/* gEwramData +0x414 byte: the Object20Update prologue's cleared-game
+ * transform (word16&8 / word60&2 / !(+0x42C&0x10000)) rewrites it to
+ * (b & ~0x10) | 5, and the param0-4/5/6 create paths and the
+ * story/slots variants report the same idempotent write. Its only
+ * decoded consumer is sub_08067A04's early-out — while +0x417 != 0
+ * and (+0x414 & 0xF) <= 4 the room-dialogue poll reports not-done;
+ * +0x417's own lifecycle (writers in the npc_talk/object20 families)
+ * has no forwarded channel yet, so the gate stays approximated and
+ * only the byte round-trips here, feeding back into
+ * in->byte414. Session-scoped like the +0x427 channel. */
+static uint8_t object20_ewram_414;
 /* gEwramData +8 RNG state + +0x7864 byte for the ported
  * sub_08064518 whiteout renderer (param0 30). The RNG state
  * round-trips through the story Out; +0x7864 has no other
@@ -261,6 +296,99 @@ static bool spawn_special_boss_soul(AriaRoom *room, const AriaEntity *entity,
         return false;
     room->pickups[room->pickup_count++] = special;
     return true;
+}
+
+/* gEwramData + 0x4E4 entityData[] host model (EwramData_EntityData,
+ * stride 0x84, entityData[0xE0] natively). Index 0 is the player
+ * record (native slot 0, EntityCreateInRange(0,0) in sub_0801487C);
+ * indices 1..MAX_ENTITIES mirror room->entities[] in room order —
+ * the native 0x1B-based slot numbering is not reproduced, so
+ * slot10/slot11 hold host table indices (0 = player), matching
+ * the native post-clear +0x11 == 0 default that resolves to
+ * entityData[0]. Records activate when their entity spawns
+ * (sub_0800F1FC's EntityCreateInRange) and sync position/state/
+ * flags every frame; +0x20 and the non-consumer bytes stay 0.
+ * Only the fields ported consumers read are populated:
+ *   +0x40/+0x44 fine position — enemy entities keep the 16.16
+ *     e->enemy.x/y; the rest store e->x/e->y pixels << 16.
+ *   +0xA state — SPECIAL id-32 entities report their variant
+ *     state byte (+0xA in every ported family struct); other
+ *     kinds' state machines are not mirrored (stay 0).
+ *   +0x58 flags — id-32 entities seed it from object20.flags58
+ *     (the shared facing approximation) at activation; the shop's
+ *     record58_val writes land on the bound record in
+ *     object20_apply_out and persist (the native +0x58 byte is
+ *     shared mutable state).
+ *   player record — pos from soma, +0x58 the facing bit
+ *     approximation shared with in->player_flags58 (resynced
+ *     every frame, so the shop's player +0x58 stores persist
+ *     only until the next sync — the non-facing bits are not
+ *     modelled). */
+static AriaEntityDataRecord aria_entity_data[ARIA_ENTITY_DATA_RECORDS];
+
+/* The +0xA state byte of an Object20 entity's live variant. */
+static uint8_t object20_state_byte(const AriaEntity *e) {
+    switch (e->object20.family) {
+    case AOS_OBJECT20_FAMILY_DIRS:    return e->object20.v.dirs.state;
+    case AOS_OBJECT20_FAMILY_STORY:   return e->object20.v.story.state;
+    case AOS_OBJECT20_FAMILY_SHOP:    return e->object20.v.shop.state;
+    case AOS_OBJECT20_FAMILY_GUIDE:   return e->object20.v.guide.state_a;
+    case AOS_OBJECT20_FAMILY_LOOP:    return e->object20.v.npc_loop.state;
+    case AOS_OBJECT20_FAMILY_GUARD:   return e->object20.v.guard.state;
+    case AOS_OBJECT20_FAMILY_TALK_LOOP: return e->object20.v.talk_loop.state;
+    case AOS_OBJECT20_FAMILY_SLOTS:   return e->object20.v.slots.state;
+    default:                          return 0;
+    }
+}
+
+/* entityData[host index] for an entity's +0x11-bound record:
+ * the table's slot11 already names a host index (0 = player). */
+static AriaEntityDataRecord *entity_data_bound(
+        const AriaEntityDataRecord *rec) {
+    /* slot11 is a host table index latched at spawn; clamp so a
+     * stale/corrupt value can never index past the table. */
+    return &aria_entity_data[rec->slot11 < ARIA_ENTITY_DATA_RECORDS
+                                    ? rec->slot11 : 0];
+}
+
+/* Sync one entity's entityData record (index i + 1) from its live
+ * state. Unspawned entities hold no native record: the slot is
+ * cleared so a later spawn re-initializes slot10/slot11. */
+static void entity_data_sync(const AriaEntity *e, size_t i) {
+    AriaEntityDataRecord *rec = &aria_entity_data[i + 1];
+    if (!e->spawned) {
+        memset(rec, 0, sizeof *rec);
+        return;
+    }
+    if (!rec->active) {
+        memset(rec, 0, sizeof *rec);
+        rec->active = true;
+        /* +0x10 own slot: EntityCreateInRange writes the native
+         * slot; the host index stands in for it. */
+        rec->slot10 = (uint8_t)(i + 1);
+        /* +0x11 bound record: child spawns copy the parent's +0x10
+         * (sub_08062F8C and siblings). Host links: .spawner is the
+         * parent entity index (enemy children), .link_parent is
+         * already index + 1 (Object25/26 children); roots keep the
+         * post-clear 0 (entityData[0], the player record). */
+        rec->slot11 = e->spawner >= 0 ? (uint8_t)(e->spawner + 1)
+                   : e->link_parent > 0 ? (uint8_t)e->link_parent : 0;
+        /* +0x58 seeds from the shared facing approximation; later
+         * frames leave the byte alone so shop record58 writes
+         * persist (the native +0x58 byte is shared mutable
+         * state, not a per-frame mirror). */
+        if (e->kind == ARIA_KIND_SPECIAL && e->id == 32)
+            rec->flags58 = e->object20.flags58;
+    }
+    if (e->kind == ARIA_KIND_ENEMY) {
+        rec->pos40 = e->enemy.x;
+        rec->pos44 = e->enemy.y;
+    } else {
+        rec->pos40 = (int32_t)e->x << 16;
+        rec->pos44 = (int32_t)e->y << 16;
+    }
+    if (e->kind == ARIA_KIND_SPECIAL && e->id == 32)
+        rec->state = object20_state_byte(e);
 }
 
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
@@ -411,6 +539,12 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
     if (object1c_save_ctx)
         object20_ewram_word60 = object1c_save_ctx->progress_flags;
     in->word60 = object20_ewram_word60; /* gEwramData + 0x60 flags */
+    /* sub_08013960's cleared-game conjunct (currentCharacter != 0 &&
+     * unk_60 bit 1) reads the same word: publish it to the room
+     * music module so its alternate per-area table gate sees the
+     * persisted progress_flags bit 1. */
+    aos_room_music_set_progress(object20_ewram_word60);
+    in->byte414 = object20_ewram_414; /* gEwramData + 0x414 */
     in->flag1327a = soma ? soma->hp : 0;
     in->flag42c = aria_pickup_state.global_flags;
     in->text_done = aos_room_dialogue_text_done(&room_dialogue);
@@ -473,15 +607,21 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
     }
     in->shop.room_q3 = e->x >> 3;
     /* entityData[+0x11] record view (gEwramData + 0x4E4 +
-     * slot*0x84): entity +0x11's native source is unmodelled,
-     * so the shopkeeper's own record is bound — record +0x40 is
-     * its fine X (e->x) and +0x58 its flags byte, which has no
-     * Object20 consumer yet and stays 0 (the computed store
-     * value still reaches the Out). player +0x40 is soma->x;
-     * player +0x58 keeps the shared facing approximation. */
+     * slot*0x84): entity +0x11's only native writers are child
+     * spawns copying a parent's +0x10 (sub_08062F8C and
+     * siblings); root entities keep the post-clear 0 and bind
+     * entityData[0] — the player record — natively. The host
+     * record's slot11 names the bound host index, so
+     * record_pos40/record_flags58 read the bound record's +0x40
+     * and +0x58 instead of the shopkeeper's own approximation.
+     * player +0x40 is soma->x; player +0x58 keeps the shared
+     * facing approximation (entityData[0] is synced the same
+     * way). */
+    const AriaEntityDataRecord *bound = entity_data_bound(
+        &aria_entity_data[(size_t)(e - room->entities) + 1]);
     in->shop.player_pos40 = soma ? soma->x : 0;
-    in->shop.record_pos40 = e->x;
-    in->shop.record_flags58 = 0;
+    in->shop.record_pos40 = bound->pos40;
+    in->shop.record_flags58 = bound->flags58;
     in->shop.player_flags58 = in->player_flags58;
     in->shop.byte_427 = object20_ewram_427;
     /* npc probes (param0 25-28). */
@@ -525,9 +665,40 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
  * the shared room dialogue first (open -> poll -> close, the native
  * order inside a single update); the rest follow the sibling
  * branches' conventions. */
+/* Run one sub_0800ED24(param0, arg1, 0) against the ported scroll
+ * state and report the resulting BG1 position/velocity. The +0x427
+ * gate byte is object20_ewram_427 (already updated from this
+ * frame's write_427 reports before this runs). */
+static void object20_scroll_tx(AriaRoom *room, int cam_x, int cam_y,
+                               int param0, int32_t arg1,
+                               const char *tag, int id) {
+    if (aria_scroll_room_area != room->area ||
+        aria_scroll_room_number != room->number) {
+        memset(&aria_scroll, 0, sizeof aria_scroll);
+        aos_scroll_bind(&aria_scroll, 1,
+                        (uint8_t)room->width_screens,
+                        (uint8_t)room->height_screens,
+                        0, 0, 0, (int32_t)cam_x << 16,
+                        (int32_t)cam_y << 16);
+        aria_scroll_room_area = room->area;
+        aria_scroll_room_number = room->number;
+    }
+    AosScrollOut sx;
+    int ran = aos_scroll_transaction(&aria_scroll, object20_ewram_427,
+                                     param0, arg1, 0, NULL, &sx);
+    const AosBgLayer *b1 = &aria_scroll.bg[1];
+    printf("Object20 %d: %s ED24(%d, 0x%X)%s BG1 pos=(%d,%d) "
+           "vel=(%d,%d)%s\n", id, tag, param0, (unsigned)arg1,
+           ran ? "" : " gated", b1->x_pos >> 16, b1->y_pos >> 16,
+           b1->x_vel, b1->y_vel,
+           sx.fx ? " (layer FX unported)" : "");
+}
+
 static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
+                               AriaEntityDataRecord *rec,
                                AriaCombat *combat, AosForcedInput *input,
-                               uint16_t new_input, int npc_pre_state) {
+                               uint16_t new_input, int npc_pre_state,
+                               AriaRoom *room, int cam_x, int cam_y) {
     /* sub_08067934/sub_08067A04/sub_08067898 triple. The npc_talk
      * families keep their window requests inside the variant state
      * structs instead of a normalized Out: the poll frames are the
@@ -629,8 +800,8 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
      * sub_0803CDF0/sub_0803D270/sub_0803CED4/sub_0801D028/
      * sub_080127F0 engine calls, the DMA chains and the animation/
      * spawn requests have no runtime consumer and are reported in
-     * the module headers; the shop transaction (sub_0800ED24) is
-     * printed because it is gameplay-visible. */
+     * the module headers; the sub_0800ED24 transactions drive the
+     * ported aos_scroll state (object20_scroll_tx above). */
     uint32_t set42c = out->set_42c | out->dirs.set_42c |
                       out->story.set_42c | out->shop.set_42c |
                       out->slots.set_42c;
@@ -656,10 +827,37 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     }
     if (out->story.wo_unk4 >= 0) object20_ewram_unk4 = (uint16_t)out->story.wo_unk4;
     if (out->story.wo_unk6 >= 0) object20_ewram_unk6 = (uint16_t)out->story.wo_unk6;
-    /* gEwramData +0x427: the shop sell sequence's ED24 gate byte
-     * round-trips through object20_ewram_427 (filled into
-     * in->shop.byte_427 above). */
+    /* gEwramData +0x427: the ED24 gate byte round-trips through
+     * object20_ewram_427 (filled into in->shop.byte_427 above); the
+     * shop, dirs and story families all write the same byte, last
+     * write wins. */
     if (out->shop.write_427) object20_ewram_427 = out->shop.write_427_val;
+    if (out->dirs.write_427) object20_ewram_427 = out->dirs.write_427_val;
+    if (out->story.write_427) object20_ewram_427 = out->story.write_427_val;
+    /* sub_0800ED24 consumers: the shop transaction
+     * (transaction/transaction_arg1, arg0 always 1) and the
+     * dirs/story ed24 pairs (arg0 = ed24_a, arg1 = ed24_b, arg2
+     * always 0). Each family's Out carries at most one request. */
+    if (out->shop.transaction)
+        object20_scroll_tx(room, cam_x, cam_y, 1,
+                           (int32_t)out->shop.transaction_arg1,
+                           "shop", e->id);
+    if (out->dirs.ed24_a >= 0)
+        object20_scroll_tx(room, cam_x, cam_y, out->dirs.ed24_a,
+                           out->dirs.ed24_b, "dirs", e->id);
+    if (out->story.ed24_a >= 0)
+        object20_scroll_tx(room, cam_x, cam_y, out->story.ed24_a,
+                           out->story.ed24_b, "story", e->id);
+    /* gEwramData +0x414: every family's +0x414 report is the same
+     * (b & ~0x10) | 5 transform (or a plain write of its result);
+     * last write wins like the native byte. The story family
+     * reports it twice — write_414 (variant paths) and unk414_write
+     * (the shared prologue) — both land here. */
+    if (out->write_414) object20_ewram_414 = out->write_414_val;
+    if (out->dirs.write_414) object20_ewram_414 = out->dirs.write_414_val;
+    if (out->story.write_414) object20_ewram_414 = out->story.write_414_val;
+    if (out->story.unk414_write) object20_ewram_414 = out->story.unk414_val;
+    if (out->slots.write_414) object20_ewram_414 = out->slots.write_414_val;
     if (out->story.wo_rng >= 0) object20_wo_rng = (uint32_t)out->story.wo_rng;
     if (out->story.wo_bars_drawn || out->story.wo_spawn_count ||
         out->story.wo_particle_count || out->story.wo_purge_547 ||
@@ -869,21 +1067,22 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     if (out->shop.sound_2b) printf("Object20 %d: held sound 0x2B\n", e->id);
     if (out->shop.release_sound_2b)
         printf("Object20 %d: release sound 0x2B\n", e->id);
-    if (out->shop.transaction) {
-        printf("Object20 %d: shop transaction arg1 0x%X (unforwarded)\n",
-               e->id, (unsigned)out->shop.transaction_arg1);
-    }
     if (out->shop.side_record_53c || out->shop.side_record_58 ||
-        out->shop.side_player_58)
-        printf("Object20 %d: shop record flags write rec58=0x%02X "
-               "player58=%d val=0x%02X (unforwarded)\n",
-               e->id, out->shop.record58_val,
-               out->shop.side_player_58 ? 1 : 0,
-               out->shop.player58_val);
-    if (out->story.ed24_a >= 0) {
-        printf("Object20 %d: story transaction ed24(0x%X, 0x%X) "
-               "(unforwarded)\n", e->id, out->story.ed24_a,
-               (unsigned)out->story.ed24_b);
+        out->shop.side_player_58 || out->shop.andnot_player58 ||
+        out->shop.andnot_ent58) {
+        /* Both record flags name the same byte — gEwramData +0x53C
+         * + slot*0x84 IS record +0x58 — so the store lands on the
+         * entity's +0x11-bound record (rec->slot11); the player
+         * stores land on entityData[0] and the entity's own +0x58
+         * approximation on its own record. */
+        if (out->shop.side_record_53c || out->shop.side_record_58)
+            entity_data_bound(rec)->flags58 = out->shop.record58_val;
+        if (out->shop.side_player_58)
+            aria_entity_data[0].flags58 = out->shop.player58_val;
+        if (out->shop.andnot_player58)
+            aria_entity_data[0].flags58 &= (uint8_t)~out->shop.andnot_player58;
+        if (out->shop.andnot_ent58)
+            rec->flags58 &= (uint8_t)~out->shop.andnot_ent58;
     }
     if (out->fade_out || out->story.fade_out || out->story.fade_3d18c ||
         out->story.fade_3cdf0 || out->slots.fade_count)
@@ -903,7 +1102,7 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         out->slots.call_2dff0 || out->slots.call_67804 ||
         out->slots.unk2cb0_feff || out->slots.unk2cb0_or100 ||
         out->slots.unk7864_or2 || out->slots.write_90 ||
-        out->slots.write_417 || out->slots.write_414 ||
+        out->slots.write_417 ||
         out->slots.player5a_count || out->slots.rec_53c_write ||
         out->slots.player_scr42_set || out->slots.player58_or_40 ||
         out->slots.player58_andnot_41 || out->slots.player_w48_zero ||
@@ -1102,8 +1301,19 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
      * [2, 0x3C], the native entity update loop is suspended; the
      * display and its sparkles are drawFunc-driven and keep running. */
     const bool entities_frozen = aos_levelup_frozen(&combat->levelup);
+    /* entityData[0] is the player record natively (slot 0):
+     * pos40/pos44 are the +0x40/+0x44 fine words and +0x58 the
+     * facing-bit approximation shared with player_flags58. */
+    memset(&aria_entity_data[0], 0, sizeof aria_entity_data[0]);
+    aria_entity_data[0].active = soma != NULL;
+    if (soma) {
+        aria_entity_data[0].pos40 = soma->x;
+        aria_entity_data[0].pos44 = soma->y;
+        aria_entity_data[0].flags58 = soma->facing_left ? 0x40 : 0;
+    }
     for (size_t i = 0; !entities_frozen && i < room->entity_count; ++i) {
         AriaEntity *e = &room->entities[i];
+        entity_data_sync(e, i);
         bool placed_pickup = e->kind == ARIA_KIND_PICKUP && e->id >= 1 && e->id <= 8;
         if (placed_pickup) {
             if (!e->spawned && entity_spawn_due(e, room, cam_x, cam_y)) {
@@ -3240,8 +3450,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     printf("Object20 %zu: param0 %d unported variant "
                            "(inert)\n", i, e->param0);
                 if (!e->object20.deleted)
-                    object20_apply_out(e, &out, combat, input,
-                                       new_input, -1);
+                    object20_apply_out(e, &out,
+                                       &aria_entity_data[i + 1], combat,
+                                       input, new_input, -1, room,
+                                       cam_x, cam_y);
                 continue;
             }
             if (e->object20.deleted ||
@@ -3302,8 +3514,9 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             if (o20_px) e->x = o20_px >> 16;
             if (o20_py) e->y = o20_py >> 16;
-            object20_apply_out(e, &out, combat, input, new_input,
-                               npc_pre_state);
+            object20_apply_out(e, &out, &aria_entity_data[i + 1],
+                               combat, input, new_input, npc_pre_state,
+                               room, cam_x, cam_y);
             continue;
         }
         if (!door) continue;

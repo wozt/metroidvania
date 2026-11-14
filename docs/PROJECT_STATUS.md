@@ -43,6 +43,30 @@
   accumulation, +0x65 commits, loop wrap, once-end latch,
   pause/ended early-outs, +0x5B modes and the palette tail.
 
+## Patch 1136 - entityData table, BG1 scroll engine, word60 consumers
+
+- **entityData (+0x4E4) modelled**: `AriaEntityDataRecord` (native
+  stride 0x84, 129 records, index 0 = player) mirrored per frame in
+  `aria_entities.c`; shop `+0x11` lookups now resolve natively —
+  root entities bind `entityData[0]` (the player record) exactly as
+  the ROM, replacing the shopkeeper-self approximation. `record_pos40`
+  is true 16.16 fine X; `+0x58` bit-6 writes land on the bound record.
+- **BG1 scroll engine** (`aos.core.scroll`, `aos_scroll.c/.h`):
+  `sub_0803FBBC` velocity request (metadata pin/clamp, ±8px cap,
+  tile-row rebuild probe), `sub_08000F60` entity shift and
+  `sub_0800D288` per-layer mode dispatch ported; every Object20
+  `sub_0800ED24` Out (shop + dirs/story pairs) now drives real scroll
+  state behind the live `+0x427` gate. Modeled but not yet visible:
+  `follow_camera` still recomputes the camera statelessly.
+- **word60 consumers**: `sub_08013960` alternate music tables wired —
+  `aos_room_music` picks the cleared-game table when
+  `currentCharacter != 0 && progress_flags & 2`; the Object20 `+0x414`
+  rewrite channel (`object20_ewram_414`) is closed end-to-end; `+0x64`
+  scene byte and `word60 & 1` menu readers documented (per-slot intro
+  mask stands in for the global bit).
+- Registries synced (`aos.core.scroll` row added, `shop_sequences`
+  refreshed).
+
 ## Patch 1135 - save schema v15, shop records, ambient-NPC audit
 
 - **Save schema v15**: `progress_flags` persists the
@@ -56,8 +80,12 @@
   funnels through Object20's 0x08526658/0x085266D8 tables — the
   proximity trigger is `sub_08065DB8` (sub_08068AD4 box vs the player
   entity, no button press), already wired. SPECIAL tables corrected
-  to 0x084F0DF8/0x084F0ED8. A second text UI (`sub_0805AFC0` via
-  engine dispatcher `func_0800C022`) remains unidentified.
+  to 0x084F0DF8/0x084F0ED8. The
+  'second text UI' lead dissolved: `sub_0805AFC0` is the
+  window-manager's frame-draw state (`func_0800BEC0`, control block
+  EWRAM 0x02000060), reached via `func_0805AF68` from the same
+  Object20 dialogue trigger — the 0x085B496C pointer was a
+  compressed-data coincidence.
 - **Object1C modes +0x5B 2/3**: proven dead for Object1C (every
   sub_0803F2C8 site passes mode 0) — documented with asm evidence.
 - Registries synced (shop_sequences, portable_slots, text_window rows).

@@ -178,6 +178,11 @@ int32_t aos_main_menu_play_update(AosMainMenu *menu, const AosInput *input) {
             menu->alternate_mode = menu->confirm_choice != 0;
             menu->confirm_active = false;
             if (cursor < 6) {
+                /* Native gate (sub_080083C8 confirm): the name-code
+                 * checks run only while gEwramData + 0x60 bit 0 is
+                 * set and the entry is the new-game slot; the
+                 * per-slot intro mask stands in for the progress
+                 * bit here. */
                 menu->name_codes_enabled =
                     (menu->slot_intro_mask & (1u << base_slot)) != 0;
                 menu->new_game_flow_requested = true;
@@ -213,6 +218,7 @@ int32_t aos_main_menu_play_update(AosMainMenu *menu, const AosInput *input) {
                 menu->intro_requested = true;
                 return -3;
             } else {
+                /* Same sub_080083C8 word60-bit-0 gate as above. */
                 menu->name_codes_enabled =
                     (menu->slot_intro_mask & (1u << base_slot)) != 0;
                 menu->new_game_flow_requested = true;
@@ -268,6 +274,12 @@ int32_t aos_main_menu_play_update(AosMainMenu *menu, const AosInput *input) {
 
     base_slot = cursor >= 6 ? (uint8_t)(cursor - 6) : cursor;
     bool empty = cursor >= 6 || !slot_present(menu, cursor);
+    /* Native equivalent (sub_080074C0): while word60 bit 0 is set
+     * and a regular slot is selected, the empty-slot marker toggles
+     * every 0x80 frames between the 0x35B and 0x3B0 elements; the
+     * ported prompt_alternate flag carries the same blink, gated
+     * per-slot by the intro mask instead of the global progress
+     * bit. */
     if ((menu->slot_intro_mask & (1u << base_slot)) && empty && cursor < 6) {
         uint8_t old_timer = menu->prompt_timer++;
         if (!(old_timer & 0x7Fu)) {

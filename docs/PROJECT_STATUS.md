@@ -70,6 +70,40 @@
 - Registries synced (`aos.core.scroll`/`aos.core.tilemap` rows,
   `text_window`).
 
+## Patch 1140 - scroll layer records, flags59 writer, intro scroll port, Object20 comparison
+
+- **BG2/BG3 layer records bound per room**: `aria_scroll_layers_refresh`
+  reads the room descriptor's `unk_8` background table through the
+  already-bound ROM (`fusion_aos_read_room_backgrounds` — no pipeline
+  change needed) and binds each layer's `unk_18` mode, `unk_14/16`
+  ranges and `pBgMetadata` dimension bytes into `AosScroll`. The
+  `sub_0800ED5C`/`sub_0800EE54` load origins are ported as
+  `aos_scroll_origin_x`/`aos_scroll_origin_y` (per-axis mode tables,
+  meta gates, 0xF0/0xD0 bases, ARM-SDIV zero-denominator, y +0x30
+  bias). `sub_0800D288` propagation now runs with real per-room
+  modes; `unk_60.unk_33C[3]`/`unk_4CC_0`/`unk_4C8` stay zeroed.
+- **`flags59` bit 1 writer found and ported**: `sub_0800F1FC` sets
+  `unk_53D_1` unconditionally on every spawned room entity and
+  `sub_0801487C` on the player record — mirrored in
+  `entity_data_sync`, and `object20_scroll_tx` now binds the record
+  table as `sub_08000F60`'s scan list so scroll transactions shift
+  real records. Documented divergence: host positions are per-frame
+  mirrors, so a shift lasts until the next sync (native accumulates).
+- **Intro cutscene on the real `sub_0803FC6C`**: stage 3 issues
+  `aos_scroll_transition_request` on a dedicated bound `AosScroll`
+  (BG1-3, ROM-verified metadata constants) replacing the `scroll_up`
+  approximation; identical 3220-frame stage timing. `aos_scroll.c`
+  added to the three CMake targets that compile the cutscene.
+- **Object20 room-dialogue comparison unblocked**: the epilogue
+  proximity trigger now uses the native `sub_0805CED0` case-10/11
+  gate (0x40px box AND input `0x42` edge every frame) instead of an
+  armed-once approximation; `--dialogue-trace` logs exact window
+  frames. Measured: native opens 10-30 frames after each A+B pulse,
+  runtime opens at latency ~1 — the epilogue path lacks the
+  `sub_08067934`/`67A04` window-open delay (opening-path suspend
+  only). First headless Object20 measurement; gap documented.
+- Registries synced (`aos.core.scroll`, `aos.events.opening_scene`).
+
 ## Patch 1139 - scroll rebuild tile words, opening +0xB serialization, Object20 comparison
 
 - **Scroll rebuild DMA resolves real tile words**: `AosScroll`

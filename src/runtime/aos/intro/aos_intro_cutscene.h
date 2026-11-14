@@ -8,6 +8,7 @@
 
 #include "../../aos/game/aos_game_mode.h"
 #include "../core/aos_input.h"
+#include "../core/aos_scroll.h"
 #include "aos_intro_entities.h"
 
 enum {
@@ -28,6 +29,10 @@ typedef struct {
     uint16_t palette_fade_timer;
     int32_t bg_y[4];
     int32_t bg_y_velocity[4];
+    /* The ported gEwramData bgInfo[1..3] scroll state sub_0803F8A8
+     * binds in stage 0 and sub_0803FC6C drives in stage 3; bg_y[]/
+     * bg_y_velocity[] mirror its y halves for the draw path. */
+    AosScroll scroll;
     AosIntroEntities entities;
     uint32_t random_state;
     bool preview_only;

@@ -200,11 +200,33 @@ typedef struct {
 /* sub_0803F8A8's binding half: attaches the layer's scroll gates
  * and mode, sets the integer position (16.16 whole here) and
  * clears the velocities. BG2/BG3 layer records (unk_18/unk_14/
- * unk_16) are per-room data the runtime does not extract yet;
- * leaving them 0 keeps mode 0 (no propagation). */
+ * unk_16 and the pBgMetadata dimension bytes) are per-room data
+ * the runtime resolves from the room's background records
+ * (sub_0800F9EC's unk_8 table) when a ROM is bound; without one
+ * they stay 0 (mode 0, no propagation). */
 void aos_scroll_bind(AosScroll *s, int bg, uint8_t meta_0, uint8_t meta_1,
                      uint8_t mode, uint16_t unk_14, uint16_t unk_16,
                      int32_t x_pos, int32_t y_pos);
+
+/* sub_0800ED5C / sub_0800EE54: the per-axis initial scroll
+ * position (integer pixels — sub_0803F8A8 stores the u16 result
+ * in the position's high half) sub_0800F9EC computes for each
+ * layer record at room load. `arg` is the incoming scroll
+ * coordinate (unk_60.unk_334/unk_336 — the previous room's
+ * bgInfo[1] integer position, y minus 0x30); `meta` is the
+ * layer's pBgMetadata->unk_0/unk_1 screen count, `range` its
+ * unk_14/unk_16 scroll range and `ref_range` bgInfo[1]'s
+ * matching range (the interpolation denominator base). Modes
+ * absent from the native switch keep `arg`; a zero
+ * interpolation denominator yields 0 like ARM SDIV. The y twin
+ * adds the native +0x30 bias (and mode 10's 0xFFD0 pre-bias
+ * wrap to 0). */
+uint16_t aos_scroll_origin_x(uint8_t mode, uint8_t meta_0,
+                             uint16_t range, uint16_t ref_range,
+                             uint16_t arg);
+uint16_t aos_scroll_origin_y(uint8_t mode, uint8_t meta_1,
+                             uint16_t range, uint16_t ref_range,
+                             uint16_t arg);
 
 /* Binds (fetch != NULL) or clears (fetch == NULL) the tile-word
  * source consulted when a scroll request queues a rebuild DMA.

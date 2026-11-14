@@ -213,13 +213,20 @@ static uint8_t object20_ewram_427;
  * per-frame camera-follow scroll (follow_camera recomputes
  * cam_x/cam_y statelessly; the draw path adds this layer's
  * accumulated transaction delta on top through
- * aria_scroll_bg1_offset), the BG2/BG3 layer records
- * (unk_18/unk_14/unk_16), the
- * unk_60.unk_33C[3]/unk_4CC_0 flag word, the entityData +0x59
- * bit-1 scroll-compensation flag (entityData[] is mirrored but
- * +0x59 has no ported writer, so the sub_08000F60 pass shifts
- * nothing yet), and the native
- * display effects (hblank/affine/scanline layer FX). The BG map
+ * aria_scroll_bg1_offset). The BG2/BG3 layer records
+ * (unk_18/unk_14/unk_16 plus the pBgMetadata dimension bytes)
+ * bind per room from the room descriptor's background table
+ * when a ROM is bound (aria_scroll_layers_refresh); without one
+ * they stay mode 0. Still unmodelled and reported through
+ * AosScrollOut: the unk_60.unk_33C[3]/unk_4CC_0 flag word, and the native
+ * display effects (hblank/affine/scanline layer FX). The +0x59
+ * bit-1 scroll-compensation flag now has its ported writer
+ * (sub_0800F1FC's unconditional spawn-time set, mirrored in
+ * entity_data_sync, plus sub_0801487C's player record), and
+ * object20_scroll_tx binds the record table as sub_08000F60's
+ * scan list — but the records are per-frame mirrors of e->x/e->y,
+ * so a shift lasts only until the record's next sync (native
+ * +0x524/+0x528 are authoritative and accumulate). The BG map
  * tile-row rebuild's sub_08001994 lookups resolve to real tile
  * words through the room tilemap below when a ROM is bound via
  * aria_scroll_tilemap_bind; the BgCmdBuffer_WriteData VRAM write
@@ -249,6 +256,19 @@ static AosRoomTilemap aria_scroll_tiles;
 static int aria_scroll_tiles_area = -1, aria_scroll_tiles_room = -1;
 static int aria_scroll_tiles_tried_area = -1,
            aria_scroll_tiles_tried_room = -1;
+/* The room descriptor's three background records — sub_0800F9EC's
+ * unk_8 table that fills bgInfo[1..3]'s unk_18 mode, unk_14/unk_16
+ * scroll ranges and pBgMetadata dimension bytes — resolved lazily
+ * per (area, room) like the tilemap above. Without a bound ROM, or
+ * for a room whose records fail to read, the layers bind zeroed
+ * (mode 0: no propagation), the previous behavior. A record with
+ * metadata_pointer == 0 leaves pBgMetadata NULL natively; the
+ * port binds meta 0/0 there, which pins both axes — the native
+ * read of address 0 (the BIOS-shadow region) is not reproducible
+ * and only two rooms (10/1, 11/2 BG3) hit it. */
+static FusionAosBackgroundList aria_scroll_backgrounds;
+static int aria_scroll_bg_tried_area = -1, aria_scroll_bg_tried_room = -1;
+static bool aria_scroll_bg_ok;
 /* gEwramData +0x414 byte: the Object20Update prologue's cleared-game
  * transform (word16&8 / word60&2 / !(+0x42C&0x10000)) rewrites it to
  * (b & ~0x10) | 5, and the param0-4/5/6 create paths and the
@@ -421,11 +441,16 @@ static bool spawn_special_boss_soul(AriaRoom *room, const AriaEntity *entity,
  *     object20_apply_out and persist (the native +0x58 byte is
  *     shared mutable state; only bit 6 has ported consumers —
  *     see AriaEntityDataRecord.flags58).
+ *   +0x59 flags — bit 1 (unk_53D_1) seeds at activation: every
+ *     room entity natively passes sub_0800F1FC (or the pickup
+ *     spawners sub_08044054/sub_08044980), which sets it
+ *     unconditionally; other bits stay 0 (bit 3's child-draw mark
+ *     lives in the variant structs, not this mirror).
  *   player record — pos from soma, +0x58 the facing bit
  *     approximation shared with in->player_flags58 (resynced
  *     every frame, so the shop's player +0x58 stores persist
  *     only until the next sync — the non-facing bits are not
- *     modelled). */
+ *     modelled), +0x59 bit 1 per sub_0801487C. */
 static AriaEntityDataRecord aria_entity_data[ARIA_ENTITY_DATA_RECORDS];
 
 /* The +0xA state byte of an Object20 entity's live variant. */
@@ -481,6 +506,18 @@ static void entity_data_sync(const AriaEntity *e, size_t i) {
          * state, not a per-frame mirror). */
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 32)
             rec->flags58 = e->object20.flags58;
+        /* +0x59 bit 1 (unk_53D_1): sub_0800F1FC sets it
+         * unconditionally on every record it spawns — the room
+         * entity list (objects through the case-2 ObjectXXCreate
+         * dispatch, kind-1 enemies through sub_0800F92C, and the
+         * case-4/5 pickups whose real entities sub_08044054/
+         * sub_08044980 flag themselves). Every host room entity
+         * maps to one of those paths, so the flag seeds at
+         * activation; dynamically spawned children
+         * (e->spawner/link_parent) are approximated the same way —
+         * most native EntityCreateInRange child creates set the
+         * bit too, though a few (sub_080355D0) do not. */
+        rec->flags59 |= 0x02;
     }
     if (e->kind == ARIA_KIND_ENEMY) {
         rec->pos40 = e->enemy.x;
@@ -884,6 +921,20 @@ static size_t aria_scroll_tile_fetch(void *context, int bg,
                            count);
 }
 
+/* Lazily read the area directory once per bound ROM; shared by
+ * the tilemap and layer-record refreshes below. */
+static bool aria_scroll_directory_ready(void) {
+    if (!aria_scroll_areas_tried) {
+        aria_scroll_areas_tried = true;
+        char error[160];
+        aria_scroll_areas_ok =
+            fusion_aos_read_area_directory(aria_scroll_rom,
+                                           &aria_scroll_areas,
+                                           error, sizeof error);
+    }
+    return aria_scroll_areas_ok;
+}
+
 /* (Re)resolve the scroll tile source for `room`: reads the area
  * directory once per bound ROM, loads the room's tilemap once per
  * (area, room) — a failed load is not retried until the room or
@@ -891,44 +942,63 @@ static size_t aria_scroll_tile_fetch(void *context, int bg,
  * it when no usable tilemap exists. Cheap on repeat calls. */
 static void aria_scroll_tilemap_refresh(const AriaRoom *room) {
     const AosRoomTilemap *source = NULL;
-    if (aria_scroll_rom) {
-        if (!aria_scroll_areas_tried) {
-            aria_scroll_areas_tried = true;
+    if (aria_scroll_rom && aria_scroll_directory_ready() &&
+        room->area >= 0 && room->area < FUSION_AOS_AREA_COUNT &&
+        room->number >= 0 &&
+        (size_t)room->number <
+            aria_scroll_areas.areas[room->area].room_count) {
+        if (aria_scroll_tiles_tried_area != room->area ||
+            aria_scroll_tiles_tried_room != room->number) {
+            aos_room_tilemap_free(&aria_scroll_tiles);
+            aria_scroll_tiles_area = aria_scroll_tiles_room = -1;
+            aria_scroll_tiles_tried_area = room->area;
+            aria_scroll_tiles_tried_room = room->number;
             char error[160];
-            aria_scroll_areas_ok =
-                fusion_aos_read_area_directory(aria_scroll_rom,
-                                               &aria_scroll_areas,
-                                               error, sizeof error);
-        }
-        if (aria_scroll_areas_ok && room->area >= 0 &&
-            room->area < FUSION_AOS_AREA_COUNT && room->number >= 0 &&
-            (size_t)room->number <
-                aria_scroll_areas.areas[room->area].room_count) {
-            if (aria_scroll_tiles_tried_area != room->area ||
-                aria_scroll_tiles_tried_room != room->number) {
-                aos_room_tilemap_free(&aria_scroll_tiles);
-                aria_scroll_tiles_area = aria_scroll_tiles_room = -1;
-                aria_scroll_tiles_tried_area = room->area;
-                aria_scroll_tiles_tried_room = room->number;
-                char error[160];
-                if (aos_room_tilemap_load(
-                        &aria_scroll_tiles, aria_scroll_rom,
-                        &aria_scroll_areas, (size_t)room->area,
-                        (size_t)room->number, error, sizeof error)) {
-                    aria_scroll_tiles_area = room->area;
-                    aria_scroll_tiles_room = room->number;
-                }
+            if (aos_room_tilemap_load(
+                    &aria_scroll_tiles, aria_scroll_rom,
+                    &aria_scroll_areas, (size_t)room->area,
+                    (size_t)room->number, error, sizeof error)) {
+                aria_scroll_tiles_area = room->area;
+                aria_scroll_tiles_room = room->number;
             }
-            if (aria_scroll_tiles_area == room->area &&
-                aria_scroll_tiles_room == room->number)
-                source = &aria_scroll_tiles;
         }
+        if (aria_scroll_tiles_area == room->area &&
+            aria_scroll_tiles_room == room->number)
+            source = &aria_scroll_tiles;
     }
     if (source)
         aos_scroll_tile_source(&aria_scroll, aria_scroll_tile_fetch,
                                (void *)source);
     else
         aos_scroll_tile_source(&aria_scroll, NULL, NULL);
+}
+
+/* (Re)resolve the room's three background records for the scroll
+ * layer bind: descriptor + background table once per (area, room),
+ * a failed read is not retried until the room or the bound ROM
+ * changes. Cheap on repeat calls. */
+static void aria_scroll_layers_refresh(const AriaRoom *room) {
+    if (aria_scroll_bg_tried_area == room->area &&
+        aria_scroll_bg_tried_room == room->number)
+        return;
+    aria_scroll_bg_tried_area = room->area;
+    aria_scroll_bg_tried_room = room->number;
+    aria_scroll_bg_ok = false;
+    if (!aria_scroll_rom || !aria_scroll_directory_ready() ||
+        room->area < 0 || room->area >= FUSION_AOS_AREA_COUNT ||
+        room->number < 0 ||
+        (size_t)room->number >=
+            aria_scroll_areas.areas[room->area].room_count)
+        return;
+    char error[160];
+    FusionAosRoomDescriptor descriptor;
+    aria_scroll_bg_ok =
+        fusion_aos_read_room_descriptor(
+            aria_scroll_rom, &aria_scroll_areas, (size_t)room->area,
+            (size_t)room->number, &descriptor, error, sizeof error) &&
+        fusion_aos_read_room_backgrounds(
+            aria_scroll_rom, &descriptor, &aria_scroll_backgrounds,
+            error, sizeof error);
 }
 
 /* Bind the ROM the scroll rebuild's tile words resolve through
@@ -944,27 +1014,90 @@ void aria_scroll_tilemap_bind(const FusionRom *rom) {
     aos_room_tilemap_free(&aria_scroll_tiles);
     aria_scroll_tiles_area = aria_scroll_tiles_room = -1;
     aria_scroll_tiles_tried_area = aria_scroll_tiles_tried_room = -1;
+    aria_scroll_bg_tried_area = aria_scroll_bg_tried_room = -1;
+    aria_scroll_bg_ok = false;
 }
 
-/* Bind the ported BG1 scroll layer for this room on first use —
- * the same seed object20_scroll_tx installs (map-size gates =
- * the room's screen counts, BG1 rebinds to the camera
- * position). */
+/* Bind the ported scroll layers for this room on first use — the
+ * same seed object20_scroll_tx installs. BG1 keeps the room's
+ * screen counts as its pBgMetadata->unk_0/unk_1 map-size gates
+ * (BG1's metadata bytes are exactly those dimensions) and the
+ * camera position; its unk_18/unk_14/unk_16 come from the room's
+ * BG1 background record when the ROM records resolved (unk_14/
+ * unk_16 are the interpolation reference ranges sub_0800D288's
+ * modes 11-16/23 scale against). BG2/BG3 bind their full records:
+ * mode, scroll ranges, dimension gates and the sub_0800ED5C/
+ * sub_0800EE54 initial positions computed from the incoming
+ * scroll (unk_60.unk_334/unk_336 — the previous room's BG1
+ * integer position, y minus 0x30 — approximated by the camera
+ * position minus the same 0x30). Without a bound ROM every
+ * record stays zeroed: BG1 as before, BG2/BG3 mode 0. */
 static void object20_scroll_ensure(AriaRoom *room, int cam_x,
                                    int cam_y) {
     if (aria_scroll_room_area == room->area &&
         aria_scroll_room_number == room->number)
         return;
     memset(&aria_scroll, 0, sizeof aria_scroll);
+    aria_scroll_layers_refresh(room);
+    const FusionAosBackground *records =
+        aria_scroll_bg_ok ? aria_scroll_backgrounds.entries : NULL;
+    const FusionAosBackground *bg1 = records ? &records[0] : NULL;
     aos_scroll_bind(&aria_scroll, 1,
                     (uint8_t)room->width_screens,
                     (uint8_t)room->height_screens,
-                    0, 0, 0, (int32_t)cam_x << 16,
-                    (int32_t)cam_y << 16);
+                    bg1 ? bg1->field_1 : 0,
+                    bg1 ? bg1->field_4 : 0,
+                    bg1 ? bg1->field_6 : 0,
+                    (int32_t)cam_x << 16, (int32_t)cam_y << 16);
+    for (int bg = 2; bg < 4; ++bg) {
+        const FusionAosBackground *rec = records ? &records[bg - 1] : NULL;
+        uint8_t mode = rec ? rec->field_1 : 0;
+        uint16_t range_x = rec ? rec->field_4 : 0;
+        uint16_t range_y = rec ? rec->field_6 : 0;
+        /* pBgMetadata->unk_0/unk_1: the record's two dimension
+         * bytes; absent metadata binds 0/0 (see the statics
+         * comment — the native NULL dereference is not
+         * reproducible). */
+        uint8_t meta_0 = (rec && rec->has_dimensions)
+            ? rec->width_screens : 0;
+        uint8_t meta_1 = (rec && rec->has_dimensions)
+            ? rec->height_screens : 0;
+        uint16_t origin_x = aos_scroll_origin_x(
+            mode, meta_0, range_x, aria_scroll.bg[1].unk_14,
+            (uint16_t)cam_x);
+        uint16_t origin_y = aos_scroll_origin_y(
+            mode, meta_1, range_y, aria_scroll.bg[1].unk_16,
+            (uint16_t)(cam_y - 0x30));
+        aos_scroll_bind(&aria_scroll, bg, meta_0, meta_1, mode,
+                        range_x, range_y, (int32_t)origin_x << 16,
+                        (int32_t)origin_y << 16);
+    }
     aria_scroll_room_area = room->area;
     aria_scroll_room_number = room->number;
     aria_scroll_seed_x = cam_x;
     aria_scroll_seed_y = cam_y;
+}
+
+/* sub_08000F60's scan list over the entityData mirror: the refs'
+ * fine_x/fine_y point into the static record table, so they are
+ * bound once; flagged is refreshed from each record's +0x59 bit 1
+ * before every transaction (unspawnled records are memset, so a
+ * zero flags59 already reads unflagged). */
+static AosScrollEntityRef aria_scroll_entities[ARIA_ENTITY_DATA_RECORDS];
+static bool aria_scroll_entities_ready;
+
+static void object20_scroll_entities_refresh(void) {
+    if (!aria_scroll_entities_ready) {
+        for (size_t i = 0; i < ARIA_ENTITY_DATA_RECORDS; ++i) {
+            aria_scroll_entities[i].fine_x = &aria_entity_data[i].pos40;
+            aria_scroll_entities[i].fine_y = &aria_entity_data[i].pos44;
+            aria_scroll_entities[i].flagged = false;
+        }
+        aria_scroll_entities_ready = true;
+    }
+    for (size_t i = 0; i < ARIA_ENTITY_DATA_RECORDS; ++i)
+        aria_scroll_entities[i].flagged =
+            (aria_entity_data[i].flags59 & 0x02) != 0;
 }
 
 /* Run one sub_0800ED24(param0, arg1, 0) against the ported scroll
@@ -979,14 +1112,26 @@ static void object20_scroll_tx(AriaRoom *room, int cam_x, int cam_y,
      * fetch so this transaction's rebuild descriptors carry the
      * real sub_08001994 words. Cheap no-op once resolved. */
     aria_scroll_tilemap_refresh(room);
+    /* The sub_08000F60 entity pass: every +0x59-bit-1 record's
+     * +0x40/+0x44 shifts by -bgInfo[1].xVel/yVel. Caveat: the host
+     * records are per-frame mirrors — entity_data_sync rewrites
+     * pos40/pos44 from e->x/e->y (and the player record from soma)
+     * at the top of each entity's update, so a shift persists only
+     * until that record's next sync. Native +0x524/+0x528 are the
+     * authoritative positions and the compensation accumulates over
+     * the scroll sequence; keeping that accumulation would need the
+     * record positions to be authoritative, which they are not. */
+    object20_scroll_entities_refresh();
+    AosScrollWorld sw = { 0, false, 0,
+                          aria_scroll_entities, ARIA_ENTITY_DATA_RECORDS };
     AosScrollOut sx;
     int ran = aos_scroll_transaction(&aria_scroll, object20_ewram_427,
-                                     param0, arg1, 0, NULL, &sx);
+                                     param0, arg1, 0, &sw, &sx);
     const AosBgLayer *b1 = &aria_scroll.bg[1];
     printf("Object20 %d: %s ED24(%d, 0x%X)%s BG1 pos=(%d,%d) "
-           "vel=(%d,%d)%s\n", id, tag, param0, (unsigned)arg1,
-           ran ? "" : " gated", b1->x_pos >> 16, b1->y_pos >> 16,
-           b1->x_vel, b1->y_vel,
+           "vel=(%d,%d) entities_shifted=%zu%s\n", id, tag, param0,
+           (unsigned)arg1, ran ? "" : " gated", b1->x_pos >> 16,
+           b1->y_pos >> 16, b1->x_vel, b1->y_vel, sx.entities_shifted,
            sx.fx ? " (layer FX unported)" : "");
     /* The rebuild DMA's resolved staging words (0 without a bound
      * ROM tilemap): the VRAM write itself stays unmodelled. */
@@ -1004,7 +1149,9 @@ static void object20_scroll_tx(AriaRoom *room, int cam_x, int cam_y,
  * transaction compose on that one accumulator — so the visible BG1
  * offset is the camera position plus this delta. Entities keep
  * cam_x/cam_y: only entityData records with +0x59 bit 1 shift
- * (sub_08000F60) and no ported writer sets that flag yet. Returns
+ * (sub_08000F60 — the flag is seeded at spawn now, but the host
+ * records resync from e->x/e->y every frame so the shift does not
+ * accumulate into the drawn positions). Returns
  * 0,0 before the room's first transaction or for another room's
  * stale state. */
 void aria_scroll_bg1_offset(const AriaRoom *room, int32_t *x, int32_t *y) {
@@ -1891,6 +2038,9 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
      * facing-bit approximation shared with player_flags58. */
     memset(&aria_entity_data[0], 0, sizeof aria_entity_data[0]);
     aria_entity_data[0].active = soma != NULL;
+    /* +0x59 bit 1: sub_0801487C sets unk_53D_1 on the player record
+     * (entityData[0]) right after EntityCreateInRange(0,0). */
+    aria_entity_data[0].flags59 = 0x02;
     if (soma) {
         aria_entity_data[0].pos40 = soma->x;
         aria_entity_data[0].pos44 = soma->y;

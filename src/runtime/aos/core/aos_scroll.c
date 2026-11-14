@@ -27,6 +27,85 @@ void aos_scroll_bind(AosScroll *s, int bg, uint8_t meta_0, uint8_t meta_1,
     s->disp_v[bg] = (uint16_t)((uint32_t)y_pos >> 16);
 }
 
+/* The interpolation half shared by sub_0800ED5C/sub_0800EE54:
+ * (arg * (range - base)) / (ref_range - base) with ARM SDIV's
+ * zero-denominator result of 0, truncated to u16 like the native
+ * var_2 assignment. */
+static uint16_t scroll_origin_interp(uint16_t arg, uint16_t range,
+                                     uint16_t ref_range,
+                                     uint16_t base) {
+    int32_t den = (int32_t)ref_range - base;
+    if (den == 0) return 0;
+    return (uint16_t)(((int32_t)arg * ((int32_t)range - base)) / den);
+}
+
+uint16_t aos_scroll_origin_x(uint8_t mode, uint8_t meta_0,
+                             uint16_t range, uint16_t ref_range,
+                             uint16_t arg) {
+    /* sub_0800ED5C: the x half. */
+    uint16_t v = arg;
+    switch (mode) {
+    case 0: case 8: case 9: case 10: case 14: case 17: case 18:
+    case 20: case 21: case 22: case 27: case 28: case 29: case 30:
+    case 32: case 33: case 35:
+        v = 0;
+        break;
+    case 5: case 7:
+        v = (uint16_t)(v * 2);
+        break;
+    case 2: case 4:
+        v = meta_0 > 1 ? (uint16_t)(v / 2) : 0;
+        break;
+    case 11: case 13: case 15: case 16: case 23: case 31:
+        v = meta_0 > 1
+            ? scroll_origin_interp(v, range, ref_range, 0xF0) : 0;
+        break;
+    case 36:
+        break;
+    default:
+        break;
+    }
+    return v;
+}
+
+uint16_t aos_scroll_origin_y(uint8_t mode, uint8_t meta_1,
+                             uint16_t range, uint16_t ref_range,
+                             uint16_t arg) {
+    /* sub_0800EE54: the y half — same skeleton with the 0xD0
+     * base, the +0x30 bias and mode 10's 0xFFD0 (which wraps the
+     * final +0x30 back to 0). Modes 15/16 interpolate without
+     * the meta_1 gate the 12/13 pair carries. */
+    uint16_t v = arg;
+    switch (mode) {
+    case 0: case 8: case 9: case 14: case 17: case 18:
+    case 20: case 21: case 22: case 27: case 28: case 29: case 30:
+    case 32: case 33: case 35:
+        v = 0;
+        break;
+    case 10:
+        v = 0xFFD0;
+        break;
+    case 6: case 7:
+        v = (uint16_t)(v * 2);
+        break;
+    case 3: case 4:
+        v = meta_1 > 1 ? (uint16_t)(v / 2) : 0;
+        break;
+    case 12: case 13:
+        v = meta_1 > 1
+            ? scroll_origin_interp(v, range, ref_range, 0xD0) : 0;
+        break;
+    case 15: case 16:
+        v = scroll_origin_interp(v, range, ref_range, 0xD0);
+        break;
+    case 36:
+        break;
+    default:
+        break;
+    }
+    return (uint16_t)(v + 0x30);
+}
+
 static void scroll_out_reset(AosScrollOut *out) {
     if (out) memset(out, 0, sizeof *out);
 }

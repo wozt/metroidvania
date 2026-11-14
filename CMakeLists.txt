@@ -326,6 +326,7 @@ add_executable(fusion_aria_title_preview src/runtime/aos/title/aos_title_preview
                src/runtime/aos/title/aos_title_fade.c src/runtime/aos/title/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos/game/aos_obj.c src/runtime/aos/core/aos_anim.c
                src/runtime/aos/game/aos_game_mode.c src/runtime/aos/game/aos_game_lifecycle.c src/runtime/aos/intro/aos_game_over.c
                src/runtime/aos/menus/aos_main_menu.c src/runtime/aos/intro/aos_intro_cutscene.c
+               src/runtime/aos/core/aos_scroll.c
                src/runtime/aos/intro/aos_intro_entities.c src/runtime/aos/intro/aos_intro_resources.c
                src/runtime/aos/intro/aos_intro_font.c src/runtime/aos/intro/aos_intro_graphics.c
                src/runtime/aos/core/aos_rom_graphics.c src/runtime/aos/menus/aos_main_menu_graphics.c
@@ -1360,6 +1361,7 @@ if(BUILD_TESTING)
                    src/runtime/aos/menus/aos_main_menu.c
                    src/runtime/aos/title/aos_title_fade.c src/runtime/aos/title/aos_title_screen.c src/runtime/aos/math/aos_math.c src/runtime/aos/game/aos_obj.c src/runtime/aos/core/aos_anim.c
                    src/runtime/aos/core/aos_input.c src/runtime/aos/intro/aos_intro_cutscene.c
+                   src/runtime/aos/core/aos_scroll.c
                    src/runtime/aos/intro/aos_intro_entities.c)
     target_include_directories(fusion_aos_game_lifecycle_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_game_lifecycle_tests PRIVATE m)
@@ -1369,6 +1371,7 @@ if(BUILD_TESTING)
     add_executable(fusion_aos_intro_cutscene_tests
                    tests/test_aos_intro_cutscene.c
                    src/runtime/aos/intro/aos_intro_cutscene.c
+                   src/runtime/aos/core/aos_scroll.c
                    src/runtime/aos/intro/aos_intro_entities.c)
     target_include_directories(fusion_aos_intro_cutscene_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_intro_cutscene_tests PRIVATE m)

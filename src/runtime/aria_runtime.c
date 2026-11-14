@@ -205,8 +205,9 @@ bool object10_item_owned(void *ctx, uint16_t item) {
  * therefore invisible positioning, not a visible transition effect.
  * sub_0803FC6C (aos_scroll_transition_request) is NOT part of this
  * path: its only native callers are GameModeIntroCutsceneUpdate
- * stage 3 (BG1-3 negative-y scroll, approximated by
- * aos_intro_cutscene's scroll_up) and GameModeCreditsUpdate stage 3
+ * stage 3 (BG1-3 negative-y scroll, run on the intro cutscene's own
+ * bound AosScroll in aos_intro_cutscene.c) and
+ * GameModeCreditsUpdate stage 3
  * (BG1-3 +0x8400 scroll; the credits mode is not ported). Issuing a
  * transition request here would fabricate a scroll the native door
  * path never performs, so the room swap stays instant like the
@@ -569,6 +570,8 @@ static void usage(const char *name) {
             "       [--spawn X Y] [--moves MASK]\n"
             "       [--weapon none|INDEX] [--red-soul N] [--blue-soul N] [--yellow-soul N] [--hitboxes] [--no-overlays | --overlay-dir DIR] [--atk N] [--def N] [--hp N]\n"
             "       [--repeat N: release the capture buttons one frame in N]\n"
+            "       [--dialogue-trace: log Object20 room-dialogue window\n"
+            "         open/close frames (debug timing aid)]\n"
             "       [--capture out.bmp FRAMES BUTTONS] [--input-map map.txt] [--debug-menu]\n"
             "       [--debug-input MASK,MASK,...: menu key edges, one per captured frame]\n"
             "       [--play-song N: PlaySong at the start] [--audio-wav out.wav] [--mute]\n"
@@ -609,6 +612,7 @@ int aria_runtime_main(int argc, char **argv) {
     const char *frontend_command[64] = {NULL};
     int frontend_count = 0;
     const char *debug_input = NULL;
+    bool dialogue_trace = false;   /* --dialogue-trace: window timing log */
     /* Diagnostic combat stats (new-game values are not traced). */
     AriaPlayerStats player_stats = {10, 4, 320, 320};
     AosSaveData active_save = {0};
@@ -660,6 +664,7 @@ int aria_runtime_main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--hitboxes")) show_hitboxes = true;
         else if (!strcmp(argv[i], "--debug-menu")) debug_at_start = true;
         else if (!strcmp(argv[i], "--debug-input") && i + 1 < argc) debug_input = argv[++i];
+        else if (!strcmp(argv[i], "--dialogue-trace")) dialogue_trace = true;
         else if (!strcmp(argv[i], "--input-map") && i + 1 < argc) {
             char error[256];
             if (!gba_pad_map_load(&pad_map, argv[++i], error, sizeof error)) {
@@ -1137,7 +1142,7 @@ int aria_runtime_main(int argc, char **argv) {
     bool opening_text_ready = false;
     bool opening_window_ready = false;
     bool opening_epilogue = false;
-    bool opening_talk_armed = true;
+    bool dialogue_trace_was_open = false;   /* --dialogue-trace edge state */
     bool opening_soul_text_ready = false;
     SDL_Texture *opening_portrait_texture = NULL;
     uint8_t opening_portrait_id = 0xFF;
@@ -2011,7 +2016,6 @@ int aria_runtime_main(int argc, char **argv) {
                 soma.hp > 0 && soma.anim.id != AOS_SOMA_ANIM_DEATH) {
                 int psx = (int)(soma.x >> 16) - cam_x;
                 int psy = (int)(soma.y >> 16) - cam_y;
-                bool near_any = false;
                 int talk = -1;
                 /* Arikado (+0x18) is tested before Mina (+0x14), matching
                  * sub_0805D076's order. */
@@ -2022,16 +2026,23 @@ int aria_runtime_main(int argc, char **argv) {
                     int ax = (int)(opening_actors.x[talks[t].actor] >> 16) - cam_x - 0x20;
                     int ay = (int)(opening_actors.y[talks[t].actor] >> 16) - cam_y - 0x20;
                     if ((uint16_t)(psx - ax) <= 0x40 &&
-                        (uint16_t)(psy - ay) <= 0x40) {
-                        near_any = true;
-                        if (talk < 0) talk = (int)talks[t].text;
-                    }
+                        (uint16_t)(psy - ay) <= 0x40 && talk < 0)
+                        talk = (int)talks[t].text;
                 }
-                /* Re-arm only after Soma leaves both boxes so a finished
-                 * conversation cannot retrigger on the next frame. */
-                if (!near_any) opening_talk_armed = true;
-                if (talk >= 0 && opening_talk_armed) {
-                    opening_talk_armed = false;
+                /* sub_0805CED0 case 10 (_0805D076) re-checks its gate
+                 * every frame: the 0x40px proximity box AND the player
+                 * input word's 0x42 bits (KEY_B|KEY_UP edge — the same
+                 * gEwramData +0x16 mask the npc families read through
+                 * word16) with global 0x4BE == 0 (no runtime channel;
+                 * clear). Case 11 (_0805D168) runs sub_08067A04 until
+                 * done then returns +0xA to 10, so every qualifying
+                 * edge re-opens the chatter while Soma stays in a box —
+                 * the native per-pulse cadence, replacing the earlier
+                 * armed-once approximation. */
+                if (talk >= 0 && (aria_input.new_input & 0x42) != 0) {
+                    if (dialogue_trace)
+                        printf("DialogueTrace epilogue-talk frame=%ld text=0x%X\n",
+                               step, talk);
                     const uint8_t *script = NULL;
                     size_t script_size = 0;
                     if (opening_rom.data &&
@@ -2501,6 +2512,63 @@ int aria_runtime_main(int argc, char **argv) {
             object1c_save_path = has_active_save ? save_path : NULL;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
                             aria_input.new_input);
+            /* --dialogue-trace: log the shared room dialogue's window
+             * open/close frames so scripted-input runs can measure the
+             * pulse->window latency without pixel probing. Debug
+             * diagnostics only; no gameplay effect. */
+            if (dialogue_trace) {
+                bool rd_open = aos_room_dialogue_active(&room_dialogue);
+                bool rd_edge = rd_open != dialogue_trace_was_open;
+                dialogue_trace_was_open = rd_open;
+                if (rd_edge || step % 1000 == 0) {
+                    printf("DialogueTrace %s frame=%ld text=0x%04X "
+                           "soma=%d,%d",
+                           rd_edge ? (rd_open ? "open" : "close") : "hb",
+                           step, room_dialogue.text_id,
+                           (int)(soma.x >> 16), (int)(soma.y >> 16));
+                    for (size_t k = 0; k < room.entity_count; ++k) {
+                        const AriaEntity *de = &room.entities[k];
+                        if (de->kind != ARIA_KIND_SPECIAL || de->id != 32 ||
+                            !de->spawned)
+                            continue;
+                        int st = -1;
+                        switch (de->object20.family) {
+                        case AOS_OBJECT20_FAMILY_LOOP:
+                            st = de->object20.v.npc_loop.state; break;
+                        case AOS_OBJECT20_FAMILY_GUARD:
+                            st = de->object20.v.guard.state; break;
+                        case AOS_OBJECT20_FAMILY_TALK_LOOP:
+                            st = de->object20.v.talk_loop.state; break;
+                        default: break;
+                        }
+                        printf(" | e%zu p0=%d f=%u st=%d @%d,%d", k,
+                               de->param0, de->object20.family, st,
+                               de->x, de->y);
+                    }
+                    putchar('\n');
+                }
+                /* Edge-frame probe dump: why a state-1 npc does not
+                 * retrigger (probe_inside / word16 & 0x42 / gate). */
+                if ((aria_input.new_input & 0x42) != 0) {
+                    int psx = (int)(soma.x >> 16) - cam_x;
+                    int psy = (int)(soma.y >> 16) - cam_y;
+                    printf("DialogueTrace edge frame=%ld new=%04x",
+                           step, aria_input.new_input);
+                    for (size_t k = 0; k < room.entity_count; ++k) {
+                        const AriaEntity *de = &room.entities[k];
+                        if (de->kind != ARIA_KIND_SPECIAL || de->id != 32 ||
+                            !de->spawned)
+                            continue;
+                        int esx = de->x - cam_x, esy = de->y - cam_y;
+                        int inside =
+                            (uint16_t)(psx - esx + 0x20) <= 0x40 &&
+                            (uint16_t)(psy - esy + 0x20) <= 0x40;
+                        printf(" | e%zu p0=%d inside=%d", k, de->param0,
+                               inside);
+                    }
+                    putchar('\n');
+                }
+            }
             if (have_quick_map)
                 for (size_t wi = 0; wi < room.entity_count; ++wi) {
                     AriaEntity *wall_e = &room.entities[wi];

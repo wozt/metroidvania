@@ -58,6 +58,12 @@ int main(void) {
     }
     assert(frames == 3220 && mode.update_stage == 4 && intro.bg_y[1] == 0 &&
            intro.bg_y[2] == 0 && intro.bg_y[3] == 0);
+    /* The stage-3 scroll is the ported sub_0803FC6C state: BG1-3
+     * pinned at y = 0 with cleared velocities. */
+    for (int bg = 1; bg < 4; ++bg)
+        assert(intro.scroll.bg[bg].y_pos == 0 &&
+               intro.scroll.bg[bg].y_vel == 0 &&
+               intro.bg_y[bg] == intro.scroll.bg[bg].y_pos);
 
     frames = 0;
     while (mode.update_stage == 4) {

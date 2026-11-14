@@ -19,17 +19,23 @@ never committed):
    run; the WIN0 band luminance metric from the opening comparison
    detects window-open frames.
 3. Runtime side: `fusion_aria_runtime --save <fresh> --rom <rom>
-   --capture out.bmp N 3 --repeat PULSE` under xvfb (or $DISPLAY).
-   The constant A+B mask with one released frame per PULSE gives the
-   same edge cadence; once free-roam begins each pulse re-opens the
-   room dialogue, so the band stays dark ~PULSE-10 frames per cycle
-   and the first lit->dark transition after the opening is found by
-   probe + binary search.
-4. Report: every lit->dark transition frame on both sides, the
-   pulse->window latency, and deltas. Frame 0 differs between sides
-   (native = first mode-4 frame after the file flow; runtime = first
-   room-loop frame after setup), so treat absolute frames as
-   approximate; the pulse->window latency is the comparable metric.
+   --repeat PULSE --dialogue-trace --capture out.bmp N 3` under xvfb
+   (or $DISPLAY). The constant A+B mask with one released frame per
+   PULSE gives the same edge cadence; once free-roam begins each
+   pulse re-opens the room dialogue. --dialogue-trace (added for this
+   comparison; debug diagnostics only) prints the exact frame of
+   every Object20 room-dialogue open/close and every epilogue
+   proximity-talk trigger, so pulse->window latency is measured
+   directly. A single band probe inside the first talk window
+   sanity-checks visibility: the room_dialogue bridge draws text but
+   no BLDY backdrop (band stays lit), while the epilogue talks reuse
+   the opening draw path and darken the band to ~61 like native ~62.
+4. Report: every lit->dark transition frame on the native side, the
+   runtime talk-trigger frames and their pulse-cycle offsets, and
+   deltas. Frame 0 differs between sides (native = first mode-4 frame
+   after the file flow; runtime = first room-loop frame after setup),
+   so treat absolute frames as approximate; the pulse->window latency
+   is the comparable metric.
 
 Measured 2026-11-15 (ROM abd71fe0..., this checkout, pulse=500,
 workdir /tmp/obj20/cmp_test):
@@ -46,7 +52,26 @@ workdir /tmp/obj20/cmp_test):
            around Mina/Arikado and the capture mask has no direction
            bits. --capture buttons=19 (A+B+RIGHT) walks Soma out of
            room 0 (0/3 -> 0/5 by frame 20000) without a confirmed
-           window. See --rt-buttons/--rt-thresh/--rt-lo/--rt-hi.
+           window. See --rt-buttons/--rt-thresh.
+
+Measured 2026-11-16 (same ROM, pulse=500, runtime --dialogue-trace,
+36000 frames):
+  runtime: epilogue proximity talks now fire on every qualifying
+           0x42 edge while Soma stands in the Mina box (the
+           sub_0805CED0 case-10/11 gate was ported to require the
+           B/UP edge per trigger instead of the armed-once
+           approximation): 15+ triggers at frames 21500, 22500,
+           23500, ... ~= every pulse. Window-open latency ~= 1 frame
+           after the pulse edge vs native 10-30 - the runtime opens
+           the window on the trigger frame with no sub_08067934 /
+           sub_08067A04 state-machine or WIN0 open-animation delay.
+           Band sanity: ~61 (dark) inside the talk window vs ~117
+           lit between windows. The param0-27 guard Object20 fires
+           once (text 0x45, frames ~22001-23502) then releases its
+           record via sub_0805B66C(0) and retires - matching the
+           native release semantics; its window draws no BLDY
+           backdrop so the band metric cannot see it (documented
+           room_dialogue host gap).
 
 Usage:
   tests/compare_aos_object20_dialogue.py --rom "roms/Castlevania - Aria of Sorrow (USA).gba" [--keep]
@@ -226,64 +251,77 @@ def measure_native(rom, state, workdir, lab, pulse, frames,
 
 # --- runtime measurement ---------------------------------------------------
 
-def runtime_band(runtime, rom, save, target, workdir, frames,
-                 buttons=3, repeat=PULSE_DEFAULT):
-    out = os.path.join(workdir, f"rt_{frames}.bmp")
+def runtime_band_probe(runtime, rom, save, target, workdir, frames,
+                       buttons):
+    """One --capture band probe (constant mask; used only as a
+    mid-window visibility sanity check, not for timing)."""
+    out = os.path.join(workdir, f"rt_probe_{frames}.bmp")
     inner = [runtime, "--save", save, "--save-target", target,
-             "--rom", rom, "--repeat", str(repeat),
+             "--rom", rom,
              "--capture", out, str(frames), str(buttons)]
     cmd = inner if os.environ.get("DISPLAY") else ["xvfb-run", "-a"] + inner
     proc = subprocess.run(cmd, capture_output=True, text=True)
-    completed = "opening story completed" in proc.stdout
     if not os.path.exists(out):
-        return None, completed, proc.stdout + proc.stderr
-    return band_mean_bmp(out), completed, proc.stdout + proc.stderr
+        return None, "opening story completed" in proc.stdout, \
+            proc.stdout + proc.stderr
+    return band_mean_bmp(out), "opening story completed" in proc.stdout, \
+        proc.stdout + proc.stderr
 
 
-def measure_runtime(runtime, rom, save, workdir, lo, hi,
+def measure_runtime(runtime, rom, save, workdir, frames,
                     buttons=3, repeat=PULSE_DEFAULT, thresh=90.0):
-    """Find the first frame in [lo,hi] whose WIN0 band is dark.
-    Assumes lit before the room-dialogue era and (near-)permanently
-    dark after it starts, because each pulse re-opens the window."""
+    """Single traced run: `fusion_aria_runtime --dialogue-trace` logs the
+    Object20 room-dialogue window open/close frames and each epilogue
+    proximity talk trigger, so the pulse->window latency is read
+    exactly instead of probed through the WIN0 band. The constant A+B
+    mask with one released frame per `repeat` gives the same edge
+    cadence as the native pulse schedule. One band probe inside the
+    first talk window sanity-checks that the window is actually
+    visible (the room_dialogue bridge draws text but no BLDY backdrop;
+    the epilogue talks reuse the opening draw path and do darken)."""
+    import re
     target = os.path.join(workdir, "rt_save.sav")
-    cache = {}
-
-    def probe(f):
-        if f in cache:
-            return cache[f]
-        m, completed, log = runtime_band(runtime, rom, save, target,
-                                       workdir, f, buttons, repeat)
-        cache[f] = (m, completed)
-        return cache[f]
-
-    # exponential probe for first dark
-    first_dark = None
-    prev = None
-    f = lo
-    step = max(1, (hi - lo) // 12)
-    while f <= hi:
-        m, _ = probe(f)
-        if m is not None and m < thresh:
-            first_dark = f
-            break
-        prev = f
-        f += step
-    if first_dark is None:
-        return {"error": f"no dark frame in [{lo},{hi}]",
-                "probes": {k: v[0] for k, v in cache.items()}}
-    # binary search left edge between prev (lit) and first_dark
-    a = prev if prev is not None else lo
-    b = first_dark
-    while b - a > 1:
-        mid = (a + b) // 2
-        m, _ = probe(mid)
-        if m is not None and m < thresh:
-            b = mid
-        else:
-            a = mid
-    completed_frames = sorted(f for f, (_, c) in cache.items() if c)
-    return {"t_window": b, "probes": {k: v[0] for k, v in cache.items()},
-            "completed_seen_at": completed_frames}
+    out = os.path.join(workdir, "rt_trace.bmp")
+    inner = [runtime, "--save", save, "--save-target", target,
+             "--rom", rom, "--repeat", str(repeat),
+             "--dialogue-trace",
+             "--capture", out, str(frames), str(buttons)]
+    cmd = inner if os.environ.get("DISPLAY") else ["xvfb-run", "-a"] + inner
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    log = proc.stdout + proc.stderr
+    completed = "opening story completed" in log
+    talks = [int(m) for m in re.findall(
+        r"DialogueTrace epilogue-talk frame=(\d+)", log)]
+    opens = [int(m) for m in re.findall(
+        r"DialogueTrace open frame=(\d+)", log)]
+    closes = [int(m) for m in re.findall(
+        r"DialogueTrace close frame=(\d+)", log)]
+    result = {"talks": talks[:50], "opens": opens[:50],
+              "closes": closes[:50], "completed": completed,
+              "log_tail": log.strip().splitlines()[-15:]}
+    if not talks:
+        result["error"] = "no epilogue-talk triggers in trace"
+        return result
+    # Pulse edges land on the frame after each `repeat` boundary:
+    # --repeat releases the buttons when step % repeat == repeat - 1
+    # (pre-increment step), so the mask resumes — and new_input edges —
+    # on the next frame, capture frame k*repeat + 1. The trace prints
+    # the pre-increment step, so the effective capture frame is
+    # printed + 1 and pulse_latency() reports the offset inside the
+    # cycle (edge frame itself maps to 1).
+    lat = [pulse_latency(t + 1, repeat) for t in talks]
+    result["talk_latencies"] = lat
+    result["first_talk"] = talks[0] + 1
+    result["pulse_latency"] = lat[0] if lat else None
+    # Band sanity probe well inside the first talk window (the talk
+    # stays open ~repeat frames; +60 is past any open lag).
+    probe_frame = talks[0] + 61
+    if probe_frame <= 36000:
+        band, _, _ = runtime_band_probe(runtime, rom, save, target,
+                                      workdir, probe_frame, buttons)
+        result["band_at_first_talk+60"] = band
+        result["band_dark"] = band is not None and band < thresh
+    return result
 
 
 def pulse_latency(open_frame, pulse):
@@ -305,15 +343,16 @@ def main():
     ap.add_argument("--native-frames", type=int, default=NATIVE_RUN_FRAMES)
     ap.add_argument("--cap-from", type=int, default=CAP_FROM)
     ap.add_argument("--cap-to", type=int, default=CAP_TO)
-    ap.add_argument("--rt-lo", type=int, default=4000)
-    ap.add_argument("--rt-hi", type=int, default=30000)
+    ap.add_argument("--rt-frames", type=int, default=36000,
+                    help="runtime traced-run length (capture max 36000)")
     ap.add_argument("--rt-buttons", type=lambda s: int(s, 0),
                     default=3,
                     help="runtime --capture mask (default 3 = A+B; "
                          "add direction bits, e.g. 19 = A+B+RIGHT)")
-    ap.add_argument("--rt-thresh", type=float, default=100.0,
-                    help="runtime dark-band threshold (lit ~=117, "
-                         "window chrome ~=98)")
+    ap.add_argument("--rt-thresh", type=float, default=90.0,
+                    help="runtime dark-band threshold for the "
+                         "visibility sanity probe (lit ~=117, "
+                         "window chrome ~=61)")
     ap.add_argument("--skip-native", action="store_true")
     ap.add_argument("--skip-runtime", action="store_true")
     args = ap.parse_args()
@@ -357,18 +396,27 @@ def main():
 
     if not args.skip_runtime:
         rt = measure_runtime(args.runtime, args.rom, save, workdir,
-                             args.rt_lo, args.rt_hi,
+                             min(args.rt_frames, 36000),
                              buttons=args.rt_buttons,
                              repeat=args.pulse, thresh=args.rt_thresh)
         report["runtime"] = rt
         print("\n=== runtime ===")
-        print(rt.get("t_window") and
-              f"t_window={rt['t_window']} "
-              f"pulse_latency={pulse_latency(rt['t_window'], args.pulse)}"
-              or rt)
-        if rt.get("completed_seen_at"):
-            print(f"'story completed' first seen at probe "
-                  f"{rt['completed_seen_at'][0]}")
+        if rt.get("talks"):
+            print(f"epilogue talks: {len(rt['talks'])} triggers, "
+                  f"first at frame {rt['first_talk']}")
+            print(f"talk->pulse-cycle latencies: {rt['talk_latencies'][:10]}"
+                  f"{'...' if len(rt['talk_latencies']) > 10 else ''}")
+            print(f"first pulse_latency={rt.get('pulse_latency')} "
+                  f"(native ~=10-30)")
+            print(f"band sanity at first talk+60: "
+                  f"{rt.get('band_at_first_talk+60')} "
+                  f"(dark={rt.get('band_dark')})")
+            if rt.get("opens"):
+                print(f"room_dialogue windows: {len(rt['opens'])} opens "
+                      f"(e.g. {rt['opens'][:5]})")
+        else:
+            print(rt)
+        print(f"'story completed': {rt.get('completed')}")
 
     out_path = os.path.join(workdir, "comparison.txt")
     import json

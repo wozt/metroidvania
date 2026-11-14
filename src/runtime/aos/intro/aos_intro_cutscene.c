@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_intro_cutscene.h"
 
+#include <string.h>
+
 enum {
     AOS_INTRO_DISPLAY_ALL_LAYERS = 0x1F00,
     AOS_INTRO_BLEND_BRIGHTNESS_FIRST = 0x00FF,
@@ -54,11 +56,37 @@ size_t aos_intro_cutscene_audio_requests(
     return count;
 }
 
-static void scroll_up(int32_t *position, int32_t *velocity, int32_t step) {
-    if (*position + step < 0) step = -*position;
-    if (step < -0x80000) step = -0x80000;
-    *velocity = step;
-    *position += step;
+/* sub_0803F8A8's pBgMetadata->unk_0/unk_1 scroll gates for the three
+ * intro backgrounds, read from the ROM metadata records the native
+ * stage 0 binds: BG1 0x080E9464, BG2 0x080E9244, BG3 0x080E9354.
+ * unk_0 = 1 pins the x axis (native also clears bgOfs[1].hOfs in
+ * stage 3); unk_1 = 2/3/2 leaves the y axis live. */
+enum {
+    AOS_INTRO_SCROLL_META_X = 1,
+    AOS_INTRO_SCROLL_META_Y_BG1 = 2,
+    AOS_INTRO_SCROLL_META_Y_BG2 = 3,
+    AOS_INTRO_SCROLL_META_Y_BG3 = 2,
+};
+
+/* sub_0803F8A8(bg, pBgMetadata, 0, yInt): seeds bgInfo[bg] with the
+ * intro background's scroll gates and 16.16 start position. */
+static void intro_scroll_bind(AosIntroCutscene *intro) {
+    memset(&intro->scroll, 0, sizeof intro->scroll);
+    aos_scroll_bind(&intro->scroll, 1, AOS_INTRO_SCROLL_META_X,
+                    AOS_INTRO_SCROLL_META_Y_BG1, 0, 0, 0, 0, 0x1600000);
+    aos_scroll_bind(&intro->scroll, 2, AOS_INTRO_SCROLL_META_X,
+                    AOS_INTRO_SCROLL_META_Y_BG2, 0, 0, 0, 0, 0x2600000);
+    aos_scroll_bind(&intro->scroll, 3, AOS_INTRO_SCROLL_META_X,
+                    AOS_INTRO_SCROLL_META_Y_BG3, 0, 0, 0, 0, 0x0C90000);
+}
+
+/* Mirror the scroll layer's y halves into the cutscene's public
+ * bg_y[]/bg_y_velocity[] view after the stage-3 requests. */
+static void intro_scroll_sync(AosIntroCutscene *intro) {
+    for (int bg = 1; bg < 4; ++bg) {
+        intro->bg_y[bg] = intro->scroll.bg[bg].y_pos;
+        intro->bg_y_velocity[bg] = intro->scroll.bg[bg].y_vel;
+    }
 }
 
 static int32_t finish(AosIntroCutscene *intro, bool immediate_skip) {
@@ -103,6 +131,7 @@ int32_t aos_game_mode_intro_cutscene_update(AosGameMode *mode,
             intro->bg_y_velocity[1] = 0;
             intro->bg_y_velocity[2] = 0;
             intro->bg_y_velocity[3] = 0;
+            intro_scroll_bind(intro);
             intro->timer = 0;
             aos_intro_entities_init(&intro->entities);
             mode->update_stage = 1;
@@ -129,9 +158,15 @@ int32_t aos_game_mode_intro_cutscene_update(AosGameMode *mode,
             break;
 
         case 3:
-            scroll_up(&intro->bg_y[1], &intro->bg_y_velocity[1], -0x1C00);
-            scroll_up(&intro->bg_y[2], &intro->bg_y_velocity[2], -0x3200);
-            scroll_up(&intro->bg_y[3], &intro->bg_y_velocity[3], -0x1000);
+            /* GameModeIntroCutsceneUpdate stage 3: sub_0803FC6C on
+             * BG1-3 with the fixed negative-y steps, then wait on
+             * bgInfo[1].yVel == 0. The tile-row rebuilds the native
+             * requests queue stay unported — the host draws the
+             * pre-rendered intro bitmaps, not BG tilemap memory. */
+            aos_scroll_transition_request(&intro->scroll, 1, 0, -0x1C00, NULL);
+            aos_scroll_transition_request(&intro->scroll, 2, 0, -0x3200, NULL);
+            aos_scroll_transition_request(&intro->scroll, 3, 0, -0x1000, NULL);
+            intro_scroll_sync(intro);
             if (intro->bg_y_velocity[1] == 0) {
                 intro->blend_control = AOS_INTRO_BLEND_ALPHA_SECOND;
                 intro->timer = 0;

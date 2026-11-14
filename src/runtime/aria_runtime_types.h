@@ -279,10 +279,11 @@ typedef struct {
                              * ported consumers so far; the other
                              * bits round-trip untouched. */
     uint8_t flags59;        /* +0x59 flags byte (unk_53D): bit 1
-                             * (unk_53D_1) marks the screen-locked
-                             * entities sub_08000F60 compensates
-                             * during BG scroll transactions; no
-                             * ported writer sets it yet */
+                             * (unk_53D_1) marks the entities
+                             * sub_08000F60 compensates during BG
+                             * scroll transactions — seeded at spawn
+                             * (sub_0800F1FC for room entities,
+                             * sub_0801487C for the player record) */
     uint8_t slot10;         /* +0x10 own slot index */
     uint8_t slot11;         /* +0x11 bound-record slot index */
 } AriaEntityDataRecord;

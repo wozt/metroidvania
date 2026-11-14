@@ -507,6 +507,42 @@ int main(void) {
     assert(out.rebuild_y.queued && out.rebuild_y.word_count == 0x1F);
     assert(log.calls == 1 && !log.column && log.count == 0x1F);
 
+    /* ---- sub_0800ED5C / sub_0800EE54 load origins ---- */
+    /* Mode 1 is absent from both switches: the arg passes
+     * through (the y twin still adds its +0x30 bias). */
+    assert(aos_scroll_origin_x(1, 2, 0x100, 0x140, 0x123) == 0x123);
+    assert(aos_scroll_origin_y(1, 2, 0x100, 0x110, 0x123) == 0x153);
+    /* The zero lists differ per axis: mode 10 zeroes x but sets
+     * y to 0xFFD0 + 0x30 = 0 (u16 wrap); mode 6 doubles y but
+     * keeps x's arg. */
+    assert(aos_scroll_origin_x(10, 2, 0, 0, 0x50) == 0);
+    assert(aos_scroll_origin_y(10, 2, 0, 0, 0x50) == 0);
+    assert(aos_scroll_origin_y(6, 2, 0, 0, 0x50) == 0xD0);
+    assert(aos_scroll_origin_x(6, 2, 0, 0, 0x50) == 0x50);
+    /* Halving gates on the layer's own meta byte. */
+    assert(aos_scroll_origin_x(2, 2, 0, 0, 0x50) == 0x28);
+    assert(aos_scroll_origin_x(2, 1, 0, 0, 0x50) == 0);
+    assert(aos_scroll_origin_y(3, 1, 0, 0, 0x50) == 0x30);
+    assert(aos_scroll_origin_y(4, 2, 0, 0, 0x51) == 0x58);
+    /* Interpolation: x uses base 0xF0 gated on meta_0, y base
+     * 0xD0; modes 15/16 skip the y meta gate. */
+    /* x: arg 0x400 * (range 0x118 - 0xF0) / (ref 0x140 - 0xF0)
+     *    = 0x400 * 0x28 / 0x50 = 0x200; no bias on x. */
+    assert(aos_scroll_origin_x(11, 2, 0x118, 0x140, 0x400) == 0x200);
+    assert(aos_scroll_origin_x(11, 1, 0x118, 0x140, 0x400) == 0);
+    /* y: arg 0x300 * (0xE8 - 0xD0) / (0x110 - 0xD0)
+     *    = 0x300 * 0x18 / 0x40 = 0x120; + 0x30 bias = 0x150. */
+    assert(aos_scroll_origin_y(12, 2, 0xE8, 0x110, 0x300) == 0x150);
+    assert(aos_scroll_origin_y(12, 1, 0xE8, 0x110, 0x300) == 0x30);
+    /* Mode 15 interpolates y unconditionally (no meta gate). */
+    assert(aos_scroll_origin_y(15, 1, 0xE8, 0x110, 0x300) == 0x150);
+    /* A zero denominator yields 0 like ARM SDIV. */
+    assert(aos_scroll_origin_x(13, 2, 0x118, 0xF0, 0x400) == 0);
+    assert(aos_scroll_origin_y(13, 2, 0xE8, 0xD0, 0x300) == 0x30);
+    /* Mode 36 keeps the arg on both axes. */
+    assert(aos_scroll_origin_x(36, 2, 0, 0, 0x77) == 0x77);
+    assert(aos_scroll_origin_y(36, 2, 0, 0, 0x77) == 0xA7);
+
     puts("aos_scroll: ok");
     return 0;
 }

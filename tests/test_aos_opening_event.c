@@ -270,7 +270,9 @@ static void test_trigger(void) {
     assert(aos_opening_actors_update(&actors, NULL, &camera_x, 0) ==
            AOS_OPENING_CUE_NONE);
     assert(camera_x == 223 && !actors.camera_active);
-    for (unsigned frame = 0; frame < 31; ++frame)
+    /* +0xB==3 sub-state 2's +0xD=0x20 wrap wait plus sub-state 3's
+     * next-frame emission: 0x22 portable frames. */
+    for (unsigned frame = 0; frame < 33; ++frame)
         assert(aos_opening_actors_update(&actors, NULL, &camera_x, 0) == AOS_OPENING_CUE_NONE);
     assert(aos_opening_actors_update(&actors, NULL, &camera_x, 0) ==
            AOS_OPENING_CUE_ENEMY_APPEARS);
@@ -302,32 +304,63 @@ static void test_trigger(void) {
     assert(spawns[2].x == 0x7C && spawns[3].x == 0xC4);
 
     const uint16_t durations[AOS_OPENING_ACTOR_COUNT] = {1, 3, 1};
+
+    /* +0xB==3's sub-state-4 tail auto-advances into +0xB==4 without a
+     * script beat: the second 0x21-frame wait runs, then entity+0x38=3's
+     * mode-3 return pan and sub-state 2's SE 0x1DF + animation 2. */
+    for (unsigned frame = 0; frame < 0x21; ++frame)
+        assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
+               AOS_OPENING_CUE_NONE);
+    assert(actors.scene_state == 4 && actors.scene_step == 0 &&
+           actors.scene_timer == 0 && actors.camera_mode == 3);
+    unsigned guard = 0;
+    while (actors.scene_step == 0 && guard++ < 200)
+        aos_opening_actors_update(&actors, durations, &camera_x, 0);
+    assert(actors.scene_step == 1 && camera_x <= 0x60);
+    assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
+           AOS_OPENING_CUE_ENEMY_ATTACKS);
+    assert(actors.animation[1] == 2 && actors.scene_step == 2);
+    /* child18's +0x59 animation-finished flag: animation_age reaches the
+     * exported duration (3 frames), then parent +0x20 bit 1's
+     * disappearance pass begins. */
+    for (unsigned frame = 0; frame < 3; ++frame)
+        aos_opening_actors_update(&actors, durations, &camera_x, 0);
+    assert(actors.emitted[0].disappearing && actors.emitted[0].state == 3 &&
+           actors.emitted[0].step == 0 && actors.scene_step == 3);
+    /* sub-state 4's 0x10->0xFF tail is 0x11 frames, then SE 0x1E0 and
+     * animation 3. */
+    for (unsigned frame = 0; frame < 0x10; ++frame)
+        assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
+               AOS_OPENING_CUE_NONE);
+    assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
+           AOS_OPENING_CUE_ENEMY_ATTACKS_AGAIN);
+    assert(actors.animation[1] == 3 && actors.animation_age[1] == 0 &&
+           actors.scene_step == 4);
+    for (unsigned frame = 0; frame < 3; ++frame)
+        aos_opening_actors_update(&actors, durations, &camera_x, 0);
+    assert(actors.scene_step == 5 && actors.scene_timer == 0x59);
+    for (unsigned frame = 0; frame < 0x58; ++frame)
+        aos_opening_actors_update(&actors, durations, &camera_x, 0);
+    assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
+           AOS_OPENING_CUE_NONE);
+    assert(actors.scene_step == 6 && !aos_opening_actors_blocks_script(&actors));
+
+    /* Script beat 4 lands on +0xB==5, the soul battle: a 0x12-frame
+     * preamble, then the 0xD2 countdown whose 0xD0 and 0x8F events fire
+     * on the countdown's third and 0x44th checks. */
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENEMY_ATTACKS);
     assert(aos_opening_actors_blocks_script(&actors));
-    assert(actors.animation[1] == 2);
-    assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
-           AOS_OPENING_CUE_ENEMY_ATTACKS);
-    assert(aos_opening_actors_update(&actors, durations, NULL, 0) == AOS_OPENING_CUE_NONE);
-    assert(aos_opening_actors_update(&actors, durations, NULL, 0) == AOS_OPENING_CUE_NONE);
-    assert(actors.emitted[0].disappearing && actors.emitted[0].state == 3 &&
-           actors.emitted[0].step == 0);
-    for (unsigned frame = 0; frame < 15; ++frame)
-        assert(aos_opening_actors_update(&actors, durations, NULL, 0) == AOS_OPENING_CUE_NONE);
-    assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
-           AOS_OPENING_CUE_ENEMY_ATTACKS_AGAIN);
-    assert(actors.animation[1] == 3 && actors.animation_age[1] == 0);
-    assert(!aos_opening_actors_blocks_script(&actors));
-
-    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_SOUL_ABSORBED);
-    assert(aos_opening_actors_blocks_script(&actors));
-    for (unsigned frame = 0; frame < 18; ++frame) {
-        AosOpeningCue cue = aos_opening_actors_update(&actors, durations, NULL, 0);
-        if (frame == 17) assert(cue == AOS_OPENING_CUE_ENEMY_DEFEATED);
-        else assert(cue == AOS_OPENING_CUE_NONE);
-    }
-    /* Timer 0xD0: sub_0805E9F0's six pieces, sub_0806D578's flame,
-     * sub_0805EAFC's soul orb and the 0x28-frame blink death all start;
-     * the body is not removed instantly. */
+    assert(actors.scene_state == 5 && actors.scene_step == 0 &&
+           actors.scene_timer == 0x12);
+    for (unsigned frame = 0; frame < 20; ++frame)
+        assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
+               AOS_OPENING_CUE_NONE);
+    /* Countdown update 3 sees +0xD==0xD0: sub_0805E9F0's six pieces,
+     * sub_0806D578's flame, sub_0805EAFC's soul orb, SE 0x6B and the
+     * 0x28-frame blink death all start; the body is not removed
+     * instantly. */
+    assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
+           AOS_OPENING_CUE_ENEMY_DEFEATED);
     assert(actors.skeleton_death == 0x28 && actors.soul_active &&
            !actors.soul_absorbed);
     unsigned death_pieces = 0;
@@ -338,10 +371,10 @@ static void test_trigger(void) {
     int32_t soul_start_x = actors.soul_x;
     int32_t soul_start_y = actors.soul_y;
     for (unsigned frame = 0; frame < 64; ++frame)
-        assert(aos_opening_actors_update(&actors, durations, NULL, 0) == AOS_OPENING_CUE_NONE);
+        assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) == AOS_OPENING_CUE_NONE);
     assert(!actors.visible[2] && actors.skeleton_death == 0);
     assert(actors.soul_x != soul_start_x || actors.soul_y != soul_start_y);
-    assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
+    assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
            AOS_OPENING_CUE_SOUL_ABSORBED);
     assert(!actors.soul_active && actors.soul_absorbed &&
            actors.soul_x == (AOS_OPENING_SOMA_X << 16) &&
@@ -350,27 +383,57 @@ static void test_trigger(void) {
     /* The script stays blocked only while the window is open or waiting;
      * native state 5 resumes as soon as sub_0800F0AC starts the close. */
     assert(aos_opening_actors_blocks_script(&actors));
-    assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
+    assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
            AOS_OPENING_CUE_NONE);
     assert(actors.soul_notice == 2);
     aos_opening_actors_input(&actors, AOS_KEY_A);
-    assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
+    assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
            AOS_OPENING_CUE_SOUL_NOTICE_DISMISS);
     assert(actors.soul_notice == 3 && actors.soul_notice_timer == 0x20);
     assert(!aos_opening_actors_blocks_script(&actors));
     /* sub-state 5 keeps pose 0x52 once, without the absorption blink. */
-    assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
+    assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
            AOS_OPENING_CUE_NONE);
     assert(!actors.soma_hidden && actors.soma_animation == 0x52);
     for (unsigned frame = 0; frame < 0x1F; ++frame)
-        aos_opening_actors_update(&actors, durations, NULL, 0);
+        aos_opening_actors_update(&actors, durations, &camera_x, 0);
     assert(actors.soul_notice == 0);
     assert(!aos_opening_actors_blocks_script(&actors));
+
+    /* Script beat 5 lands on +0xB==6: sub_08013CF0(0x17)'s music change
+     * (the reused AFTER_BATTLE audio label) under a 0x21-frame suspend
+     * hold, then the script is released. */
+    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_SOUL_ABSORBED);
+    assert(aos_opening_actors_blocks_script(&actors));
+    assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
+           AOS_OPENING_CUE_AFTER_BATTLE);
+    for (unsigned frame = 0; frame < 0x20; ++frame)
+        assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
+               AOS_OPENING_CUE_NONE && aos_opening_actors_blocks_script(&actors));
+    aos_opening_actors_update(&actors, durations, &camera_x, 0);
+    assert(!aos_opening_actors_blocks_script(&actors));
+
+    /* Script beat 6 lands on +0xB==7: sub_0805B878(0x1041)'s one-shot
+     * (the reused COMPLETE audio label), then +0xC=1 idles. The
+     * absorbed pose 0x52 remains until the +0xA==0x80 teardown. */
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_AFTER_BATTLE);
     assert(!actors.soul_active && !actors.soma_hidden &&
-           actors.soma_animation == 0x51);
-    assert(aos_opening_actors_update(&actors, durations, NULL, 0) ==
-           AOS_OPENING_CUE_AFTER_BATTLE);
+           actors.soma_animation == 0x52 && actors.scene_state == 7);
+    assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
+           AOS_OPENING_CUE_COMPLETE);
+    assert(!aos_opening_actors_blocks_script(&actors));
+
+    /* Script beat 7 lands on +0xB==8: the mode-4 return pan holds the
+     * suspend until sub_0805CCE4 reports Soma recentered. */
+    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_RETURN_PAN);
+    assert(aos_opening_actors_blocks_script(&actors));
+    assert(actors.scene_state == 8 && actors.camera_mode == 4);
+    guard = 0;
+    while (aos_opening_actors_blocks_script(&actors) && guard++ < 400) {
+        assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
+               AOS_OPENING_CUE_NONE);
+    }
+    assert(actors.scene_step == 1 && !aos_opening_actors_blocks_script(&actors));
     assert(AOS_SOMA_ANIM_OPENING_LYING == 0x51);
     assert(!strcmp(aos_opening_event_speaker_name(1), "Soma Cruz"));
     assert(!strcmp(aos_opening_event_speaker_name(2), "Mina Hakuba"));
@@ -546,6 +609,7 @@ int main(int argc, char **argv) {
         assert(cues[AOS_OPENING_CUE_ENEMY_ATTACKS]);
         assert(cues[AOS_OPENING_CUE_SOUL_ABSORBED]);
         assert(cues[AOS_OPENING_CUE_AFTER_BATTLE]);
+        assert(cues[AOS_OPENING_CUE_RETURN_PAN]);
         assert(cues[AOS_OPENING_CUE_COMPLETE]);
         fusion_rom_close(&rom);
     }

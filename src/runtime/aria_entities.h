@@ -20,6 +20,7 @@
 #include "aos/core/aos_collision.h"
 #include "aos/core/aos_soma.h"
 #include "aos/core/aos_stats.h"
+#include "fusion/assets/rom.h"
 #include "aos/weapons/aos_weapon.h"
 #include "aos/game/aos_pickup.h"
 #include "aos/game/aos_recent_items.h"
@@ -74,6 +75,16 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
  * room's first transaction. The draw path adds it to cam_x/cam_y
  * for the BG1 source rect only; entities keep cam_x/cam_y. */
 void aria_scroll_bg1_offset(const AriaRoom *room, int32_t *x, int32_t *y);
+
+/* Binds the ROM the ported scroll rebuild's tile words resolve
+ * through (aos/core/aos_tilemap's sub_08001994 port): the room
+ * tilemap loads lazily per room inside the entity scroll path and
+ * queued AosScrollRebuild descriptors then carry the real
+ * staging-buffer words. `rom` is borrowed and must outlive the
+ * runtime; NULL unbinds (descriptors keep word_count 0). The
+ * BgCmdBuffer_WriteData VRAM write stays unmodelled — the draw
+ * path samples the pre-rendered background.bmp. */
+void aria_scroll_tilemap_bind(const FusionRom *rom);
 
 /* Helpers the entity pass borrows from aria_runtime.c (their state —
  * the homing list, the published save context, the shared room

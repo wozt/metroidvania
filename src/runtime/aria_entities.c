@@ -63,6 +63,7 @@
 #include "aos/core/aos_wall.h"
 #include "aos/core/aos_enemy.h"
 #include "aos/core/aos_scroll.h"
+#include "aos/core/aos_tilemap.h"
 #include "aos/game/aos_game_lifecycle.h"
 #include "aos/intro/aos_intro_font.h"
 #include "aos/intro/aos_intro_resources.h"
@@ -218,14 +219,36 @@ static uint8_t object20_ewram_427;
  * bit-1 scroll-compensation flag (entityData[] is mirrored but
  * +0x59 has no ported writer, so the sub_08000F60 pass shifts
  * nothing yet), and the native
- * display effects (BG map tile-row rebuild, hblank/affine/
- * scanline layer FX). */
+ * display effects (hblank/affine/scanline layer FX). The BG map
+ * tile-row rebuild's sub_08001994 lookups resolve to real tile
+ * words through the room tilemap below when a ROM is bound via
+ * aria_scroll_tilemap_bind; the BgCmdBuffer_WriteData VRAM write
+ * itself stays unmodelled — the draw path samples the room's
+ * pre-rendered background.bmp and has no tile-level consumer. */
 static AosScroll aria_scroll;
 static int aria_scroll_room_area = -1;
 static int aria_scroll_room_number = -1;
 /* The camera position (integer px) BG1 was bound at; the accessor
  * below reports the accumulated transaction delta against it. */
 static int32_t aria_scroll_seed_x, aria_scroll_seed_y;
+/* Room tilemap for the scroll rebuild DMA's sub_08001994 words
+ * (aos/core/aos_tilemap): aria_scroll_tilemap_refresh binds its
+ * fetch adapter into aria_scroll.tile_source so queued
+ * AosScrollRebuild descriptors carry the real staging-buffer tile
+ * words. aria_scroll_rom is a borrowed pointer set by
+ * aria_scroll_tilemap_bind (the runtime's opened FusionRom — it
+ * must outlive the runtime); the area directory is read once per
+ * bound ROM and each room's three background tile arrays load
+ * lazily on the room's first scroll transaction. Without a bound
+ * ROM, or for a room whose tilemap fails to decode, the fetch
+ * stays NULL and the descriptors report word_count 0. */
+static const FusionRom *aria_scroll_rom;
+static FusionAosAreaDirectory aria_scroll_areas;
+static bool aria_scroll_areas_tried, aria_scroll_areas_ok;
+static AosRoomTilemap aria_scroll_tiles;
+static int aria_scroll_tiles_area = -1, aria_scroll_tiles_room = -1;
+static int aria_scroll_tiles_tried_area = -1,
+           aria_scroll_tiles_tried_room = -1;
 /* gEwramData +0x414 byte: the Object20Update prologue's cleared-game
  * transform (word16&8 / word60&2 / !(+0x42C&0x10000)) rewrites it to
  * (b & ~0x10) | 5, and the param0-4/5/6 create paths and the
@@ -844,6 +867,85 @@ static void object20_a094_view(const AriaRoom *room, int cam_x,
     }
 }
 
+/* AosScrollTileFetch adapter over the loaded room tilemap:
+ * `column` is the x-axis rebuild's span (fixed tile_x, tile_y
+ * stepping — aos_tilemap_column, the sub_0803F3F8/3F4C8 lookups),
+ * otherwise the y-axis row (fixed tile_y, tile_x stepping —
+ * aos_tilemap_row, sub_0803F580/3F650). */
+static size_t aria_scroll_tile_fetch(void *context, int bg,
+                                     bool column, uint16_t tile_x,
+                                     uint16_t tile_y, size_t count,
+                                     uint16_t *out) {
+    const AosRoomTilemap *tilemap = context;
+    if (column)
+        return aos_tilemap_column(tilemap, bg, tile_x, tile_y, count,
+                                  out, count);
+    return aos_tilemap_row(tilemap, bg, tile_x, tile_y, count, out,
+                           count);
+}
+
+/* (Re)resolve the scroll tile source for `room`: reads the area
+ * directory once per bound ROM, loads the room's tilemap once per
+ * (area, room) — a failed load is not retried until the room or
+ * the bound ROM changes — and binds the fetch adapter, or clears
+ * it when no usable tilemap exists. Cheap on repeat calls. */
+static void aria_scroll_tilemap_refresh(const AriaRoom *room) {
+    const AosRoomTilemap *source = NULL;
+    if (aria_scroll_rom) {
+        if (!aria_scroll_areas_tried) {
+            aria_scroll_areas_tried = true;
+            char error[160];
+            aria_scroll_areas_ok =
+                fusion_aos_read_area_directory(aria_scroll_rom,
+                                               &aria_scroll_areas,
+                                               error, sizeof error);
+        }
+        if (aria_scroll_areas_ok && room->area >= 0 &&
+            room->area < FUSION_AOS_AREA_COUNT && room->number >= 0 &&
+            (size_t)room->number <
+                aria_scroll_areas.areas[room->area].room_count) {
+            if (aria_scroll_tiles_tried_area != room->area ||
+                aria_scroll_tiles_tried_room != room->number) {
+                aos_room_tilemap_free(&aria_scroll_tiles);
+                aria_scroll_tiles_area = aria_scroll_tiles_room = -1;
+                aria_scroll_tiles_tried_area = room->area;
+                aria_scroll_tiles_tried_room = room->number;
+                char error[160];
+                if (aos_room_tilemap_load(
+                        &aria_scroll_tiles, aria_scroll_rom,
+                        &aria_scroll_areas, (size_t)room->area,
+                        (size_t)room->number, error, sizeof error)) {
+                    aria_scroll_tiles_area = room->area;
+                    aria_scroll_tiles_room = room->number;
+                }
+            }
+            if (aria_scroll_tiles_area == room->area &&
+                aria_scroll_tiles_room == room->number)
+                source = &aria_scroll_tiles;
+        }
+    }
+    if (source)
+        aos_scroll_tile_source(&aria_scroll, aria_scroll_tile_fetch,
+                               (void *)source);
+    else
+        aos_scroll_tile_source(&aria_scroll, NULL, NULL);
+}
+
+/* Bind the ROM the scroll rebuild's tile words resolve through
+ * (aos/core/aos_tilemap). `rom` is borrowed — it must outlive the
+ * runtime (the room-dialogue ROM handle qualifies). NULL unbinds:
+ * queued rebuild descriptors then keep reporting word_count 0.
+ * The runtime calls this once it has opened the Aria ROM; until
+ * then the data path stays dormant. */
+void aria_scroll_tilemap_bind(const FusionRom *rom) {
+    if (aria_scroll_rom == rom) return;
+    aria_scroll_rom = rom;
+    aria_scroll_areas_tried = aria_scroll_areas_ok = false;
+    aos_room_tilemap_free(&aria_scroll_tiles);
+    aria_scroll_tiles_area = aria_scroll_tiles_room = -1;
+    aria_scroll_tiles_tried_area = aria_scroll_tiles_tried_room = -1;
+}
+
 /* Bind the ported BG1 scroll layer for this room on first use —
  * the same seed object20_scroll_tx installs (map-size gates =
  * the room's screen counts, BG1 rebinds to the camera
@@ -873,6 +975,10 @@ static void object20_scroll_tx(AriaRoom *room, int cam_x, int cam_y,
                                int param0, int32_t arg1,
                                const char *tag, int id) {
     object20_scroll_ensure(room, cam_x, cam_y);
+    /* Room-change point for the scroll world: (re)bind the tilemap
+     * fetch so this transaction's rebuild descriptors carry the
+     * real sub_08001994 words. Cheap no-op once resolved. */
+    aria_scroll_tilemap_refresh(room);
     AosScrollOut sx;
     int ran = aos_scroll_transaction(&aria_scroll, object20_ewram_427,
                                      param0, arg1, 0, NULL, &sx);
@@ -882,6 +988,11 @@ static void object20_scroll_tx(AriaRoom *room, int cam_x, int cam_y,
            ran ? "" : " gated", b1->x_pos >> 16, b1->y_pos >> 16,
            b1->x_vel, b1->y_vel,
            sx.fx ? " (layer FX unported)" : "");
+    /* The rebuild DMA's resolved staging words (0 without a bound
+     * ROM tilemap): the VRAM write itself stays unmodelled. */
+    if (sx.rebuild_x.word_count || sx.rebuild_y.word_count)
+        printf("Object20 %d: scroll rebuild tile words x=%u y=%u\n",
+               id, sx.rebuild_x.word_count, sx.rebuild_y.word_count);
 }
 
 /* The BG1 scroll offset the ported sub_0800ED24 transactions have

@@ -67,6 +67,9 @@ typedef enum {
     AOS_OPENING_CUE_SOUL_ABSORBED,
     AOS_OPENING_CUE_SOUL_NOTICE_DISMISS,
     AOS_OPENING_CUE_AFTER_BATTLE,
+    /* Script beat 7 selects sub_0805D410 +0xB==8, the mode-4 return pan.
+     * It carries no audio of its own. */
+    AOS_OPENING_CUE_RETURN_PAN,
     AOS_OPENING_CUE_COMPLETE,
 } AosOpeningCue;
 
@@ -205,6 +208,11 @@ typedef struct {
     uint8_t state;
     uint8_t step;
     uint8_t timer;
+    /* sub_0805D410's beat serialization: scene_state mirrors entity +0xB,
+     * scene_step its +0xC sub-state and scene_timer its +0xD countdown.
+     * Each script control-2 beat increments +0xB and clears +0xC, so the
+     * seven beats of the opening script select +0xB values 1, 2, 3,
+     * 5, 6, 7 and 8; +0xB==3's own tail auto-increments to 4. */
     uint8_t scene_state;
     uint8_t scene_step;
     uint16_t scene_timer;
@@ -251,8 +259,9 @@ typedef struct {
     uint8_t debris_count;
     uint8_t projectile_count;
     uint8_t flame_count;
-    /* sub_0805D410 state 5, timer 0xD0: entity[0x1c] + 0x58 bit 0x20 enters
-     * the Winged Skeleton's generic death, a 0x28-frame blink (table
+    /* sub_0805D410 +0xB==5 at +0xD==0xD0 on entity[0x1c]: entity +0x58
+     * bit 0x20 enters the Winged Skeleton's generic death, a 0x28-frame
+     * blink (table
      * 0x08118CE0) with sub_0806D578 flames while sub_0805E9F0's six pieces
      * and sub_0805EAFC's soul orb are already in flight. */
     uint8_t skeleton_death;
@@ -282,8 +291,9 @@ typedef struct {
     bool soul_absorbed;
     /* sub_0800E708's obtained-soul window: 0 closed, 1 opening, 2 waiting
      * for the player, 3 closing after sub_0800F0AC. The script stays
-     * blocked while it is 1 or 2; native state 5 continues as soon as the
-     * window starts closing, so 3 does not block. */
+     * blocked while it is 1 or 2; native +0xB==5 keeps the suspend until
+     * sub-state 5's tail, which lands about one frame after the close
+     * starts, so 3 does not block. */
     uint8_t soul_notice;
     uint8_t soul_notice_timer;
     uint16_t notice_input;

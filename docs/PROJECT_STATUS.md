@@ -70,6 +70,41 @@
 - Registries synced (`aos.core.scroll`/`aos.core.tilemap` rows,
   `text_window`).
 
+## Patch 1139 - scroll rebuild tile words, opening +0xB serialization, Object20 comparison
+
+- **Scroll rebuild DMA resolves real tile words**: `AosScroll`
+  gained an `AosScrollTileFetch` callback + `AosScrollTileSource`;
+  each queued `AosScrollRebuild` now carries `words[0x1F]` filled
+  by `aos_tilemap_column`/`aos_tilemap_row` (the `sub_08001994`
+  lookups in native order, palette-XORed, short-write clamped).
+  `aria_entities.c` binds a lazily loaded per-room `AosRoomTilemap`
+  via `aria_scroll_tilemap_refresh` inside `object20_scroll_tx`,
+  and `aria_runtime.c` calls `aria_scroll_tilemap_bind` once the
+  dialogue ROM opens. The `BgCmdBuffer_WriteData` VRAM write stays
+  unmodelled — the draw samples a pre-rendered `background.bmp`.
+- **`sub_0803FC6C` attribution corrected**: its only native callers
+  are `GameModeIntroCutsceneUpdate` stage 3 and
+  `GameModeCreditsUpdate` stage 3 — the door transition
+  `sub_080104EC` uses plain `sub_0803FBBC` on a blanked display, so
+  no host transition call site exists (documented, not wired).
+- **Opening `+0xB` serialization ported**: the real ROM script
+  (text id 0xC, table `0x08506B38`) carries exactly 7 control-2
+  beats selecting `+0xB` = 1,2,3,5,6,7,8, with `+0xB==3`'s tail
+  auto-advancing to 4. All eight `sub_0805D410` cases modelled in
+  `scene_state`/`scene_step`/`scene_timer` (camera waits, `+0xD`
+  countdowns with native wrap/count semantics, `+0x59` anim waits
+  via duration proxy, emissions, songs, soul window, mode-4 return
+  pan). New `AOS_OPENING_CUE_RETURN_PAN`. Window latency still
+  −6 frames vs native.
+- **`tests/compare_aos_object20_dialogue.py`** (new): first mGBA
+  comparison beyond the opening — native room-dialogue windows
+  fire every ~500 frames, opening 10-30 frames after each A+B
+  pulse edge. Runtime side measured the story completing by frame
+  ~20000 but no headless room-dialogue trigger was found (proximity
+  box needs fine position control); documented blocker.
+- Registries synced (`aos.core.scroll`, `aos.core.tilemap`,
+  `aos.events.opening_scene`).
+
 ## Patch 1137 - visible BG1 scroll, +0x417 gate, event-flag bridge
 
 - **BG1 scroll now visible**: `aria_scroll_bg1_offset` exposes the

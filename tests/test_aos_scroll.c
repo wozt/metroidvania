@@ -7,6 +7,35 @@
 #include <stdio.h>
 #include <string.h>
 
+/* Stub tile-word source for the rebuild DMA tests: records the
+ * span arguments and fills `count` deterministic words
+ * (0x2000 base + bg<<8 + 0x8000 when column + index). `ret`,
+ * when nonzero, shortens the reported write count. */
+struct scroll_test_fetch_log {
+    int calls;
+    int bg;
+    int column;
+    uint16_t tile_x, tile_y;
+    size_t count;
+    size_t ret;
+};
+
+static size_t scroll_test_fetch(void *context, int bg, bool column,
+                                uint16_t tile_x, uint16_t tile_y,
+                                size_t count, uint16_t *out) {
+    struct scroll_test_fetch_log *log = context;
+    ++log->calls;
+    log->bg = bg;
+    log->column = column;
+    log->tile_x = tile_x;
+    log->tile_y = tile_y;
+    log->count = count;
+    for (size_t i = 0; i < count; ++i)
+        out[i] = (uint16_t)(0x2000u + ((uint32_t)bg << 8) +
+                            (column ? 0x8000u : 0u) + i);
+    return log->ret ? log->ret : count;
+}
+
 int main(void) {
     AosScroll s;
     AosScrollOut out;
@@ -417,6 +446,66 @@ int main(void) {
     assert(out.rebuild_y.tile_x == 1 && out.rebuild_y.tile_y == 8);
     assert(out.rebuild_y.vram_addr == 0x0600F202u);
     assert(s.bg[2].y_pos == ((int32_t)0x48 << 16) - 0x80000);
+
+    /* ---- rebuild staging-buffer words (aos_scroll_tile_source) ----
+     * With a source bound the descriptor's words[] carry the
+     * sub_08001994 lookups in native order: the x rebuild is a
+     * column (fixed tile_x, tile_y stepping, count 0x15), the y
+     * rebuild a row (fixed tile_y, tile_x stepping, 0x1F). */
+    struct scroll_test_fetch_log log;
+    memset(&log, 0, sizeof log);
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 4, 4, 0, 0, 0, 0x40 << 16, 0x30 << 16);
+    aos_scroll_tile_source(&s, scroll_test_fetch, &log);
+    memset(&out, 0, sizeof out);
+    aos_scroll_request(&s, 1, 0x80000, 0, &out);
+    assert(out.rebuild_x.queued);
+    assert(log.calls == 1);
+    assert(log.bg == 1 && log.column);
+    assert(log.tile_x == 38 && log.tile_y == 6 && log.count == 0x15);
+    assert(out.rebuild_x.word_count == 0x15);
+    for (size_t i = 0; i < 0x15; ++i)
+        assert(out.rebuild_x.words[i] == (uint16_t)(0xA100u + i));
+    assert(!out.rebuild_y.queued && out.rebuild_y.word_count == 0);
+
+    /* The y rebuild asks for the row orientation. */
+    memset(&log, 0, sizeof log);
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 4, 4, 0, 0, 0, 0, 0x40 << 16);
+    aos_scroll_tile_source(&s, scroll_test_fetch, &log);
+    memset(&out, 0, sizeof out);
+    aos_scroll_request(&s, 1, 0, 0x80000, &out);
+    assert(out.rebuild_y.queued);
+    assert(log.calls == 1 && !log.column);
+    assert(log.tile_x == 0 && log.tile_y == 28 && log.count == 0x1F);
+    assert(out.rebuild_y.word_count == 0x1F);
+    assert(out.rebuild_y.words[0] == 0x2100);
+    assert(out.rebuild_y.words[0x1E] == (uint16_t)(0x2100u + 0x1E));
+
+    /* A short-writing source clamps word_count to what it
+     * reported; clearing the source returns to report-only. */
+    memset(&log, 0, sizeof log);
+    log.ret = 3;
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 4, 4, 0, 0, 0, 0x40 << 16, 0x30 << 16);
+    aos_scroll_tile_source(&s, scroll_test_fetch, &log);
+    memset(&out, 0, sizeof out);
+    aos_scroll_request(&s, 1, 0x80000, 0, &out);
+    assert(out.rebuild_x.word_count == 3);
+    aos_scroll_tile_source(&s, NULL, NULL);
+    memset(&out, 0, sizeof out);
+    aos_scroll_bind(&s, 1, 4, 4, 0, 0, 0, 0x40 << 16, 0x30 << 16);
+    aos_scroll_request(&s, 1, 0x80000, 0, &out);
+    assert(out.rebuild_x.queued && out.rebuild_x.word_count == 0);
+    /* The transition sibling resolves words the same way. */
+    memset(&log, 0, sizeof log);
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 4, 4, 0, 0, 0, 0, 0x40 << 16);
+    aos_scroll_tile_source(&s, scroll_test_fetch, &log);
+    memset(&out, 0, sizeof out);
+    aos_scroll_transition_request(&s, 1, 0, 0x80000, &out);
+    assert(out.rebuild_y.queued && out.rebuild_y.word_count == 0x1F);
+    assert(log.calls == 1 && !log.column && log.count == 0x1F);
 
     puts("aos_scroll: ok");
     return 0;

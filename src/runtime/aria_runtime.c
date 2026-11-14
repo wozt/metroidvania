@@ -191,7 +191,26 @@ bool object10_item_owned(void *ctx, uint16_t item) {
 /* Leaves the room through its native entry, or through the editor's door
  * `forced`; an editor spawn point places Soma's feet there (kept inside the
  * target). 1 when the room changed, 0 when an editor door's target cannot be
- * loaded (the room stays), -1 when a native exit fails. */
+ * loaded (the room stays), -1 when a native exit fails.
+ *
+ * Native room-transition flow (cvaos GameModeInGameUpdate): the exit
+ * check runs sub_08011A44/sub_08010244/sub_08010350, which latch
+ * unk_60.unk_64 = 3; sub_080104EC then runs the transition stages —
+ * black screen + entity cleanup (unk_65 0), sub_08010350 seeds BG1's
+ * xVel/yVel with the arrival delta and sub_0800F9EC loads the new room
+ * (unk_65 1, display blanked via dispCnt = 0), and sub_0800ED24(0, dx,
+ * dy) — the gated sub_0803FBBC scroll transaction — walks BG1 onto the
+ * camera settle point while the screen is still off (unk_65 2), then
+ * the display and blend registers come back (unk_65 3). The scroll is
+ * therefore invisible positioning, not a visible transition effect.
+ * sub_0803FC6C (aos_scroll_transition_request) is NOT part of this
+ * path: its only native callers are GameModeIntroCutsceneUpdate
+ * stage 3 (BG1-3 negative-y scroll, approximated by
+ * aos_intro_cutscene's scroll_up) and GameModeCreditsUpdate stage 3
+ * (BG1-3 +0x8400 scroll; the credits mode is not ported). Issuing a
+ * transition request here would fabricate a scroll the native door
+ * path never performs, so the room swap stays instant like the
+ * native blanked-display result. */
 /* Object20 room dialogue state — declared before take_exit, which
  * closes the window on room changes. The host adapter that binds
  * these is defined next to update_entities. */
@@ -347,6 +366,9 @@ static bool room_dialogue_resolve(void *context, uint16_t id,
         }
         if (room_dialogue_rom.data) {
             char error[160];
+            /* Borrowed ROM handle for the scroll tile-row rebuild's
+             * sub_08001994 lookups (aria_entities tilemap fetch). */
+            aria_scroll_tilemap_bind(&room_dialogue_rom);
             room_dialogue_ready =
                 aos_intro_resources_init(&room_dialogue_resources,
                                          &room_dialogue_rom, error,

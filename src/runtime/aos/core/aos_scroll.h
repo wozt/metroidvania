@@ -17,16 +17,25 @@
  *   math; the tile-row rebuild (20/30 sub_08001994 lookups into
  *   the gEwramData + 0x13414 staging buffer plus one
  *   BgCmdBuffer_WriteData to 0x0600E000 + (bg<<11) + tile offset)
- *   is reported as an AosScrollRebuild DMA descriptor — the tile
- *   IDs need the room tilemap the host does not extract, so the
- *   data write itself stays unported.
+ *   is reported as an AosScrollRebuild DMA descriptor. When a
+ *   tile-word source is bound (aos_scroll_tile_source — the host
+ *   wires aos/core/aos_tilemap's sub_08001994 port), the
+ *   descriptor's `words` carry the real staging-buffer tile
+ *   words; the VRAM write itself stays unported (the host has no
+ *   BG tilemap memory — the draw path samples a pre-rendered
+ *   background.bmp).
  * - sub_0803FC6C (same asm block): the room-transition sibling
  *   of sub_0803FBBC — identical skeleton and x axis, but the y
  *   axis runs sub_0803FA10/sub_0803FAE0: edge constants
  *   +0x14/+0xA00000 (a 0xA0-px screen vs 0xD0), negative y pins
  *   at 0 instead of 0x30 << 16, and a gated y axis pins yPos to
- *   0 instead of 0x300000. Called by the transition paths
- *   sub_08013960/sub_08008750.
+ *   0 instead of 0x300000. Its only native callers are
+ *   GameModeIntroCutsceneUpdate stage 3
+ *   (sub_0803FC6C(1..3, 0, -0x1C00/-0x3200/-0x1000)) and
+ *   GameModeCreditsUpdate stage 3
+ *   (sub_0803FC6C(1..3, 0, 0x8400)); the door room transition
+ *   sub_080104EC uses plain sub_0803FBBC while the display is
+ *   blanked instead.
  * - sub_08000F60 (src/code_080009A0.c): adds -bgInfo[bg].xVel /
  *   yVel to the fine position (+0x524/+0x528) of every entityData
  *   record whose +0x59 bit 1 (unk_53D_1) is set — the
@@ -54,6 +63,27 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* Optional tile-word source for the rebuild DMA: bound once per
+ * room through aos_scroll_tile_source (the runtime wires
+ * aos/core/aos_tilemap's sub_08001994 port). When set, every
+ * queued AosScrollRebuild carries the real looked-up tile words
+ * in its staging-buffer order; when NULL the descriptor keeps
+ * word_count 0. `column` selects the span orientation the way the
+ * native helper pair does: true fixes tile_x and steps tile_y
+ * upward (the sub_0803F3F8/sub_0803F4C8 x-axis rebuild), false
+ * fixes tile_y and steps tile_x upward (sub_0803F580/sub_0803F650
+ * and the sub_0803FC6C transition siblings). tile_x/tile_y are the
+ * descriptor's lookup origin. Writes at most `count` words to
+ * `out` and returns the number written. */
+typedef size_t (*AosScrollTileFetch)(void *context, int bg, bool column,
+                                     uint16_t tile_x, uint16_t tile_y,
+                                     size_t count, uint16_t *out);
+
+typedef struct {
+    void *context;
+    AosScrollTileFetch fetch;   /* NULL: descriptors stay word-less */
+} AosScrollTileSource;
+
 /* One gEwramData bgInfo[] record (struct EwramData_unkA078, 0x1C
  * bytes): pBgMetadata collapses to its two scroll-gate bytes. */
 typedef struct {
@@ -71,6 +101,10 @@ typedef struct {
     /* gDisplayRegisters bgOfs[] shadow: the integer scroll offsets
      * sub_0803FBBC writes back and modes 8/9/10/30 adjust. */
     uint16_t disp_h[4], disp_v[4];
+    /* Room tilemap hook for the rebuild DMA's sub_08001994 lookups;
+     * survives aos_scroll_bind (it is room-scoped, not
+     * layer-scoped) but not a whole-struct reset. */
+    AosScrollTileSource tile_source;
 } AosScroll;
 
 /* entityData record view for sub_08000F60: +0x59 bit 1
@@ -118,10 +152,11 @@ enum {
  * buffer, then one BgCmdBuffer_WriteData streams it to the BG
  * tilemap in VRAM. The tile IDs themselves come from the room
  * tilemap (sub_08001800's pBgMetadata->unk_C block lookup plus
- * the per-BG tile arrays), which the host does not extract, so
- * only the DMA descriptor — destination address, command byte,
- * length, lookup origin and count — is reported here; the tile
- * data write stays unported. */
+ * the per-BG tile arrays); when the scroll state has a bound
+ * AosScrollTileSource the descriptor's `words` hold the real
+ * looked-up staging buffer, otherwise word_count stays 0. The
+ * VRAM write itself stays unported either way: the host has no
+ * BG tilemap memory for BgCmdBuffer_WriteData to land in. */
 typedef struct {
     bool queued;             /* a rebuild was armed this call */
     int bg;                  /* bgInfo[] index the DMA targets */
@@ -138,6 +173,14 @@ typedef struct {
                                 the fixed coordinate and the
                                 start of the iterated one */
     uint16_t count;          /* 0x15 (x) / 0x1F (y) lookups */
+    /* The staging-buffer words the native sub_08001994 loop would
+     * fill before BgCmdBuffer_WriteData streams them: `count`
+     * entries in lookup order (tile_y stepping for the x rebuild,
+     * tile_x for the y rebuild), palette-XORed like the native
+     * result. word_count is 0 when no tile source is bound or the
+     * source declined the span. */
+    uint16_t words[0x1F];
+    uint16_t word_count;
 } AosScrollRebuild;
 
 typedef struct {
@@ -163,13 +206,20 @@ void aos_scroll_bind(AosScroll *s, int bg, uint8_t meta_0, uint8_t meta_1,
                      uint8_t mode, uint16_t unk_14, uint16_t unk_16,
                      int32_t x_pos, int32_t y_pos);
 
+/* Binds (fetch != NULL) or clears (fetch == NULL) the tile-word
+ * source consulted when a scroll request queues a rebuild DMA.
+ * Room-scoped: aos_scroll_bind does not touch it. */
+void aos_scroll_tile_source(AosScroll *s, AosScrollTileFetch fetch,
+                            void *context);
+
 /* sub_0803FBBC(bg, vx, vy): the scroll-velocity request. */
 void aos_scroll_request(AosScroll *s, int bg, int32_t vx, int32_t vy,
                         AosScrollOut *out);
 
-/* sub_0803FC6C(bg, vx, vy): the room-transition sibling — same
- * gates and x axis, but the y helpers carry the transition edge
- * constants and pin y at 0. */
+/* sub_0803FC6C(bg, vx, vy): the transition sibling — same gates
+ * and x axis, but the y helpers carry the intro/credits edge
+ * constants and pin y at 0. Callers: GameModeIntroCutsceneUpdate
+ * stage 3 and GameModeCreditsUpdate stage 3 (not the door path). */
 void aos_scroll_transition_request(AosScroll *s, int bg, int32_t vx,
                                    int32_t vy, AosScrollOut *out);
 

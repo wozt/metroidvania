@@ -58,15 +58,17 @@ static bool argument(AosOpeningEvent *event, uint8_t *value) {
 
 static AosOpeningCue beat_cue(uint8_t beat_count) {
     switch (beat_count) {
-    /* The first control-2 beat releases Object20's actor-entry state and
-     * advances entity+0x38 to camera phase 1. The following beats select
-     * sub_0805D410 states 2 through 6. */
+    /* The script's control-2 command increments Object20's +0xB and
+     * clears +0xC (sub_08067A04's beat handler). The opening script has
+     * seven beats, selecting +0xB values 1, 2, 3, 5, 6, 7 and 8 because
+     * +0xB==3's sub-state-4 tail increments +0xB to 4 on its own. */
     case 1: return AOS_OPENING_CUE_ENTRY_PAN;
     case 2: return AOS_OPENING_CUE_CONFRONTATION;
     case 3: return AOS_OPENING_CUE_ENEMY_APPEARS;
     case 4: return AOS_OPENING_CUE_ENEMY_ATTACKS;
     case 5: return AOS_OPENING_CUE_SOUL_ABSORBED;
     case 6: return AOS_OPENING_CUE_AFTER_BATTLE;
+    case 7: return AOS_OPENING_CUE_RETURN_PAN;
     default: return AOS_OPENING_CUE_NONE;
     }
 }
@@ -221,6 +223,18 @@ static void actor_animation(AosOpeningActors *actors, unsigned actor,
                             uint8_t animation) {
     actors->animation[actor] = animation;
     actors->animation_age[actor] = 0;
+}
+
+/* The child entities' +0x59 bit 0 is their animation-finished flag,
+ * which sub_0805D410's +0xB==4 and +0xB==5 sub-states 3/5 poll. The
+ * portable model approximates it with the exported per-animation
+ * duration; a missing duration table cannot measure the wait and is
+ * treated as already satisfied rather than stranding the beat. */
+static bool actor_animation_done(const AosOpeningActors *actors,
+                                 const uint16_t durations[AOS_OPENING_ACTOR_COUNT],
+                                 unsigned actor) {
+    uint16_t duration = durations ? durations[actor] : 0;
+    return !duration || actors->animation_age[actor] >= duration;
 }
 
 static void append_emission(AosOpeningActors *actors,
@@ -716,7 +730,9 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
     if (!actors || !actors->active || cue == AOS_OPENING_CUE_NONE) return;
     switch (cue) {
     case AOS_OPENING_CUE_ENTRY_PAN:
-        /* +0xb==1 writes entity+0x38=1 before its sub_0805CCE4 wait. */
+        /* +0xB==1 sub-state 0: child14 animation 1, the +0x427 window
+         * flag, the suspend raise and entity+0x38=1's mode-1 pan. */
+        if (actors->animation[0] != 1) actor_animation(actors, 0, 1);
         actors->camera_mode = 1;
         actors->camera_active = true;
         actors->camera_initialized = false;
@@ -725,10 +741,17 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
         actors->pending_cue = cue;
         break;
     case AOS_OPENING_CUE_CONFRONTATION:
+        /* +0xB==2 is a single sub-state-0 pass: child +0x58 attribute
+         * writes and sub_08013CF0(0x10)'s music change, then +0xC=1
+         * idles. It never raises the suspend flag. */
         actors->scene_state = 2;
         actors->pending_cue = cue;
         break;
     case AOS_OPENING_CUE_ENEMY_APPEARS:
+        /* +0xB==3 sub-state 0: sub_0805D2C8's distant batch, parent flag
+         * bit 3, the suspend raise and entity+0x38=2's mode-2 pan.
+         * Sub-state 4's tail increments +0xB itself, so scene_state 4
+         * needs no cue. */
         actors->scene_state = 3;
         actors->scene_step = 0;
         actors->camera_mode = 2;
@@ -738,39 +761,50 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
         append_emission(actors, AOS_OPENING_EMISSION_DISTANT);
         break;
     case AOS_OPENING_CUE_ENEMY_ATTACKS:
-        actors->scene_state = 4;
-        actors->scene_step = 0;
-        /* +0xb==4 inner case 0 writes entity+0x38=3: the return pan. */
-        actors->camera_mode = 3;
-        actors->camera_active = true;
-        actors->camera_initialized = false;
-        actor_animation(actors, 1, 2);
-        actors->pending_cue = cue;
-        break;
-    case AOS_OPENING_CUE_SOUL_ABSORBED:
+        /* Script beat 4 lands on +0xB==5, the soul battle: sub-state 0
+         * raises suspend with a 0x10 preamble before sub-state 2's 0xD2
+         * countdown (0x12 frames of lead-in total). */
         actors->scene_state = 5;
         actors->scene_step = 0;
-        actors->scene_timer = 16;
+        actors->scene_timer = 0x12;
         actor_animation(actors, 2, 5);
         break;
+    case AOS_OPENING_CUE_SOUL_ABSORBED:
+        /* Script beat 5 lands on +0xB==6: sub_08013CF0(0x17)'s music
+         * change under a 0x21-frame suspend hold. AFTER_BATTLE is reused
+         * purely as the audio label for that music change. */
+        actors->scene_state = 6;
+        actors->scene_step = 0;
+        actors->scene_timer = 0x22;
+        actors->pending_cue = AOS_OPENING_CUE_AFTER_BATTLE;
+        break;
     case AOS_OPENING_CUE_AFTER_BATTLE:
+        /* Script beat 6 lands on +0xB==7: sub_0805B878(0x1041)'s
+         * one-shot on sub-state 0, then +0xC=1 idles. COMPLETE is
+         * reused purely as the audio label for that sound. */
+        actors->scene_state = 7;
+        actors->scene_step = 0;
+        actors->pending_cue = AOS_OPENING_CUE_COMPLETE;
+        break;
+    case AOS_OPENING_CUE_RETURN_PAN:
+        /* Script beat 7 lands on +0xB==8: the suspend raise and
+         * entity+0x38=4's mode-4 return pan; sub-state 1 releases the
+         * suspend and returns the text engine to its wait state. */
+        actors->scene_state = 8;
+        actors->scene_step = 0;
+        actors->camera_mode = 4;
+        actors->camera_active = true;
+        actors->camera_initialized = false;
+        break;
+    case AOS_OPENING_CUE_COMPLETE:
+        /* sub_08067A04's end command finishes the script; sub_0805CED0
+         * then runs +0xA==0x80's soul commit and teardown, which the
+         * host's completion path owns. No +0xB sub-state stays armed;
+         * the absorbed pose 0x52 simply remains until teardown. */
         actors->soul_active = false;
         actors->soul_notice = 0;
         actors->notice_input = 0;
         actors->soma_hidden = false;
-        actors->soma_animation = 0x51;
-        actors->scene_state = 6;
-        actors->scene_step = 0;
-        actors->pending_cue = cue;
-        break;
-    case AOS_OPENING_CUE_COMPLETE:
-        actors->scene_state = 7;
-        actors->pending_cue = cue;
-        /* +0xb==8 sub-state 0 writes entity+0x38=4: the return pan that
-         * recenters on Soma before the scene flags complete. */
-        actors->camera_mode = 4;
-        actors->camera_active = true;
-        actors->camera_initialized = false;
         break;
     default:
         break;
@@ -779,15 +813,18 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
 
 bool aos_opening_actors_blocks_script(const AosOpeningActors *actors) {
     if (!actors || !actors->active) return false;
-    /* D410 +0xB==0's 0x40-frame suspend and +0xB==1's pan+tail hold the
-     * text engine through the same flag native sub_08067A04 checks. */
+    /* gEwramData+0x3B7 is the suspend flag native sub_08067A04 checks
+     * before consuming script bytes: +0xB==0's 0x40-frame hold plus
+     * every +0xB sub-state that keeps it raised. */
     if (actors->text_hold) return true;
     switch (actors->scene_state) {
     case 1: return actors->beat1_step < 2;
     case 3: return actors->scene_step < 3;
-    case 4: return actors->scene_step < 2;
+    case 4: return actors->scene_step < 6;
     case 5: return !actors->soul_absorbed || actors->soul_notice == 1 ||
                    actors->soul_notice == 2;
+    case 6: return actors->scene_timer != 0;
+    case 8: return actors->scene_step == 0;
     default: return false;
     }
 }
@@ -983,15 +1020,14 @@ AosOpeningCue aos_opening_actors_update(
 scene:
     switch (actors->scene_state) {
     case 1:
-        /* D410 +0xB==1: sub-state 0 already ran at the cue (entity flag,
-         * suspend, entity+0x38=1); sub-state 1 waits on sub_0805CCE4's
-         * mode-1 pan, sub-state 2 counts 0x10 frames, and sub-state 3
-         * clears the suspend while +0xB stays 1 until the script's next
-         * beat command. */
+        /* D410 +0xB==1: sub-state 1 waits on sub_0805CCE4's mode-1 pan;
+         * sub-state 2 counts +0xD=0x10 down to 0xFF (0x11 frames) and
+         * sub-state 3 clears the suspend while +0xB stays 1 until the
+         * script's next beat command. */
         if (actors->beat1_step == 0) {
             if (camera_done) {
                 actors->camera_active = false;
-                actors->scene_timer = 0x10;
+                actors->scene_timer = 0x11;
                 actors->beat1_step = 1;
             }
         } else if (actors->beat1_step == 1 && actors->scene_timer &&
@@ -1000,13 +1036,21 @@ scene:
         }
         break;
     case 3:
-        /* State 3 emits sub_0805D2C8's distant group, pans at 3.5 pixels per
-         * frame until the camera passes 0xDD, then waits 0x20 frames before
-         * sub_0805D35C's near group, Mina animation 5 and SE_436. */
-        if (actors->scene_step == 0 && camera_done) {
-            actors->camera_active = false;
-            actors->scene_step = 1;
-            actors->scene_timer = 32;
+        /* +0xB==3: sub-state 0's distant batch and mode-2 pan already ran
+         * at the cue; sub-state 1 waits on sub_0805CCE4, sub-state 2's
+         * +0xD=0x20 wrap wait ends with sub-state 3 emitting
+         * sub_0805D35C's near batch, Mina animation 5 and SE 0x1B4, and
+         * sub-state 4's second wrap tail increments +0xB to 4 and
+         * resets +0xC — the attack beat runs without a script beat. */
+        if (actors->scene_step == 0) {
+            if (camera_done) {
+                actors->camera_active = false;
+                actors->scene_step = 1;
+                /* +0xD=0x20 wraps to 0xFF on the 33rd decrement and
+                 * sub-state 3's emission runs the following frame, so
+                 * the portable countdown is 0x22 frames. */
+                actors->scene_timer = 0x22;
+            }
         } else if (actors->scene_step == 1 && actors->scene_timer &&
                    --actors->scene_timer == 0) {
             actors->emitted_batches |= AOS_OPENING_EMISSION_NEAR_SOMA;
@@ -1017,44 +1061,89 @@ scene:
             else
                 actors->pending_cue = AOS_OPENING_CUE_ENEMY_APPEARS;
             actors->scene_step = 2;
-            actors->scene_timer = 32;
+            actors->scene_timer = 0x21;
         } else if (actors->scene_step == 2 && actors->scene_timer &&
                    --actors->scene_timer == 0) {
-            actors->scene_step = 3;
+            /* _0805D642: +0xB++ with +0xC=0; the suspend flag stays
+             * raised straight into +0xB==4's sub-states. */
+            actors->scene_state = 4;
+            actors->scene_step = 0;
+            actors->scene_timer = 0;
+            /* +0xB==4 sub-state 0 writes entity+0x38=3: the return pan. */
+            actors->camera_mode = 3;
+            actors->camera_active = true;
+            actors->camera_initialized = false;
         }
         break;
-    case 4: {
-        /* Arikado's animation 2 completes, the controller waits 0x10 frames,
-         * then animation 3 and SE_480 begin. */
-        uint16_t duration = animation_durations ? animation_durations[1] : 0;
-        if (actors->scene_step == 0 && duration &&
-            actors->animation_age[1] >= duration) {
-            /* sub_0805D410 raises parent bit 2 here. Both private child
-             * callbacks enter their two-stage 0x20 + 0x10 blink sequence. */
-            begin_emitted_disappearance(actors);
-            actors->scene_step = 1;
-            actors->scene_timer = 16;
-        } else if (actors->scene_step == 1 && actors->scene_timer &&
+    case 4:
+        /* +0xB==4, reached by +0xB==3's tail without a script beat:
+         * sub-state 0 raises suspend and arms the mode-3 return pan;
+         * sub-state 1 waits on sub_0805CCE4; sub-state 2's wrapped +0xD
+         * fires SE 0x1DF and Arikado animation 2 one frame after the
+         * pan; sub-state 3 waits on child18's +0x59 animation-finished
+         * flag and sets parent +0x20 bit 1; sub-state 4's 0x10->0xFF
+         * tail fires SE 0x1E0 and animation 3; sub-state 5 waits on the
+         * flag again and arms +0xD=0x58; sub-state 6's countdown clears
+         * the suspend one frame after +0xD reaches 0. */
+        if (actors->scene_step == 0) {
+            if (camera_done) {
+                actors->camera_active = false;
+                actors->scene_step = 1;
+            }
+        } else if (actors->scene_step == 1) {
+            if (output == AOS_OPENING_CUE_NONE)
+                output = AOS_OPENING_CUE_ENEMY_ATTACKS;
+            else
+                actors->pending_cue = AOS_OPENING_CUE_ENEMY_ATTACKS;
+            actor_animation(actors, 1, 2);
+            actors->scene_step = 2;
+        } else if (actors->scene_step == 2) {
+            if (actor_animation_done(actors, animation_durations, 1)) {
+                /* Native sub-state 3 ORs parent +0x20 with 2 here; the
+                 * emitted children poll that flag for their attack and
+                 * despawn sequence, approximated by the disappearance
+                 * pass the old scene_state 4 model already used. */
+                begin_emitted_disappearance(actors);
+                actors->scene_step = 3;
+                actors->scene_timer = 0x11;
+            }
+        } else if (actors->scene_step == 3 && actors->scene_timer &&
                    --actors->scene_timer == 0) {
-            actor_animation(actors, 1, 3);
             if (output == AOS_OPENING_CUE_NONE)
                 output = AOS_OPENING_CUE_ENEMY_ATTACKS_AGAIN;
             else
                 actors->pending_cue = AOS_OPENING_CUE_ENEMY_ATTACKS_AGAIN;
-            actors->scene_step = 2;
+            if (actors->animation[1] != 3)
+                actor_animation(actors, 1, 3);
+            actors->scene_step = 4;
+        } else if (actors->scene_step == 4) {
+            if (actor_animation_done(actors, animation_durations, 1)) {
+                actors->scene_step = 5;
+                /* Sub-state 6 reads +0xD before decrementing: the
+                 * suspend clears on the frame after +0xD reaches 0,
+                 * 0x59 frames after sub-state 5 armed it. */
+                actors->scene_timer = 0x59;
+            }
+        } else if (actors->scene_step == 5 && actors->scene_timer &&
+                   --actors->scene_timer == 0) {
+            /* Sub-state 6 clears the suspend when +0xD reaches 0 and
+             * then idles in sub-state 6. */
+            actors->scene_step = 6;
         }
         break;
-    }
     case 5:
-        /* State 5 waits 0x10 frames, starts its 0xD2-frame battle timer,
-         * removes the enemy at 0xD0 and plays the impact cue at 0x8F. */
+        /* +0xB==5: sub-state 1's 0x10->0xFF preamble arms sub-state 2's
+         * 0xD2 countdown; each countdown frame checks +0xD against 0xD0
+         * (the Winged Skeleton's death, soul orb, debris, flame and
+         * SE 0x6B) and 0x8F (the obtained-soul window, SE 0x197 and the
+         * SE 0x1040 mute) before decrementing, then sub-state 3 owns
+         * the modal wait. */
         if (actors->scene_step == 0) {
             if (actors->scene_timer && --actors->scene_timer == 0) {
                 actors->scene_step = 1;
                 actors->scene_timer = 0xD2;
             }
         } else if (actors->scene_step == 1 && actors->scene_timer) {
-            --actors->scene_timer;
             AosOpeningCue due = AOS_OPENING_CUE_NONE;
             if (actors->scene_timer == 0xD0) {
                 begin_skeleton_death(actors);
@@ -1075,6 +1164,7 @@ scene:
                 if (output == AOS_OPENING_CUE_NONE) output = due;
                 else actors->pending_cue = due;
             }
+            if (actors->scene_timer) --actors->scene_timer;
         }
         /* sub_0805D410 state 5 keeps pose 0x52 from the start of the
          * 0xD2 countdown through the window wait, alternating the player
@@ -1089,13 +1179,29 @@ scene:
             actors->soma_hidden = flashing && (actors->frame & 1u) != 0;
         }
         break;
+    case 6:
+        /* +0xB==6: sub-state 0's sub_08013CF0(0x17) music change already
+         * fired through pending_cue; sub-state 1 counts +0xD=0x20 down
+         * to 0xFF (0x21 frames after sub-state 0's frame) and then
+         * clears the suspend. */
+        if (actors->scene_timer) --actors->scene_timer;
+        break;
+    case 8:
+        /* +0xB==8 sub-state 1: sub_0805CCE4's mode-4 pan recenters on
+         * Soma; completion clears the suspend and returns the text
+         * engine's state byte to its wait value. */
+        if (actors->scene_step == 0 && camera_done) {
+            actors->camera_active = false;
+            actors->scene_step = 1;
+        }
+        break;
     default:
         break;
     }
-    /* sub_0805D410 state 5, sub-state 3: the sub_0800E708 obtained-soul
+    /* sub_0805D410 +0xB==5 sub-state 3: the sub_0800E708 obtained-soul
      * window opens with the absorption, stays modal while the player has
      * not pressed A (each press plays SE_0x132), then sub_0800F0AC closes
-     * it before the script may continue to state 6. */
+     * it before the script may continue to +0xB==6. */
     if (actors->soul_notice == 1) {
         actors->soul_notice = 2;
     } else if (actors->soul_notice == 2 &&

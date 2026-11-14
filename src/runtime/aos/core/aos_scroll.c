@@ -64,6 +64,29 @@ static uint32_t scroll_rebuild_vram(int bg, uint16_t tile_x,
            (((uint32_t)tile_y & 0x1F) << 6);
 }
 
+/* Fills the descriptor's staging-buffer words through the bound
+ * tile source — the sub_08001994 lookups the native runs before
+ * BgCmdBuffer_WriteData. `column` selects the span orientation:
+ * true for the x-axis helpers (fixed tile_x, tile_y stepping
+ * upward), false for the y-axis ones (fixed tile_y, tile_x
+ * stepping upward). With no source bound word_count stays 0 and
+ * the descriptor remains report-only. */
+static void scroll_rebuild_words(const AosScroll *s,
+                                 AosScrollRebuild *r, bool column) {
+    r->word_count = 0;
+    if (!s->tile_source.fetch) return;
+    size_t n = s->tile_source.fetch(s->tile_source.context, r->bg,
+                                    column, r->tile_x, r->tile_y,
+                                    r->count, r->words);
+    r->word_count = (uint16_t)(n > 0x1F ? 0x1F : n);
+}
+
+void aos_scroll_tile_source(AosScroll *s, AosScrollTileFetch fetch,
+                            void *context) {
+    s->tile_source.fetch = fetch;
+    s->tile_source.context = context;
+}
+
 /* sub_0803F3F8: positive x velocity. Clamps the request against the
  * map edge ((meta_0 << 5) tile blocks of 8 px plus the 30-tile
  * screen), caps at +8 px, stores xVel, integrates xPos and queues
@@ -72,8 +95,9 @@ static uint32_t scroll_rebuild_vram(int bg, uint16_t tile_x,
  * (x + v - 0x10000) >> 19 on both sides. The rebuild streams 21
  * tile lookups (BgCmdBuffer_WriteData(0x80, 0x15, ...)) down the
  * screen's tile rows; the descriptor is reported through `out`. */
-static void scroll_vel_x_pos(AosBgLayer *bg, int bgnum, int32_t vx,
+static void scroll_vel_x_pos(AosScroll *s, int bgnum, int32_t vx,
                              AosScrollOut *out) {
+    AosBgLayer *bg = &s->bg[bgnum];
     int32_t x = bg->x_pos;
     int32_t v = vx;
     if (!((((uint32_t)(x + vx)) >> 19) + 0x1E <
@@ -96,6 +120,7 @@ static void scroll_vel_x_pos(AosBgLayer *bg, int bgnum, int32_t vx,
             r->length = 0x15;
             r->vram_addr = scroll_rebuild_vram(bgnum, r->tile_x,
                                                r->tile_y);
+            scroll_rebuild_words(s, r, true);
         }
     }
     bg->x_pos = x + v;
@@ -104,8 +129,9 @@ static void scroll_vel_x_pos(AosBgLayer *bg, int bgnum, int32_t vx,
 /* sub_0803F4C8: negative x velocity. Stops at x = 0, caps at
  * -8 px, stores xVel, integrates xPos, rebuilds on a tile-index
  * change (the unshifted (x >> 19) vs ((x + v) >> 19) probe). */
-static void scroll_vel_x_neg(AosBgLayer *bg, int bgnum, int32_t vx,
+static void scroll_vel_x_neg(AosScroll *s, int bgnum, int32_t vx,
                              AosScrollOut *out) {
+    AosBgLayer *bg = &s->bg[bgnum];
     int32_t x = bg->x_pos;
     int32_t v = vx;
     if (x + vx < 0) v = -x;
@@ -125,6 +151,7 @@ static void scroll_vel_x_neg(AosBgLayer *bg, int bgnum, int32_t vx,
             r->length = 0x15;
             r->vram_addr = scroll_rebuild_vram(bgnum, r->tile_x,
                                                r->tile_y);
+            scroll_rebuild_words(s, r, true);
         }
     }
     bg->x_pos = x + v;
@@ -138,9 +165,10 @@ static void scroll_vel_x_neg(AosBgLayer *bg, int bgnum, int32_t vx,
  * (sub_0803FA10) uses +0x14/+0xA00000 (0xA0 << 16). The rebuild
  * streams 31 tile lookups across the screen's tile columns
  * (BgCmdBuffer_WriteData(0, 0x1F, ...)). */
-static void scroll_vel_y_pos(AosBgLayer *bg, int bgnum, int32_t vy,
+static void scroll_vel_y_pos(AosScroll *s, int bgnum, int32_t vy,
                              AosScrollOut *out, uint32_t edge_add,
                              int32_t edge_off) {
+    AosBgLayer *bg = &s->bg[bgnum];
     int32_t y = bg->y_pos;
     int32_t v = vy;
     if (!((((uint32_t)(y + vy)) >> 19) + edge_add <
@@ -163,6 +191,7 @@ static void scroll_vel_y_pos(AosBgLayer *bg, int bgnum, int32_t vy,
             r->length = 0x1F;
             r->vram_addr = scroll_rebuild_vram(bgnum, r->tile_x,
                                                r->tile_y);
+            scroll_rebuild_words(s, r, false);
         }
     }
     bg->y_pos = y + v;
@@ -176,8 +205,9 @@ static void scroll_vel_y_pos(AosBgLayer *bg, int bgnum, int32_t vy,
  * room-transition sibling (sub_0803FAE0) pins at 0 — the native
  * test is `yPos + vy < pin`, so the 0x300000 case's
  * `<= 0x2FFFFF` folds into the same comparison. */
-static void scroll_vel_y_neg(AosBgLayer *bg, int bgnum, int32_t vy,
+static void scroll_vel_y_neg(AosScroll *s, int bgnum, int32_t vy,
                              AosScrollOut *out, int32_t pin) {
+    AosBgLayer *bg = &s->bg[bgnum];
     int32_t y = bg->y_pos;
     int32_t v = vy;
     if (y + vy < pin) v = pin - y;
@@ -197,6 +227,7 @@ static void scroll_vel_y_neg(AosBgLayer *bg, int bgnum, int32_t vy,
             r->length = 0x1F;
             r->vram_addr = scroll_rebuild_vram(bgnum, r->tile_x,
                                                r->tile_y);
+            scroll_rebuild_words(s, r, false);
         }
     }
     bg->y_pos = y + v;
@@ -209,8 +240,8 @@ void aos_scroll_request(AosScroll *s, int bg, int32_t vx, int32_t vy,
     /* pBgMetadata->unk_0 > 1 gates the x axis; <= 1 pins xPos to 0
      * and clears xVel (the one-screen pin). */
     if (b->meta_0 > 1) {
-        if (vx > 0)      scroll_vel_x_pos(b, bg, vx, out);
-        else if (vx < 0) scroll_vel_x_neg(b, bg, vx, out);
+        if (vx > 0)      scroll_vel_x_pos(s, bg, vx, out);
+        else if (vx < 0) scroll_vel_x_neg(s, bg, vx, out);
         else             b->x_vel = 0;
     } else {
         b->x_vel = 0;
@@ -219,8 +250,8 @@ void aos_scroll_request(AosScroll *s, int bg, int32_t vx, int32_t vy,
     /* pBgMetadata->unk_1 > 1 gates the y axis; <= 1 pins yPos to
      * 0x30 << 16 and clears yVel. */
     if (b->meta_1 > 1) {
-        if (vy > 0)      scroll_vel_y_pos(b, bg, vy, out, 0x1A, 0xD00000);
-        else if (vy < 0) scroll_vel_y_neg(b, bg, vy, out, 0x300000);
+        if (vy > 0)      scroll_vel_y_pos(s, bg, vy, out, 0x1A, 0xD00000);
+        else if (vy < 0) scroll_vel_y_neg(s, bg, vy, out, 0x300000);
         else             b->y_vel = 0;
     } else {
         b->y_pos = 0x300000;
@@ -240,23 +271,25 @@ void aos_scroll_request(AosScroll *s, int bg, int32_t vx, int32_t vy,
  * the clamp lands at (meta_1<<24) - (y + 0xA00000) (0xA0 px
  * screen vs 0xD0), negative y stops at 0 rather than the 0x30
  * pin, and a gated axis pins yPos to 0 instead of 0x300000.
- * Called by the transition paths (sub_08013960/sub_08008750)
- * with vy = +/-0x8400-class fixed-point steps. */
+ * Called by GameModeIntroCutsceneUpdate stage 3 and
+ * GameModeCreditsUpdate stage 3 (the door transition sub_080104EC
+ * uses plain sub_0803FBBC on a blanked display instead) with vy =
+ * +/-0x8400-class fixed-point steps. */
 void aos_scroll_transition_request(AosScroll *s, int bg, int32_t vx,
                                    int32_t vy, AosScrollOut *out) {
     AosBgLayer *b = &s->bg[bg];
     if (out) ++out->requests;
     if (b->meta_0 > 1) {
-        if (vx > 0)      scroll_vel_x_pos(b, bg, vx, out);
-        else if (vx < 0) scroll_vel_x_neg(b, bg, vx, out);
+        if (vx > 0)      scroll_vel_x_pos(s, bg, vx, out);
+        else if (vx < 0) scroll_vel_x_neg(s, bg, vx, out);
         else             b->x_vel = 0;
     } else {
         b->x_vel = 0;
         b->x_pos = 0;
     }
     if (b->meta_1 > 1) {
-        if (vy > 0)      scroll_vel_y_pos(b, bg, vy, out, 0x14, 0xA00000);
-        else if (vy < 0) scroll_vel_y_neg(b, bg, vy, out, 0);
+        if (vy > 0)      scroll_vel_y_pos(s, bg, vy, out, 0x14, 0xA00000);
+        else if (vy < 0) scroll_vel_y_neg(s, bg, vy, out, 0);
         else             b->y_vel = 0;
     } else {
         b->y_pos = 0;

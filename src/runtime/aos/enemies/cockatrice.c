@@ -97,6 +97,7 @@ AosHitReport aos_enemy_cockatrice_rock_update(AosEnemy *e, AosSoma *soma,
                                   soma_atk, soma_def);
     if (e->state == 0) {
         if (random() & 0x8000) {
+            aos_audio_release(0x65);
             e->removed = true;
             return report;
         }
@@ -123,14 +124,17 @@ AosHitReport aos_enemy_cockatrice_rock_update(AosEnemy *e, AosSoma *soma,
         e->x += e->vx;
         e->y += e->vy;
         if (e->ck_phase > 0x1F) {
-            aos_audio_play_song(0x65);
+            /* sub_08013E18(0x65) as the rock expires. */
+            aos_audio_release(0x65);
             e->removed = true;
         }
     } else {
         e->removed = true;
     }
-    if (outside_margins(kind, 1, (e->x >> 16) - cam_x, (e->y >> 16) - cam_y))
+    if (outside_margins(kind, 1, (e->x >> 16) - cam_x, (e->y >> 16) - cam_y)) {
+        aos_audio_release(0x65);
         e->removed = true;
+    }
     return report;
 }
 
@@ -216,6 +220,8 @@ static void cockatrice_attack(AosEnemy *e, AosSoma *soma, const AosCollision *la
             r.combat.type = AOS_TYPE_ENEMY;
             r.combat.hurt_off = true;
             spawned->children[spawned->child_count++] = r;
+            /* sub_080BBAC4 arms the rock with sub_08013D60(0x65). */
+            aos_audio_hold(0x65);
         }
         if (e->anim.flags & AOS_ANIM_ENDED) {
             e->timer = 0x20;
@@ -231,8 +237,9 @@ static void cockatrice_attack(AosEnemy *e, AosSoma *soma, const AosCollision *la
     }
 }
 
-/* sub_080BBEE4: the state-2 death. Step 0 plays sound 0x65 and
- * animation 2 once with the 0x40 timer; step 1 drifts (vx += 0x3A00,
+/* sub_080BBEE4: the state-2 death. Step 0 releases any rock hold
+ * (sub_08013E18(0x65)) and plays animation 2 once with the 0x40
+ * timer; step 1 drifts (vx += 0x3A00,
  * vy += -0x6000), plays song 0x6E every eighth tick, bursts gore every
  * other tick (the native sub_08045CEC spawn approximated by the blood
  * effect) and blinks (the + 0x5A palette merge is not ported); at 0 it
@@ -241,7 +248,8 @@ static bool cockatrice_die(AosEnemy *e, const AosEnemyKind *kind,
                            AosHitReport *report, uint32_t (*random)(void)) {
     switch (e->step) {
     case 0:
-        aos_audio_play_song(0x65);
+        /* sub_08013E18(0x65): drop a leftover rock hold. */
+        aos_audio_release(0x65);
         play_loop(e, kind->anims, 2, false);
         e->timer = 0x40;
         e->step = 1;

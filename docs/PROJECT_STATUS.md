@@ -1,3 +1,43 @@
+## Patch 1150 - remaining native held-sound sites audited and wired
+
+- **Newly wired held sounds** (`aos/enemies/`): Arachne's web rain
+  holds `0x82` — `aos_audio_hold` at the rain start
+  (sub_08079EF0), `aos_audio_hold_if_new` on the fourth-tick
+  sub_08013DA8 refresh, `aos_audio_release` at the rain end, on
+  the EnemyArachneUpdate margin exit and on any state-1 exit
+  (hit/death; the native sub_0807A4DC web-expiry release).
+  Alura Une holds `0x105` across the sub_0807C150 volley
+  (hold at case 11->12, hold_if_new refreshes, release at the
+  case-13 exit) and the sub_0807C494 spin (hold at case 1->2,
+  refreshes in cases 2/4, releases at the 0xFC/0xEF case ends and
+  on a lethal hit). The Beam Skeleton beam holds `0x66` while
+  the owner fires and is visible, re-armed every fourth frame
+  (sub_080CAE74's hand scan + sub_08013D60 pair maps to
+  hold_if_new). Balore's sub_080B53F8 shot holds `0x66` from
+  spawn to expiry. Cockatrice's rock holds `0x65` from spawn to
+  expiry/cull (sub_080BBAC4) and the death now runs the native
+  sub_08013E18(0x65) release — it was previously mistranslated
+  as PlaySong(0x65) (test_aos_enemy.c assertion corrected).
+- **Verified already covered**: Persephone `0x9C`
+  (aos_soul.c hold_if_new + release), Lightning Doll `0x75`
+  (lightning_doll.c + shared death release in aos_enemy.c),
+  Object14/Object17 `0x136`/`0x116` (owned modules), the shop
+  `0x2B` (aos_shop.c out-flags) and NPC-talk `0x26`
+  (aos_npc_talk.c out-flags) report paths.
+- **Documented, not wired** (no verifiable ported counterpart or
+  excluded owner): sub_08034F48's `0xFA`/`0xFB` Julius-mode
+  red-soul effect; sub_08033370's Object01-child `0x136` movement
+  loop (children are static draws); Belmont state-8 sub_080D0E60
+  `0xFA`/`0xFB` (bel_attack envelope drops the choreography);
+  Graham 0xF0 sub_080D2BDC `0x16C`/`0x105`; the sub_080D6B0C
+  transient's `0x14C`/`0x14B` (spawned by the sub_080D6EF8 gore
+  burst, entity type 0x49); Death-module sub_080BC390/sub_080BC82C
+  `0x105`; the aria_entities.c consumers for the shop/NPC/Object20
+  out-flag holds; Object20 story sub_080620E8 `0x2D`.
+- Registries synced (`aos.audio.play_song` notes/next_action,
+  `aos_monster_aspects.tsv` for alura_une, arachne, balore,
+  beam_skeleton, cockatrice).
+
 ## Patch 1149 - whiteout spark draw wired, sub_08063AEC burst ported, purge scans decoded
 
 - **Spark/particle draw wired.** `aria_draw.c` gains

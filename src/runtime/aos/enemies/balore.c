@@ -140,6 +140,8 @@ static void bl_spawn_shot(AosEnemy *e, AosHitReport *hit) {
     c.timer = 0x50;
     c.hp = 1;
     hit->children[hit->child_count++] = c;
+    /* sub_080B53F8 runs sub_08013D60(0x66) as the shot arms. */
+    aos_audio_hold(0x66);
 }
 
 /* sub_080B41E0: the wing orbits the parent at radius + 0x20
@@ -253,6 +255,9 @@ static void bl_projectile_update(AosEnemy *e, const AosAnimSet *anims,
     AosEnemy *p = e->parent;
     if (!p || !bl_is_balore(p->id) || p->state == 4 || p->removed ||
         --e->timer == 0) {
+        /* sub_080B53F8's sub_08013E18(0x66) on the shot's expiry. */
+        if (e->role == AOS_ROLE_BALO_SHOT)
+            aos_audio_release(0x66);
         e->removed = true;
         return;
     }

@@ -5,6 +5,7 @@
  * enemy framework API. */
 
 #include "../../aos/core/aos_enemy_internal.h"
+#include "../../aos/core/aos_audio.h"
 
 #include <stdlib.h>
 
@@ -268,7 +269,11 @@ static void beam_attack(AosEnemy *e, const AosEnemyKind *kind, AosHitReport *rep
  * back to the eye beyond 92 pixels of the owner. Drawn with the owner's
  * vertical scale unless full, it stops hurting (+ 0x72 bit 1) once the
  * scale shrinks. The flash only follows the scale. Both are deleted with
- * + 0x1A clear or the owner hidden. The sound 0x66 loop is not ported. */
+ * + 0x1A clear or the owner hidden. The sub_080CAE74 tail holds sound
+ * 0x66: while the owner fires (+ 0x1A bit 0) and is not hidden
+ * (+ 0x58 bit 0x20), every fourth frame the native hand scan +
+ * sub_08013D60 pair re-adds the song (mapped to hold_if_new), and
+ * sub_08013E18(0x66) runs on every other tick. */
 AosHitReport aos_enemy_beam_update(
     AosEnemy *b, AosSoma *soma, const AosEnemyKind *kind,
     const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
@@ -314,6 +319,16 @@ AosHitReport aos_enemy_beam_update(
         }
         if (o->scale != 0xFFFF) b->combat.attack_off = true;
         aos_combat_tick(&b->combat);
+        /* sub_080CAE74 tail: the 0x66 loop follows the owner's firing
+         * bit and hidden flag; + 0x14 is the beam's own tick counter
+         * (kept on phase) gating the every-fourth-frame re-hold. */
+        if (o->firing && !o->hidden && !o->removed) {
+            if ((b->phase & 3) == 0)
+                aos_audio_hold_if_new(0x66);
+            b->phase++;
+        } else {
+            aos_audio_release(0x66);
+        }
     }
     b->scale = o->scale;
     b->scaled = o->scale != 0xFFFF;

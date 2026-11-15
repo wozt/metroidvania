@@ -19,8 +19,11 @@
  *   head could not be confirmed.
  * - sub_0806AE54/sub_0806D4C0 (sleep and stun gates) map to the shared
  *   hit_flash freeze used by the other ports.
- * - sub_08013D60/sub_08013DA8/sub_08013E18(0x82) room events and the
- *   + 0x5A palette merge are cosmetic and skipped.
+ * - sub_08013D60/sub_08013DA8/sub_08013E18(0x82) map to the shared
+ *   held-sound calls: hold at the rain start, hold_if_new on the
+ *   fourth-tick refresh, release at the rain end, on the margin
+ *   exit and on any state-1 exit; the + 0x5A palette merge stays
+ *   cosmetic and is skipped.
  * - The web's + 0xD lifetime is approximated to 0x60 ticks (the native
  *   initial byte was not recovered); contact damage uses the shared
  *   collide path with the parent's stats.
@@ -207,16 +210,23 @@ static void ar_state1(AosEnemy *e, AosSoma *soma,
         if (e->cycle_done) {
             e->step = 2;
             play(e, kind->anims, 2);
+            /* sub_08079EF0: sub_08013D60(0x82) starts the rain hold. */
+            aos_audio_hold(0x82);
             e->angle = e->mirrored ? 0x2800 : 0x5800;
         }
         break;
     case 2:
         e->timer++;
-        if ((e->timer & 3) == 0)
+        if ((e->timer & 3) == 0) {
             ar_spawn_web(report, e, kind->anims);
+            /* sub_08013DA8(0x82) every fourth rain tick. */
+            aos_audio_hold_if_new(0x82);
+        }
         if (e->timer > 0x3B) {
             e->state = 0;
             e->step = 1;
+            /* sub_08013E18(0x82) at the end of the rain. */
+            aos_audio_release(0x82);
             e->timer = 0;
             e->ar_cool = (uint8_t)((random() & 0x3F) + 0x3C);
             e->vx = 0;
@@ -425,6 +435,9 @@ AosHitReport aos_enemy_arachne_update(AosEnemy *e, AosSoma *soma,
                              soma_atk, soma_def);
 
     int sx = ar_px(e) - cam_x, sy = ar_py(e) - cam_y;
+    /* EnemyArachneUpdate releases the rain hold when the
+     * sub_0806D128(e, 4) activity check fails (state 2 exempt). */
+    uint8_t pre_state = e->state;
     if (!e->boss_parts_spawned) {
         ar_spawn_legs(&report, e, kind->anims);
         e->boss_parts_spawned = true;
@@ -433,6 +446,11 @@ AosHitReport aos_enemy_arachne_update(AosEnemy *e, AosSoma *soma,
         e->hidden = true;
     } else {
         e->hidden = outside_margins(kind, 4, sx, sy);
+        /* sub_08013E18(0x82) on the margin exit; a hit or lethal blow
+         * leaving state 1 releases the same hold (the native web
+         * callback sub_0807A4DC releases it on web expiry). */
+        if (e->state != 2 && e->hidden)
+            aos_audio_release(0x82);
         if (!e->defeated && (uint16_t)(sx + 0x10) <= 0x110 &&
             (uint16_t)sy <= 0xB0)
             report.targetable = true;
@@ -470,5 +488,9 @@ AosHitReport aos_enemy_arachne_update(AosEnemy *e, AosSoma *soma,
     for (unsigned i = 0; i < spawned.child_count &&
          report.child_count < AOS_ENEMY_MAX_CHILDREN; ++i)
         report.children[report.child_count++] = spawned.children[i];
+    /* Leaving the rain for any reason (hit knockback state 3, lethal
+     * state 2, margin reset) releases the 0x82 hold. */
+    if (pre_state == 1 && e->state != 1)
+        aos_audio_release(0x82);
     return report;
 }

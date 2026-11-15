@@ -5183,9 +5183,9 @@ static void cockatrice_tests(void) {
     }
     assert(e.state == 0 && e.step == 0 && e.anim.id == 0 && frames < 200);
 
-    /* The lethal blow (sub_080BC0B4): state 2; the next update plays
-     * sound 0x65, then song 0x6E with gore, deletes at the timer's
-     * end. */
+    /* The lethal blow (sub_080BC0B4): state 2; the next update runs
+     * sub_08013E18(0x65) (a held-sound release, not a play), then song
+     * 0x6E with gore, deletes at the timer's end. */
     assert(aos_enemy_create(&e, AOS_ENEMY_COCKATRICE, 200, 150, 0, 0,
                             &soma, &layer, &kind, &stats));
     e.x = AOS_FIXED(200);
@@ -5207,7 +5207,7 @@ static void cockatrice_tests(void) {
     AosHitReport death = aos_enemy_update(&e, &soma, &layer, &kind, NULL,
                                           NULL, 10, 4, 0, 0, always_zero);
     assert(!e.removed && e.anim.id == 2 &&
-           aos_audio_requested(AOS_AUDIO_START_SONG, 0x65) == 1);
+           aos_audio_requested(AOS_AUDIO_STOP_SONG, 0x65) == 1);
     (void)death;
     int ticks = 0;
     while (!e.removed && ticks < 200) {

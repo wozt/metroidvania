@@ -44,7 +44,10 @@
  * mark + 0x59 bit 3 when the boss dies.
  *
  * Approximations: the 0x105 sub_08013D60/sub_08013DA8/sub_08013E18 room
- * events, the sub_08011F7C screen pulses, the sub_0806D54C aggro helper,
+ * events map to the shared held-sound calls (hold at the volley/spin
+ * entry, hold_if_new on the fourth-tick refresh, release at the case
+ * exits and on a lethal hit), while the sub_08011F7C screen pulses,
+ * the sub_0806D54C aggro helper,
  * the sub_0806D260 callback variant, sub_0806B1FC/sub_0806AF98/
  * sub_0806B04C/sub_08042B8C/sub_080421AC/sub_08042848 helpers and the
  * exact sub_0806DCC4 velocity picks are approximated through the shared
@@ -139,6 +142,8 @@ static void au_hurt(AosEnemy *e, bool killed) {
         e->state = 2;
         e->step = 0;
         e->timer = 0x28;
+        /* Drop any in-flight 0x105 spin/volley hold. */
+        aos_audio_release(0x105);
         aos_audio_play_song(0x6E);
     }
 }
@@ -251,15 +256,18 @@ static void au_state0(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
         }
         break;
     case 11:
-        /* The sub_08011F7C screen pulse every eighth tick and the 0x105
-         * room event are not ported. */
+        /* The sub_08011F7C screen pulse every eighth tick is not
+         * ported; the case end runs sub_08013D60(0x105). */
         au_anim(e, kind, 1, false);
         e->step++;
         e->timer = 0;
+        aos_audio_hold(0x105);
         break;
     case 12:
         if ((e->timer & 3) == 0) {
             /* sub_08011F7C(0, r4, r2) random directional pulse. */
+            /* sub_08013DA8(0x105) every fourth tick. */
+            aos_audio_hold_if_new(0x105);
         }
         if (e->cycle_done) {
             e->step++;
@@ -270,12 +278,16 @@ static void au_state0(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
     case 13:
         if ((e->timer & 3) == 0) {
             /* sub_08011F7C(0, r4, r2) random directional pulse. */
+            /* sub_08013DA8(0x105) every fourth tick. */
+            aos_audio_hold_if_new(0x105);
         }
         e->timer++;
         if (e->timer <= 0x1D) return;
         e->state = 0;
         e->step = 2;
         e->timer = 0;
+        /* sub_08013E18(0x105) at the end of the volley. */
+        aos_audio_release(0x105);
         au_anim(e, kind, 3, false);
         break;
     default:
@@ -317,11 +329,14 @@ static void au_state1(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
         e->step++;
         e->timer = 0;
         au_anim(e, kind, 3, false);
+        /* sub_0807C494: sub_08013D60(0x105) starts the spin hold. */
+        aos_audio_hold(0x105);
         break;
     case 2:
         e->timer++;
         if ((e->timer & 3) == 0) {
-            /* sub_08013DA8(0x105) room event not ported. */
+            /* sub_08013DA8(0x105) every fourth tick. */
+            aos_audio_hold_if_new(0x105);
         }
         if (!e->cycle_done) return;
         au_anim(e, kind, 4, true);
@@ -335,7 +350,8 @@ static void au_state1(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
         /* fallthrough */
     case 4: {
         if ((e->timer & 3) == 0) {
-            /* sub_08013DA8(0x105) room event not ported. */
+            /* sub_08013DA8(0x105) every fourth tick. */
+            aos_audio_hold_if_new(0x105);
         }
         uint8_t t = e->timer;
         if (t > 0x1D) {
@@ -352,6 +368,7 @@ static void au_state1(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
         if (e->timer <= 0xFC) break;
         /* sub_08013E18(0x105) + sub_0806D128(e, 4): off-screen resets
          * the fight, on-screen picks the next pattern. */
+        aos_audio_release(0x105);
         {
             int sx = (int)(e->x >> 16) - cam_x;
             int sy = (int)(e->y >> 16);
@@ -428,6 +445,7 @@ static void au_state1(AosEnemy *e, AosSoma *soma, const AosCollision *layer,
         e->timer++;
         if (e->timer <= 0xEF) break;
         /* sub_0806D128(e, 4) margin check + sub_08013E18(0x105). */
+        aos_audio_release(0x105);
         {
             int sx = (int)(e->x >> 16) - cam_x;
             int sy = (int)(e->y >> 16);

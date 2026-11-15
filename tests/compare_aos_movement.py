@@ -20,12 +20,13 @@ never committed):
    taps closes leftover text windows -> "clean.state". A fourth "walk"
    run holds RIGHT with the same A-tap cadence for --walk-frames,
    walking Soma through the room 0/0 exit into room 0/3 -> "entered.state".
-   A fifth "entry settle" run of pure A taps for --entry-settle-frames
-   lets the native room-entry sequence finish (the fade and the wooden
-   door's pass/close hold player input via gEwramData +0x42C for ~170
-   frames after the transition commits) -> "moved.state". Measuring
-   before that settle compares settled runtime movement against a
-   native side that is still input-locked.
+   A fifth "entry settle" run tapping A|B every 30 frames for
+   --entry-settle-frames lets the native room-entry sequence finish
+   (the fade holds input via gEwramData +0x42C for ~130 frames, then
+   sub_080110E4 stage 2 waits for KEY_B | KEY_SELECT while game-mode
+   case 4 locks player input) -> "moved.state". Measuring before that
+   settle compares settled runtime movement against a native side
+   that is still input-locked.
 2. Native measurement: from moved.state, RIGHT held from frame 0 with
    A taps every --a-every frames; per-frame peeks of 0x02000524:8 give
    posX,posY as 16.16 fixed point (entityData[0] +0x40/+0x44; see
@@ -186,12 +187,17 @@ def ensure_native_states(rom, workdir, lab, story_frames, pulse,
         sys.exit("entered state-out failed")
     # The walk ends the frame the room-0/3 transition commits, so the
     # saved state still sits inside the native entry sequence: the fade
-    # (gEwramData +0x42C bit 15) suppresses all input for ~130 frames
-    # and the wooden door's pass/close then masks player input for
-    # ~40 more (Object00 sets +0x42C bits 0x101 while Soma passes).
-    # Settle with pure A taps so moved.state matches the settled
-    # gameplay the runtime --simulate path models.
-    ekeys = settle_keys(entry_settle_frames)
+    # (gEwramData +0x42C bit 15) suppresses all input for ~130 frames,
+    # then sub_080110E4 stage unk_65 == 2 waits for KEY_B | KEY_SELECT
+    # while GameModeInGameUpdate case 4 holds SetPlayerInput(1, 0)
+    # (unk_64 == 4). Pure A taps never satisfy that wait, so the settle
+    # taps A|B together: A keeps dialogue advancing and B both satisfies
+    # the stage and swings the whip (clearing the room's zombies, which
+    # keeps them from drifting into the measured stretch). Settle long
+    # enough for the whole fade -> wait -> fade-back chain (~200 frames)
+    # plus margin so moved.state matches the settled gameplay the
+    # runtime --simulate path models.
+    ekeys = tap_keys(entry_settle_frames, 0, 30, A | 2)
     out = run_lab(rom, entry_settle_frames, ekeys, workdir,
                   ["--state-in", entered_state, "--state-out", moved_state,
                    "--peek", f"-1:{POS_ADDR:x}:8,-1:{ROOM_ADDR:x}:16"])
@@ -208,10 +214,17 @@ def ensure_native_states(rom, workdir, lab, story_frames, pulse,
 
 
 def native_measure(rom, state, workdir, lab, frames, direction):
-    """Hold `direction` with A taps every A_EVERY frames; per-frame
-    posX/posY peeks. Returns list of (frame, x16.16, y16.16)."""
+    """Hold `direction` with A|B taps every A_EVERY frames; per-frame
+    posX/posY peeks. Returns list of (frame, x16.16, y16.16).
+
+    B is tapped together with A: room 0/3's native entry/event
+    sequences park in sub_080110E4 stage unk_65 == 2, which only
+    advances on KEY_B | KEY_SELECT while game-mode case 4 holds
+    SetPlayerInput(1, 0). Without a B press the native side stays
+    input-locked and the comparison measures nothing. The runtime
+    script taps the same mask, so both sides whip-swing symmetrically."""
     base = RIGHT if direction == "right" else LEFT
-    keys = tap_keys(frames, base, A_EVERY, A)
+    keys = tap_keys(frames, base, A_EVERY, A | 2)
     peeks = ",".join(f"{f}:{POS_ADDR:x}:8" for f in range(frames))
     out = run_lab(rom, frames, keys, workdir,
                   ["--state-in", state, "--peek", peeks])
@@ -241,7 +254,10 @@ def write_sim_script(path: str, frames: int, direction: str) -> None:
         if gap > 0:
             lines.append(f"tap {base} {gap}")
             cursor = f
-        lines.append(f"tap {base | A} 3")
+        # A|B: A advances text/jumps, B satisfies the native
+        # sub_080110E4 stage-2 KEY_B|KEY_SELECT wait (see
+        # native_measure); the runtime maps B to the whip attack.
+        lines.append(f"tap {base | A | 2} 3")
         cursor += 3
         f += A_EVERY
     with open(path, "w") as fh:

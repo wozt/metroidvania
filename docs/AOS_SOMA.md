@@ -599,6 +599,29 @@ reproduces `sub_080104EC`'s `unk_65` stage ordering around `take_exit`
 (see Patch 1155). Walking from 0/6 into 0/9 arrives on the floor
 (Y 159 to 1439).
 
+In-game event locks. While `gameMode` (`gEwramData + 0x10`) is 1 or 4,
+`GameModeInGameUpdate` (`sub_0800B700`) dispatches on
+`unk_60.unk_64`/`unk_65` (`gEwramData + 0x64/+0x65`). Several stages call
+`SetPlayerInput(1, 0)` every frame, which parks a priority-1 override in
+`inputData` so `playerHeldInput` reads 0 regardless of the pad: case 4 runs
+`sub_080110E4`, the staged room-transition fade whose stage `unk_65 == 2`
+draws `sub_08010FF4` and only advances on `new_input & (KEY_B |
+KEY_SELECT)`; case 6 runs `sub_08047764`, a room event script; cases 5, 7
+and 8 run `sub_080106DC`, `sub_080116A8`/`sub_08011AD0` and
+`sub_08011B2C`. `gEwramData + 0x42C` (`unk_60.unk_42C`) is the matching
+global bitfield: the wooden door sets bits `0x101` while Soma passes
+(`sub_0800C5A8(0)` also clears `unk_A074` bit 1, freezing entity updates)
+and the fade path holds bit `0x80000000`. Measured on the real ROM in
+room 0/3 (`tests/compare_aos_movement.py` artifacts): a state saved at
+the room-0/3 transition commit keeps `unk_64 == 4` with `0x42C ==
+0x81010000` for ~130 frames of suppressed input, then `0x01010000` while
+the door pass and the stage-2 B/Select wait hold the lock; only after a
+B or Select press does `unk_64` return to 1. Later in the same room a
+second sequence (`unk_64 == 6`, `sub_08047764`) locks input around
+x ~= 100-120, and a further stationary stop near x ~= 120 persists with
+input free — consistent with an enemy body block (zombies converge on
+Soma there) but the exact native mechanism is not yet confirmed.
+
 Animation palettes: every direct animation change compares the byte
 `0x080E126C[id]` with `+0x26` and, when it differs, loads that bank of
 Soma's palette descriptor `0x082097D4` into OBJ palette 0 with

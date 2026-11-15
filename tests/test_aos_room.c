@@ -65,6 +65,18 @@ int main(void) {
     soma = (AosSoma){.vx = -0x18000, .vy = -0x60000};
     aos_room_exit_velocity(&soma, 100, 10);
     assert(soma.vx == -0x18000 && soma.vy == -0x60000);
+
+    /* sub_080104EC unk_65 == 2: the blanked BG1 settle lasts
+     * dist / 8 + 1 frames plus one when the remainder is not a
+     * multiple of 8 — the stage ends the frame after the
+     * sub_0803FBBC request reaches zero. */
+    assert(aos_room_transition_settle_frames(0, 0x30, 0, 0x30) == 1);
+    assert(aos_room_transition_settle_frames(0, 0x30, 8, 0x30) == 2);
+    assert(aos_room_transition_settle_frames(0, 0x30, 9, 0x30) == 3);
+    assert(aos_room_transition_settle_frames(0, 0x30, 16, 0x30) == 3);
+    assert(aos_room_transition_settle_frames(0, 0x30, 17, 0x30) == 4);
+    assert(aos_room_transition_settle_frames(0, 0x30, 0, 0xB0) == 17);
+    assert(aos_room_transition_settle_frames(1040, 512, 120, 48) == 116);
     puts("aos_room: ok");
     return 0;
 }

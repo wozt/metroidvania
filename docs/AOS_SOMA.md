@@ -586,9 +586,18 @@ adjustment and Y = (H > 1 ? load_y + 0x30 : 0x30) + local Y.
 --audit-transitions` leaves every exported room through each entry: all
 725 entries match an exit, all 723 edge transitions arrive inside their
 target, and the 2 exit-cell transitions arrive outside when leaving from
-the first exit cell (X = 240), presumably because their door entities,
-which are not ported, control that crossing. Walking from 0/6 into 0/9
-arrives on the floor (Y 159 to 1439).
+the first exit cell (X = 240). Room 9/1's gate is identified: SPECIAL
+object 0x02 (the cutscene director ported as `aos_object02`) sits on the
+exit column and seals it with three solid blocks until its one-shot
+param0 <= 1 record deletes itself once the `gEwramData + 0x37E` bit
+`param1` (= 0) sets — the bit the room's kind-4 pickup
+(`persistent_index` 0) collects into `aria_pickup_state.special`. Room
+5/5 has no entity record within ~240 px of its `0xF0` cells in the
+complete export, so its gate is still unidentified (likely an
+event-driven collision change rather than a spawned entity). The host
+reproduces `sub_080104EC`'s `unk_65` stage ordering around `take_exit`
+(see Patch 1155). Walking from 0/6 into 0/9 arrives on the floor
+(Y 159 to 1439).
 
 Animation palettes: every direct animation change compares the byte
 `0x080E126C[id]` with `+0x26` and, when it differs, loads that bank of

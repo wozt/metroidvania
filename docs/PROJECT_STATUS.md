@@ -307,6 +307,80 @@
   `assets.aria_rooms` in `features.tsv` updated; status stays
   `partial` — no emulator comparison yet.
 
+## Patch 1155 - Staged `sub_080104EC` room-transition timing
+
+- **Gap.** Patch 1154 left the `unk_65` transition stage machine
+  collapsed into `take_exit`'s instant room swap, and the two
+  `0xF0` exit-cell crossings of rooms 5/5 and 9/1 were attributed
+  to unported door entities.
+- **Native decode.** `sub_080104EC`
+  (`third_party/cvaos/src/code_0800F1FC.c`) drives
+  `gEwramData->unk_60.unk_65` through stages 0-3 while
+  `unk_64 = 3`: stage 0 sets `bldY = BLDY_MAX_VALUE` (16), clears
+  entities/effects and stops the hblank effect; stage 1 runs
+  `sub_08010350`/`sub_0800F9EC` — the room load — with
+  `dispCnt = 0`; stage 2 re-issues
+  `sub_0800ED24(0, player_screen - camera_target)` (the gated
+  `sub_0803FBBC` scroll, 8 px/frame cap) until BG1 `xVel`/`yVel`
+  reach zero, then restores `dispCnt`/blend/window state; stage 3
+  clears `bldY` and returns to the in-game mode. There is no
+  gradual fade — `bldY` jumps 0 -> 16 -> 0 — so the visible fade
+  durations are the single blanked frames at each end. mGBA
+  instrumentation of a real transition showed the stage sequence
+  and an ~11-frame window (stage 0 through the frame the target
+  room first displays), with the room load and BG1 settle both
+  happening while `dispCnt = 0`.
+- **Change.** `src/runtime/aria_runtime.c` gains
+  `AriaRoomTransition room_transition` and
+  `room_transition_begin`/`room_transition_tick`, called once per
+  frame at the top of both the SDL accumulator loop and the
+  `--simulate` frame loop while active. The exit check now only
+  latches the transition (stage 0: room effects cleared, matching
+  the native entity/effect cleanup); the stage-1 tick performs the
+  `take_exit` commit while the display would be blanked, the
+  stage-2 ticks hold the blanked settle, and the stage-3 tick
+  restores — the frame the new room first renders, the same frame
+  native first displays it. Blanked frames skip the whole game
+  update; the SDL path renders a black clear instead of the room.
+  `take_exit` computes the settle length through the new
+  `aos_room_transition_settle_frames` (`aos_room.c`): the scroll
+  delta between the transition's `(load_x, load_y + 0x30)` seed and
+  the `follow_camera` settle position, at the native 8 px/frame
+  cap — `dist / 8 + 1` frames plus one when the remainder is not a
+  multiple of 8, minimum 1. `tests/test_aos_room.c` covers the
+  formula; the simulate loop prints begin/commit/restore frame
+  diagnostics.
+- **Door-gate findings.** Room 9/1's `0xF0` exit column
+  (cells x 496-511, y 112-159) is sealed by SPECIAL object 0x02
+  (`Object02Create`/`Object02Update`, the cutscene director already
+  ported as `aos_object02`) at (504,160): its three-block column
+  covers the exit cells until the one-shot param0 <= 1 record
+  deletes itself when `gEwramData + 0x37E` bit `param1` (= 0)
+  sets — the bit the room's kind-4 pickup (`persistent_index` 0)
+  collects into `aria_pickup_state.special`. Both sides of that
+  gate are already ported; end-to-end verification is entity-side
+  work outside this patch. Room 5/5's `0xF0` cells (x 240-255,
+  y 368-415) have no entity record within ~240 px in the complete
+  export — its gate is still unidentified, so that crossing stays
+  unresolved rather than bypassed.
+- **Limitations.** The native scroll settle is not drawn (the
+  display is blanked natively too, and the draw-side blend/window
+  registers are not modelled — `aria_draw.c` is owned elsewhere);
+  the reproduction is the timing/state ordering, not the pixels.
+  The settle length is computed from pixel distance rather than
+  simulating `bgInfo[1]` velocities, so it can differ by a frame
+  from native on edge-clamped scrolls. No emulator comparison of
+  the blanked-frame count yet.
+- **Test.** `tests/test_aos_room.c` settle-frame cases;
+  `tests/test_aria_simulate_transition.sh` still passes through
+  the staged machine (simulated run: begin frame 78, commit 79,
+  restore 81 for the zero-distance 0/0 -> 0/3 settle).
+- **Registries.** `aos.transitions.room_exits` in
+  `annotations.tsv` updated: staged timing now reproduced, 9/1
+  gate identified (ported Object02 + pickup bit), 5/5 gate still
+  unresolved. `features.tsv` still has no row covering the Aria
+  simulate path; `docs/AOS_SOMA.md` room-exit notes updated.
+
 ## Patch 1154 - Headless `--simulate` room transitions
 
 - **Gap.** The `--simulate` loop in `fusion_aria_runtime` ran the

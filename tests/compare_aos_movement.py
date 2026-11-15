@@ -19,8 +19,13 @@ never committed):
    --story-frames and saves "free.state". A third "settle" run of A
    taps closes leftover text windows -> "clean.state". A fourth "walk"
    run holds RIGHT with the same A-tap cadence for --walk-frames,
-   walking Soma through the room 0/0 exit into room 0/3 -> "moved.state"
-   (a room with no talk boxes in the measured stretch).
+   walking Soma through the room 0/0 exit into room 0/3 -> "entered.state".
+   A fifth "entry settle" run of pure A taps for --entry-settle-frames
+   lets the native room-entry sequence finish (the fade and the wooden
+   door's pass/close hold player input via gEwramData +0x42C for ~170
+   frames after the transition commits) -> "moved.state". Measuring
+   before that settle compares settled runtime movement against a
+   native side that is still input-locked.
 2. Native measurement: from moved.state, RIGHT held from frame 0 with
    A taps every --a-every frames; per-frame peeks of 0x02000524:8 give
    posX,posY as 16.16 fixed point (entityData[0] +0x40/+0x44; see
@@ -84,6 +89,7 @@ ROOM_ADDR = 0x02000090         # area=byte14, room=byte15
 STORY_FRAMES = 30000           # post-story key schedule length
 SETTLE_FRAMES = 900            # A-tap run closing leftover windows
 WALK_FRAMES = 420              # RIGHT+A walk into room 0/3
+ENTRY_SETTLE_FRAMES = 420      # A-tap run letting the room entry settle
 MEASURE_FRAMES = 200           # measured RIGHT+A run length
 A_EVERY = 90                   # A-tap cadence while walking/measuring
 
@@ -147,12 +153,14 @@ def band_dark(ppm_path: str) -> bool:
 
 
 def ensure_native_states(rom, workdir, lab, story_frames, pulse,
-                         settle_frames, walk_frames, direction):
+                         settle_frames, walk_frames, direction,
+                         entry_settle_frames):
     """Boot to gameplay and walk to a clean measured room. Returns
-    (clean_state_path, pos16.16, room "a/r")."""
+    (moved_state_path, pos16.16, room "a/r")."""
     room_state = os.path.join(workdir, "room0.state")
     free_state = os.path.join(workdir, "free.state")
     clean_state = os.path.join(workdir, "clean.state")
+    entered_state = os.path.join(workdir, "entered.state")
     moved_state = os.path.join(workdir, "moved.state")
     keys = _opening.scout_keys()
     f4 = _opening.first_mode4_frame(rom, keys, workdir)
@@ -173,7 +181,19 @@ def ensure_native_states(rom, workdir, lab, story_frames, pulse,
     base = RIGHT if direction == "right" else LEFT
     wkeys = tap_keys(walk_frames, base, A_EVERY, A)
     out = run_lab(rom, walk_frames, wkeys, workdir,
-                  ["--state-in", clean_state, "--state-out", moved_state,
+                  ["--state-in", clean_state, "--state-out", entered_state])
+    if not os.path.exists(entered_state):
+        sys.exit("entered state-out failed")
+    # The walk ends the frame the room-0/3 transition commits, so the
+    # saved state still sits inside the native entry sequence: the fade
+    # (gEwramData +0x42C bit 15) suppresses all input for ~130 frames
+    # and the wooden door's pass/close then masks player input for
+    # ~40 more (Object00 sets +0x42C bits 0x101 while Soma passes).
+    # Settle with pure A taps so moved.state matches the settled
+    # gameplay the runtime --simulate path models.
+    ekeys = settle_keys(entry_settle_frames)
+    out = run_lab(rom, entry_settle_frames, ekeys, workdir,
+                  ["--state-in", entered_state, "--state-out", moved_state,
                    "--peek", f"-1:{POS_ADDR:x}:8,-1:{ROOM_ADDR:x}:16"])
     if not os.path.exists(moved_state):
         sys.exit("moved state-out failed")
@@ -289,6 +309,10 @@ def main():
     ap.add_argument("--story-frames", type=int, default=STORY_FRAMES)
     ap.add_argument("--settle-frames", type=int, default=SETTLE_FRAMES)
     ap.add_argument("--walk-frames", type=int, default=WALK_FRAMES)
+    ap.add_argument("--entry-settle-frames", type=int,
+                    default=ENTRY_SETTLE_FRAMES,
+                    help="A-tap frames letting the room-0/3 entry "
+                         "transition/door pass settle before moved.state")
     ap.add_argument("--measure-frames", type=int, default=MEASURE_FRAMES)
     ap.add_argument("--a-every", type=int, default=A_EVERY,
                     help="frames between A taps while walking")
@@ -337,7 +361,7 @@ def main():
             moved_state, native_pos, room_str = ensure_native_states(
                 args.rom, workdir, args.lab, args.story_frames,
                 args.pulse, args.settle_frames, args.walk_frames,
-                args.direction)
+                args.direction, args.entry_settle_frames)
         print(f"[native] moved state={moved_state} pos={native_pos} "
               f"room={room_str}")
 

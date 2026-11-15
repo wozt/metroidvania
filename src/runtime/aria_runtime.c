@@ -210,8 +210,9 @@ bool object10_item_owned(void *ctx, uint16_t item) {
  * GameModeCreditsUpdate stage 3
  * (BG1-3 +0x8400 scroll; the credits mode is not ported). Issuing a
  * transition request here would fabricate a scroll the native door
- * path never performs, so the room swap stays instant like the
- * native blanked-display result. */
+ * path never performs; the stage ordering itself is reproduced by
+ * room_transition_begin/room_transition_tick below, which call this
+ * function on the blanked stage-1 frame. */
 /* Object20 room dialogue state — declared before take_exit, which
  * closes the window on room changes. The host adapter that binds
  * these is defined next to update_entities. */
@@ -229,6 +230,10 @@ static bool room_dialogue_input_lock;
 static bool object1c_input_lock;
 AosRoomDialogue room_dialogue;
 static AosRoomDialogueHost room_dialogue_host;
+
+/* Stage-2 (unk_65 == 2) settle length computed by the last take_exit;
+ * read by room_transition_tick below. */
+static int room_transition_settle_frames = 1;
 
 static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **background,
                      AosSoma *soma, int cam_x, int cam_y, const AosProjectDoor *forced) {
@@ -280,6 +285,27 @@ static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **backg
     soma->y = (int32_t)((uint32_t)ay << 16) | (soma->y & 0xFFFF);
     printf("Room %d/%d -> %d/%d, arrival %d,%d\n", room->area, room->number, target.area,
            target.number, ax, ay);
+    /* sub_080104EC unk_65 == 2 settle length: the stage machine
+     * re-issues sub_0800ED24(0, dx, dy) once per frame with dx/dy =
+     * Soma's screen position minus the camera settle target
+     * (gEwramData + 0x13214 / + 0x13216 = 0x78 / 0x6F), and each
+     * sub_0803FBBC call moves BG1 at most 8 px toward the scroll
+     * sub_0800F9EC seeded at (load_x, load_y + 0x30). The stage ends
+     * the frame after the request reaches zero, so the blanked
+     * settle lasts dist / 8 + 1 frames plus one more when the
+     * remainder is not a multiple of 8 (minimum 1). Editor spawns
+     * carry no native transition entry and keep 1. Computed before
+     * free_room: `exit` indexes the old room's transition table. */
+    if (exit) {
+        int sx, sy;
+        follow_camera(&target, ax, ay, &sx, &sy);
+        int scroll_x = target.width_screens > 1 ? exit->load_x : 0;
+        int scroll_y = target.height_screens > 1 ? exit->load_y + 0x30 : 0x30;
+        room_transition_settle_frames = aos_room_transition_settle_frames(
+            scroll_x, scroll_y, sx, sy);
+    } else {
+        room_transition_settle_frames = 1;
+    }
     /* A room dialogue window belongs to the room that opened it;
      * native room loads retire the text state with the entities. */
     aos_room_dialogue_close(&room_dialogue);
@@ -289,6 +315,79 @@ static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **backg
     if (*background) SDL_DestroyTexture(*background);
     *background = texture;
     return 1;
+}
+
+/* sub_080104EC stage machine (unk_60.unk_64 = 3, unk_65 stages
+ * 0-3): the exit check latches the transition and the following
+ * frames run the stages while the game update is suspended —
+ * stage 0 fades to BLDY_MAX_VALUE and clears entities/effects,
+ * stage 1 runs sub_08010350/sub_0800F9EC (the take_exit commit)
+ * with dispCnt = 0, stage 2 settles BG1 through sub_0800ED24
+ * until xVel/yVel reach zero, stage 3 restores bldY/dispCnt and
+ * returns to the in-game mode. The host keeps the old room drawn
+ * until the stage-0 frame, blanks dispCnt-equivalent frames
+ * through the settle, and shows the target from the stage-3
+ * frame — the same frame native first displays it. */
+typedef struct {
+    bool active;            /* unk_64 == 3 */
+    int stage;              /* unk_65: 1 commit pending, 2 settling, 3 restore */
+    int settle_left;        /* stage-2 frames remaining */
+    bool has_door;          /* editor door copy for the stage-1 commit */
+    AosProjectDoor door;
+} AriaRoomTransition;
+static AriaRoomTransition room_transition;
+
+static void room_transition_begin(AriaRoomTransition *t,
+                                  const AosProjectDoor *door) {
+    memset(t, 0, sizeof *t);
+    t->active = true;
+    t->stage = 1;           /* stage 0 (fade + cleanup) ran inline */
+    t->settle_left = 1;
+    if (door) {
+        t->has_door = true;
+        t->door = *door;
+    }
+}
+
+/* One sub_080104EC call. Returns the take_exit result on the
+ * stage-1 commit frame (1 swapped, 0 editor target missing, -1
+ * native failure), 0 while the display stays blanked and 2 when
+ * the stage-3 restore finished (active clears; normal play
+ * resumes on this frame). */
+static int room_transition_tick(AriaRoomTransition *t,
+                                SDL_Renderer *renderer, AriaRoom *room,
+                                SDL_Texture **background, AosSoma *soma,
+                                int *cam_x, int *cam_y) {
+    if (t->stage == 1) {
+        /* unk_65 == 1: sub_08010350 picks the entry and sub_0800F9EC
+         * loads the target room while dispCnt = 0 blanks the display. */
+        t->stage = 2;
+        int result = take_exit(renderer, room, background, soma,
+                               *cam_x, *cam_y,
+                               t->has_door ? &t->door : NULL);
+        if (result <= 0) {
+            t->active = false;
+            t->stage = 0;
+            return result;
+        }
+        t->settle_left = room_transition_settle_frames;
+        /* The camera re-settles on the arrival like the normal
+         * exit path's follow_camera did on the swap frame. */
+        follow_camera(room, soma->x >> 16, soma->y >> 16, cam_x, cam_y);
+        return 1;
+    }
+    if (t->stage == 2) {
+        /* unk_65 == 2: sub_0800ED24 scroll settle; the display stays
+         * blanked until BG1's velocities reach zero. */
+        if (--t->settle_left > 0) return 0;
+        t->stage = 3;
+        return 0;
+    }
+    /* unk_65 == 3: bldY = 0 and the display/blend registers come
+     * back; sub_080104EC returns 1 and the mode leaves unk_64 = 3. */
+    t->stage = 0;
+    t->active = false;
+    return 2;
 }
 
 /* Soma's world sprite — the draw the render loop runs either at
@@ -1138,6 +1237,25 @@ int aria_runtime_main(int argc, char **argv) {
         SDL_Texture *sim_background = NULL;
         long sim_room_changes = 0;
         for (long frame = 0; frame < simulate_frames; ++frame) {
+            /* sub_080104EC: while the transition stage machine runs the
+             * room update is suspended; the stage-1 tick performs the
+             * take_exit commit while the display would be blanked. */
+            if (room_transition.active) {
+                int tr = room_transition_tick(&room_transition, NULL, &room,
+                                              &sim_background, &soma,
+                                              &cam_x, &cam_y);
+                if (tr == 1) {
+                    printf("Aria simulate: transition commit frame %ld -> %d/%d\n",
+                           frame, room.area, room.number);
+                    project_door_latch = true;
+                    ++sim_room_changes;
+                    layer = room_layer(&room);
+                    save_room = (AosSaveRoom){0};
+                } else if (tr < 0) break;   /* native exit failed */
+                else if (tr == 2)
+                    printf("Aria simulate: transition restore frame %ld\n", frame);
+                if (room_transition.active) continue;
+            }
             if (!moves_override) soma.moves = progress.abilities[0] & 0x1Fu;
             soma.abilities = progress.flags;
             soma.guardian_alive = false;
@@ -1213,18 +1331,19 @@ int aria_runtime_main(int argc, char **argv) {
             bool sim_leaving = aos_room_outside(&layer, room.width_screens,
                                                 room.height_screens,
                                                 soma.x >> 16, soma.y >> 16);
-            int sim_exited = sim_leaving || sim_door
-                ? take_exit(NULL, &room, &sim_background, &soma, cam_x, cam_y,
-                            sim_leaving ? NULL : sim_door)
-                : 0;
-            if (sim_exited < 0) break;   /* native exit failed: stop honestly */
-            if (sim_door && !sim_exited) project_door_latch = true;
-            if (sim_exited > 0) {
-                project_door_latch = true;
-                ++sim_room_changes;
-                layer = room_layer(&room);
-                save_room = (AosSaveRoom){0};
+            /* sub_08010244 latches unk_64 = 3; the sub_080104EC stage
+             * machine then commits the swap on a later blanked frame
+             * (room_transition_tick at the top of the loop). */
+            if (!room_transition.active && (sim_leaving || sim_door)) {
+                room_transition_begin(&room_transition,
+                                      sim_leaving ? NULL : sim_door);
+                /* unk_65 == 0 cleanup: the room's effects die with the
+                 * stage; entities are replaced by the stage-1 load. */
+                room.effect_count = 0;
+                printf("Aria simulate: transition begin frame %ld (%s)\n",
+                       frame, sim_leaving ? "exit" : "door");
             }
+            if (sim_door) project_door_latch = true;
             if (aos_save_room_update(&save_room, room_has_save_point(&room), soma.x >> 16,
                                      soma.y >> 16, 0)) {
                 soma.hp = soma.max_hp;
@@ -1944,6 +2063,34 @@ int aria_runtime_main(int argc, char **argv) {
         }
         while (accumulator >= frame_ns) {
             accumulator -= frame_ns;
+            /* sub_080104EC: while the transition stage machine runs the
+             * game update is suspended and the display stays blanked
+             * (dispCnt = 0); the stage-1 tick performs the take_exit
+             * commit. The stage-3 frame falls through to normal play. */
+            if (room_transition.active) {
+                int tr = room_transition_tick(&room_transition, renderer,
+                                              &room, &background, &soma,
+                                              &cam_x, &cam_y);
+                if (tr == 1) {
+                    /* The commit landed: the same bookkeeping the
+                     * inline take_exit result used to run. */
+                    project_door_latch = true;
+                    /* sub_0800EB04: transitions clear the HUD notice;
+                     * the level-up entity dies with the room's
+                     * entityData. */
+                    aos_hud_clear_notice(&hud);
+                    combat.levelup = (AosLevelUp){0};
+                    clear_skills(&souls);
+                    layer = room_layer(&room);
+                    save_room = (AosSaveRoom){0};
+                } else if (tr < 0) goto cleanup;
+                if (room_transition.active) {
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                    SDL_RenderClear(renderer);
+                    ++step;
+                    continue;
+                }
+            }
             uint16_t held = capture_path ? (uint16_t)capture_buttons
                                          : player_buttons(&gamepad);
             if (capture_path && repeat > 0 && step % repeat == repeat - 1) held = 0;
@@ -2690,22 +2837,17 @@ int aria_runtime_main(int argc, char **argv) {
             if (project_door_latch) project_door = NULL;
             bool leaving = aos_room_outside(&layer, room.width_screens, room.height_screens,
                                             soma.x >> 16, soma.y >> 16);
-            int exited = leaving || project_door
-                ? take_exit(renderer, &room, &background, &soma, cam_x, cam_y,
-                            leaving ? NULL : project_door)
-                : 0;
-            if (exited < 0) goto cleanup;
-            if (project_door && !exited) project_door_latch = true;
-            if (exited > 0) {
-                project_door_latch = true;
-                /* sub_0800EB04: transitions clear the HUD notice; the
-                 * level-up entity dies with the room's entityData. */
-                aos_hud_clear_notice(&hud);
-                combat.levelup = (AosLevelUp){0};
-                clear_skills(&souls);
-                layer = room_layer(&room);
-                save_room = (AosSaveRoom){0};
+            /* sub_08010244 latches unk_64 = 3; the sub_080104EC stage
+             * machine then commits the swap on a later blanked frame
+             * (room_transition_tick at the top of the frame loop). */
+            if (!room_transition.active && (leaving || project_door)) {
+                room_transition_begin(&room_transition,
+                                      leaving ? NULL : project_door);
+                /* unk_65 == 0 cleanup: the room's effects die with the
+                 * stage; entities are replaced by the stage-1 load. */
+                room.effect_count = 0;
             }
+            if (project_door) project_door_latch = true;
             if (aos_save_room_update(&save_room, room_has_save_point(&room), soma.x >> 16,
                                      soma.y >> 16, aria_input.player_held_input)) {
                 soma.hp = soma.max_hp;
@@ -2905,6 +3047,15 @@ int aria_runtime_main(int argc, char **argv) {
                 }
         }
 
+        /* The detection frame is already sub_080104EC stage 0
+         * (bldY = BLDY_MAX_VALUE): this frame's update ran, the
+         * screen is black. Later blanked frames never reach here —
+         * the stage tick continues the frame loop at its top. */
+        if (room_transition.active) {
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderClear(renderer);
+            continue;
+        }
         int sx = soma.x >> 16, sy = soma.y >> 16;
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);

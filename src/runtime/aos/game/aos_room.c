@@ -67,3 +67,13 @@ void aos_room_arrival(const AosTransition *exit, int target_width_screens,
     *out_x = (target_width_screens > 1 ? exit->load_x : 0) + local_x;
     *out_y = (target_height_screens > 1 ? exit->load_y + 0x30 : 0x30) + local_y;
 }
+
+int aos_room_transition_settle_frames(int scroll_x, int scroll_y,
+                                      int settle_x, int settle_y) {
+    int dx = scroll_x - settle_x;
+    int dy = scroll_y - settle_y;
+    if (dx < 0) dx = -dx;
+    if (dy < 0) dy = -dy;
+    int dist = dx > dy ? dx : dy;
+    return dist <= 0 ? 1 : dist / 8 + 1 + (dist % 8 != 0);
+}

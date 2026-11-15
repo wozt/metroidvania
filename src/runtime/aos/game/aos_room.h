@@ -5,8 +5,10 @@
  * sub_08010244 (velocity adjustments when the transition starts) and
  * sub_08010350 (choice of the transition entry by the screen Soma leaves
  * through, and his position in the target room). Coordinates are room
- * pixels as GetEntityRoomXPositionInteger returns them. The fade and the
- * camera scroll are not modelled. No SDL. */
+ * pixels as GetEntityRoomXPositionInteger returns them. The host
+ * reproduces sub_080104EC's unk_65 stage ordering around these rules
+ * (see aria_runtime.c's room_transition machine); the scroll itself
+ * is not drawn. No SDL. */
 #ifndef AOS_ROOM_H
 #define AOS_ROOM_H
 
@@ -41,5 +43,14 @@ const AosTransition *aos_room_find_exit(const AosTransition *list, size_t count,
 void aos_room_arrival(const AosTransition *exit, int target_width_screens,
                       int target_height_screens, int32_t x, int32_t y,
                       int32_t *out_x, int32_t *out_y);
+/* sub_080104EC unk_65 == 2 settle length in frames: the stage machine
+ * re-issues sub_0800ED24(0, dx, dy) once per frame and each
+ * sub_0803FBBC call moves BG1 at most 8 px toward the scroll delta
+ * between the load position (scroll_x, scroll_y) and the camera
+ * settle position (settle_x, settle_y); the stage ends the frame
+ * after the request reaches zero — dist / 8 + 1 frames plus one
+ * more when the remainder is not a multiple of 8 (minimum 1). */
+int aos_room_transition_settle_frames(int scroll_x, int scroll_y,
+                                      int settle_x, int settle_y);
 
 #endif /* AOS_ROOM_H */

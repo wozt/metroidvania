@@ -842,15 +842,12 @@ aos:c:src/code/code_08039340.c:sub_0803DA7C	sub_0803DA7C	unclassified				c_funct
 aos:c:src/code/code_08039340.c:sub_0803DAB4	sub_0803DAB4	unclassified				c_function	0x0803DAB4	src/code/code_08039340.c	3097	3	2
 aos:c:src/code/code_08039340.c:sub_0803DAE0	sub_0803DAE0	unclassified				c_function	0x0803DAE0	src/code/code_08039340.c	3132	0	0
 aos:c:src/code/code_08039340.c:sub_0803DB6C	sub_0803DB6C	unclassified				c_function	0x0803DB6C	src/code/code_08039340.c	3231	2	0
-aos:c:src/code/code_08039340.c:sub_0803DC18	sub_0803DC18	unclassified				c_function	0x0803DC18	src/code/code_08039340.c	3263	2	0
 aos:c:src/code/code_08039340.c:sub_0803DF70	sub_0803DF70	unclassified				c_function	0x0803DF70	src/code/code_08039340.c	3546	1	0
 aos:c:src/code/code_08039340.c:sub_0803DFE8	sub_0803DFE8	unclassified				c_function	0x0803DFE8	src/code/code_08039340.c	3589	0	1
 aos:c:src/code/code_08039340.c:sub_0803E438	sub_0803E438	unclassified				c_function	0x0803E438	src/code/code_08039340.c	3752	10	5
 aos:c:src/code/code_08039340.c:sub_0803E480	sub_0803E480	unclassified				c_function	0x0803E480	src/code/code_08039340.c	3767	2	1
 aos:c:src/code/code_08039340.c:sub_0803E4C0	sub_0803E4C0	unclassified				c_function	0x0803E4C0	src/code/code_08039340.c	3784	1	0
 aos:c:src/code/code_08039340.c:sub_0803E4F0	sub_0803E4F0	unclassified				c_function	0x0803E4F0	src/code/code_08039340.c	3798	0	0
-aos:c:src/code/code_08039340.c:sub_0803E528	sub_0803E528	unclassified				c_function	0x0803E528	src/code/code_08039340.c	3817	1	0
-aos:c:src/code/code_08039340.c:sub_0803E57C	sub_0803E57C	unclassified				c_function	0x0803E57C	src/code/code_08039340.c	3844	1	0
 aos:c:src/code/code_08039340.c:sub_0803E594	sub_0803E594	unclassified				c_function	0x0803E594	src/code/code_08039340.c	3853	1	0
 aos:c:src/code/code_08039340.c:sub_0803E5F4	sub_0803E5F4	unclassified				c_function	0x0803E5F4	src/code/code_08039340.c	3877	1	0
 aos:c:src/code/code_08039340.c:sub_0803E604	sub_0803E604	unclassified				c_function	0x0803E604	src/code/code_08039340.c	3886	0	0

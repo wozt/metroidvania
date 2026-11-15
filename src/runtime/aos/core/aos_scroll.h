@@ -293,4 +293,25 @@ size_t aos_scroll_bgofs_blits(int32_t h_ofs, int32_t v_ofs,
                               int view_w, int view_h,
                               AosScrollBlit out[4]);
 
+/* sub_0803DC18 / sub_0803DD14's priority outputs
+ * (gUnk_030019D8.unk_A / unk_E). The room load calls
+ * sub_0803DD14 once per BG with the background record's
+ * field_0 layer byte (BG0's slot gets 0 via sub_0803DD14(0,0)),
+ * and sub_0803FD60 ORs unk_A[bg] into BGxCNT bits 0-1 — the
+ * hardware BG priority, 0 front .. 3 back. sub_0803DE10 stamps
+ * unk_E[band] into each OAM record's attribute-2 priority bits,
+ * where `band` is the entity record +0x5C draw band that
+ * sub_0803E528 buckets OAM records by (it also emits the
+ * records band 0 first, so band order is the OBJ tie-break). */
+typedef struct {
+    uint8_t bg_priority[4];     /* unk_A[0..3]: BG0..BG3 */
+    uint8_t band_priority[32];  /* unk_E[0..0x1F]: +0x5C band */
+} AosDepthPriorities;
+
+/* The sub_0803DD14 recompute over the final four layer bytes
+ * (BG0..BG3 order): bg_priority[] gets unk_A[], band_priority[]
+ * gets unk_E[]. Pure function of `layer` — no state. */
+void aos_scroll_depth_priorities(const uint8_t layer[4],
+                                 AosDepthPriorities *out);
+
 #endif /* AOS_SCROLL_H */

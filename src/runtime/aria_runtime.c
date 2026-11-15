@@ -291,6 +291,30 @@ static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **backg
     return 1;
 }
 
+/* Soma's world sprite — the draw the render loop runs either at
+ * his native +0x5C band priority (aria_bg_band_priority(0x0E);
+ * the player create writes unk_540 = 0xE, code_08014548.c) or
+ * in the front pass when no band priority resolves. `hidden`
+ * is the opening scene's soma_hidden gate. */
+static void draw_soma_sprite(SDL_Renderer *renderer,
+                             const AriaLibrary *library,
+                             const AosSoma *soma, int cam_x, int cam_y,
+                             bool hidden) {
+    const AriaFrame *frame = NULL;
+    if (soma->anim.frame < MAX_FRAMES)
+        frame = &library->frames[soma->anim.id][soma->anim.frame];
+    if (!frame || !frame->texture || hidden) return;
+    int sx = soma->x >> 16, sy = soma->y >> 16;
+    /* Library offsets face right; facing left mirrors around x. */
+    float x = soma->facing_left ? (float)(sx - frame->offset_x) - frame->w
+                                : (float)(sx + frame->offset_x);
+    SDL_FRect rect = {x - (float)cam_x, (float)(sy + frame->offset_y - cam_y),
+                      frame->w, frame->h};
+    SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL,
+                             soma->facing_left ? SDL_FLIP_HORIZONTAL
+                                               : SDL_FLIP_NONE);
+}
+
 
 /* The homing list gEwramData + 0x13194 (sub_08021924, aged by
  * sub_08021DC4): four room entity indices with their seen and aged counts;
@@ -2931,8 +2955,10 @@ int aria_runtime_main(int argc, char **argv) {
          * parallax included); without one — or when the decode
          * produced no layers — the static composite below keeps
          * the previous single-texture path. */
-        if (!draw_room_backgrounds(renderer, &room, cam_x, cam_y,
-                                   bg1_ox, bg1_oy, bg_mod))
+        const bool bg_layered =
+            aria_bg_room_begin(renderer, &room, cam_x, cam_y,
+                               bg1_ox, bg1_oy);
+        if (!bg_layered)
         for (int seg_y = 0; seg_y < (bg_y_wrap ? 2 : 1); ++seg_y) {
             const int src_y = seg_y ? 0 : bg_sy;
             const int seg_h = seg_y ? bg_sy + VIEW_H - bg_map_h
@@ -2950,6 +2976,34 @@ int aria_runtime_main(int argc, char **argv) {
                 SDL_RenderTexture(renderer, background, &src, &dst);
             }
         }
+        /* Native OBJ-vs-BG priority interleave (sub_0803DC18/
+         * 3DD14 -> sub_0803FD60 BGxCNT bits; sub_0803E528/3DE10
+         * band -> OAM priority): back to front, each GBA priority
+         * level paints its BG layers then the sprites whose
+         * retained +0x5C band maps to it. Today the player
+         * (create-time band 0xE) and Object1F's children
+         * (band5c) are the only resolved bands — every other
+         * sprite keeps the old all-on-top behaviour in the front
+         * pass below. Within a shared priority the lower band is
+         * the lower OAM index (sub_0803DE10 emits band 0 first),
+         * so specials (bands 0x15+) paint before Soma. */
+        const int soma_band_prio =
+            bg_layered ? aria_bg_band_priority(0x0E) : -1;
+        if (bg_layered) {
+            for (int p = 3; p >= 0; --p) {
+                aria_bg_draw_priority(renderer, p, bg_mod);
+                if (objects_ok)
+                    draw_special_objects(renderer, &room, &objects,
+                                         cam_x, cam_y, step, p);
+                /* Soma reads the player library, not `objects` —
+                 * he draws even when the object tables failed. */
+                if (p == soma_band_prio)
+                    draw_soma_sprite(renderer, &library, &soma,
+                                     cam_x, cam_y,
+                                     opening.active &&
+                                         opening_actors.soma_hidden);
+            }
+        }
         /* The save point draws through its SPECIAL id-28 entity
          * (Object1C marker child art) in draw_special_objects —
          * the old fixed-position placeholder is retired. */
@@ -2957,7 +3011,7 @@ int aria_runtime_main(int argc, char **argv) {
         if (objects_ok) draw_walls(renderer, &room, &objects, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_BLOOD, cam_x, cam_y);
         if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y);
-        if (objects_ok) draw_special_objects(renderer, &room, &objects, cam_x, cam_y, step);
+        if (objects_ok) draw_special_objects(renderer, &room, &objects, cam_x, cam_y, step, -1);
         /* Object20's actors stay in the room for the proximity chatter. */
         if ((opening.active || opening_epilogue) && objects_ok)
             draw_opening_actors(renderer, &objects, &opening_actors, cam_x, cam_y);
@@ -3622,19 +3676,13 @@ int aria_runtime_main(int argc, char **argv) {
                 SDL_RenderRect(renderer, &er);
             }
         }
-        const AriaFrame *frame = NULL;
-        if (soma.anim.frame < MAX_FRAMES)
-            frame = &library.frames[soma.anim.id][soma.anim.frame];
-        if (frame && frame->texture &&
-            !(opening.active && opening_actors.soma_hidden)) {
-            /* Library offsets face right; facing left mirrors around x. */
-            float x = soma.facing_left ? (float)(sx - frame->offset_x) - frame->w
-                                       : (float)(sx + frame->offset_x);
-            SDL_FRect rect = {x - (float)cam_x, (float)(sy + frame->offset_y - cam_y), frame->w,
-                              frame->h};
-            SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL,
-                                     soma.facing_left ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
-        }
+        /* Soma's sprite already painted at his +0x5C band
+         * priority in the slot loop above when the layered BG
+         * path resolved it; the front pass only draws him when
+         * no band priority exists (no ROM / decode failure). */
+        if (soma_band_prio < 0)
+            draw_soma_sprite(renderer, &library, &soma, cam_x, cam_y,
+                             opening.active && opening_actors.soma_hidden);
         if (weapon_loaded && weapon_entity.active && weapon_entity.anim.frame < weapon_sprite.count) {
             const AriaFrame *blade = &weapon_sprite.frames[weapon_entity.anim.frame];
             int wx = sx + weapon_entity.x_offset, wy = sy + weapon_entity.y_offset;

@@ -45,10 +45,14 @@ void draw_walls(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects 
 /* Enemies: sprites face left; mirrored ones are flipped around x. */
 void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,
                   int cam_x, int cam_y);
-/* Room SPECIAL objects (kind 2): drawn from their exported sprite sheets. */
+/* Room SPECIAL objects (kind 2): drawn from their exported sprite sheets.
+ * `prio_slot` is the native OBJ-priority interleave slot (0 front ..
+ * 3 back) the caller is painting; only drawable units whose retained
+ * +0x5C band resolves to it draw — pass -1 for the front pass, which
+ * takes every unit without a resolved band. */
 void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                           const AriaObjects *objects, int cam_x, int cam_y,
-                          unsigned step);
+                          unsigned step, int prio_slot);
 /* Object20's first-room actors (sub_0805D198's Mina/Arikado/skeleton). */
 void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
                          const AosOpeningActors *actors, int cam_x, int cam_y);
@@ -87,10 +91,22 @@ void draw_damage_popup(SDL_Renderer *renderer, const AriaObjects *objects,
  * per-room layer textures and display-side scroll state are
  * cached here keyed on (area, room). */
 void aria_bg_layers_bind(const FusionRom *rom);
-bool draw_room_backgrounds(SDL_Renderer *renderer, const AriaRoom *room,
-                           int cam_x, int cam_y,
-                           int32_t bg1_ox, int32_t bg1_oy,
+/* Layered BG pass, split for the native OBJ-vs-BG priority
+ * interleave (sub_0803DC18/3DD14 -> sub_0803FD60 BGxCNT
+ * priorities, sub_0803E528/3DE10 band -> OAM priority):
+ * aria_bg_room_begin ensures the room's decoded layers and
+ * feeds the frame's scroll delta once (false = use the
+ * composite fallback); aria_bg_draw_priority paints the BG
+ * layers of ONE priority level (call 3..0 back-to-front,
+ * interleaved with the sprites of the same level);
+ * aria_bg_band_priority maps an entity +0x5C draw band to its
+ * OBJ priority (-1 = unresolved, keep the sprite in front). */
+bool aria_bg_room_begin(SDL_Renderer *renderer, const AriaRoom *room,
+                        int cam_x, int cam_y,
+                        int32_t bg1_ox, int32_t bg1_oy);
+void aria_bg_draw_priority(SDL_Renderer *renderer, int priority,
                            uint8_t fade_mod);
+int aria_bg_band_priority(uint8_t band);
 
 /* Shared still-frame lookup, defined in aria_runtime.c: the soul/skill
  * draw paths there and blade_frame here both resolve exported static

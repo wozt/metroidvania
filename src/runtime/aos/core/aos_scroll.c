@@ -589,3 +589,38 @@ size_t aos_scroll_bgofs_blits(int32_t h_ofs, int32_t v_ofs,
     }
     return n;
 }
+
+void aos_scroll_depth_priorities(const uint8_t layer[4],
+                                 AosDepthPriorities *out) {
+    /* sub_0803DC18/sub_0803DD14 (code_08039340.c): unk_A[i]
+     * counts the OTHER three slots whose layer byte is <=
+     * layer[i] — the native compares skip the self slot, so a
+     * lone layer always scores 0 (front). The arg0 threshold
+     * table then collects, scanning ranks 3..0 and BGs 0..3,
+     * the layer byte of the last BG holding each rank, seeded
+     * by the 0x1F sentinel carry-forward; unk_E[band] is the
+     * first arg0 index a band does not exceed, with the scan
+     * index r4 monotone across bands and capped at 3 — exactly
+     * the two loops sub_0803DC18 runs after storing unk_6. */
+    int unk_a[4];
+    for (int i = 0; i < 4; ++i) {
+        int v = 0;
+        for (int j = 0; j < 4; ++j)
+            if (j != i && layer[i] >= layer[j]) ++v;
+        unk_a[i] = v;
+    }
+    int arg0[5];
+    arg0[4] = 0x1F;
+    for (int r3 = 3; r3 >= 0; --r3) {
+        arg0[r3] = arg0[r3 + 1];
+        for (int r2 = 0; r2 < 4; ++r2)
+            if (unk_a[r2] == r3) arg0[r3] = layer[r2];
+    }
+    int r4 = 0;
+    for (int b = 0; b < 0x20; ++b) {
+        while (b > arg0[r4] && r4 < 3) ++r4;
+        out->band_priority[b] = (uint8_t)r4;
+    }
+    for (int i = 0; i < 4; ++i)
+        out->bg_priority[i] = (uint8_t)unk_a[i];
+}

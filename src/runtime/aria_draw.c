@@ -613,13 +613,24 @@ static void draw_object20_entity(SDL_Renderer *renderer,
                                          : SDL_FLIP_NONE);
 }
 
+/* `prio_slot` is the native OBJ-priority interleave slot the
+ * caller is drawing (0 front .. 3 back): only drawable units
+ * whose retained +0x5C band resolves to that priority through
+ * aria_bg_band_priority draw — today that is Object1F's
+ * per-child band5c alone. prio_slot < 0 is the front pass:
+ * every unit without a resolved band draws there, preserving
+ * the pre-priority all-on-top order. */
 void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                                  const AriaObjects *objects, int cam_x, int cam_y,
-                                 unsigned step) {
+                                 unsigned step, int prio_slot) {
     for (size_t i = 0; i < room->entity_count; ++i) {
         const AriaEntity *e = &room->entities[i];
         if (!e->spawned || e->kind != ARIA_KIND_SPECIAL || e->id < 0 || e->id >= 64)
             continue;
+        /* Every special object but Object1F lacks a retained
+         * +0x5C band, so a priority slot skips them outright;
+         * they all draw in the front pass. */
+        if (prio_slot >= 0 && e->id != 31) continue;
         if (e->id == 2 && e->object02.deleted) continue;
         if (e->id == 4 && e->object04.deleted) continue;
         if (e->id == 15 && e->object0f.finished) continue;
@@ -766,6 +777,14 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
             if (!e->spawned || e->object1f.deleted) continue;
             for (int ci = 0; ci < 11; ++ci) {
                 const AosObject1FChild *ch = &e->object1f.children[ci];
+                /* +0x5C draw band -> this room's OBJ priority
+                 * (sub_0803E528 bucket -> sub_0803DE10's OAM
+                 * attribute-2 stamp). An unresolvable band
+                 * (no layered BG path) keeps the child in the
+                 * front pass like every other unbanded sprite. */
+                int cprio = aria_bg_band_priority(ch->band5c);
+                if (prio_slot >= 0 ? cprio != prio_slot : cprio >= 0)
+                    continue;
                 int bank = ci < 9 ? 2
                         : (ch->state == 1 ? ch->anim_id : 4);
                 const __typeof__(objects->special_objects[0]) *art31 = NULL;
@@ -1283,23 +1302,34 @@ void draw_damage_popup(SDL_Renderer *renderer, const AriaObjects *objects,
  *    bgOfs but their per-scanline wave / BgAffineSet transform is
  *    still unported — the layer draws flat at its faithful offset
  *    (a documented approximation, never an invented offset).
- *  - sprite-vs-BG priority uses the native layer order the
- *    exporter already sorts by (background record field_0,
- *    descending = back to front); OBJ-vs-BG priority is not
- *    modelled — all BGs still draw before every sprite, the same
- *    order the flattened composite had.
+ * OBJ-vs-BG priority now follows the native tables: the room
+ * load's sub_0803DD14/sub_0803FD60 chain turns each BG
+ * record's field_0 layer byte into a BGxCNT priority (kept in
+ * AriaBgRoomLayers.depth.bg_priority) and sub_0803DC18's unk_E
+ * table maps an entity record's +0x5C draw band to the OBJ
+ * priority sub_0803DE10 stamps into OAM (depth.band_priority,
+ * exposed through aria_bg_band_priority). The runtime draws
+ * back-to-front per priority level — BG layers first, then the
+ * sprites whose retained band maps to it — so a sprite can sit
+ * behind a foreground layer. Bands the port does not retain
+ * (enemies, effects, pickups, skills, guardians, walls, most
+ * specials — see PROJECT_STATUS) still draw in the front pass,
+ * the same all-on-top order as before; Object20's persisted
+ * +0x5C copies are animation-derived approximations
+ * (aria_entities.c feeds soma->anim.id as player_anim5c), not
+ * the native band chain, so they stay unbanded too.
  * Without a bound ROM, a failed decode, or zero decoded layers
- * draw_room_backgrounds returns false and the caller falls back
+ * aria_bg_room_begin returns false and the caller falls back
  * to the static composite — single-layer rooms are pixel-
  * identical either way. */
 
 typedef struct {
     SDL_Texture *texture;   /* NULL: layer absent or undecoded */
     int width, height;      /* layer bitmap size in pixels */
-    uint8_t rank;           /* background record field_0: the
-                               native draw-order key
-                               (fusion_aos_composite_backgrounds
-                               sorts by it) */
+    uint8_t rank;           /* background record field_0 — also
+                               the sub_0803DD14 layer byte the
+                               depth.bg_priority tables derive
+                               from (kept for provenance) */
     bool enabled;           /* DISPCNT BG-enable bit at load */
 } AriaBgLayerDraw;
 
@@ -1317,6 +1347,13 @@ typedef struct {
     int32_t prev_bg1_x, prev_bg1_y; /* last drawn BG1 offset (px) */
     uint32_t phase;         /* unk_60.unk_4C8 stand-in, +1/frame */
     bool bg2_disabled;      /* mode 19/21 dispCnt &= ~DCNT_BG2 */
+    /* This room's sub_0803DC18/3DD14 depth tables: BGxCNT
+     * priorities for BG0..BG3 and the +0x5C band -> OBJ priority
+     * map sub_0803DE10 stamps into OAM. Computed once per room
+     * from the background records' field_0 layer bytes. */
+    AosDepthPriorities depth;
+    bool depth_ok;
+    int32_t ofs_bx, ofs_by; /* this frame's drawn BG1 offset */
 } AriaBgRoomLayers;
 
 static const FusionRom *aria_bg_rom;
@@ -1342,6 +1379,9 @@ static void aria_bg_room_clear(void) {
     aria_bg_room.prev_bg1_x = aria_bg_room.prev_bg1_y = 0;
     aria_bg_room.phase = 0;
     aria_bg_room.bg2_disabled = false;
+    memset(&aria_bg_room.depth, 0, sizeof aria_bg_room.depth);
+    aria_bg_room.depth_ok = false;
+    aria_bg_room.ofs_bx = aria_bg_room.ofs_by = 0;
 }
 
 /* Bind the ROM the layered draw decodes room backgrounds from.
@@ -1390,6 +1430,21 @@ static bool aria_bg_room_ensure(SDL_Renderer *renderer,
         !fusion_aos_read_room_backgrounds(
             aria_bg_rom, &descriptor, &backgrounds, error, sizeof error))
         return false;
+    /* sub_0800F9EC's depth setup: sub_0803DD14(layer, bg) per BG
+     * record then sub_0803DD14(0, 0) for BG0 and sub_0803FD60 —
+     * the room record's field_0 byte is the unk_0 layer value
+     * (EwramData_unk_88_8). The port keeps the resulting
+     * unk_A/unk_E tables so the draw can interleave OBJ and BG
+     * by the hardware priorities instead of painting every
+     * sprite over every layer. */
+    {
+        uint8_t layer_bytes[4] = { 0,
+            backgrounds.entries[0].field_0,
+            backgrounds.entries[1].field_0,
+            backgrounds.entries[2].field_0 };
+        aos_scroll_depth_priorities(layer_bytes, &aria_bg_room.depth);
+        aria_bg_room.depth_ok = true;
+    }
     FusionAosVideoMemory *memory = malloc(sizeof *memory);
     if (!memory) return false;
     bool mem_ok = fusion_aos_load_video_memory(
@@ -1500,25 +1555,23 @@ static bool aria_bg_room_ensure(SDL_Renderer *renderer,
     return true;
 }
 
-/* Draw the room's decoded BG layers back-to-front at their own
- * bgOfs offsets. Returns false when the layered path is
- * unavailable — the caller then draws the composite
+/* Begin the layered BG pass for this frame: ensures the room's
+ * decoded layers (aria_bg_room_ensure) and feeds this frame's
+ * BG1 motion — the camera delta plus the transaction delta —
+ * through the same request/apply chain the native per-frame
+ * camera update runs, so the BG2/BG3 parallax modes
+ * (request-scaled, interpolated, direct-write) track BG1
+ * exactly. unk_60.unk_4C8 ticks once per rendered frame like
+ * aria_scroll_frame_phase. Returns false when the layered path
+ * is unavailable — the caller then draws the composite
  * background.bmp exactly as before. `bg1_ox`/`bg1_oy` is the
  * accumulated sub_0800ED24 transaction delta
- * (aria_scroll_bg1_offset); `fade_mod` is the sub_0800C8C8 BG
- * fade the composite path already applies. */
-bool draw_room_backgrounds(SDL_Renderer *renderer, const AriaRoom *room,
-                           int cam_x, int cam_y,
-                           int32_t bg1_ox, int32_t bg1_oy,
-                           uint8_t fade_mod) {
+ * (aria_scroll_bg1_offset). */
+bool aria_bg_room_begin(SDL_Renderer *renderer, const AriaRoom *room,
+                        int cam_x, int cam_y,
+                        int32_t bg1_ox, int32_t bg1_oy) {
     if (!aria_bg_room_ensure(renderer, room, cam_x, cam_y))
         return false;
-    /* Feed this frame's BG1 motion — the camera delta plus the
-     * transaction delta — through the same request/apply chain the
-     * native per-frame camera update runs, so the BG2/BG3 parallax
-     * modes (request-scaled, interpolated, direct-write) track
-     * BG1 exactly. unk_60.unk_4C8 ticks once per rendered frame
-     * like aria_scroll_frame_phase. */
     const int32_t bx = (int32_t)cam_x + bg1_ox;
     const int32_t by = (int32_t)cam_y + bg1_oy;
     const int32_t dx = bx - aria_bg_room.prev_bg1_x;
@@ -1542,28 +1595,28 @@ bool draw_room_backgrounds(SDL_Renderer *renderer, const AriaRoom *room,
     aos_scroll_apply(&aria_bg_room.scroll, &world, &out);
     if (out.fx & AOS_SCROLL_FX_BG2_DISABLE)
         aria_bg_room.bg2_disabled = true;
+    aria_bg_room.ofs_bx = bx;
+    aria_bg_room.ofs_by = by;
+    return true;
+}
 
-    /* Back-to-front order: the same descending field_0 sort
-     * fusion_aos_composite_backgrounds applies (stable — equal
-     * ranks keep BG order), restricted to layers that decoded,
-     * are DISPCNT-enabled and were not killed by the DCNT_BG2
-     * clear. */
-    int order[FUSION_AOS_BACKGROUND_COUNT] = { 0, 1, 2 };
-    for (int i = 0; i < FUSION_AOS_BACKGROUND_COUNT; ++i) {
-        int pos = i;
-        while (pos > 0 &&
-               aria_bg_room.layer[order[pos - 1]].rank <
-                   aria_bg_room.layer[order[pos]].rank) {
-            int swap = order[pos - 1];
-            order[pos - 1] = order[pos];
-            order[pos] = swap;
-            --pos;
-        }
-    }
-    for (int s = 0; s < FUSION_AOS_BACKGROUND_COUNT; ++s) {
-        int bg = order[s] + 1;   /* BG number: entries[0] is BG1 */
-        AriaBgLayerDraw *layer = &aria_bg_room.layer[order[s]];
+/* Draw the decoded BG layers whose sub_0803FD60 priority equals
+ * `priority` (0 front .. 3 back), highest BG number first — the
+ * hardware's same-priority BG tie-break (lower BG number wins,
+ * so the higher one paints first). Only layers that decoded,
+ * are DISPCNT-enabled and were not killed by the DCNT_BG2 clear
+ * draw; BG1 samples the begin()'d camera+delta offset, BG2/BG3
+ * their faithful bgOfs shadows. `fade_mod` is the sub_0800C8C8
+ * BG fade the composite path already applies. No-op when the
+ * layered path is not bound. */
+void aria_bg_draw_priority(SDL_Renderer *renderer, int priority,
+                           uint8_t fade_mod) {
+    if (!aria_bg_room.ready || !aria_bg_room.depth_ok || !renderer)
+        return;
+    for (int bg = FUSION_AOS_BACKGROUND_COUNT; bg >= 1; --bg) {
+        AriaBgLayerDraw *layer = &aria_bg_room.layer[bg - 1];
         if (!layer->texture || !layer->enabled ||
+            aria_bg_room.depth.bg_priority[bg] != (uint8_t)priority ||
             (bg == 2 && aria_bg_room.bg2_disabled))
             continue;
         /* bgOfs shadow: BG1 is the drawn camera+delta position;
@@ -1571,7 +1624,7 @@ bool draw_room_backgrounds(SDL_Renderer *renderer, const AriaRoom *room,
          * (absolute positions in each layer's own map space). */
         int32_t h_ofs, v_ofs;
         if (bg == 1) {
-            h_ofs = bx; v_ofs = by;
+            h_ofs = aria_bg_room.ofs_bx; v_ofs = aria_bg_room.ofs_by;
         } else {
             h_ofs = aria_bg_room.scroll.disp_h[bg];
             v_ofs = aria_bg_room.scroll.disp_v[bg];
@@ -1594,8 +1647,16 @@ bool draw_room_backgrounds(SDL_Renderer *renderer, const AriaRoom *room,
             SDL_RenderTexture(renderer, layer->texture, &src, &dst);
         }
     }
-    /* ready is true here (ensure returned it): even a frame where
-     * every layer is disabled is a faithful "all BGs off" result,
-     * not a reason to resurrect the flattened composite. */
-    return true;
+}
+
+/* The OBJ priority an entity record +0x5C draw band maps to
+ * through this room's sub_0803DC18/unk_E table (the value
+ * sub_0803DE10 stamps into the OAM attribute-2 priority bits),
+ * or -1 when the layered path is unavailable or the band is
+ * outside the native 0x00-0x1F range — the caller then keeps
+ * the sprite in the front pass like every unbanded draw. */
+int aria_bg_band_priority(uint8_t band) {
+    if (!aria_bg_room.ready || !aria_bg_room.depth_ok || band >= 0x20)
+        return -1;
+    return aria_bg_room.depth.band_priority[band];
 }

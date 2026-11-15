@@ -669,6 +669,66 @@ int main(void) {
     aos_scroll_apply(&s, NULL, &out);
     assert(out.fx & AOS_SCROLL_FX_BG2_DISABLE);
 
+    /* ---- depth priorities (sub_0803DC18/3DD14 -> unk_A/unk_E,
+     * consumed by sub_0803FD60's BGxCNT write and sub_0803DE10's
+     * OAM attribute-2 stamp) ---- */
+    {
+        AosDepthPriorities d;
+        /* Room-load shape: BG0's slot is always layer 0; BG1-3
+         * take the background records' field_0 bytes. Castle
+         * Corridor room 0's {0,22,23,31} gives the hardware
+         * priorities BG0=0,BG1=1,BG2=2,BG3=3 — every band at or
+         * below the lowest layer threshold scores 0, bands past
+         * each higher threshold step up, capped at 3. */
+        const uint8_t room0[4] = {0, 22, 23, 31};
+        aos_scroll_depth_priorities(room0, &d);
+        assert(d.bg_priority[0] == 0 && d.bg_priority[1] == 1 &&
+               d.bg_priority[2] == 2 && d.bg_priority[3] == 3);
+        assert(d.band_priority[0x00] == 0);
+        assert(d.band_priority[0x01] == 1);   /* 1 > layer 0 only */
+        assert(d.band_priority[0x0E] == 1);   /* the player's band */
+        assert(d.band_priority[0x15] == 1);   /* Object1F flanks */
+        assert(d.band_priority[0x16] == 1);
+        assert(d.band_priority[0x17] == 2);   /* past layer 22 */
+        assert(d.band_priority[0x18] == 3);   /* past layer 23 */
+        assert(d.band_priority[0x1C] == 3);   /* Object1F ring hi */
+        assert(d.band_priority[0x1F] == 3);
+        /* A foreground layer below the player's band pushes him
+         * back: {0,6,22,31} keeps the same BG priorities but the
+         * band-0xE threshold count rises to 2 — he paints behind
+         * BG1 like the native walk-behind-foreground case. */
+        const uint8_t shallow[4] = {0, 6, 22, 31};
+        aos_scroll_depth_priorities(shallow, &d);
+        assert(d.bg_priority[0] == 0 && d.bg_priority[1] == 1 &&
+               d.bg_priority[2] == 2 && d.bg_priority[3] == 3);
+        assert(d.band_priority[0x0E] == 2);
+        assert(d.band_priority[0x05] == 1);
+        assert(d.band_priority[0x06] == 1);   /* ties stay front */
+        assert(d.band_priority[0x07] == 2);
+        /* Equal layer bytes: every BG scores 3 (each >= the
+         * other three) while every arg0 threshold lands on 0x1F,
+         * so no band ever exceeds one — all bands score 0, the
+         * all-0x1F title-style degenerate the native
+         * sub_0803DC18(0x1F,0x1F,0x1F,0x1F) call produces. */
+        const uint8_t flat[4] = {0x1F, 0x1F, 0x1F, 0x1F};
+        aos_scroll_depth_priorities(flat, &d);
+        for (int i = 0; i < 4; ++i) assert(d.bg_priority[i] == 3);
+        for (int b = 0; b < 0x20; ++b) assert(d.band_priority[b] == 0);
+        /* Tied mid layers keep the hardware BG-number tie-break
+         * data: {0,5,5,31} -> BG1 and BG2 both priority 2, BG3 3;
+         * band thresholds collect the last-matching BG's byte
+         * per rank so bands 1-5 score 1 and 6+ score 3. */
+        const uint8_t tied[4] = {0, 5, 5, 31};
+        aos_scroll_depth_priorities(tied, &d);
+        assert(d.bg_priority[0] == 0 && d.bg_priority[1] == 2 &&
+               d.bg_priority[2] == 2 && d.bg_priority[3] == 3);
+        assert(d.band_priority[0x00] == 0);
+        assert(d.band_priority[0x01] == 1);
+        assert(d.band_priority[0x05] == 1);
+        assert(d.band_priority[0x06] == 3);
+        assert(d.band_priority[0x1F] == 3);
+    }
+
     puts("aos_scroll: ok");
     return 0;
 }

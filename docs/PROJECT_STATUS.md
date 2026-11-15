@@ -1,3 +1,93 @@
+## Patch 1159 - native OBJ-vs-BG priority interleave for retained bands
+
+- **Gap.** Patch 1155's layered BG draw painted every decoded BG
+  layer back-to-front and then every sprite, so no sprite could sit
+  behind a foreground BG layer even though the native hardware
+  interleaves them: BGxCNT bits 0-1 and OAM attribute-2 bits 10-11
+  carry the same 0-3 priority (0 front), with OBJ winning ties.
+  The port already retained the inputs — background record
+  `field_0` layer bytes and a few entity `+0x5C` draw bands — but
+  nothing consumed them for ordering.
+- **Native model (cvaos-verified).** The room load
+  (`sub_0800F9EC`, `code_0800F1FC.c:636-648`) calls
+  `sub_0803DD14(field_0, bg)` per BG record, `sub_0803DD14(0,0)`
+  for BG0, then `sub_0803FD60` ORs `gUnk_030019D8.unk_A[bg]` into
+  each BGxCNT priority field. `unk_A[i]` counts the other three
+  layer bytes `<= layer[i]`; `sub_0803DC18`/`sub_0803DD14`
+  (`code_08039340.c:3263-3476`) then build `arg0` rank thresholds
+  and `unk_E[band]`, which `sub_0803DE10` stamps into each OAM
+  record's attribute-2 priority while emitting records band 0
+  first — band order is the OBJ tie-break. Entity `+0x5C`
+  (`unk_540`) is the band: the player create writes `0xE`
+  (`code_08014548.c:206`), Object1F's children carry `band5c`
+  (`0x15`, `0x1C`-`0x1E`), and Object20 NPC chains derive theirs
+  from the player's band (`sub_08065CD8` reads player `+0x5C`,
+  `+1` per child).
+- **Change.** `aos_scroll_depth_priorities`
+  (`aos_scroll.c/.h`) ports the `unk_A`/`arg0`/`unk_E` recompute as
+  a pure function of the four layer bytes `{0, BG1..BG3 field_0}`.
+  `aria_draw.c` stores the room's `AosDepthPriorities`, splits
+  `draw_room_backgrounds` into `aria_bg_room_begin` (ensure +
+  per-frame scroll feed, once per frame) and
+  `aria_bg_draw_priority` (one priority level, BG3->BG1 inside a
+  level for the hardware same-priority BG tie-break), and exposes
+  `aria_bg_band_priority(band)`. `aria_runtime.c` now paints
+  back-to-front per priority 3..0 — BG layers then the sprites
+  whose band resolves — via a `draw_soma_sprite` helper (player
+  band `0x0E`) and a `prio_slot` parameter on
+  `draw_special_objects` that filters Object1F's per-child
+  `band5c`; lower bands paint later within a shared priority,
+  matching `sub_0803DE10`'s band-ordered OAM emission. Every
+  sprite without a resolved band keeps the previous all-on-top
+  order in the front pass, and the no-ROM composite fallback is
+  unchanged.
+- **Honest limits.** Only two band sources are retained today:
+  the player's create-time `0xE` (the port does not track later
+  `+0x5C` writes) and Object1F's `band5c`. Enemy `+0x5C` values
+  (set at every native create, e.g. `0x11`/`0x12`/`0x13`/`0x15`/
+  `0x16`/`0x1D`) are not ported into `AosEnemy`; effects, pickups,
+  skills, guardians, doors and walls have no retained band (the
+  wall entry table's band byte at `0x08526064+8` is ROM data the
+  port does not decode); and Object20's `anim5c` fields are NOT
+  usable — `aria_entities.c` feeds `soma->anim.id` as
+  `player_anim5c`, an animation-derived approximation, not the
+  native player-band chain (`player +0x5C`, `+1` per child), so
+  Object20 sprites stay in the front pass until the entities side
+  feeds the real band. Within a shared priority the slot order is
+  specials-then-Soma (band 0xE below the 0x15+ gate bands); the
+  finer per-band OAM ordering among same-priority sprites is only
+  approximated by that fixed order. BG0/HUD stays on top as
+  before (its computed priority is 0 = front in practice).
+  Scripted mid-gameplay `sub_0803DD14` priority changes (e.g. the
+  title-mode setups in `code_08002454.c`) are not tracked — the
+  tables are computed once per room load.
+- **Affine/HBlank assessment.** Not bounded enough to port this
+  wave: `AosScrollOut::fx` already reports the
+  `AOS_SCROLL_FX_HBLANK`/`SCANLINE`/`AFFINE`/`CDAC`/`CC90`/`CB00`/
+  `D000` modes, but each needs per-scanline transforms
+  (`BgAffineSet` matrices, hBlankEffect wave buffers,
+  `sub_0800CB8C`/`sub_0800CED4`/`sub_0800D0F8` window/scanline FX)
+  sampled from the decoded tilemap — the current draw blits one
+  flat SDL texture per layer, so a correct port requires a
+  scanline (or per-tile) rasterizer for the affected layers plus
+  the register-state plumbing, window/blend interaction and the
+  `unk_60.unk_33C[3]`/`unk_4CC_0` world flags that stay zeroed.
+  The only affine-ish consumer, Object20's whiteout, already has
+  its own persisted-scanline approximation. A single-room water
+  effect would still need the full per-scanline pipeline to be
+  honest, so the gap stays documented rather than approximated.
+- **Test.** `tests/test_aos_scroll.c` gains
+  `aos_scroll_depth_priorities` cases: the room-0 `{0,22,23,31}`
+  shape (BG priorities 0/1/2/3, band thresholds), a shallow
+  foreground layer pushing band `0x0E` to priority 2, the
+  all-`0x1F` degenerate (BGs all 3, bands all 0), and tied mid
+  layers (`{0,5,5,31}` -> BG1/BG2 both 2, band thresholds by
+  last-matching BG). `ctest -R aos_scroll` passes; no emulator
+  comparison yet.
+- **Registries.** `aos.core.scroll` in `annotations.tsv` and
+  `assets.aria_rooms` in `features.tsv` updated; status stays
+  `partial`.
+
 ## Patch 1158 - Object20 sub_08013CF0 reports run through aos_room_music_change
 
 - **Native semantics.** `sub_08013CF0` (third_party/cvaos

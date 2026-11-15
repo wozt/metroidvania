@@ -1084,6 +1084,10 @@ int aria_runtime_main(int argc, char **argv) {
         int cam_x = 0, cam_y = 0;
         follow_camera(&room, spawn_x, spawn_y, &cam_x, &cam_y);
         AosForcedInput forced = {0};
+        /* The entity pass's sub_08013CF0 channel: no room-music
+         * flags are loaded headless, but the tracked-song change
+         * itself (aos_room_music_change) needs only this state. */
+        AosRoomMusic room_music = {0};
         AosSaveRoom save_room = {0};
         homing_room = &room;
         object10_save_ctx = NULL;
@@ -1209,7 +1213,7 @@ int aria_runtime_main(int argc, char **argv) {
             object1c_save_ctx = NULL;
             object1c_save_path = NULL;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
-                            sim_new_input, sim_held);
+                            sim_new_input, sim_held, &room_music);
             homing_age();
             aos_enemy_set_soul_attacks(NULL, 0);
         }
@@ -1786,7 +1790,7 @@ int aria_runtime_main(int argc, char **argv) {
      * records continue without an update, so this call is a pure
      * spawn pass; window-gated records still wait for the camera. */
     update_entities(&room, &layer, &soma, cam_x, cam_y, &forced,
-                    &combat, 0, 0);
+                    &combat, 0, 0, &room_music);
     AosSaveRoom save_room = {0};
     bool announced_death = false;
     static AosGameOver death;
@@ -2740,7 +2744,8 @@ int aria_runtime_main(int argc, char **argv) {
             object1c_save_ctx = has_active_save ? &active_save : NULL;
             object1c_save_path = has_active_save ? save_path : NULL;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
-                            aria_input.new_input, aria_input.held_input);
+                            aria_input.new_input, aria_input.held_input,
+                            &room_music);
             /* --dialogue-trace: log the shared room dialogue's window
              * open/close frames so scripted-input runs can measure the
              * pulse->window latency without pixel probing. Debug

@@ -1,3 +1,55 @@
+## Patch 1158 - Object20 sub_08013CF0 reports run through aos_room_music_change
+
+- **Native semantics.** `sub_08013CF0` (third_party/cvaos
+  `code_08013960.c:258`) is `sub_08013960_inline_0` verbatim: early-out
+  when `unk_60.currentSong == param_0`, else `PlaySong(currentSong |
+  STOP_SONG)`, store the new id and `PlaySong(param_0)`. It touches
+  only the tracked-song word and PlaySong — no +0x254CC ambient or
+  held-sound interaction — which is exactly what the ported
+  `aos_room_music_change` (`src/runtime/aos/core/aos_room_music.c`)
+  already implements, including its documented stale-tracker
+  complement.
+- **Plumbing.** `object20_apply_out` (`src/runtime/aria_entities.c`)
+  could not reach the `AosRoomMusic` instance owned by the room loop,
+  so every 13CF0 report was printf-only (Patch 1152 notes). The
+  channel chosen is an explicit parameter, matching how the entity
+  pass already borrows runtime-owned state (`AriaCombat`,
+  `AosForcedInput`): `update_entities` and `object20_apply_out` gain
+  an `AosRoomMusic *room_music` parameter (`aria_entities.h`), and
+  all three `aria_runtime.c` call sites pass their instance — the
+  SDL room loop's `room_music` (declared beside
+  `aos_room_music_enter`'s flags) and a zeroed local in the headless
+  `--simulate` path, where the room-music flags are not loaded but
+  the tracked-song change needs only the state struct. A NULL
+  pointer keeps the reports diagnostic-only.
+- **Per-site wiring.** Every reported site already carried the native
+  song argument, so no Out-struct extension was needed:
+  `dirs.cf0`/`story.cf0`/`slots.call_13cf0`/`shop.song` (the shop's
+  `out->song` IS the `sub_08013CF0(0x14)` call) forward in the shared
+  13CF0 block ahead of the frame's raw PlaySong reports; the npc_talk
+  variants forward inside their family cases at the native call
+  positions — `AosNpcLoop.ev_1e` (`sub_08013CF0(0x1E)`) after the
+  paired `sub_08013E18(0x26)` held-release (`aos_npc_talk_65db8`
+  state-1 order: release then change, matching the unconditional
+  `PlaySong(song | STOP_SONG)` both sides issue) and
+  `AosNpcGuard.ev_1d` (`sub_08013CF0(0x1D)`) before the guard case's
+  `sub_0805B878(0x1040)` song (`aos_npc_talk_66094` state-1 order).
+  Each forwarded change prints `Object20 <id>: 13CF0 song 0xNN` like
+  the sibling forwarded calls.
+- **Tests.** `aos_room_music_change` semantics were already covered by
+  `tests/test_aos_room_music.c`; the plumbing is a direct call chain
+  verified by `cmake --build build -j8` and `ctest -R
+  'aos_object20|aos_room_music|aos_npc_talk|aos_shop|aria_simulate'`
+  (9/9 pass, including the `aria_simulate_room_transition` contract).
+  A live 13CF0 in `--simulate` needs the event-gated sequences
+  (shop sell text-done, NPC window flow, story/dirs cinematics),
+  which the headless path does not reach without save state —
+  documented, not claimed as runtime-verified.
+- **Registries synced** (`aos.audio.play_song` notes/sources and
+  `aos.objects.shop_sequences` notes in
+  `data/native_parity/annotations.tsv`; `assets.audio` in
+  `data/dashboard/features.tsv`).
+
 ## Patch 1157 - opening actor draw reads +0x6E; emitted children get real tick bindings
 
 - **Drawn frame now comes from the tick chain.** Patch 1148 wired

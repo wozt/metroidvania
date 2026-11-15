@@ -18,6 +18,7 @@
 #include "aria_runtime_types.h"
 
 #include "aos/core/aos_collision.h"
+#include "aos/core/aos_room_music.h"
 #include "aos/core/aos_soma.h"
 #include "aos/core/aos_stats.h"
 #include "fusion/assets/rom.h"
@@ -69,11 +70,14 @@ typedef struct {
  * of the global inputData pair the native entities read — both are
  * the PRE-SetPlayerInput values: the port's forced-input slot only
  * substitutes the gameplay mask, so callers must not pass
- * player_held_input/player_new_input here. */
+ * player_held_input/player_new_input here. `room_music` is the room
+ * loop's tracked-music state (gEwramData->unk_60's music fields):
+ * the Object20 sub_08013CF0 reports run through
+ * aos_room_music_change on it; NULL leaves them diagnostic-only. */
 int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     int cam_x, int cam_y, AosForcedInput *input,
                     AriaCombat *combat, uint16_t new_input,
-                    uint16_t held_input);
+                    uint16_t held_input, AosRoomMusic *room_music);
 
 /* The BG1 scroll offset accumulated by the ported sub_0800ED24
  * transactions (aos/core/aos_scroll), as a delta in integer pixels

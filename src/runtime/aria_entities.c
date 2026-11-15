@@ -1303,7 +1303,8 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
                                AriaEntityDataRecord *rec,
                                AriaCombat *combat, AosForcedInput *input,
                                uint16_t new_input, int npc_pre_state,
-                               AriaRoom *room, int cam_x, int cam_y) {
+                               AriaRoom *room, int cam_x, int cam_y,
+                               AosRoomMusic *room_music) {
     /* sub_08067934/sub_08067A04/sub_08067898 triple. The npc_talk
      * families keep their window requests inside the variant state
      * structs instead of a normalized Out: the poll frames are the
@@ -1526,9 +1527,10 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
      * +0x254CC, +0xA094+4 and gUnk_03002CB0 keep their owners
      * (object20_ewram_64, the aos_audio ambient channel, the
      * BG1 scroll accumulator, object20_disp_cnt) applied
-     * below; the
+     * below; sub_08013CF0 runs through the room_music channel
+     * forwarded below; the
      * sub_0800EB04/sub_080235C8/sub_0802DFF0/sub_0806666C/
-     * sub_0800EF6C/sub_08013960/sub_08013CF0/sub_08013D60/
+     * sub_0800EF6C/sub_08013960/sub_08013D60/
      * sub_08013E18/sub_080121E0/sub_0800C5A8/sub_0800C778/
      * sub_0803F2C8/sub_0803F17C/sub_0803E058/sub_0803E654/
      * sub_0805B5E8/sub_0805B66C/sub_08067804/sub_0803D18C/
@@ -1872,10 +1874,9 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
      * owned by aos_audio — hold on the request, release
      * (PlaySong STOP_SONG) on the drop. sub_080620E8's state-2
      * sub-state-3 countdown reports e18 = 0x2D here; its paired
-     * sub_08013CF0(0x24) (cf0) is a tracked-music change whose
-     * AosRoomMusic owner lives in the room loop — no channel
-     * reaches it from this TU, so the cf0 reports below stay
-     * diagnostic-only like the npc families' ev_1d/ev_1e. */
+     * sub_08013CF0(0x24) (cf0) is a tracked-music change — the
+     * forwarding below runs it through the room loop's
+     * AosRoomMusic like the npc families' ev_1d/ev_1e. */
     if (out->story.d60 >= 0) {
         aos_audio_hold((uint16_t)out->story.d60);
         printf("Object20 %d: held sound 0x%X\n", e->id,
@@ -1886,8 +1887,45 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         printf("Object20 %d: release sound 0x%X\n", e->id,
                out->story.e18);
     }
-    if (out->dirs.cf0 >= 0 || out->story.cf0 >= 0 ||
-        out->slots.call_13cf0 >= 0 || out->shop.song >= 0)
+    /* sub_08013CF0 == sub_08013960_inline_0 (third_party/cvaos
+     * code_08013960.c:258): stop currentSong, store the new id and
+     * PlaySong it — exactly aos_room_music_change on the room
+     * loop's AosRoomMusic, which update_entities borrows from the
+     * caller. Every family's report already carries the native
+     * song argument. sub_08013CF0 touches only the currentSong
+     * word and PlaySong — no +0x254CC ambient or held-sound
+     * interaction — so the change runs here, ahead of this
+     * frame's raw PlaySong reports, matching the native order in
+     * the sequences that call 13CF0 before their PlaySong. The
+     * npc_talk ev_1d/ev_1e reports are forwarded inside their
+     * family cases below at the native call positions (ev_1e
+     * after the paired sub_08013E18 release, ev_1d before the
+     * sub_0805B878 song). A NULL room_music keeps the reports
+     * diagnostic-only. */
+    if (room_music) {
+        if (out->dirs.cf0 >= 0) {
+            aos_room_music_change(room_music, (uint16_t)out->dirs.cf0);
+            printf("Object20 %d: 13CF0 song 0x%X\n", e->id,
+                   out->dirs.cf0);
+        }
+        if (out->story.cf0 >= 0) {
+            aos_room_music_change(room_music, (uint16_t)out->story.cf0);
+            printf("Object20 %d: 13CF0 song 0x%X\n", e->id,
+                   out->story.cf0);
+        }
+        if (out->slots.call_13cf0 >= 0) {
+            aos_room_music_change(room_music,
+                                  (uint16_t)out->slots.call_13cf0);
+            printf("Object20 %d: 13CF0 song 0x%X\n", e->id,
+                   out->slots.call_13cf0);
+        }
+        if (out->shop.song >= 0) {
+            aos_room_music_change(room_music, (uint16_t)out->shop.song);
+            printf("Object20 %d: 13CF0 song 0x%X\n", e->id,
+                   out->shop.song);
+        }
+    } else if (out->dirs.cf0 >= 0 || out->story.cf0 >= 0 ||
+               out->slots.call_13cf0 >= 0 || out->shop.song >= 0)
         printf("Object20 %d: 13CF0 music change (unforwarded)\n",
                e->id);
     /* gEwramData +0xA094 + 4 = bgInfo[1].xPos whole: the dirs
@@ -1946,11 +1984,11 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     /* Songs: PlaySong arguments from every family's report — the
      * shared shell's song, the dirs/story song fields and the
      * sub_0805B878 helpers (which are PlaySong itself, confirmed
-     * in code_08050A3C.s). The shop song/jingle fields are
-     * sub_08013CF0/sub_08012048 calls, reported below instead.
-     * The update_entities `sound` return is ignored by both
-     * callers, so the requests play directly like the wall
-     * branch's report.sound. */
+     * in code_08050A3C.s). The shop song/jingle fields are the
+     * sub_08013CF0/sub_08012048 calls consumed above and in the
+     * flag12048 block. The update_entities `sound` return is
+     * ignored by both callers, so the requests play directly like
+     * the wall branch's report.sound. */
     const int *song_fields[] = {
         &out->song, &out->dirs.song, &out->story.song, &out->shop.b878,
         &out->dirs.b878, &out->story.b878,
@@ -1996,22 +2034,44 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
             aos_audio_ambient_store(0x26);
             printf("Object20 %d: +0x254CC = 0x26\n", e->id);
         }
-        /* sub_08065DB8's state-1 entry runs sub_08013E18(0x26) —
-         * the held-list release (aos_audio), distinct from the
-         * +0x254CC ambient stores and the raw PlaySong(0x26)
-         * handled above. sub_08013CF0(0x1E) (ev_1e) is a
-         * tracked-music change whose AosRoomMusic owner lives in
-         * the room loop — no channel reaches it from this TU. */
+        /* sub_08065DB8's state-1 entry runs sub_08013E18(0x26)
+         * then sub_08013CF0(0x1E), in that order — the held-list
+         * release (aos_audio) first, then the tracked-music
+         * change on the room loop's AosRoomMusic, distinct from
+         * the +0x254CC ambient stores and the raw PlaySong(0x26)
+         * handled above. */
         if (g->sfx_26) {
             aos_audio_release(0x26);
             printf("Object20 %d: release held sound 0x26\n", e->id);
         }
-        if (g->ev_1e || g->froze_player || g->facing_mirror)
+        if (g->ev_1e) {
+            if (room_music) {
+                aos_room_music_change(room_music, 0x1E);
+                printf("Object20 %d: 13CF0 song 0x1E\n", e->id);
+            } else {
+                printf("Object20 %d: 13CF0 music change "
+                       "(unforwarded)\n", e->id);
+            }
+        }
+        if (g->froze_player || g->facing_mirror)
             printf("Object20 %d: loop npc effect pulse\n", e->id);
         break;
     }
     case AOS_OBJECT20_FAMILY_GUARD: {
         const AosNpcGuard *g = &e->object20.v.guard;
+        /* sub_08066094's state-1 entry runs sub_08013CF0(0x1D)
+         * immediately before sub_0805B878(0x1040): the
+         * tracked-music change lands on the room loop's
+         * AosRoomMusic ahead of this frame's song reports. */
+        if (g->ev_1d) {
+            if (room_music) {
+                aos_room_music_change(room_music, 0x1D);
+                printf("Object20 %d: 13CF0 song 0x1D\n", e->id);
+            } else {
+                printf("Object20 %d: 13CF0 music change "
+                       "(unforwarded)\n", e->id);
+            }
+        }
         if (g->song_26) { aos_audio_play_song(0x26);
                           printf("Object20 %d: song 0x26\n", e->id); }
         if (g->song_1b5) { aos_audio_play_song(0x1B5);
@@ -2097,16 +2157,17 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         printf("Object20 %d: fade request (unforwarded)\n", e->id);
 
     /* Slots family (param0 0-2, 11-18): PlaySong args play through
-     * the shared channel; the fade pairs, sfx/call reports, player
-     * writes and misc engine effects have no consumer yet. The
-     * +0x254CC/+0x7864/+0x2CB0/+0x5A reports above are forwarded
-     * to their session channels. */
+     * the shared channel and the sub_08013CF0 report ran through
+     * the room_music channel above; the fade pairs, remaining
+     * sfx/call reports, player writes and misc engine effects
+     * have no consumer yet. The +0x254CC/+0x7864/+0x2CB0/+0x5A
+     * reports above are forwarded to their session channels. */
     for (unsigned si = 0; si < out->slots.playsong_count; ++si) {
         aos_audio_play_song(out->slots.playsong[si]);
         printf("Object20 %d: slots song 0x%X\n", e->id,
                out->slots.playsong[si]);
     }
-    if (out->slots.call_13cf0 >= 0 || out->slots.call_00ea8 >= 0 ||
+    if (out->slots.call_00ea8 >= 0 ||
         out->slots.call_6666c || out->slots.call_0eb04 ||
         out->slots.call_235c8 || out->slots.call_2dff0 ||
         out->slots.call_67804 || out->slots.write_90 ||
@@ -2297,7 +2358,8 @@ void object1c_anim_bind(const AriaObjects *objects) {
 
 int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                            int cam_x, int cam_y, AosForcedInput *input, AriaCombat *combat,
-                           uint16_t new_input, uint16_t held_input) {
+                           uint16_t new_input, uint16_t held_input,
+                           AosRoomMusic *room_music) {
     if (deferred_sound_pending) {
         deferred_sound_pending = false;
         aos_audio_play_song(deferred_sound);
@@ -4561,7 +4623,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     object20_apply_out(e, &out,
                                        &aria_entity_data[i + 1], combat,
                                        input, new_input, -1, room,
-                                       cam_x, cam_y);
+                                       cam_x, cam_y, room_music);
                 continue;
             }
             if (e->object20.deleted ||
@@ -4624,7 +4686,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (o20_py) e->y = o20_py >> 16;
             object20_apply_out(e, &out, &aria_entity_data[i + 1],
                                combat, input, new_input, npc_pre_state,
-                               room, cam_x, cam_y);
+                               room, cam_x, cam_y, room_music);
             continue;
         }
         if (!door) continue;

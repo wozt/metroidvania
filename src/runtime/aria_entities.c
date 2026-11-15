@@ -1595,14 +1595,17 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         out->story.wo_particle_count || out->story.wo_purge_547 ||
         out->story.wo_burst_63aec)
         printf("Object20 %d: whiteout render bars=%u spawns=%u "
-               "particles=%u sparks=%u purge=%d/%d burst=%d (%d,%d) "
-               "(bars->draw pass; spawn children, carrier/burst "
-               "and spark pools run; purge scans, the 63AEC burst "
-               "and display/DMA/fade effects unforwarded)\n",
+               "particles=%u sparks=%u 63aec=%u purge=%d/%d burst=%d (%d,%d) "
+               "(bars/sparks/63AEC->draw pass; spawn children, "
+               "carrier/burst pools run; purge scans, the 63AEC "
+               "homing affine/e6bc calls and display/DMA/fade "
+               "effects unforwarded)\n",
                e->id, out->story.wo_bars_drawn,
                out->story.wo_spawn_count, out->story.wo_particle_count,
                e->object20.family == AOS_OBJECT20_FAMILY_STORY
                    ? e->object20.v.story.wo_spark_count : 0,
+               e->object20.family == AOS_OBJECT20_FAMILY_STORY
+                   ? e->object20.v.story.wo_63aec_count : 0,
                out->story.wo_purge_547, out->story.wo_purge_flagged,
                out->story.wo_burst_63aec, out->story.wo_burst_x,
                out->story.wo_burst_y);
@@ -1625,10 +1628,11 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
      * share the object20_wo_rng gEwramData+8 channel with the
      * renderer. Carrier/burst Out events are consumed the same
      * frame by the burst pool below (sub_08063168/sub_080632B0/
-     * sub_08065834/sub_080630E8 state machines); the carriers'
-     * and particles' draw records (frames 0x08267EE4, graphics
-     * 0x08260390) stay unexported — state and RNG run natively,
-     * no sprites. */
+     * sub_08065834/sub_080630E8 state machines); the wo_bursts
+     * draw path in aria_draw.c renders the carriers and
+     * particles from the whiteout_burst_* exports, and the
+     * wo_sparks/wo_63aec pools below feed the same still-frame
+     * art. */
     for (uint8_t s = 0; s < out->story.wo_spawn_count; ++s) {
         if (e->wo_child_count >= AOS_WO_MAX_EVENTS) break;
         if (aos_wo_spawn_child_init(
@@ -1754,6 +1758,60 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
                 continue;
             }
             si++;
+        }
+        /* sub_08063AEC burst (+0x24 == 0x9E): the renderer's
+         * one-shot Out event appends up to 20 sub_08063944
+         * particles to the story family's pool — same-frame
+         * spawn convention as the sparks. The host cannot run
+         * the native sub_08062B60(1) alloc or sub_0803E654
+         * sprite setup: alloc_fail marks the records that do
+         * not fit the remaining pool (the native entity-pool
+         * analogue) and flags58_init carries 0 for the
+         * uninjected +0x58 low-5 bits (documented). The
+         * particles' RNG draws share the object20_wo_rng
+         * channel. */
+        if (out->story.wo_burst_63aec) {
+            uint8_t free_slots = st->wo_63aec_count < AOS_WO63AEC_POOL
+                ? (uint8_t)(AOS_WO63AEC_POOL - st->wo_63aec_count) : 0;
+            AosWo63AECIn bin = {
+                .rng = (uint32_t)object20_wo_rng,
+                .alloc_fail = free_slots >= AOS_WO63AEC_MAX
+                    ? 0u : (0xFFFFFu << free_slots),
+                .flags58_init = 0,
+            };
+            AosWo63AECBurstOut bout;
+            aos_wo_burst_63aec(st->wo_63aec, &st->wo_63aec_count,
+                               AOS_WO63AEC_POOL,
+                               out->story.wo_burst_x,
+                               out->story.wo_burst_y,
+                               out->story.wo_burst_parent,
+                               &bin, &bout);
+            object20_wo_rng = (int64_t)(uint32_t)bout.rng;
+        }
+        /* Advance the 63AEC pool one frame (sub_08063944). The
+         * entityData[+0x11].unk_3C bit-1 read is injected from
+         * the story entity's own +0x3C — wo_render.field_3c is
+         * the same byte (the +0x10 parent index resolves to
+         * this entity; documented interpretation). The
+         * sub_0803E058/sub_0803E6BC engine calls are Out
+         * flags — the affine write has no host channel and the
+         * delete path only sets +0x59 bit3, handled below. */
+        if (st->wo_63aec_count) {
+            AosWo63AECUpdateIn uin = {
+                .parent_flag3c_bit2 =
+                    (st->wo_render.field_3c & 2) != 0,
+            };
+            for (uint8_t ci = 0; ci < st->wo_63aec_count;) {
+                AosWo63AECUpdateOut uout;
+                aos_wo_63aec_update(&st->wo_63aec[ci], &uin,
+                                    &uout);
+                if (uout.done) {
+                    st->wo_63aec[ci] =
+                        st->wo_63aec[--st->wo_63aec_count];
+                    continue;
+                }
+                ci++;
+            }
         }
     }
     if (set42c || clear42c) {

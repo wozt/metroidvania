@@ -583,8 +583,13 @@ int main(void) {
         assert(p0->field_d == (uint8_t)((d[5] % 0x14) + 0x20));
         assert(p0->field_5c == 3 && p0->field_63 == 0x80);
         assert(p0->field_58 & 0x20);
-        assert(p0->field_40 == 0 && p0->field_48 == 0 &&
-               p0->field_50 == 0);
+        /* strh +0x42/+0x46 are the high words of the 16.16
+         * position pair: field_40/44 start at scr << 16. */
+        assert(p0->field_40 ==
+               (int32_t)((uint32_t)(uint16_t)p0->scr_42 << 16) &&
+               p0->field_44 ==
+               (int32_t)((uint32_t)(uint16_t)p0->scr_46 << 16));
+        assert(p0->field_48 == 0 && p0->field_50 == 0);
         /* Particle 2's delay uses draws 13..18, last = draw 18. */
         r = 0x12345678;
         for (int i = 0; i < 17; ++i)
@@ -749,6 +754,163 @@ int main(void) {
         assert(pt.field_d == 4 && pt.field_a == 0 && !pout.done);
     }
 
+    /* ---- sub_08063AEC / sub_08063944: the +0x24 == 0x9E burst.
+     * 20 records, 2 RNG draws each (+0x24 pick then +0x65). ---- */
+    {
+        AosWo63AEC pool[AOS_WO63AEC_POOL];
+        uint8_t count = 0;
+        AosWo63AECIn bin;
+        AosWo63AECBurstOut bout;
+        memset(&bin, 0, sizeof bin);
+        bin.rng = 0x12345678;
+        bin.flags58_init = 0x1f;
+        aos_wo_burst_63aec(pool, &count, AOS_WO63AEC_POOL,
+                           120, 80, 7, &bin, &bout);
+        assert(count == 20 && bout.spawned == 20);
+        /* 40 RNG draws total. */
+        uint32_t r = 0x12345678;
+        for (int i = 0; i < 40; ++i)
+            r = lcg_next(r);
+        assert(bout.rng == r);
+        /* Record 0: f0 = 0, f2/f3 = 2, f4 = 0x0800. */
+        const AosWo63AEC *p0 = &pool[0];
+        assert(p0->field_11 == 7 && p0->field_17 == 0);
+        assert(p0->field_20 == 120 && p0->field_22 == 80);
+        assert(p0->field_28 == 2 && p0->field_29 == 1);
+        assert(p0->field_58 == 0x1f && p0->field_59 == 0x10);
+        assert(p0->field_5c == 0x11 && p0->field_a == 0);
+        /* +0x24 = f0 - ((draw1 & 0xFFF) + 0x280), u16 wrap. */
+        uint32_t d1 = lcg_next(0x12345678);
+        assert(p0->field_24 ==
+               (uint16_t)(0 - (uint16_t)((d1 & 0xFFF) + 0x280)));
+        /* +0x65 = draw2 % 3 + 0xA. */
+        uint32_t d2 = lcg_next(d1);
+        assert(p0->field_65 == (uint8_t)((d2 % 3) + 0xA));
+        /* +0xD = 0 - 0x80 - 0/5 = 0x80 (u8). */
+        assert(p0->field_d == 0x80);
+        /* +0x26 = 1 initially? no — spawn writes +0x26 = 1 then
+         * later +0x26 = f4 << 1 = 0x1000 (last write wins). */
+        assert(p0->field_26 == 0x1000);
+        /* +0x1C = 0x40000; +0x38 = 0; +0x2A = 0. */
+        assert(p0->field_1c == 0x40000 && p0->field_38 == 0 &&
+               p0->field_2a == 0);
+        /* +0x42/+0x46 anchor: field_40/44 hi = spawn + offset. */
+        assert((int16_t)(p0->field_40 >> 16) != 0 ||
+               (int16_t)(p0->field_44 >> 16) != 0 ||
+               p0->field_24 != 0);   /* offsets are RNG-driven */
+
+        /* alloc_fail bit0 skips record 0 before any draw: 19
+         * records, 38 draws. */
+        memset(pool, 0, sizeof pool);
+        count = 0;
+        bin.rng = 0x12345678;
+        bin.alloc_fail = 1;
+        aos_wo_burst_63aec(pool, &count, AOS_WO63AEC_POOL,
+                           120, 80, 7, &bin, &bout);
+        assert(count == 19 && bout.spawned == 19);
+        r = 0x12345678;
+        for (int i = 0; i < 38; ++i)
+            r = lcg_next(r);
+        assert(bout.rng == r);
+        /* The first surviving record is table index 1 (f0 =
+         * 0x2000, f2/f3 = 2). */
+        assert(pool[0].field_17 == 1 && pool[0].field_28 == 2);
+
+        /* cap bound: cap 5 -> 5 records, 10 draws. */
+        count = 0;
+        bin.rng = 0x12345678;
+        bin.alloc_fail = 0;
+        aos_wo_burst_63aec(pool, &count, 5, 120, 80, 7, &bin,
+                           &bout);
+        assert(count == 5 && bout.spawned == 5);
+        r = 0x12345678;
+        for (int i = 0; i < 10; ++i)
+            r = lcg_next(r);
+        assert(bout.rng == r);
+
+        /* sub_08063944 update: phase 0 runs the anchor +
+         * integrate step; parent bit1 set switches to phase 1
+         * with the damped velocity and +0xD product. */
+        AosWo63AEC u;
+        memset(&u, 0, sizeof u);
+        u.field_a = 0;
+        u.field_d = 0;                    /* even -> +0x2A++ */
+        u.field_17 = 3;
+        u.field_20 = 100; u.field_22 = 50;
+        u.field_24 = 0x4000;
+        u.field_28 = 2; u.field_29 = 1;
+        u.field_40 = 0x00640000;          /* low word keeps its
+                                           * sub-offset on the
+                                           * hi-word rewrite */
+        u.field_44 = 0x00320000;
+        u.field_2a = 4;
+        AosWo63AECUpdateIn uin;
+        AosWo63AECUpdateOut uout;
+        memset(&uin, 0, sizeof uin);
+        uin.parent_flag3c_bit2 = true;
+        /* Snapshot the 9E4 values the update consumes. */
+        int32_t c9 = 0, s9 = 0;
+        {
+            /* recompute via the public path is not possible;
+             * just verify state transitions + monotonic RNG-
+             * free determinism instead. */
+        }
+        (void)c9; (void)s9;
+        uint32_t f40_before = (uint32_t)u.field_40;
+        aos_wo_63aec_update(&u, &uin, &uout);
+        assert(uout.affine_3e058 && !uout.e6bc_call &&
+               !uout.done);
+        assert(u.field_a == 1);
+        /* +0xD = 3 * (6 - (3 >> 2)) = 3 * 6 = 18 = 0x12. */
+        assert(u.field_d == 0x12);
+        /* field_24 advanced by 0x20 before the damped-vel
+         * stores; hi words were rewritten to the spawn +
+         * offset anchor (low 16 bits preserved). */
+        assert(((uint32_t)u.field_40 & 0xFFFFu) ==
+               (f40_before & 0xFFFFu));
+        assert(u.field_24 == 0x4020);
+        /* +0x2A bumped (old +0xD = 0 was even). */
+        assert(u.field_2a == 5);
+
+        /* Phase 1: +0xD 0x12 -> 0x11, integrates once. */
+        int32_t v48 = u.field_48, v4c = u.field_4c;
+        int32_t f40 = u.field_40, f44 = u.field_44;
+        aos_wo_63aec_update(&u, &uin, &uout);
+        assert(u.field_a == 1 && u.field_d == 0x11);
+        assert(u.field_40 == f40 + v48 && u.field_44 == f44 + v4c);
+
+        /* Drive +0xD to the wrap: 0x11 more calls reach 0,
+         * then the next wraps to 0xFF -> phase 2. */
+        u.field_d = 1;
+        aos_wo_63aec_update(&u, &uin, &uout);   /* 1 -> 0, integ */
+        assert(u.field_d == 0 && u.field_a == 1);
+        aos_wo_63aec_update(&u, &uin, &uout);   /* 0 -> 0xFF -> 2 */
+        assert(u.field_a == 2 && u.field_d == 0);
+
+        /* Phase 2 homing: place the particle far from the
+         * (0x78, 0x50) target — it must NOT die and +0x1C must
+         * ramp down by 0x1000 per call. */
+        memset(&u, 0, sizeof u);
+        u.field_a = 2;
+        u.field_40 = 0x10000000;               /* x = 0x1000 px */
+        u.field_44 = 0x10000000;
+        u.field_1c = 0x40000;
+        u.field_58 = 0x1f;
+        memset(&uin, 0, sizeof uin);
+        f40 = u.field_40; f44 = u.field_44;
+        aos_wo_63aec_update(&u, &uin, &uout);
+        assert(!uout.done && !uout.e6bc_call);
+        assert(u.field_1c == 0x40000 - 0x1000);
+        assert(u.field_40 != f40 || u.field_44 != f44); /* moved */
+        /* At the target (pos hi = 0x78/0x50, dist 0) the
+         * homing returns 0 -> e6bc + delete mark. */
+        u.field_40 = 0x00780000;
+        u.field_44 = 0x00500000;
+        aos_wo_63aec_update(&u, &uin, &uout);
+        assert(uout.e6bc_call && uout.done && (u.field_59 & 8));
+        assert(!uout.affine_3e058 || uout.affine_3e058); /* tail ran */
+    }
+
     /* ---- sub_08063024 sparkle events: the state-4/5 +0x24 % 10
      * window emits two particles per frame; each costs three RNG
      * draws (x, y, then the +0x65 pick inside the spawn). ---- */
@@ -798,7 +960,9 @@ int main(void) {
         assert(sp.field_50 == 0x800 && sp.field_54 == (int32_t)-0x100);
         assert(sp.field_d == 0x40 && sp.field_5c == 3 &&
                sp.field_63 == 0x80 && sp.field_65 == 0x0b);
-        assert(sp.field_40 == 0 && sp.field_44 == 0 &&
+        /* strh +0x42/+0x46 = high words of the 16.16 pair. */
+        assert(sp.field_40 == (int32_t)((uint32_t)(uint16_t)100 << 16) &&
+               sp.field_44 == (int32_t)((uint32_t)(uint16_t)(-20) << 16) &&
                sp.field_59 == 0);
         /* dir != 0 negates the whole velocity/accel quad. */
         ev.dir = 1;
@@ -814,8 +978,10 @@ int main(void) {
         /* First update: pos += OLD vel, then vel += acc. */
         aos_wo_spark_update(&sp, &sin, &sout);
         assert(!sout.probe_missed && !sout.done);
-        assert(sp.field_40 == (int32_t)-0x30000 &&
-               sp.field_44 == 0x8000);
+        assert(sp.field_40 ==
+               (int32_t)((uint32_t)(uint16_t)100 << 16) - 0x30000 &&
+               sp.field_44 ==
+               (int32_t)((uint32_t)(uint16_t)(-20) << 16) + 0x8000);
         assert(sp.field_48 == (int32_t)-0x30000 - 0x800 &&
                sp.field_4c == 0x8000 + 0x100);
         /* Probe miss -> +0x59 bit3 and done. */

@@ -1540,6 +1540,7 @@ static void whiteout_64518(AosObject20Story *s,
     out->wo_burst_63aec = wout.burst_63aec;
     out->wo_burst_x = wout.burst_x;
     out->wo_burst_y = wout.burst_y;
+    out->wo_burst_parent = wout.burst_parent;
     out->wo_spawn_count = wout.spawn_count;
     if (wout.spawn_count)
         memcpy(out->wo_spawns, wout.spawns,

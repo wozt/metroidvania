@@ -237,6 +237,10 @@ typedef struct {
                              * particle burst at the same point */
     int16_t  burst_x;
     int16_t  burst_y;
+    uint8_t  burst_parent;  /* caller entity +0x10 — copied into
+                             * each particle's +0x11 (the parent
+                             * slot byte sub_08063944 reads
+                             * entityData[+0x11].unk_3C through) */
     uint8_t  spawn_count;
     AosWoSpawn spawns[AOS_WO_MAX_EVENTS];
     uint8_t  particle_count;
@@ -404,8 +408,10 @@ void aos_wo_spawn_child_update(AosWoSpawnChild *c,
  * the sub_0803F2C8/sub_0803F17C/sub_0806E0D0/sub_08068AD4
  * engine calls are injected or reported, matching the module's
  * Out-event convention. Fresh-entity bytes the native relies on
- * the entity pool to clear (+0x40..+0x54 accumulators, +0x59)
- * are zeroed by the port — documented approximation.
+ * the entity pool to clear (+0x44/+0x48..+0x54 accumulators,
+ * +0x59) are zeroed by the port — documented approximation;
+ * +0x40/+0x44 are NOT zeroed: the strh +0x42/+0x46 spawn writes
+ * set their high words (scr << 16), matching the native bytes.
  * ------------------------------------------------------------------ */
 
 /* Carrier entity spawned by sub_08063168/sub_080632B0 (and
@@ -552,9 +558,10 @@ void aos_wo_particle_update(AosWoBurstParticle *p,
  * the s16 args, the fixed velocity/accel quad (+0x48 = 0x30000,
  * +0x4C = -0x8000, +0x50 = 0x800, +0x54 = -0x100, negated when
  * dir != 0), +0xD = 0x40, +0x5C = 3, +0x63 = 0x80 and the +0x65
- * RNG pick reported in AosWoParticle::field_65. +0x40/+0x44 are
- * left at the fresh-entity zero — the same documented
- * approximation the burst particles make.
+ * RNG pick reported in AosWoParticle::field_65. The strh
+ * +0x42/+0x46 writes are the HIGH words of the +0x40/+0x44
+ * 16.16 position pair (+0x42/+0x46 alias them), so field_40/44
+ * start at x/y << 16 with the fresh-entity low words 0.
  *
  * sub_08065858 (code_08060B98.s:9701-9746) is its update: the
  * ballistic step (position += velocity, velocity += accel on
@@ -613,5 +620,151 @@ typedef struct {
 /* sub_08065858: ballistic step + probe; a miss sets +0x59 bit3. */
 void aos_wo_spark_update(AosWoSpark *p, const AosWoSparkIn *in,
                          AosWoSparkOut *out);
+
+/* ------------------------------------------------------------------
+ * sub_08063AEC / sub_08063944 — the state-4/5 +0x24 == 0x9E burst.
+ *
+ * sub_08063AEC(caller, x, y) (code_08060B98.s:5990-6152) memcpy's
+ * the committed 20 x 8-byte record table at 0x08118B4C onto the
+ * stack and loops sl = 0..0x13: per record it runs the
+ * sub_08062B60(1) alloc prologue (entity type 0x1B range 0x48,
+ * graphics 0x08260390, +0x2C = 0xE, frames 0x08267EE4 anim 0xE,
+ * draw sub_0803B9D0, +0x1C = 0x12000, sub_0803E654(entity,1),
+ * +0x59 |= 0x10, +0x5C = 0x11), stores update sub_08063944,
+ * +0x11 = caller +0x10, +0x17 = sl, +0x20/+0x22 = the s16 args,
+ * +0x28 = rec u8@+2, +0x29 = rec u8@+3 >> 1, +0x24 = rec u16@+0
+ * minus ((RNG & 0xFFF) + 0x280) (u16 wrap), +0x38 = 0, +0x26 = 1,
+ * then writes +0x42/+0x46 = +0x20/+0x22 (the high words of the
+ * +0x40/+0x44 16.16 position pair — the +0x42/+0x46 "screen
+ * words" are aliases of those high halves, which is why every
+ * entity read/write of +0x42/+0x46 here lands on field_40/44's
+ * top words), offsets them by (sub_080009E4(+0x24+0x4000) *
+ * +0x28) >> 13 / (sub_080009E4(+0x24) * +0x29) >> 13, stores
+ * +0x48/+0x4C = sub_080009E4(+0x24+0x4000/+0x24) >> 8, +0x2A = 0,
+ * +0x1C = 0x40000, +0x26 = rec u16@+4 << 1, +0xD = sl - 0x80 -
+ * sl/5 (trunc), +0x5C = 0x11 and +0x65 = RNG % 3 + 0xA. Two RNG
+ * draws per successful alloc, in that order; a NULL
+ * sub_08062B60 skips the record before any draw.
+ *
+ * sub_08063944 (code_08060B98.s:5781-5987) is the particle
+ * update. +0xA == 0: recomputes the +0x42/+0x46 anchor from
+ * +0x20/+0x22 plus the per-record trig offsets, integrates
+ * +0x40/+0x44 by +0x48/+0x4C * (s16)+0x2A (the odd/even +0xD
+ * counter), bumps +0x24 by 0x20 and — only while
+ * entityData[+0x11].unk_3C bit 1 is set — damps +0x48/+0x4C to
+ * >> 2, sets +0xA = 1 and +0xD = +0x17 * (6 - (+0x17 >> 2)).
+ * +0xA == 1 counts +0xD down; on the u8 wrap to 0xFF it clears
+ * +0xD and sets +0xA = 2, otherwise it integrates +0x40/+0x44
+ * by +0x48/+0x4C once. +0xA >= 2 runs sub_0806E43C(entity,
+ * 0x780000, 0x500000, 3) — the Sqrt/ArcTan2/sub_08068CDC
+ * homing step toward screen (0x78, 0x50) ported below — and a
+ * zero result (particle within one pixel of the target) runs
+ * sub_0803E6BC + sets +0x59 bit 3; a nonzero result decrements
+ * +0x1C by 0x1000 while nonzero (the affine fade). Every call
+ * ends in sub_0803E058 (affine write — reported).
+ *
+ * sub_080009E4 is the ROM's Q16 sine lookup (cvaos
+ * code_080009A0.c); its 1024-entry u16 table is committed in
+ * the module. Sqrt (BIOS svc 8) and ArcTan2 (BIOS svc 0xA) are
+ * ported as exact-floor isqrt and a documented atan2
+ * quantization — a 1-LSB angle difference is possible against
+ * the BIOS table. The entityData[+0x11].unk_3C bit-1 read is
+ * injected through AosWo63AECIn::parent_flag3c_bit2.
+ * ------------------------------------------------------------------ */
+
+/* The committed 20 x 8-byte records of 0x08118B4C. Byte layout
+ * per record: u16 f0 @+0 (the +0x24 base angle), u8 f2 @+2
+ * (+0x28), u8 f3 @+3 (+0x29 = f3 >> 1), u16 f4 @+4 (+0x26 =
+ * f4 << 1); bytes +5..+7 are copied but never read. */
+typedef struct {
+    uint16_t f0;
+    uint8_t  f2;
+    uint8_t  f3;
+    uint16_t f4;
+} AosWo63AECRec;
+
+#define AOS_WO63AEC_MAX 20        /* sl loop bound 0x13 inclusive */
+#define AOS_WO63AEC_POOL 64       /* host pool bound — the native
+                                 * bound is the 0xE0-slot entity
+                                 * table; 64 covers repeated
+                                 * bursts without modelling it */
+
+/* One sub_08063AEC particle (the sub_08063944 entity). +0x42/
+ * +0x46 are the high words of field_40/field_44 — kept as the
+ * derived aliases they are (field_40 >> 16), matching the
+ * sub_08068AD4/sub_0803AC40/sub_0806E43C reads. */
+typedef struct {
+    uint8_t  field_a;    /* +0xA phase: 0 anchor/integrate,
+                          * 1 delay, >=2 homing */
+    uint8_t  field_d;    /* +0xD counter */
+    uint8_t  field_11;   /* +0x11 parent slot byte (caller +0x10) */
+    uint8_t  field_17;   /* +0x17 record index 0..19 */
+    int16_t  field_20;   /* +0x20 spawn X arg (u16 on the wire) */
+    int16_t  field_22;   /* +0x22 spawn Y arg */
+    uint16_t field_24;   /* +0x24 angle; += 0x20 per phase-0 call */
+    uint16_t field_26;   /* +0x26 = rec f4 << 1 (affine scale) */
+    uint8_t  field_28;   /* +0x28 = rec f2 (X offset gain) */
+    uint8_t  field_29;   /* +0x29 = rec f3 >> 1 (Y offset gain) */
+    int16_t  field_2a;   /* +0x2A odd-+0xD counter (s16) */
+    uint32_t field_38;   /* +0x38 = 0 (sub_0803E058 arg0) */
+    int32_t  field_40;   /* +0x40 16.16 pos X (+0x42 = hi word) */
+    int32_t  field_44;   /* +0x44 16.16 pos Y (+0x46 = hi word) */
+    int32_t  field_48;   /* +0x48 velocity X */
+    int32_t  field_4c;   /* +0x4C velocity Y */
+    int32_t  field_1c;   /* +0x1C affine/alpha — 0x40000 at spawn,
+                          * -0x1000 per homing call while nonzero */
+    uint8_t  field_58;   /* +0x58 = (sub_0803E654 ret & 0x1F) */
+    uint8_t  field_59;   /* +0x59: bit3 = delete (0x10 set at
+                          * the sub_08062B60(1) prologue) */
+    uint8_t  field_5c;   /* +0x5C = 0x11 */
+    uint8_t  field_65;   /* +0x65 = RNG % 3 + 0xA still frame */
+} AosWo63AEC;
+
+typedef struct {
+    uint32_t rng;           /* gEwramData+8 LCG state */
+    uint32_t alloc_fail;    /* bit i: record i's sub_08062B60(1)
+                             * returned NULL — the record is
+                             * skipped before any RNG draw */
+    uint8_t  flags58_init;  /* sub_0803E654(entity,1) result &
+                             * 0x1F written to +0x58 (bit5
+                             * cleared) — same value applied to
+                             * every record of the burst */
+} AosWo63AECIn;
+
+typedef struct {
+    uint32_t rng;           /* gEwramData+8 after this call */
+    uint8_t  spawned;       /* records that survived alloc */
+} AosWo63AECBurstOut;
+
+/* sub_08063AEC(caller, x, y): appends up to AOS_WO63AEC_MAX
+ * particles to pool[count..], bounded by cap. `parent` is the
+ * caller entity's +0x10 byte (stored at particle +0x11). */
+void aos_wo_burst_63aec(AosWo63AEC *pool, uint8_t *count,
+                        uint8_t cap, int16_t x, int16_t y,
+                        uint8_t parent, const AosWo63AECIn *in,
+                        AosWo63AECBurstOut *out);
+
+/* Injected reads for the sub_08063944 update. */
+typedef struct {
+    bool parent_flag3c_bit2;/* entityData[+0x11].unk_3C bit 1 —
+                             * the phase-0 -> phase-1 switch.
+                             * The host cannot index the native
+                             * entity table; the Object20 apply
+                             * path feeds its own +0x3C bit 1
+                             * (documented interpretation: the
+                             * +0x10 byte indexes the caller). */
+} AosWo63AECUpdateIn;
+
+typedef struct {
+    bool affine_3e058;      /* sub_0803E058 ran (every call) */
+    bool e6bc_call;         /* sub_0803E6BC(entity, +0x58 & 1)
+                             * on the homing-arrival delete */
+    bool done;              /* +0x59 bit3 — host deletes */
+} AosWo63AECUpdateOut;
+
+/* sub_08063944: one particle update. */
+void aos_wo_63aec_update(AosWo63AEC *p,
+                         const AosWo63AECUpdateIn *in,
+                         AosWo63AECUpdateOut *out);
 
 #endif /* AOS_OBJECT20_WHITEOUT_RENDER_H */

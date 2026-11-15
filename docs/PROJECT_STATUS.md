@@ -1,3 +1,71 @@
+## Patch 1149 - whiteout spark draw wired, sub_08063AEC burst ported, purge scans decoded
+
+- **Spark/particle draw wired.** `aria_draw.c` gains
+  `draw_object20_wo_particle` (one still-frame draw shared by
+  every whiteout particle family) and
+  `draw_object20_wo_particles`, invoked from
+  `draw_object20_entity` for the story family only. It renders
+  `wo_sparks` (sub_08063024/sub_08065858) and the new `wo_63aec`
+  pool through `objects->wo_burst_particle` — the
+  `whiteout_burst_particle` export over graphics 0x08260390 /
+  frames 0x08267EE4 — indexing `frames[0][+0x65]` with the same
+  bounds guard as the burst-particle pass and positioning at the
+  16.16 accumulators' high words (`+0x42/+0x46` aliases),
+  screen-space like the bars. `+0x65` values 0xA-0xC resolve to
+  native record indices; only still frames 0xB/0xC are exported,
+  so a 0xA pick draws nothing — documented gap, matching the
+  export's coverage.
+- **sub_08063AEC / sub_08063944 ported.** The `+0x24 == 0x9E`
+  whiteout burst is decoded from `code_08060B98.s`: the spawn
+  copies 0xA0 bytes from `0x08118B4C` and fills up to 20 records
+  through `sub_08062B60(1)`, two `RandomNumberGenerator` draws per
+  record (`+0x24` offset pick, then the `+0x65` frame pick over
+  `{0xA,0xB,0xC}`). `aos_wo_burst_63aec` reproduces the loop with
+  `alloc_fail` marking records that do not fit the remaining
+  `AOS_WO63AEC_POOL` (the native entity-pool analogue) and
+  `flags58_init` carrying the uninjected `+0x58` low-5 bits;
+  `aos_wo_63aec_update` ports `sub_08063944`'s phase 0
+  (anchor + integrate), phase 1 (delay countdown, damped
+  velocity) and phase 2 (sine/atan2 homing toward the `+0x20`/
+  `+0x22` target with the `+0x1C` ramp), reporting the
+  `sub_0803E058` affine write and `sub_0803E6BC` cleanup as Out
+  flags (no host channel for either). `AosObject20StoryOut`
+  forwards `wo_burst_63aec`/`wo_burst_x`/`wo_burst_y`/
+  `wo_burst_parent`, `AosObject20Story` owns the
+  `wo_63aec[AOS_WO63AEC_POOL]` pool, and `object20_apply_out`
+  spawns/advances/compacts it on the shared `object20_wo_rng`
+  channel with `parent_flag3c_bit2` injected from the story
+  entity's `+0x3C`.
+- **`+0x40 = pos << 16` aliasing fixed.** The burst-particle and
+  spark spawn paths now write the 16.16 position pair's low word
+  from the spawn offset and the high word (`+0x42/+0x46`
+  aliases) from the screen position, instead of leaving
+  `field_40/44` at zero — spark draws previously would have
+  anchored at the screen origin.
+- **Purge scans decoded, reported, not consumed.** Both
+  `sub_08064518` state-4/5 purges are now explicit in the
+  renderer: `sub_08000EA8(0x80)` (delete-all-flagged-0x80) sets
+  `wo_purge_547`, and the second scan walks the entity table
+  deleting records with `+0x63 == 1` through `sub_0803E6BC` +
+  `EntityDelete`, reported as `wo_purge_flagged`. They reach
+  `AosObject20StoryOut`/the apply diagnostic but no host entity
+  carries the native `+0x63` flag, so no deletion is applied —
+  documented, not silently approximated.
+- **Display/DMA/fade/palette status.** Fades keep their existing
+  Out-event reporting with the host consumer that already
+  exists; `BgAffineSet` scanline records remain approximated as
+  solid strips (no host affine pipeline); palette-cycle banks
+  5-9 of `0x08119FDC` stay unexported so bank 0 draws; native
+  DMA/display-register writes remain reported-only.
+- Tests: `test_aos_object20_whiteout_render` covers the 63AEC
+  spawn decode (record fields, RNG draw count/positions,
+  alloc_fail and cap bounds) and the `sub_08063944` phase
+  machine (anchor rewrite, damped integrate, homing ramp,
+  target-arrival delete). `ctest -R 'object20|whiteout|draw'`:
+  5/5 pass.
+- Registries synced (`annotations.tsv` `aos.events.opening_scene`,
+  `features.tsv` `story.aria_opening_event`).
+
 ## Patch 1148 - opening actors run the real animation tick chain; Arikado walk consumer proven absent
 
 - **GAP 1 — real per-frame animation ticks.** The opening actors
@@ -192,8 +260,8 @@
   spawn-child pool, carrier/burst pool and now the spark pool all
   run; still unforwarded are the `sub_08063AEC` burst, the two
   purge scans, and the display/DMA/fade/palette effects. Spark
-  draw records are not yet wired into `aria_draw.c` (outside this
-  change's scope) — sparks simulate natively but draw nothing.
+  draw records were not yet wired into `aria_draw.c` at this
+  patch — superseded by Patch 1149.
 - Registries synced (`features.tsv` opening_scene note).
 
 ## Patch 1144 - save-screen tiles, ambient audio channel, pause overlay fix, opening homing

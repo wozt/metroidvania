@@ -174,6 +174,14 @@ typedef struct {
      * cinematic's other host state (gc.debris precedent). */
     AosWoSpark wo_sparks[AOS_WO_MAX_EVENTS];
     uint8_t wo_spark_count;
+    /* Host pool for the renderer's sub_08063AEC burst
+     * (update sub_08063944): each frame's wo_burst_63aec Out
+     * event appends up to AOS_WO63AEC_MAX particles through
+     * aos_wo_burst_63aec, bounded by AOS_WO63AEC_POOL like the
+     * native entity pool bound. param0-30 only, same single
+     * cinematic as wo_sparks. */
+    AosWo63AEC wo_63aec[AOS_WO63AEC_POOL];
+    uint8_t wo_63aec_count;
     bool deleted;       /* EntityDelete requested */
 } AosObject20Story;
 
@@ -365,6 +373,9 @@ typedef struct {
     bool wo_purge_flagged;  /* the +0x63/+0x58 flagged scan */
     bool wo_burst_63aec;    /* sub_08063AEC particle burst */
     int16_t wo_burst_x, wo_burst_y;
+    uint8_t wo_burst_parent;/* caller entity +0x10 -> particle
+                             * +0x11 (the entityData index the
+                             * sub_08063944 phase-0 check reads) */
     uint8_t wo_spawn_count; /* EntityCreateInRange/scripted spawn
                              * requests this call (kinds/args in
                              * the renderer module — the ROM spawn

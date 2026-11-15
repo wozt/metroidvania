@@ -269,4 +269,28 @@ int aos_scroll_transaction(AosScroll *s, uint8_t gate_byte, int param0,
                            int32_t vx, int32_t vy,
                            const AosScrollWorld *world, AosScrollOut *out);
 
+/* One source/destination rectangle of a wrapped text-BG blit: the
+ * layer bitmap is sampled at (src_x, src_y) for w*h pixels and
+ * drawn at (dst_x, dst_y) inside the view. Host draw-path helper,
+ * not a native routine: it reproduces the wrap math the runtime's
+ * composite background draw already used for BG1 so per-layer
+ * draws of BG2/BG3 can share it. */
+typedef struct {
+    int src_x, src_y;   /* source pixel origin in the layer bitmap */
+    int dst_x, dst_y;   /* destination offset inside the view */
+    int w, h;
+} AosScrollBlit;
+
+/* Wraps the integer bgOfs-style offset (h_ofs, v_ofs) against the
+ * layer bitmap size (map_w x map_h pixels) and the view size
+ * (view_w x view_h pixels), returning up to 4 blit rectangles:
+ * a window crossing the map's right/bottom edge continues at
+ * source 0 like the native tilemap wrap. map_w/map_h <= 0 disables
+ * wrapping (one full-view blit sampled at the raw offset). The
+ * returned count is the number of entries written to `out` (cap 4). */
+size_t aos_scroll_bgofs_blits(int32_t h_ofs, int32_t v_ofs,
+                              int map_w, int map_h,
+                              int view_w, int view_h,
+                              AosScrollBlit out[4]);
+
 #endif /* AOS_SCROLL_H */

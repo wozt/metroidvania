@@ -581,6 +581,94 @@ int main(void) {
     assert(s.disp_h[2] == 0x21);
     assert(out.requests == 0);
 
+    /* ---- aos_scroll_bgofs_blits: the layered draw path's wrap ----
+     * A 512x256 layer (2x1 screens) under a 240x160 view. */
+    {
+        AosScrollBlit blits[4];
+        /* No wrap: one full-view blit at the offset. */
+        assert(aos_scroll_bgofs_blits(100, 50, 512, 256, 240, 160,
+                                      blits) == 1);
+        assert(blits[0].src_x == 100 && blits[0].src_y == 50);
+        assert(blits[0].dst_x == 0 && blits[0].dst_y == 0);
+        assert(blits[0].w == 240 && blits[0].h == 160);
+        /* Right-edge wrap: 400 + 240 crosses 512; the second segment
+         * resumes at source 0 and fills the remaining 128 px. */
+        assert(aos_scroll_bgofs_blits(400, 50, 512, 256, 240, 160,
+                                      blits) == 2);
+        assert(blits[0].src_x == 400 && blits[0].w == 112);
+        assert(blits[1].src_x == 0 && blits[1].w == 128);
+        assert(blits[1].dst_x == 112);
+        /* Bottom-edge wrap on a 256-tall layer. */
+        assert(aos_scroll_bgofs_blits(10, 200, 512, 256, 240, 160,
+                                      blits) == 2);
+        assert(blits[0].src_y == 200 && blits[0].h == 56);
+        assert(blits[1].src_y == 0 && blits[1].h == 104);
+        assert(blits[1].dst_y == 56);
+        /* Both axes wrap: a 256x256 layer at (200,200) needs all
+         * four segments. */
+        assert(aos_scroll_bgofs_blits(200, 200, 256, 256, 240, 160,
+                                      blits) == 4);
+        assert(blits[0].src_x == 200 && blits[0].src_y == 200);
+        assert(blits[0].w == 56 && blits[0].h == 56);
+        assert(blits[1].src_x == 0 && blits[1].src_y == 200);
+        assert(blits[1].w == 184 && blits[1].h == 56);
+        assert(blits[1].dst_x == 56);
+        assert(blits[2].src_x == 200 && blits[2].src_y == 0);
+        assert(blits[2].w == 56 && blits[2].h == 104);
+        assert(blits[2].dst_y == 56);
+        assert(blits[3].src_x == 0 && blits[3].src_y == 0);
+        assert(blits[3].w == 184 && blits[3].h == 104);
+        assert(blits[3].dst_x == 56 && blits[3].dst_y == 56);
+        /* Negative offsets wrap into range like the native
+         * tilemap's unsigned scroll position: -10 -> 502 and
+         * -20 -> 236, both past the wrap edge for this view so
+         * all four segments come back with the wrapped origins. */
+        assert(aos_scroll_bgofs_blits(-10, -20, 512, 256, 240, 160,
+                                      blits) == 4);
+        assert(blits[0].src_x == 502 && blits[0].src_y == 236);
+        /* Degenerate map size: one unwrapped full-view blit at the
+         * raw offset (same as the composite path's !wrap_ok arm). */
+        assert(aos_scroll_bgofs_blits(-5, 7, 0, 0, 240, 160,
+                                      blits) == 1);
+        assert(blits[0].src_x == -5 && blits[0].src_y == 7);
+        assert(blits[0].w == 240 && blits[0].h == 160);
+    }
+
+    /* ---- display-side feed (draw_room_backgrounds' per-frame
+     * chain): request(1, frame delta) then apply propagates BG1's
+     * velocity into BG2/BG3's bgOfs shadows — the offsets the
+     * layered draw samples. Mode 2 halves x, mode 1 is 1:1. */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 2, 2, 0, 0, 0, 0x40 << 16, 0x40 << 16);
+    aos_scroll_bind(&s, 2, 2, 2, 2, 0, 0, 0x10 << 16, 0x10 << 16);
+    aos_scroll_bind(&s, 3, 2, 2, 1, 0, 0, 0x20 << 16, 0x20 << 16);
+    memset(&out, 0, sizeof out);
+    aos_scroll_apply(&s, NULL, &out);   /* room-load tail */
+    assert(s.disp_h[2] == 0x10 && s.disp_h[3] == 0x20);
+    /* BG1 moves +4 px this frame; BG2 (mode 2) gains +2, BG3
+     * (mode 1) gains +4 in their own bgOfs shadows. */
+    aos_scroll_request(&s, 1, 4 << 16, 0, NULL);
+    memset(&out, 0, sizeof out);
+    aos_scroll_apply(&s, NULL, &out);
+    assert(s.disp_h[2] == 0x12);
+    assert(s.disp_h[3] == 0x24);
+    /* A zero-delta frame leaves every layer's offset alone. */
+    aos_scroll_request(&s, 1, 0, 0, NULL);
+    memset(&out, 0, sizeof out);
+    aos_scroll_apply(&s, NULL, &out);
+    assert(s.disp_h[2] == 0x12 && s.disp_h[3] == 0x24);
+    /* Mode 21's else-branch (unk_33C[3] bit 0x02000000 clear, the
+     * unmodelled world flags stay 0) is the unconditional
+     * dispCnt &= ~DCNT_BG2 write; the fx bit is what the draw
+     * path folds into the BG2 enable flag. */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 2, 2, 0, 0, 0, 0, 0);
+    aos_scroll_bind(&s, 2, 2, 2, 21, 0, 0, 0, 0);
+    aos_scroll_bind(&s, 3, 2, 2, 0, 0, 0, 0, 0);
+    memset(&out, 0, sizeof out);
+    aos_scroll_apply(&s, NULL, &out);
+    assert(out.fx & AOS_SCROLL_FX_BG2_DISABLE);
+
     puts("aos_scroll: ok");
     return 0;
 }

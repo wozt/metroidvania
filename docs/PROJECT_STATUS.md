@@ -1,3 +1,64 @@
+## Patch 1155 - layered BG1-BG3 draw from the bound ROM
+
+- **Gap.** BG2/BG3 scroll state was already faithful — modes,
+  `bgOfs` shadows, `DCNT_BG2` clears and the `unk_4C8` phase all
+  populated at room load and per frame — but nothing drew them:
+  the exporter composites every decoded layer into one
+  static-origin `background.bmp` consumed as BG1, so parallax and
+  the per-layer offsets had no consumer. A metadata scan of all
+  343 exported room descriptors found 482 nonzero-mode BG2/BG3
+  layer records (modes 0-36), so this was not a handful of
+  water/fog rooms.
+- **Change.** `src/runtime/aria_draw.c` gains the layered draw:
+  `aria_bg_layers_bind` takes the already-open room-dialogue ROM
+  (opened eagerly in `aria_runtime.c` when `--rom` is given, next
+  to `aria_scroll_tilemap_bind`), `aria_bg_room_ensure` decodes
+  the room's three background tile arrays through the same
+  `fusion_aos_read_background_tiles` + `fusion_aos_render_background`
+  pipeline the exporter composites — no export-format change was
+  needed — and keeps one SDL texture per decoded layer.
+  `draw_room_backgrounds` feeds each rendered frame's BG1 motion
+  (camera delta plus the `aria_scroll_bg1_offset` transaction
+  delta) through `aos_scroll_request(1)` + `aos_scroll_apply` on a
+  display-side `AosScroll` that mirrors `object20_scroll_ensure`'s
+  bind — the entity transaction state in `aria_entities.c` only
+  binds on the first `sub_0800ED24` call and stays dormant for
+  rooms without Object20 scrolls, so it could not be reused — then
+  blits each layer at its own `bgOfs` shadow, back-to-front in the
+  exporter's descending `field_0` order with the DISPCNT enable
+  bits and the mode-19/21 `DCNT_BG2` clear honoured. The wrap math
+  is factored into `aos_scroll_bgofs_blits` (`aos_scroll.c/.h`),
+  the same modulo-and-continue-at-zero segmentation the composite
+  BG1 draw used, generalized to per-layer offsets.
+- **Fallback.** With no bound ROM, a failed decode, or zero
+  decoded layers `draw_room_backgrounds` returns false and the
+  caller draws the composite `background.bmp` exactly as before —
+  single-layer rooms are pixel-identical either way (verified by
+  capture: `--capture` with and without `--rom` on room 0/0, the
+  layered frame is plausible and non-black; multi-layer rooms now
+  differ by design because BG2/BG3 move at their own offsets
+  instead of being flattened into the map).
+- **Honest limits.** Affine tile arrays still do not decode
+  (`FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE`) so those layers simply
+  do not draw, exactly like the composite. The hblank/affine/
+  scanline modes update the layer's base `bgOfs` but their
+  per-scanline wave / `BgAffineSet` transform stays unported —
+  those layers draw flat at the faithful offset, never an invented
+  one. OBJ-vs-BG priority is not modelled: all BGs still draw
+  before every sprite, the same order the flattened composite had.
+  The display-side scroll duplicates `object20_scroll_ensure`'s
+  bind intentionally (documented in `aria_draw.c`); the
+  `unk_60.unk_33C[3]`/`unk_4CC_0` world flags stay 0 as before.
+- **Test.** `tests/test_aos_scroll.c` gains `aos_scroll_bgofs_blits`
+  cases (single/double-axis wrap, negative offsets, degenerate map)
+  and a display-feed scenario proving BG2 (mode 2, half scroll)
+  and BG3 (mode 1) `bgOfs` shadows move by the propagated amounts
+  per frame. `ctest -R aos_scroll` passes; a real-ROM
+  `--capture 90` smoke run exercised the layered path end-to-end.
+- **Registries.** `aos.core.scroll` in `annotations.tsv` and
+  `assets.aria_rooms` in `features.tsv` updated; status stays
+  `partial` — no emulator comparison yet.
+
 ## Patch 1154 - Headless `--simulate` room transitions
 
 - **Gap.** The `--simulate` loop in `fusion_aria_runtime` ran the

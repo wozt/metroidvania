@@ -374,8 +374,11 @@ static bool room_dialogue_resolve(void *context, uint16_t id,
         if (room_dialogue_rom.data) {
             char error[160];
             /* Borrowed ROM handle for the scroll tile-row rebuild's
-             * sub_08001994 lookups (aria_entities tilemap fetch). */
+             * sub_08001994 lookups (aria_entities tilemap fetch)
+             * and the layered BG draw's room background decode
+             * (aria_draw.c). */
             aria_scroll_tilemap_bind(&room_dialogue_rom);
+            aria_bg_layers_bind(&room_dialogue_rom);
             room_dialogue_ready =
                 aos_intro_resources_init(&room_dialogue_resources,
                                          &room_dialogue_rom, error,
@@ -934,6 +937,24 @@ int aria_runtime_main(int argc, char **argv) {
      * for the lazy open inside room_dialogue_resolve so both the
      * SDL and --simulate paths can bind it. */
     room_dialogue_rom_path = rom_path;
+    /* The layered BG draw (aria_draw.c) and the scroll tile-row
+     * rebuild's tile words decode room background records straight
+     * from the ROM like the room dialogue does; open it eagerly
+     * when a path was given instead of waiting for the first
+     * dialogue poll. The lazy open inside room_dialogue_resolve
+     * then sees the already-open handle (tried is set, rom.data
+     * drives the resource init as before). */
+    if (rom_path && !room_dialogue_rom_tried) {
+        char error[160];
+        room_dialogue_rom_tried = true;
+        (void)fusion_rom_open(FUSION_ASSET_GAME_ARIA, rom_path,
+                              &room_dialogue_rom, error,
+                              sizeof error);
+        if (room_dialogue_rom.data) {
+            aria_scroll_tilemap_bind(&room_dialogue_rom);
+            aria_bg_layers_bind(&room_dialogue_rom);
+        }
+    }
 
     if (simulate_frames > 0) {
         /* Headless gameplay tick: the same data loads as the SDL runtime
@@ -2891,14 +2912,22 @@ int aria_runtime_main(int argc, char **argv) {
             : (int)bg_raw_y;
         const bool bg_x_wrap = bg_wrap_ok && bg_sx + VIEW_W > bg_map_w;
         const bool bg_y_wrap = bg_wrap_ok && bg_sy + VIEW_H > bg_map_h;
+        uint8_t bg_mod;
         {
             /* The BG fade of sub_0800C8C8, relative to the OBJ veil. */
             float bg = announced_death && death.obj.weight > 0
                            ? (float)death.bg.weight / (float)death.obj.weight : 1.0f;
-            uint8_t mod = (uint8_t)((bg > 1.0f ? 1.0f : bg) * 255.0f);
-            SDL_SetTextureColorMod(background, mod, mod, mod);
-            if (hud_texture) SDL_SetTextureColorMod(hud_texture, mod, mod, mod);
+            bg_mod = (uint8_t)((bg > 1.0f ? 1.0f : bg) * 255.0f);
+            SDL_SetTextureColorMod(background, bg_mod, bg_mod, bg_mod);
+            if (hud_texture) SDL_SetTextureColorMod(hud_texture, bg_mod, bg_mod, bg_mod);
         }
+        /* Layered BG draw: with a bound ROM the room's decoded
+         * BG1..BG3 bitmaps draw at their own bgOfs (BG2/BG3
+         * parallax included); without one — or when the decode
+         * produced no layers — the static composite below keeps
+         * the previous single-texture path. */
+        if (!draw_room_backgrounds(renderer, &room, cam_x, cam_y,
+                                   bg1_ox, bg1_oy, bg_mod))
         for (int seg_y = 0; seg_y < (bg_y_wrap ? 2 : 1); ++seg_y) {
             const int src_y = seg_y ? 0 : bg_sy;
             const int seg_h = seg_y ? bg_sy + VIEW_H - bg_map_h

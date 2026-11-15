@@ -21,6 +21,7 @@
 
 #include "aos/core/aos_soma.h"
 #include "aos/intro/aos_levelup.h"
+#include "fusion/assets/rom.h"
 
 /* The skill-art record of AriaObjects.skills (enemies/variants share the
  * same anonymous layout; blade_frame only ever reads static_ids/statics). */
@@ -74,6 +75,21 @@ void draw_levelup(SDL_Renderer *renderer, const AriaObjects *objects,
 /* sub_0804301C's damage popup glyphs. */
 void draw_damage_popup(SDL_Renderer *renderer, const AriaObjects *objects,
                        const AosDamagePopup *popup, int cam_x, int cam_y);
+
+/* BG1-BG3 layered draw (aria_draw.c): binds the ROM the room
+ * background layers decode from, and draws the room's decoded
+ * BG bitmaps back-to-front at their own bgOfs when available.
+ * Returns false when the layered path is unavailable (no ROM
+ * bound, decode failure, zero decoded layers) so the caller can
+ * fall back to the composite background.bmp. This is the one
+ * stateful exception to this header's pure-drawing rule: the
+ * per-room layer textures and display-side scroll state are
+ * cached here keyed on (area, room). */
+void aria_bg_layers_bind(const FusionRom *rom);
+bool draw_room_backgrounds(SDL_Renderer *renderer, const AriaRoom *room,
+                           int cam_x, int cam_y,
+                           int32_t bg1_ox, int32_t bg1_oy,
+                           uint8_t fade_mod);
 
 /* Shared still-frame lookup, defined in aria_runtime.c: the soul/skill
  * draw paths there and blade_frame here both resolve exported static

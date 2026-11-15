@@ -551,3 +551,41 @@ int aos_scroll_transaction(AosScroll *s, uint8_t gate_byte, int param0,
     aos_scroll_apply(s, world, out);
     return 1;
 }
+
+size_t aos_scroll_bgofs_blits(int32_t h_ofs, int32_t v_ofs,
+                              int map_w, int map_h,
+                              int view_w, int view_h,
+                              AosScrollBlit out[4]) {
+    /* Host draw-path wrap, not a native routine: the same
+     * modulo-and-continue-at-zero segmentation the composite
+     * background draw used for BG1, generalized so BG2/BG3 layer
+     * bitmaps can be drawn at their own bgOfs. */
+    if (map_w <= 0 || map_h <= 0) {
+        out[0].src_x = (int)h_ofs; out[0].src_y = (int)v_ofs;
+        out[0].dst_x = 0; out[0].dst_y = 0;
+        out[0].w = view_w; out[0].h = view_h;
+        return 1;
+    }
+    int sx = (int)(((int64_t)h_ofs % map_w + map_w) % map_w);
+    int sy = (int)(((int64_t)v_ofs % map_h + map_h) % map_h);
+    bool x_wrap = sx + view_w > map_w;
+    bool y_wrap = sy + view_h > map_h;
+    size_t n = 0;
+    for (int seg_y = 0; seg_y < (y_wrap ? 2 : 1); seg_y++) {
+        int src_y = seg_y ? 0 : sy;
+        int seg_h = seg_y ? sy + view_h - map_h
+                          : (y_wrap ? map_h - sy : view_h);
+        int dst_y = seg_y ? view_h - seg_h : 0;
+        for (int seg_x = 0; seg_x < (x_wrap ? 2 : 1); seg_x++) {
+            int src_x = seg_x ? 0 : sx;
+            int seg_w = seg_x ? sx + view_w - map_w
+                              : (x_wrap ? map_w - sx : view_w);
+            int dst_x = seg_x ? view_w - seg_w : 0;
+            out[n].src_x = src_x; out[n].src_y = src_y;
+            out[n].dst_x = dst_x; out[n].dst_y = dst_y;
+            out[n].w = seg_w; out[n].h = seg_h;
+            n++;
+        }
+    }
+    return n;
+}

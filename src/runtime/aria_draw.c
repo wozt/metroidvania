@@ -9,8 +9,12 @@
 #include "aria_tables.h"
 
 #include "aos/core/aos_collision.h"
+#include "aos/core/aos_scroll.h"
 #include "aos/math/aos_math.h"
+#include "fusion/assets/aos.h"
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* The sprite art of a pickup, or -1 (items). */
@@ -1198,4 +1202,347 @@ void draw_damage_popup(SDL_Renderer *renderer, const AriaObjects *objects,
         }
         x += 5;
     }
+}
+
+/* ================= BG1-BG3 layered draw =================
+ * The composite background.bmp flattens every decoded BG layer at
+ * its static origin, so BG2/BG3 parallax (and the scanline /
+ * hblank / affine modes sub_0800D288 reports through
+ * AosScrollOut::fx) had no draw consumer even though the scroll
+ * state kept the faithful bgOfs shadows. When a ROM is bound
+ * (aria_bg_layers_bind — the runtime opens it for the room
+ * dialogue and scroll tilemap) this path decodes the room's three
+ * background tile arrays straight from the ROM — the same
+ * fusion_aos_read_background_tiles + fusion_aos_render_background
+ * pipeline the exporter composites — and keeps one SDL texture
+ * per decoded layer. Each frame the layer is drawn at its own
+ * gDisplayRegisters.bgOfs shadow, fed by a display-side
+ * AosScroll that mirrors object20_scroll_ensure's room bind and
+ * runs the same sub_0803FBBC request + sub_0800D288 apply chain
+ * the native per-frame camera update runs, so parallax modes
+ * track BG1 exactly like the hardware.
+ *
+ * Honest limits, matching the scroll port's documented gaps:
+ *  - affine tile arrays (FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE)
+ *    produce no texture; the layer simply does not draw, exactly
+ *    like the composite which also skips it.
+ *  - scanline/hblank/affine fx modes update the layer's base
+ *    bgOfs but their per-scanline wave / BgAffineSet transform is
+ *    still unported — the layer draws flat at its faithful offset
+ *    (a documented approximation, never an invented offset).
+ *  - sprite-vs-BG priority uses the native layer order the
+ *    exporter already sorts by (background record field_0,
+ *    descending = back to front); OBJ-vs-BG priority is not
+ *    modelled — all BGs still draw before every sprite, the same
+ *    order the flattened composite had.
+ * Without a bound ROM, a failed decode, or zero decoded layers
+ * draw_room_backgrounds returns false and the caller falls back
+ * to the static composite — single-layer rooms are pixel-
+ * identical either way. */
+
+typedef struct {
+    SDL_Texture *texture;   /* NULL: layer absent or undecoded */
+    int width, height;      /* layer bitmap size in pixels */
+    uint8_t rank;           /* background record field_0: the
+                               native draw-order key
+                               (fusion_aos_composite_backgrounds
+                               sorts by it) */
+    bool enabled;           /* DISPCNT BG-enable bit at load */
+} AriaBgLayerDraw;
+
+typedef struct {
+    int area, number;
+    bool ready;             /* >=1 layer decoded for this room */
+    AriaBgLayerDraw layer[3];   /* [0]=BG1 [1]=BG2 [2]=BG3 */
+    /* Display-side scroll state: mirrors object20_scroll_ensure's
+     * bind (aria_entities.c) but is fed the per-frame camera delta
+     * every rendered frame — the entity transaction state there
+     * only binds on the first sub_0800ED24 call and stays dormant
+     * for rooms without Object20 scrolls. */
+    AosScroll scroll;
+    bool scroll_bound;
+    int32_t prev_bg1_x, prev_bg1_y; /* last drawn BG1 offset (px) */
+    uint32_t phase;         /* unk_60.unk_4C8 stand-in, +1/frame */
+    bool bg2_disabled;      /* mode 19/21 dispCnt &= ~DCNT_BG2 */
+} AriaBgRoomLayers;
+
+static const FusionRom *aria_bg_rom;
+static FusionAosAreaDirectory aria_bg_areas;
+static bool aria_bg_areas_tried, aria_bg_areas_ok;
+/* area/number start at -1 so the empty cache can never alias a
+ * real room (0/0 is a valid room). */
+static AriaBgRoomLayers aria_bg_room = { .area = -1, .number = -1 };
+
+static void aria_bg_room_clear(void) {
+    for (int i = 0; i < FUSION_AOS_BACKGROUND_COUNT; ++i) {
+        if (aria_bg_room.layer[i].texture)
+            SDL_DestroyTexture(aria_bg_room.layer[i].texture);
+        aria_bg_room.layer[i].texture = NULL;
+        aria_bg_room.layer[i].width = aria_bg_room.layer[i].height = 0;
+        aria_bg_room.layer[i].rank = 0;
+        aria_bg_room.layer[i].enabled = false;
+    }
+    memset(&aria_bg_room.scroll, 0, sizeof aria_bg_room.scroll);
+    aria_bg_room.area = aria_bg_room.number = -1;
+    aria_bg_room.ready = false;
+    aria_bg_room.scroll_bound = false;
+    aria_bg_room.prev_bg1_x = aria_bg_room.prev_bg1_y = 0;
+    aria_bg_room.phase = 0;
+    aria_bg_room.bg2_disabled = false;
+}
+
+/* Bind the ROM the layered draw decodes room backgrounds from.
+ * `rom` is borrowed — it must outlive the runtime (the
+ * room-dialogue ROM handle qualifies). NULL unbinds: the draw
+ * path then always falls back to the composite. */
+void aria_bg_layers_bind(const FusionRom *rom) {
+    if (aria_bg_rom == rom) return;
+    aria_bg_rom = rom;
+    aria_bg_areas_tried = aria_bg_areas_ok = false;
+    aria_bg_room_clear();
+}
+
+/* Decode the room's three background layers once per room and
+ * bind the display-side scroll state. Returns false (caller falls
+ * back to background.bmp) when no ROM is bound, the records fail
+ * to read, or no layer decoded. */
+static bool aria_bg_room_ensure(SDL_Renderer *renderer,
+                                const AriaRoom *room,
+                                int cam_x, int cam_y) {
+    if (aria_bg_room.area == room->area &&
+        aria_bg_room.number == room->number)
+        return aria_bg_room.ready;
+    aria_bg_room_clear();
+    aria_bg_room.area = room->area;
+    aria_bg_room.number = room->number;
+    if (!renderer || !aria_bg_rom) return false;
+    if (!aria_bg_areas_tried) {
+        aria_bg_areas_tried = true;
+        char error[160];
+        aria_bg_areas_ok =
+            fusion_aos_read_area_directory(aria_bg_rom, &aria_bg_areas,
+                                           error, sizeof error);
+    }
+    if (!aria_bg_areas_ok || room->area < 0 ||
+        room->area >= FUSION_AOS_AREA_COUNT || room->number < 0 ||
+        (size_t)room->number >=
+            aria_bg_areas.areas[room->area].room_count)
+        return false;
+    char error[160];
+    FusionAosRoomDescriptor descriptor;
+    FusionAosBackgroundList backgrounds;
+    if (!fusion_aos_read_room_descriptor(
+            aria_bg_rom, &aria_bg_areas, (size_t)room->area,
+            (size_t)room->number, &descriptor, error, sizeof error) ||
+        !fusion_aos_read_room_backgrounds(
+            aria_bg_rom, &descriptor, &backgrounds, error, sizeof error))
+        return false;
+    FusionAosVideoMemory *memory = malloc(sizeof *memory);
+    if (!memory) return false;
+    bool mem_ok = fusion_aos_load_video_memory(
+        aria_bg_rom, &descriptor, memory, error, sizeof error);
+    if (!mem_ok) {
+        free(memory);
+        return false;
+    }
+    for (int i = 0; i < FUSION_AOS_BACKGROUND_COUNT; ++i) {
+        AriaBgLayerDraw *layer = &aria_bg_room.layer[i];
+        const FusionAosBackground *rec = &backgrounds.entries[i];
+        layer->rank = rec->field_0;
+        /* DISPCNT bits 9..11 enable BG1..BG3 (DCNT_BG2 = 0x0400);
+         * display_control is sub_0800F9EC's gUnk_03002CB0.dispCnt
+         * seed. */
+        layer->enabled =
+            (descriptor.display_control >> (9 + i)) & 1;
+        FusionAosBackgroundTilemap tilemap;
+        memset(&tilemap, 0, sizeof tilemap);
+        if (!fusion_aos_read_background_tiles(aria_bg_rom, rec,
+                                              &tilemap, error,
+                                              sizeof error))
+            continue;
+        if (tilemap.status == FUSION_AOS_TILEMAP_DECODED) {
+            FusionAosRenderedBackground rendered;
+            memset(&rendered, 0, sizeof rendered);
+            if (fusion_aos_render_background(rec, &tilemap, memory,
+                                             &rendered, error,
+                                             sizeof error)) {
+                SDL_Texture *tex = SDL_CreateTexture(
+                    renderer, SDL_PIXELFORMAT_RGBA32,
+                    SDL_TEXTUREACCESS_STATIC,
+                    (int)rendered.width_pixels,
+                    (int)rendered.height_pixels);
+                if (tex) {
+                    SDL_UpdateTexture(
+                        tex, NULL, rendered.rgba,
+                        (int)(rendered.width_pixels * 4));
+                    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+                    SDL_SetTextureScaleMode(tex,
+                                            SDL_SCALEMODE_NEAREST);
+                    layer->texture = tex;
+                    layer->width = (int)rendered.width_pixels;
+                    layer->height = (int)rendered.height_pixels;
+                    aria_bg_room.ready = true;
+                }
+                fusion_aos_free_rendered_background(&rendered);
+            }
+        }
+        fusion_aos_free_background_tilemap(&tilemap);
+    }
+    free(memory);
+    if (!aria_bg_room.ready) return false;
+
+    /* Display-side scroll bind, mirroring object20_scroll_ensure
+     * (aria_entities.c): BG1 keeps the room screen counts as its
+     * pBgMetadata->unk_0/unk_1 gates and the camera position; BG2/
+     * BG3 bind their full records with the sub_0800ED5C/sub_0800EE54
+     * initial positions (the incoming scroll approximated by the
+     * camera, y minus 0x30). The room-load tail — sub_0800F9EC's
+     * dispCnt store plus the first sub_0800D288 with BG1 velocity
+     * still 0 — runs once through aos_scroll_apply so the
+     * meta<=1 pins, the mode 8/9/10 direct bgOfs writes and the
+     * mode 19/21 DCNT_BG2 clear land exactly like the native load. */
+    memset(&aria_bg_room.scroll, 0, sizeof aria_bg_room.scroll);
+    const FusionAosBackground *bg1 = &backgrounds.entries[0];
+    aos_scroll_bind(&aria_bg_room.scroll, 1,
+                    (uint8_t)room->width_screens,
+                    (uint8_t)room->height_screens,
+                    bg1->field_1, bg1->field_4, bg1->field_6,
+                    (int32_t)cam_x << 16, (int32_t)cam_y << 16);
+    for (int bg = 2; bg < 4; ++bg) {
+        const FusionAosBackground *rec = &backgrounds.entries[bg - 1];
+        uint8_t mode = rec->field_1;
+        uint16_t range_x = rec->field_4;
+        uint16_t range_y = rec->field_6;
+        uint8_t meta_0 = rec->has_dimensions ? rec->width_screens : 0;
+        uint8_t meta_1 = rec->has_dimensions ? rec->height_screens : 0;
+        uint16_t origin_x = aos_scroll_origin_x(
+            mode, meta_0, range_x, aria_bg_room.scroll.bg[1].unk_14,
+            (uint16_t)cam_x);
+        uint16_t origin_y = aos_scroll_origin_y(
+            mode, meta_1, range_y, aria_bg_room.scroll.bg[1].unk_16,
+            (uint16_t)(cam_y - 0x30));
+        aos_scroll_bind(&aria_bg_room.scroll, bg, meta_0, meta_1,
+                        mode, range_x, range_y,
+                        (int32_t)origin_x << 16,
+                        (int32_t)origin_y << 16);
+    }
+    {
+        AosScrollOut load_out;
+        memset(&load_out, 0, sizeof load_out);
+        aos_scroll_apply(&aria_bg_room.scroll, NULL, &load_out);
+        if (load_out.fx & AOS_SCROLL_FX_BG2_DISABLE)
+            aria_bg_room.bg2_disabled = true;
+    }
+    aria_bg_room.prev_bg1_x = cam_x;
+    aria_bg_room.prev_bg1_y = cam_y;
+    aria_bg_room.scroll_bound = true;
+    if (getenv("ARIA_BG_DEBUG"))
+        fprintf(stderr, "aria_bg: room %d/%d layers=%d,%d,%d disp2=(%u,%u) disp3=(%u,%u)\n",
+                room->area, room->number,
+                aria_bg_room.layer[0].texture != NULL,
+                aria_bg_room.layer[1].texture != NULL,
+                aria_bg_room.layer[2].texture != NULL,
+                aria_bg_room.scroll.disp_h[2], aria_bg_room.scroll.disp_v[2],
+                aria_bg_room.scroll.disp_h[3], aria_bg_room.scroll.disp_v[3]);
+    return true;
+}
+
+/* Draw the room's decoded BG layers back-to-front at their own
+ * bgOfs offsets. Returns false when the layered path is
+ * unavailable — the caller then draws the composite
+ * background.bmp exactly as before. `bg1_ox`/`bg1_oy` is the
+ * accumulated sub_0800ED24 transaction delta
+ * (aria_scroll_bg1_offset); `fade_mod` is the sub_0800C8C8 BG
+ * fade the composite path already applies. */
+bool draw_room_backgrounds(SDL_Renderer *renderer, const AriaRoom *room,
+                           int cam_x, int cam_y,
+                           int32_t bg1_ox, int32_t bg1_oy,
+                           uint8_t fade_mod) {
+    if (!aria_bg_room_ensure(renderer, room, cam_x, cam_y))
+        return false;
+    /* Feed this frame's BG1 motion — the camera delta plus the
+     * transaction delta — through the same request/apply chain the
+     * native per-frame camera update runs, so the BG2/BG3 parallax
+     * modes (request-scaled, interpolated, direct-write) track
+     * BG1 exactly. unk_60.unk_4C8 ticks once per rendered frame
+     * like aria_scroll_frame_phase. */
+    const int32_t bx = (int32_t)cam_x + bg1_ox;
+    const int32_t by = (int32_t)cam_y + bg1_oy;
+    const int32_t dx = bx - aria_bg_room.prev_bg1_x;
+    const int32_t dy = by - aria_bg_room.prev_bg1_y;
+    aria_bg_room.prev_bg1_x = bx;
+    aria_bg_room.prev_bg1_y = by;
+    ++aria_bg_room.phase;
+    AosScrollWorld world = { 0, false, aria_bg_room.phase, NULL, 0 };
+    AosScrollOut out;
+    memset(&out, 0, sizeof out);
+    aos_scroll_request(&aria_bg_room.scroll, 1,
+                       (int32_t)((int64_t)dx << 16),
+                       (int32_t)((int64_t)dy << 16), NULL);
+    /* Resync BG1's own record onto the drawn position: the request
+     * integrated last frame's pos and the draw offset is the
+     * authoritative bgOfs[1] anyway. */
+    aria_bg_room.scroll.bg[1].x_pos = (int32_t)((int64_t)bx << 16);
+    aria_bg_room.scroll.bg[1].y_pos = (int32_t)((int64_t)by << 16);
+    aria_bg_room.scroll.disp_h[1] = (uint16_t)bx;
+    aria_bg_room.scroll.disp_v[1] = (uint16_t)by;
+    aos_scroll_apply(&aria_bg_room.scroll, &world, &out);
+    if (out.fx & AOS_SCROLL_FX_BG2_DISABLE)
+        aria_bg_room.bg2_disabled = true;
+
+    /* Back-to-front order: the same descending field_0 sort
+     * fusion_aos_composite_backgrounds applies (stable — equal
+     * ranks keep BG order), restricted to layers that decoded,
+     * are DISPCNT-enabled and were not killed by the DCNT_BG2
+     * clear. */
+    int order[FUSION_AOS_BACKGROUND_COUNT] = { 0, 1, 2 };
+    for (int i = 0; i < FUSION_AOS_BACKGROUND_COUNT; ++i) {
+        int pos = i;
+        while (pos > 0 &&
+               aria_bg_room.layer[order[pos - 1]].rank <
+                   aria_bg_room.layer[order[pos]].rank) {
+            int swap = order[pos - 1];
+            order[pos - 1] = order[pos];
+            order[pos] = swap;
+            --pos;
+        }
+    }
+    for (int s = 0; s < FUSION_AOS_BACKGROUND_COUNT; ++s) {
+        int bg = order[s] + 1;   /* BG number: entries[0] is BG1 */
+        AriaBgLayerDraw *layer = &aria_bg_room.layer[order[s]];
+        if (!layer->texture || !layer->enabled ||
+            (bg == 2 && aria_bg_room.bg2_disabled))
+            continue;
+        /* bgOfs shadow: BG1 is the drawn camera+delta position;
+         * BG2/BG3 are the scroll state's faithful integer offsets
+         * (absolute positions in each layer's own map space). */
+        int32_t h_ofs, v_ofs;
+        if (bg == 1) {
+            h_ofs = bx; v_ofs = by;
+        } else {
+            h_ofs = aria_bg_room.scroll.disp_h[bg];
+            v_ofs = aria_bg_room.scroll.disp_v[bg];
+        }
+        AosScrollBlit blits[4];
+        size_t count = aos_scroll_bgofs_blits(
+            h_ofs, v_ofs, layer->width, layer->height,
+            VIEW_W, VIEW_H, blits);
+        SDL_SetTextureColorMod(layer->texture, fade_mod, fade_mod,
+                               fade_mod);
+        for (size_t b = 0; b < count; ++b) {
+            SDL_FRect src = {(float)blits[b].src_x,
+                             (float)blits[b].src_y,
+                             (float)blits[b].w,
+                             (float)blits[b].h};
+            SDL_FRect dst = {(float)blits[b].dst_x,
+                             (float)blits[b].dst_y,
+                             (float)blits[b].w,
+                             (float)blits[b].h};
+            SDL_RenderTexture(renderer, layer->texture, &src, &dst);
+        }
+    }
+    /* ready is true here (ensure returned it): even a frame where
+     * every layer is disabled is a faithful "all BGs off" result,
+     * not a reason to resurrect the flattened composite. */
+    return true;
 }

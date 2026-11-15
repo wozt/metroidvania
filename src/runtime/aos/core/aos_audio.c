@@ -45,6 +45,30 @@ bool aos_audio_hold(uint16_t song) {
     return listed;
 }
 
+bool aos_audio_hold_if_new(uint16_t song) {
+    /* sub_08013DA8: the first scan only detects an already-listed song;
+     * the second re-scans for a match (impossible after the first scan)
+     * and then a free slot before playing. A full list still plays. */
+    bool listed = false;
+    for (int slot = 3; slot >= 0; --slot) {
+        if (g_held[slot] == song) {
+            listed = true;
+            break;
+        }
+    }
+    if (!listed) {
+        for (int slot = 3; slot >= 0; --slot) {
+            if (g_held[slot] == song) break;
+            if (g_held[slot] == 0) {
+                g_held[slot] = song;
+                break;
+            }
+        }
+        aos_audio_play_song(song);
+    }
+    return listed;
+}
+
 bool aos_audio_release(uint16_t song) {
     bool listed = false;
     for (int slot = 3; slot >= 0; --slot) {
@@ -68,6 +92,33 @@ void aos_audio_release_held(void) {
         if (song) aos_audio_release(song);
     }
 }
+
+void aos_audio_resume_held(void) {
+    /* sub_08013E74: AUDIO_RESUME first, then each held song replayed
+     * raw, index 3 down to 0. */
+    aos_audio_play_song(AOS_AUDIO_RESUME);
+    for (int slot = 3; slot >= 0; --slot) {
+        if (g_held[slot]) aos_audio_play_song(g_held[slot]);
+    }
+}
+
+void aos_audio_pause_held(void) {
+    /* sub_08013EAC: AUDIO_PAUSE first, then each held song stopped,
+     * index 3 down to 0. */
+    aos_audio_play_song(AOS_AUDIO_PAUSE);
+    for (int slot = 3; slot >= 0; --slot) {
+        if (g_held[slot])
+            aos_audio_play_song((uint16_t)(g_held[slot] | AOS_STOP_SONG_FLAG));
+    }
+}
+
+/* gEwramData +0x254CE special-song slot (sub_08013960 writes, the
+ * Chronomage release and sub_080235C8 read). */
+static uint16_t g_special_song;
+
+uint16_t aos_audio_special(void) { return g_special_song; }
+
+void aos_audio_special_store(uint16_t song) { g_special_song = song; }
 
 /* gEwramData +0x254CC ambient-song slot (sub_08013EEC/sub_08013F38). */
 static uint16_t g_ambient_song;
@@ -189,6 +240,7 @@ void aos_audio_reset(void) {
     memset(&g_state, 0, sizeof g_state);
     memset(g_held, 0, sizeof g_held);
     g_ambient_song = 0;
+    g_special_song = 0;
     g_state.current_song = -1;
     g_state.sound_mode = AOS_DEFAULT_SOUND_MODE;
     g_song_count = 0;

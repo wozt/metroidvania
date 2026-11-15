@@ -190,6 +190,9 @@ void aos_opening_actors_init(AosOpeningActors *actors) {
         .y = {AOS_OPENING_MINA_Y << 16, AOS_OPENING_ARIKADO_Y << 16,
               AOS_OPENING_SKELETON_Y << 16},
         .animation = {4, 1, 4},
+        /* sub_0805D198's sub_0803F2C8 arg3: record 0 anim 4 non-loop,
+         * record 1 anim 1 loop, record 8 anim 4 loop. */
+        .anim_loop = {0, 1, 1},
         .visible = {true, true, true},
         .timer = 0x40,
         .active = true,
@@ -219,20 +222,30 @@ void aos_opening_actors_set_motion(AosOpeningActors *actors,
     actors->motion_context = context;
 }
 
+/* sub_0803F2C8's loop argument is +0x6C bit 3: a looping sequence
+ * wraps instead of latching +0x59 bit 0. */
 static void actor_animation(AosOpeningActors *actors, unsigned actor,
-                            uint8_t animation) {
+                            uint8_t animation, bool loop) {
     actors->animation[actor] = animation;
     actors->animation_age[actor] = 0;
+    actors->anim_loop[actor] = loop ? 1 : 0;
 }
 
 /* The child entities' +0x59 bit 0 is their animation-finished flag,
  * which sub_0805D410's +0xB==4 and +0xB==5 sub-states 3/5 poll. The
  * portable model approximates it with the exported per-animation
  * duration; a missing duration table cannot measure the wait and is
- * treated as already satisfied rather than stranding the beat. */
+ * treated as already satisfied rather than stranding the beat. A
+ * looping sequence can never raise the flag, matching +0x6C bit 3.
+ * The native flag is latched by the sub_0803F17C -> sub_0803EE24 ->
+ * sub_0803F224 tick chain off +0x6D/+0x6E/+0x6F per-frame records;
+ * reproducing it needs the flattened {frame,ticks} table the Object1C
+ * port already models, which the host's opening_actor_durations does
+ * not yet export — a runtime hook outside this module's scope. */
 static bool actor_animation_done(const AosOpeningActors *actors,
                                  const uint16_t durations[AOS_OPENING_ACTOR_COUNT],
                                  unsigned actor) {
+    if (actors->anim_loop[actor]) return false;
     uint16_t duration = durations ? durations[actor] : 0;
     return !duration || actors->animation_age[actor] >= duration;
 }
@@ -796,7 +809,7 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
     case AOS_OPENING_CUE_ENTRY_PAN:
         /* +0xB==1 sub-state 0: child14 animation 1, the +0x427 window
          * flag, the suspend raise and entity+0x38=1's mode-1 pan. */
-        if (actors->animation[0] != 1) actor_animation(actors, 0, 1);
+        if (actors->animation[0] != 1) actor_animation(actors, 0, 1, false);
         actors->camera_mode = 1;
         actors->camera_active = true;
         actors->camera_initialized = false;
@@ -831,7 +844,7 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
         actors->scene_state = 5;
         actors->scene_step = 0;
         actors->scene_timer = 0x12;
-        actor_animation(actors, 2, 5);
+        actor_animation(actors, 2, 5, true);
         break;
     case AOS_OPENING_CUE_SOUL_ABSORBED:
         /* Script beat 5 lands on +0xB==6: sub_08013CF0(0x17)'s music
@@ -1033,6 +1046,14 @@ AosOpeningCue aos_opening_actors_update(
     int32_t *camera_x, int32_t camera_y) {
     if (!actors || !actors->active) return AOS_OPENING_CUE_NONE;
     actors->camera_y = camera_y;
+    /* +0x40 was baked at spawn as the room coordinate minus the camera
+     * word, so the +0xB==2 stop guard needs the camera value from that
+     * moment; the first update sees it before any pan step runs. */
+    if (!actors->scene_camera_set) {
+        actors->scene_camera_set = true;
+        actors->scene_camera_x = camera_x ? *camera_x
+                                          : (actors->camera_x >> 16);
+    }
     AosOpeningCue output = actors->pending_cue;
     actors->pending_cue = AOS_OPENING_CUE_NONE;
     /* Edge-triggered like the emitted entities' events field: the host
@@ -1070,11 +1091,16 @@ AosOpeningCue aos_opening_actors_update(
         goto scene;
     }
     /* sub_0805D198 stores 0xFFFFA000 (-0x6000, about 0.37 pixel per
-     * frame) into entity+0x48, Arikado's x velocity. The native stop
-     * condition lives in entity type 1's data-driven behavior (resource
-     * table 0x081186DC record 1), which is not decoded here; the
-     * source-position guard keeps this partial controller bounded
-     * until that condition is ported. */
+     * frame) into entity+0x48, Arikado's x velocity. The 0x081186DC
+     * table is now decoded: its 12-byte records are pure sprite
+     * resources (three words fed to sub_0803B800/sub_08068264/
+     * sub_0803B924 by sub_0805B5E8), so record 1 carries no behavior.
+     * The child's only per-frame routine is sub_0805B748 ->
+     * sub_0803F17C, and no dumped routine integrates +0x48 for it;
+     * the consumer — likely the same sub_0806D430/sub_0806D460 +
+     * caller-add pattern sub_0805DAA0 uses, or a dispatch not in this
+     * dump — remains unidentified, so the source-position guard keeps
+     * this partial controller bounded until it is found. */
     if (actors->state == 1) {
         const int32_t stop_x = 0xD0 << 16;
         if (actors->x[1] > stop_x) {
@@ -1091,7 +1117,7 @@ AosOpeningCue aos_opening_actors_update(
      * runs the same phase-sine vertical bob the emitted Winged
      * Skeletons use while polling bit 0x10 (Arikado's attack animation
      * under +0xB==4), and +0xA==2 walks him left through sub_0806E140
-     * until his screen position reaches the 0xCA threshold. */
+     * until entity +0x42 crosses 0xCA minus the camera scroll word. */
     if (actors->skeleton_state == 0 &&
         (actors->emitted_batches & AOS_OPENING_EMISSION_DISTANT)) {
         actors->skeleton_state = 1;
@@ -1101,7 +1127,7 @@ AosOpeningCue aos_opening_actors_update(
             actors->skeleton_state = 2;
             actors->skeleton_step = 1;
             actors->skeleton_timer = 0x60;
-            actor_animation(actors, 2, 5);
+            actor_animation(actors, 2, 5, true);
         } else if (actors->sine) {
             int32_t dy = actors->sine(
                 (uint16_t)(actors->skeleton_phase + 0x4000),
@@ -1116,29 +1142,46 @@ AosOpeningCue aos_opening_actors_update(
             if (actors->skeleton_timer && --actors->skeleton_timer == 0)
                 actors->skeleton_step = 2;
         } else {
-            /* +0xB==2 approach: sub_0806E140(entity, 0x30000, 0x200000,
-             * 0x14000, 1) stores +0x48=-0x30000 (facing away from the
-             * player puts the sign negative) and +0x4C=0x14000, then
-             * the callback adds both velocities. The stop test compares
-             * +0x42 against 0xCA minus the camera word; with +0x42
-             * already screen-relative that reduces to a world X of
-             * 0xCA, which is the proxy used here. Without a floor probe
-             * the entity simply falls at +0x4C per frame. */
+            /* +0xB==2,+0xC==2 approach. The stop test reads entity
+             * +0x42 (the s16 high word of +0x40, stored at spawn as
+             * 0x16F minus the camera word) and compares it against
+             * 0xCA minus the live camera word at gEwramData+0xA094+6.
+             * In world coordinates that is x <= 0xCA + cam_spawn -
+             * cam_now. The move is sub_0806E140(e, 0x30000, 0x200000,
+             * 0x14000, 1): +0x48 stores -0x30000 (facing bit +0x58&0x40
+             * clear) and +0x4C stores 0x14000, sub_080698A8's
+             * sub_0806D430/sub_0806D460 integrate each velocity once,
+             * and the callback then adds +0x48 and +0x4C a second
+             * time — the +0x44 add is skipped when the floor probe's
+             * flag bit 2 reports contact, in which case +0x44 was
+             * already snapped to the floor. The horizontal wall snaps
+             * of sub_0800207C/sub_08002058 (flag bits 1/2 of the
+             * sub_080698A8 result) are not modelled; the approach
+             * corridor is open floor. */
+            int32_t cam_now = camera_x ? *camera_x
+                                       : (actors->camera_x >> 16);
+            int32_t stop_x = 0xCA + actors->scene_camera_x - cam_now;
             if (actors->skeleton_death) {
                 /* generic_death owns the body from +0xD==0xD0 on. */
-            } else if ((actors->x[2] >> 16) > 0xCA) {
-                int32_t next_x = actors->x[2] - 0x30000;
-                int32_t next_y = actors->y[2] + 0x14000;
+            } else if ((actors->x[2] >> 16) > stop_x) {
+                int32_t next_x = actors->x[2] - 0x60000;
+                int32_t probe_y = actors->y[2] + 0x14000;
                 int depth = actors->floor_depth
                                 ? actors->floor_depth(next_x >> 16,
-                                                      next_y >> 16,
+                                                      probe_y >> 16,
                                                       actors->motion_context)
                                 : 0;
+                if (depth) {
+                    /* Floor contact: sub_080698A8's sub_08001D94 probe
+                     * added the snap and cleared +0x44's low word; the
+                     * caller's second +0x44 add is gated off. */
+                    actors->y[2] = ((probe_y >> 16) + depth) * 0x10000;
+                } else {
+                    actors->y[2] = probe_y + 0x14000;
+                }
                 actors->x[2] = next_x;
-                actors->y[2] = depth ? ((next_y >> 16) + depth) * 0x10000
-                                     : next_y;
             } else {
-                actor_animation(actors, 2, 2);
+                actor_animation(actors, 2, 2, true);
                 actors->skeleton_state = 3;
             }
         }
@@ -1182,7 +1225,7 @@ scene:
                    --actors->scene_timer == 0) {
             actors->emitted_batches |= AOS_OPENING_EMISSION_NEAR_SOMA;
             append_emission(actors, AOS_OPENING_EMISSION_NEAR_SOMA);
-            actor_animation(actors, 0, 5);
+            actor_animation(actors, 0, 5, false);
             if (output == AOS_OPENING_CUE_NONE)
                 output = AOS_OPENING_CUE_ENEMY_APPEARS;
             else
@@ -1222,7 +1265,7 @@ scene:
                 output = AOS_OPENING_CUE_ENEMY_ATTACKS;
             else
                 actors->pending_cue = AOS_OPENING_CUE_ENEMY_ATTACKS;
-            actor_animation(actors, 1, 2);
+            actor_animation(actors, 1, 2, false);
             actors->scene_step = 2;
         } else if (actors->scene_step == 2) {
             if (actor_animation_done(actors, animation_durations, 1)) {
@@ -1240,7 +1283,7 @@ scene:
             else
                 actors->pending_cue = AOS_OPENING_CUE_ENEMY_ATTACKS_AGAIN;
             if (actors->animation[1] != 3)
-                actor_animation(actors, 1, 3);
+                actor_animation(actors, 1, 3, false);
             actors->scene_step = 4;
         } else if (actors->scene_step == 4) {
             if (actor_animation_done(actors, animation_durations, 1)) {

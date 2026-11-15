@@ -1545,6 +1545,9 @@ static void whiteout_64518(AosObject20Story *s,
         memcpy(out->wo_spawns, wout.spawns,
                wout.spawn_count * sizeof(AosWoSpawn));
     out->wo_particle_count = wout.particle_count;
+    if (wout.particle_count)
+        memcpy(out->wo_particles, wout.particles,
+               wout.particle_count * sizeof(AosWoParticle));
     if (wout.song >= 0)
         out->song = wout.song;
     if (wout.fade_pair) {

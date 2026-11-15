@@ -749,6 +749,86 @@ int main(void) {
         assert(pt.field_d == 4 && pt.field_a == 0 && !pout.done);
     }
 
+    /* ---- sub_08063024 sparkle events: the state-4/5 +0x24 % 10
+     * window emits two particles per frame; each costs three RNG
+     * draws (x, y, then the +0x65 pick inside the spawn). ---- */
+    {
+        memset(&s, 0, sizeof s);
+        s.field_15 = 4;
+        s.field_16 = 1;                  /* skip the init frame */
+        s.field_24 = 0x28;               /* % 10 == 0, <= 0x4F */
+        s.field_14 = 0xff;               /* keep the state alive */
+        in = base_in();
+        uint32_t rng0 = in.rng;
+        step(&s, &in, &out);
+        assert(out.particle_count == 2);
+        /* Draw order this frame: 2 jitter draws (field_14-1 =
+         * 0xFE > 0xE5), then per particle x, y and the +0x65
+         * pick — indices 4 and 7. */
+        uint32_t r = rng0;
+        for (int d = 0; d < 8; ++d) {
+            r = lcg_next(r);
+            if (d == 4 || d == 7) {
+                static const uint8_t tab[3] = {0x0a, 0x0b, 0x0c};
+                uint8_t want = tab[r % 3];
+                assert(out.particles[d == 4 ? 0 : 1].field_65 ==
+                       want);
+            }
+        }
+        assert(in.rng == r);              /* exactly 8 draws */
+        assert(out.particles[0].dir == 0 &&
+               out.particles[1].dir == 1);
+        assert(out.particles[0].variant == 0);
+        assert(out.particles[0].field_65 >= 0x0a &&
+               out.particles[0].field_65 <= 0x0c);
+    }
+
+    /* ---- aos_wo_spark_spawn / aos_wo_spark_update:
+     * sub_08063024 spawn writes + sub_08065858's unconditional
+     * integrate-then-probe step. ---- */
+    {
+        AosWoParticle ev;
+        memset(&ev, 0, sizeof ev);
+        ev.x = 100; ev.y = -20; ev.dir = 0; ev.variant = 0;
+        ev.field_65 = 0x0b;
+        AosWoSpark sp;
+        aos_wo_spark_spawn(&sp, &ev);
+        assert(sp.scr_42 == 100 && sp.scr_46 == -20);
+        assert(sp.field_48 == 0x30000 && sp.field_4c == (int32_t)-0x8000);
+        assert(sp.field_50 == 0x800 && sp.field_54 == (int32_t)-0x100);
+        assert(sp.field_d == 0x40 && sp.field_5c == 3 &&
+               sp.field_63 == 0x80 && sp.field_65 == 0x0b);
+        assert(sp.field_40 == 0 && sp.field_44 == 0 &&
+               sp.field_59 == 0);
+        /* dir != 0 negates the whole velocity/accel quad. */
+        ev.dir = 1;
+        aos_wo_spark_spawn(&sp, &ev);
+        assert(sp.field_48 == (int32_t)-0x30000 &&
+               sp.field_4c == 0x8000 && sp.field_50 == (int32_t)-0x800 &&
+               sp.field_54 == 0x100);
+
+        AosWoSparkIn sin;
+        AosWoSparkOut sout;
+        memset(&sin, 0, sizeof sin);
+        sin.probe_inside = true;
+        /* First update: pos += OLD vel, then vel += acc. */
+        aos_wo_spark_update(&sp, &sin, &sout);
+        assert(!sout.probe_missed && !sout.done);
+        assert(sp.field_40 == (int32_t)-0x30000 &&
+               sp.field_44 == 0x8000);
+        assert(sp.field_48 == (int32_t)-0x30000 - 0x800 &&
+               sp.field_4c == 0x8000 + 0x100);
+        /* Probe miss -> +0x59 bit3 and done. */
+        sin.probe_inside = false;
+        aos_wo_spark_update(&sp, &sin, &sout);
+        assert(sout.probe_missed && sout.done);
+        assert(sp.field_59 & 8);
+        /* Once deleted the native update keeps running (there is
+         * no early-out) — bit3 stays set and done stays true. */
+        aos_wo_spark_update(&sp, &sin, &sout);
+        assert(sout.done && (sp.field_59 & 8));
+    }
+
     puts("test_aos_object20_whiteout_render: OK");
     return 0;
 }

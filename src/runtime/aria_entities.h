@@ -82,6 +82,17 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
  * for the BG1 source rect only; entities keep cam_x/cam_y. */
 void aria_scroll_bg1_offset(const AriaRoom *room, int32_t *x, int32_t *y);
 
+/* The gDisplayRegisters.bgOfs[bg] shadow for BG1..BG3: each
+ * layer's absolute integer scroll offset in pixels, maintained by
+ * the ported sub_0803FBBC write-back and the sub_0800D288
+ * direct-write modes (including the room-load propagation).
+ * BG2/BG3 currently have no draw consumer — the draw path
+ * composites every decoded layer into one static-origin
+ * background.bmp — so this only exposes the faithful state; 0,0
+ * before the room's scroll bind or for an out-of-range bg. */
+void aria_scroll_bgofs(const AriaRoom *room, int bg, int32_t *h,
+                       int32_t *v);
+
 /* Binds the ROM the ported scroll rebuild's tile words resolve
  * through (aos/core/aos_tilemap's sub_08001994 port): the room
  * tilemap loads lazily per room inside the entity scroll path and

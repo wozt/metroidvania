@@ -103,8 +103,15 @@ static void wo_spawn(AosWoRenderOut *out, uint8_t kind,
         ? wo_spawn_table_118b34[aux] : 0;
 }
 
+/* 0x081189A0 — sub_08063024's +0x65 pick table (variant 0):
+ * three u32 words {0xA, 0xB, 0xC} indexed by rng % 3, low byte
+ * stored. Verified against the ROM dump; sits 12 bytes ahead of
+ * the 0x081189AC burst-particle table. */
+static const uint8_t wo_spark_field65_1189a0[3] = {0x0a, 0x0b, 0x0c};
+
 static void wo_particle(AosWoRenderOut *out, int32_t x, int32_t y,
-                        uint8_t dir, uint8_t variant) {
+                        uint8_t dir, uint8_t variant,
+                        uint32_t *rng) {
     if (out->particle_count >= AOS_WO_MAX_EVENTS)
         return;
     AosWoParticle *p = &out->particles[out->particle_count++];
@@ -112,6 +119,12 @@ static void wo_particle(AosWoRenderOut *out, int32_t x, int32_t y,
     p->y = (int16_t)y;
     p->dir = dir;
     p->variant = variant;
+    /* sub_08063024's post-alloc RNG draw for +0x65 (the draw is
+     * skipped natively only when sub_08062B60(0) returns NULL —
+     * the renderer assumes the alloc, documented in the header). */
+    p->field_65 = variant == 0
+        ? wo_spark_field65_1189a0[wo_rng(rng) % 3]
+        : (uint8_t)((wo_rng(rng) % 7) + 2);
 }
 
 static void wo_fade(AosWoRenderOut *out, uint32_t a3,
@@ -603,49 +616,60 @@ void aos_wo_render_update(AosWoRender *s,
             if (wo_mod((int32_t)s->field_24, 0xa) == 0 &&
                 (int16_t)s->field_24 <= 0x4f) {
                 int32_t q = wo_div((int32_t)s->field_24, 10);
+                /* Native draw order per spawn is x, y, then the
+                 * +0x65 pick inside sub_08063024 — hoisted into
+                 * locals so the unspecified C argument-evaluation
+                 * order cannot reorder the x/y draws. */
+                int32_t rx = wo_rng(&rng) & 0xf;
+                int32_t ry = wo_rng(&rng) & 0xf;
                 wo_particle(out,
-                            (int16_t)(q + 0x88 - (int32_t)(wo_rng(&rng) & 0xf)),
-                            (int16_t)(0x26 - (int32_t)(wo_rng(&rng) & 0xf)),
-                            0, 0);
+                            (int16_t)(q + 0x88 - rx),
+                            (int16_t)(0x26 - ry), 0, 0, &rng);
+                rx = wo_rng(&rng) & 0x1f;
+                ry = wo_rng(&rng) & 0x1f;
                 wo_particle(out,
-                            (int16_t)(0x80 - (int32_t)(wo_rng(&rng) & 0x1f) - q),
-                            (int16_t)(0x92 - (int32_t)(wo_rng(&rng) & 0x1f)),
-                            1, 0);
+                            (int16_t)(0x80 - rx - q),
+                            (int16_t)(0x92 - ry), 1, 0, &rng);
             }
             if ((uint16_t)(s->field_24 - 0x48) <= 0x10) {
+                int32_t rx = wo_rng(&rng) & 0xf;
+                int32_t ry = wo_rng(&rng) & 0xf;
                 wo_particle(out,
-                            (int16_t)(0xb2 - (int32_t)(wo_rng(&rng) & 0xf)),
-                            (int16_t)(0x80 - (int32_t)(wo_rng(&rng) & 0xf)),
-                            1, 0);
+                            (int16_t)(0xb2 - rx),
+                            (int16_t)(0x80 - ry), 1, 0, &rng);
             }
             if (s->field_24 == 0x60) {      /* _08064DDE: fixed spawn */
                 wo_spawn(out, AOS_WO_SPAWN_SUB_6384C, 0, 0, 0);
             }
             if ((uint16_t)(s->field_24 - 0x70) <= 8) {
+                int32_t rx = wo_rng(&rng) & 0xf;
+                int32_t ry = wo_rng(&rng) & 7;
                 wo_particle(out,
-                            (int16_t)(0x9e - (int32_t)(wo_rng(&rng) & 0xf)),
-                            (int16_t)(0x70 - (int32_t)(wo_rng(&rng) & 7)),
-                            1, 0);
+                            (int16_t)(0x9e - rx),
+                            (int16_t)(0x70 - ry), 1, 0, &rng);
             }
             if ((uint16_t)(s->field_24 - 0x80) <= 0x10 &&
                 (wo_rng(&rng) & 1) == 0) {
+                int32_t rx = wo_rng(&rng) & 7;
+                int32_t ry = wo_rng(&rng) & 7;
                 wo_particle(out,
-                            (int16_t)(0x48 - (int32_t)(wo_rng(&rng) & 7)),
-                            (int16_t)(0x4e - (int32_t)(wo_rng(&rng) & 7)),
-                            0, 0);
+                            (int16_t)(0x48 - rx),
+                            (int16_t)(0x4e - ry), 0, 0, &rng);
             }
             if ((s->field_24 & 3) == 0 &&
                 (int16_t)s->field_24 > 0x70 &&
                 (int16_t)s->field_24 <= 0x97) {
                 int32_t q = wo_div((int32_t)s->field_24, 10);
+                int32_t rx = wo_rng(&rng) & 0xf;
+                int32_t ry = wo_rng(&rng) & 0xf;
                 wo_particle(out,
-                            (int16_t)(q + 0x88 - (int32_t)(wo_rng(&rng) & 0xf)),
-                            (int16_t)(0x4e - (int32_t)(wo_rng(&rng) & 0xf)),
-                            0, 0);
+                            (int16_t)(q + 0x88 - rx),
+                            (int16_t)(0x4e - ry), 0, 0, &rng);
+                rx = wo_rng(&rng) & 0xf;
+                ry = wo_rng(&rng) & 0xf;
                 wo_particle(out,
-                            (int16_t)(0x78 - (int32_t)(wo_rng(&rng) & 0xf) - q),
-                            (int16_t)(0x62 - (int32_t)(wo_rng(&rng) & 0xf)),
-                            1, 0);
+                            (int16_t)(0x78 - rx - q),
+                            (int16_t)(0x62 - ry), 1, 0, &rng);
             }
         } else {
             /* _08064F0C: the +0x24 > 0x9F tail. Even frames either
@@ -931,5 +955,68 @@ void aos_wo_particle_update(AosWoBurstParticle *p,
         }
     }
     /* +0xA >= 2: native falls straight to the epilogue. */
+    out->done = (p->field_59 & 8) != 0;
+}
+
+/* ------------------------------------------------------------------
+ * sub_08063024 / sub_08065858 — the renderer's sparkle particles
+ * (code_08060B98.s:4624-4719 spawn, :9701-9746 update).
+ *
+ * sub_08063024 runs the shared sub_08062B60(0) alloc prologue
+ * (EntityCreateInRange(0x1B, 0x48, EntityUpdateNothing) +
+ * graphics 0x08260390 + frames 0x08267EE4 anim 0xE + draw
+ * sub_0803B9D0 + +0x2C = 0xE + +0x5C = 0x11), then on success:
+ *   +0    = sub_08065858          +0x42/+0x46 = s16 x / s16 y
+ *   +0x48 = 0x30000, +0x4C = -0x8000, +0x50 = 0x800, +0x54 = -0x100
+ *          (all four negated when dir != 0)
+ *   +0xD  = 0x40                  +0x5C = 3 (over the 0x11)
+ *   +0x65 = variant ? (rng % 7) + 2 : table1189A0[rng % 3] low byte
+ *   +0x63 = 0x80
+ * +0x40/+0x44 keep the fresh-entity zero — the same documented
+ * approximation the burst particles make. The +0x65 RNG draw is
+ * consumed inside the renderer's wo_particle (the alloc is
+ * host-side; see the header note).
+ *
+ * sub_08065858 integrates +0x40/+0x44 with +0x48/+0x4C, adds
+ * +0x50/+0x54 into the velocities, then probes
+ * sub_08068AD4(entity, -0x80, -0x40, 0x1F0, 0x120) on +0x42/+0x46;
+ * a miss sets +0x59 bit 3 (the host delete mark). No +0xA delay
+ * phase, no lifetime counter — +0xD = 0x40 is written at spawn
+ * but never read by this update.
+ * ------------------------------------------------------------------ */
+void aos_wo_spark_spawn(AosWoSpark *p, const AosWoParticle *ev) {
+    memset(p, 0, sizeof *p);
+    p->scr_42 = ev->x;              /* strh +0x42 / +0x46 */
+    p->scr_46 = ev->y;
+    /* The fixed quad, negated as a unit when dir != 0. */
+    int32_t vx = 0x30000, vy = -0x8000, ax = 0x800, ay = -0x100;
+    if (ev->dir) {
+        vx = -vx; vy = -vy; ax = -ax; ay = -ay;
+    }
+    p->field_48 = vx;
+    p->field_4c = vy;
+    p->field_50 = ax;
+    p->field_54 = ay;
+    p->field_d = 0x40;
+    p->field_5c = 3;
+    p->field_65 = ev->field_65;
+    p->field_63 = 0x80;
+}
+
+void aos_wo_spark_update(AosWoSpark *p, const AosWoSparkIn *in,
+                         AosWoSparkOut *out) {
+    /* sub_08065858 (code_08060B98.s:9701-9746): integrate then
+     * probe every call — no state byte gates either half. */
+    memset(out, 0, sizeof *out);
+    p->field_40 += p->field_48;
+    p->field_44 += p->field_4c;
+    p->field_48 += p->field_50;
+    p->field_4c += p->field_54;
+    /* sub_08068AD4(entity, -0x80, -0x40, 0x1F0, 0x120): nonzero
+     * keeps the spark; zero sets +0x59 bit3. */
+    if (!in->probe_inside) {
+        p->field_59 = (uint8_t)(p->field_59 | 8);
+        out->probe_missed = true;
+    }
     out->done = (p->field_59 & 8) != 0;
 }

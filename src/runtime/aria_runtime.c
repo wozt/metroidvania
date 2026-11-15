@@ -2535,6 +2535,10 @@ int aria_runtime_main(int argc, char **argv) {
             guardian.margins = souls.margins;
             souls.cam_x = cam_x;
             souls.cam_y = cam_y;
+            /* unk_42C bit 0x40000 for the Chronomage/sub_080235C8
+             * release songs (PlaySong(0x1038) is skipped while the
+             * transition music fade latch is set). */
+            souls.music_fade = room_music.fade_requested;
             souls.layer = &layer;
             souls.effects = room.effects;
             souls.effect_count = &room.effect_count;

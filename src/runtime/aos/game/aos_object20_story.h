@@ -164,6 +164,16 @@ typedef struct {
      * ported renderer owns these; field15 above mirrors
      * wo_render.field_15 for the sub_080628AC case-3 gate. */
     AosWoRender wo_render;
+    /* Host pool for the renderer's sub_08063024 sparkle
+     * particles (update sub_08065858): each frame's
+     * out->wo_particles events instantiate one AosWoSpark,
+     * capped at AOS_WO_MAX_EVENTS like the spawn-child and
+     * burst pools. param0-30 only — the whiteout cinematic is
+     * a single global sequence (its gEwramData +4/+6 counters
+     * are session channels), so the pool lives with the
+     * cinematic's other host state (gc.debris precedent). */
+    AosWoSpark wo_sparks[AOS_WO_MAX_EVENTS];
+    uint8_t wo_spark_count;
     bool deleted;       /* EntityDelete requested */
 } AosObject20Story;
 
@@ -364,6 +374,11 @@ typedef struct {
                              * AosWoSpawnChild state for kind
                              * AOS_WO_SPAWN_TABLE_118B34 events */
     uint8_t wo_particle_count;
+    AosWoParticle wo_particles[AOS_WO_MAX_EVENTS]; /* the
+                             * sub_08063024 spawn records
+                             * themselves — the host instantiates
+                             * AosWoSpark state (update
+                             * sub_08065858) for each */
     bool fade_pair_wo;      /* sub_08064518's fade pair fired —
                              * sub_0803D18C + sub_0803CDF0 with the
                              * decoded args below */

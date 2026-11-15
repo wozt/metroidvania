@@ -63,8 +63,18 @@ bool aos_room_music_enter(AosRoomMusic *music, int area, int room,
      * slot. Both are idempotent, so re-entering a room is safe. */
     aos_audio_release_held();
     aos_audio_ambient_stop();
-    if (music->boss_mode) return aos_room_music_change(music, 0x14);
+    /* unk_42C bit 0x40000 (sub_08013F6C's latch) clears when the
+     * transition fade completes — natively sub_08067A04's done state
+     * in the room-update object (asm code_08060B98.s:2024-2030). The
+     * port models no fade timer, so the next non-transition room load
+     * stands in for that completion: the flag stays set for the whole
+     * stay inside a transition room and clears on the next enter. */
+    if (music->boss_mode) {
+        music->fade_requested = false;
+        return aos_room_music_change(music, 0x14);
+    }
     if (flags && (flags->save || flags->warp)) {
+        music->fade_requested = false;
         aos_audio_play_song(SONG_QUIET);
         return false;
     }
@@ -76,6 +86,7 @@ bool aos_room_music_enter(AosRoomMusic *music, int area, int room,
         music->current_song = 0;
         return false;
     }
+    music->fade_requested = false;
     aos_audio_play_song(SONG_LOUD);
     if (area < 0 || area >= AREA_COUNT) return false;
     /* sub_08013960: (currentCharacter == 0) || !(unk_60 & 2) picks
@@ -94,6 +105,12 @@ bool aos_room_music_enter(AosRoomMusic *music, int area, int room,
     if (!music->special_song && (music->events_37e & 4) && area == 5 &&
         (room == 6 || room == 0xE))
         song = music->special_song = 0x25;
+    /* gEwramData +0x254CE: sub_08013960 clears the word on this normal
+     * path and sets it with the special song; the save/warp/transition
+     * early-outs above return before the write, so the previous value
+     * survives — the global mirror is stored only here. The Chronomage
+     * release and sub_080235C8 resume paths replay it raw. */
+    aos_audio_special_store(music->special_song);
     /* The teardown above covers the +0x254CC ambient only when the
      * entity side registered it through aos_audio_ambient_set — the
      * ported Object20 reports still play it as a bare PlaySong, so an

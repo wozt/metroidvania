@@ -221,6 +221,52 @@ static void ambient_tests(void) {
     aos_audio_ambient_stop();
     assert(aos_audio_requested(AOS_AUDIO_STOP_SONG, 7) == 1);
 
+    /* sub_08013DA8 holds only when the sound is not already listed:
+     * an already-held sound is a no-op (the native has no return), a
+     * new one enters a free slot and plays. */
+    aos_audio_reset();
+    assert(aos_audio_set_song_table(songs, 64));
+    assert(!aos_audio_hold(0x9C));
+    aos_audio_clear();
+    assert(aos_audio_hold_if_new(0x9C));
+    assert(aos_audio_count() == 0);
+    assert(!aos_audio_hold_if_new(0x75));   /* new: plays, returns listed=0 */
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x75) == 1);
+    assert(aos_audio_held(3) == 0x9C && aos_audio_held(2) == 0x75);
+
+    /* sub_08013E74: AUDIO_RESUME then each held song replayed raw,
+     * unk_254C4 index 3 down to 0. */
+    aos_audio_clear();
+    aos_audio_resume_held();
+    assert(aos_audio_requested(AOS_AUDIO_COMMAND, AOS_AUDIO_RESUME) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x9C) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x75) == 1);
+    int resume_9c = -1, resume_75 = -1;
+    for (int i = 0; i < aos_audio_count(); ++i) {
+        AosAudioRequest req = aos_audio_get(i);
+        if (req.action == AOS_AUDIO_START_SONG && req.value == 0x9C)
+            resume_9c = i;
+        if (req.action == AOS_AUDIO_START_SONG && req.value == 0x75)
+            resume_75 = i;
+    }
+    assert(resume_9c >= 0 && resume_75 > resume_9c);   /* slot 3 first */
+
+    /* sub_08013EAC: AUDIO_PAUSE then each held song stopped, index 3
+     * down to 0; the held list itself is untouched. */
+    aos_audio_clear();
+    aos_audio_pause_held();
+    assert(aos_audio_requested(AOS_AUDIO_COMMAND, AOS_AUDIO_PAUSE) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_STOP_SONG, 0x9C) == 1);
+    assert(aos_audio_requested(AOS_AUDIO_STOP_SONG, 0x75) == 1);
+    assert(aos_audio_held(3) == 0x9C && aos_audio_held(2) == 0x75);
+
+    /* gEwramData +0x254CE: raw store mirrors sub_08013960's write. */
+    aos_audio_clear();
+    aos_audio_special_store(0x2A);
+    assert(aos_audio_special() == 0x2A && aos_audio_count() == 0);
+    aos_audio_reset();
+    assert(aos_audio_special() == 0);
+
     /* sub_08013D30 releases every held sound, index 3 down to 0. */
     aos_audio_reset();
     assert(aos_audio_set_song_table(songs, 64));

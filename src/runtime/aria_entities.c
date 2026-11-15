@@ -169,9 +169,12 @@ extern const char *object1c_save_path;
 extern AosRoomDialogue room_dialogue;
 
 /* gEwramData +4/+6 whiteout counters for the Object20 param0-30
- * sub_080628AC sequence (sub_08064518's renderer output, +0x15,
- * stays -1: the renderer is unported so the sequence parks at its
- * documented whiteout case — no room record uses param0 30). */
+ * sub_080628AC sequence. The sub_08064518 renderer is ported
+ * (aos_object20_whiteout_render): its +0x15 sub-state byte feeds
+ * the case-3 gate through s->field15, and its bar records, spawn
+ * children, carrier/burst pool and spark pool are consumed in
+ * object20_apply_out below; no room record uses param0 30, so
+ * the sequence stays dormant in shipped content. */
 static uint16_t object20_ewram_unk4;
 static uint16_t object20_ewram_unk6;
 /* gEwramData +0x60 u32 (EwramData_unk60.unk_60): the persistent
@@ -217,9 +220,28 @@ static uint8_t object20_ewram_427;
  * (unk_18/unk_14/unk_16 plus the pBgMetadata dimension bytes)
  * bind per room from the room descriptor's background table
  * when a ROM is bound (aria_scroll_layers_refresh); without one
- * they stay mode 0. Still unmodelled and reported through
- * AosScrollOut: the unk_60.unk_33C[3]/unk_4CC_0 flag word, and the native
- * display effects (hblank/affine/scanline layer FX). The +0x59
+ * they stay mode 0. The room-load half of the native chain is
+ * reproduced at bind time: sub_0800F9EC's
+ * gUnk_03002CB0.dispCnt = descriptor->unk_0 seeds
+ * object20_disp_cnt from the descriptor's display_control, and
+ * sub_0800ECA0's tail sub_0800D288 runs once through
+ * aos_scroll_apply with BG1's still-zero velocity (the native
+ * call propagates nothing but still applies each layer's mode:
+ * the meta<=1 axis pins, the mode-8/9/10 direct bgOfs writes and
+ * the mode-19/21 DCNT_BG2 clears). Still unmodelled: the
+ * unk_60.unk_33C[3]/unk_4CC_0 flag word (the world passes 0),
+ * and unk_60.unk_4C8 — the hblank/affine wave phase
+ * sub_0800C8C8/sub_0800CA40 increment once per in-game frame and
+ * the room transition clears; the port ticks it once per
+ * rendered frame through aria_scroll_bg1_offset instead
+ * (aria_scroll_frame_phase), an equivalent cadence while a room
+ * is on screen. The display effects themselves (hblank buffer +
+ * REG writes, BgAffineSet on BG2) stay unported: the draw path
+ * composites every decoded layer into one static-origin
+ * background.bmp, so no per-layer scroll offset, scanline wave
+ * or affine transform has a consumer — bg[2]/bg[3] and
+ * disp_h/disp_v[2..3] keep the faithful native state for a
+ * future layered draw path. The +0x59
  * bit-1 scroll-compensation flag now has its ported writer
  * (sub_0800F1FC's unconditional spawn-time set, mirrored in
  * entity_data_sync, plus sub_0801487C's player record), and
@@ -270,6 +292,22 @@ static int aria_scroll_tiles_tried_area = -1,
 static FusionAosBackgroundList aria_scroll_backgrounds;
 static int aria_scroll_bg_tried_area = -1, aria_scroll_bg_tried_room = -1;
 static bool aria_scroll_bg_ok;
+/* The room descriptor's display_control (EwramData_unk88.unk_0 —
+ * sub_0800F9EC's gUnk_03002CB0.dispCnt load) captured by
+ * aria_scroll_layers_refresh so object20_scroll_ensure can reseed
+ * object20_disp_cnt at the scroll bind, the port's room-load
+ * point. Only valid while aria_scroll_bg_ok; without a bound ROM
+ * the shadow keeps its previous value. */
+static uint16_t aria_scroll_bg_display_control;
+static bool aria_scroll_bg_has_display_control;
+/* unk_60.unk_4C8 stand-in: the hblank/affine wave phase the
+ * native increments once per in-game frame (sub_0800C8C8 /
+ * sub_0800CA40) and clears on the room transition. The port has
+ * no per-frame engine tick inside the scroll state, so
+ * aria_scroll_bg1_offset — called once per rendered room frame —
+ * advances it; object20_scroll_tx feeds it to AosScrollWorld.
+ * Reset at each scroll bind (the native clear). */
+static uint32_t aria_scroll_frame_phase;
 /* gEwramData +0x414 byte: the Object20Update prologue's cleared-game
  * transform (word16&8 / word60&2 / !(+0x42C&0x10000)) rewrites it to
  * (b & ~0x10) | 5, and the param0-4/5/6 create paths and the
@@ -294,6 +332,25 @@ static uint8_t object20_ewram_414;
  * write_417 reports land between them in native store order.
  * Session-scoped like the +0x414 channel. */
 static uint8_t object20_ewram_417;
+/* gEwramData +0x410 word, +0x418/+0x419 halfword and +0x41A byte:
+ * the remaining sub_08067934 window-open gEwramData stores —
+ * +0x410 = 0 (str r5), +0x418 word = 0 (strh r5, covering both
+ * bytes) and +0x41A = 0 (strb r6), alongside the already
+ * modelled +0x417 = 0 and +0x416 = 1 (asm/code_08060B98.s
+ * _08067934). No ported consumer exists: the only writer of
+ * these offsets in the dumped Object20 code is sub_08067934
+ * itself and no reader appears in code_08050A3C.s /
+ * code_08060B98.s — the consumers live in the undumped
+ * window-manager/display code (the func_0800BEC0 family). The
+ * channels preserve the write history like the +0x414/+0x417
+ * pair; they feed no In field. The sibling +0x40C store (the
+ * sub_08041434-resolved pointer into the 0x08506B38 language
+ * text table) stays unchannelled — it is a ROM address the
+ * host's dialogue bridge resolves itself, so no faithful host
+ * value exists. Session-scoped. */
+static uint32_t object20_ewram_410;
+static uint16_t object20_ewram_418;
+static uint8_t object20_ewram_41a;
 /* Set when the last forwarded sub_08067A04 poll was suppressed
  * by the +0x417/+0x414 gate: the native call returned 0 that
  * frame, so in->text_done reports not-done until a poll
@@ -988,6 +1045,7 @@ static void aria_scroll_layers_refresh(const AriaRoom *room) {
     aria_scroll_bg_tried_area = room->area;
     aria_scroll_bg_tried_room = room->number;
     aria_scroll_bg_ok = false;
+    aria_scroll_bg_has_display_control = false;
     if (!aria_scroll_rom || !aria_scroll_directory_ready() ||
         room->area < 0 || room->area >= FUSION_AOS_AREA_COUNT ||
         room->number < 0 ||
@@ -1003,6 +1061,14 @@ static void aria_scroll_layers_refresh(const AriaRoom *room) {
         fusion_aos_read_room_backgrounds(
             aria_scroll_rom, &descriptor, &aria_scroll_backgrounds,
             error, sizeof error);
+    /* sub_0800F9EC stores arg0->unk_0 (the descriptor's first u16,
+     * display_control) into gUnk_03002CB0.dispCnt at every room
+     * load; keep it for the bind-time reseed in
+     * object20_scroll_ensure. */
+    if (aria_scroll_bg_ok) {
+        aria_scroll_bg_display_control = descriptor.display_control;
+        aria_scroll_bg_has_display_control = true;
+    }
 }
 
 /* Bind the ROM the scroll rebuild's tile words resolve through
@@ -1020,6 +1086,7 @@ void aria_scroll_tilemap_bind(const FusionRom *rom) {
     aria_scroll_tiles_tried_area = aria_scroll_tiles_tried_room = -1;
     aria_scroll_bg_tried_area = aria_scroll_bg_tried_room = -1;
     aria_scroll_bg_ok = false;
+    aria_scroll_bg_has_display_control = false;
 }
 
 /* Bind the ported scroll layers for this room on first use — the
@@ -1076,6 +1143,28 @@ static void object20_scroll_ensure(AriaRoom *room, int cam_x,
                         range_x, range_y, (int32_t)origin_x << 16,
                         (int32_t)origin_y << 16);
     }
+    /* The room-load tail of the native chain, reproduced at the
+     * port's bind point (sub_0800ECA0 -> sub_0800F9EC ->
+     * sub_0800D288): F9EC stores the room descriptor's unk_0 into
+     * gUnk_03002CB0.dispCnt, then D288 propagates BG1's velocity —
+     * still 0 right after the binds — into BG2/BG3. The apply runs
+     * every layer mode once: the meta<=1 axis pins overwrite the
+     * ED5C/EE54 origins exactly like the native load, the mode
+     * 8/9/10 direct bgOfs writes land, and the mode-19/21
+     * DCNT_BG2 clears reach object20_disp_cnt through the fx bit.
+     * The hblank/affine/scanline cases only set fx bits (their
+     * buffers and BgAffineSet stay unported) and unk_4C8 reads 0
+     * here — the world flags are unmodelled, documented above. */
+    if (aria_scroll_bg_has_display_control)
+        object20_disp_cnt = aria_scroll_bg_display_control;
+    {
+        AosScrollOut load_out;
+        memset(&load_out, 0, sizeof load_out);
+        aos_scroll_apply(&aria_scroll, NULL, &load_out);
+        if (load_out.fx & AOS_SCROLL_FX_BG2_DISABLE)
+            object20_disp_cnt &= ~0x0400u;   /* ~DCNT_BG2 */
+    }
+    aria_scroll_frame_phase = 0;
     aria_scroll_room_area = room->area;
     aria_scroll_room_number = room->number;
     aria_scroll_seed_x = cam_x;
@@ -1131,11 +1220,21 @@ static void object20_scroll_tx(AriaRoom *room, int cam_x, int cam_y,
      * (previously the refs targeted pos40/pos44 directly and the
      * next per-frame sync overwrote the shift). */
     object20_scroll_entities_refresh();
-    AosScrollWorld sw = { 0, false, 0,
+    /* unk_60.unk_4C8: the wave phase the hblank/affine cases read;
+     * aria_scroll_frame_phase ticks once per rendered frame (the
+     * native increments it once per in-game update and clears it
+     * on the room transition — the bind reset above). The
+     * unk_33C[3]/unk_4CC_0 flag word stays 0 (unmodelled). */
+    AosScrollWorld sw = { 0, false, aria_scroll_frame_phase,
                           aria_scroll_entities, ARIA_ENTITY_DATA_RECORDS };
     AosScrollOut sx;
     int ran = aos_scroll_transaction(&aria_scroll, object20_ewram_427,
                                      param0, arg1, 0, &sw, &sx);
+    /* sub_0800D288's mode-19/21 else-branch writes
+     * gUnk_03002CB0.dispCnt &= ~DCNT_BG2 (0x0400) — the same mask
+     * the Object20 window routines apply to object20_disp_cnt. */
+    if (sx.fx & AOS_SCROLL_FX_BG2_DISABLE)
+        object20_disp_cnt &= ~0x0400u;
     const AosBgLayer *b1 = &aria_scroll.bg[1];
     printf("Object20 %d: %s ED24(%d, 0x%X)%s BG1 pos=(%d,%d) "
            "vel=(%d,%d) entities_shifted=%zu%s\n", id, tag, param0,
@@ -1165,11 +1264,35 @@ static void object20_scroll_tx(AriaRoom *room, int cam_x, int cam_y,
  * room's stale state. */
 void aria_scroll_bg1_offset(const AriaRoom *room, int32_t *x, int32_t *y) {
     *x = *y = 0;
+    /* Once-per-rendered-frame tick for the unk_60.unk_4C8 wave
+     * phase (the draw path calls this exactly once per room
+     * frame; native sub_0800C8C8/sub_0800CA40 increment the same
+     * counter once per in-game update). */
+    ++aria_scroll_frame_phase;
     if (!room || aria_scroll_room_area != room->area ||
         aria_scroll_room_number != room->number)
         return;
     *x = (aria_scroll.bg[1].x_pos >> 16) - aria_scroll_seed_x;
     *y = (aria_scroll.bg[1].y_pos >> 16) - aria_scroll_seed_y;
+}
+
+/* The gDisplayRegisters.bgOfs[bg] shadow sub_0803FBBC and the
+ * sub_0800D288 direct-write modes maintain: the layer's absolute
+ * integer scroll offset in pixels (BG1 included — unlike
+ * aria_scroll_bg1_offset this is NOT the camera delta; native
+ * bgOfs[1] holds the same absolute position). BG2/BG3 have no
+ * draw consumer yet — the runtime composites every decoded layer
+ * into one static-origin background.bmp — but the state is the
+ * faithful native value a layered draw path would sample. */
+void aria_scroll_bgofs(const AriaRoom *room, int bg, int32_t *h,
+                       int32_t *v) {
+    *h = *v = 0;
+    if (!room || bg < 1 || bg > 3 ||
+        aria_scroll_room_area != room->area ||
+        aria_scroll_room_number != room->number)
+        return;
+    *h = aria_scroll.disp_h[bg];
+    *v = aria_scroll.disp_v[bg];
 }
 
 /* Forward one update's Out effects. The window triple goes through
@@ -1260,6 +1383,9 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     bool wrote_417 = false;
     if (req.window_text >= 0) {
         object20_ewram_417 = 0;      /* sub_08067934's +0x417 clear */
+        object20_ewram_410 = 0;      /* +0x410 word clear */
+        object20_ewram_418 = 0;      /* +0x418/+0x419 word clear */
+        object20_ewram_41a = 0;      /* +0x41A byte clear */
         object20_dialogue_gate = false;
         /* The rest of sub_08067934's gEwramData setup stores: the
          * +0x414 bit-4 clear, +0x416 = 1 (owned by
@@ -1268,8 +1394,10 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
          * gUnk_03002CB0 &= 0xFEFF display-control mask and the
          * +0x42C |= 0x21 (talk-active/display bits) — all land
          * before the family's own reports below, matching the
-         * native call order. +0x418/+0x41A are also cleared but
-         * have no channel yet. */
+         * native call order. +0x410/+0x418/+0x419/+0x41A are
+         * cleared above onto their session channels (no ported
+         * consumer yet); the +0x40C text-pointer store stays
+         * unchannelled — see the channel comment. */
         object20_ewram_414 &= (uint8_t)~0x10u;
         object20_disp_cnt &= 0xFEFFu;
         aria_pickup_state.global_flags |= 0x21u;
@@ -1467,11 +1595,14 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         out->story.wo_particle_count || out->story.wo_purge_547 ||
         out->story.wo_burst_63aec)
         printf("Object20 %d: whiteout render bars=%u spawns=%u "
-               "particles=%u purge=%d/%d burst=%d (%d,%d) "
-               "(bars->draw pass; spawn children run, "
-               "carrier/burst callees unforwarded)\n",
+               "particles=%u sparks=%u purge=%d/%d burst=%d (%d,%d) "
+               "(bars->draw pass; spawn children, carrier/burst "
+               "and spark pools run; purge scans, the 63AEC burst "
+               "and display/DMA/fade effects unforwarded)\n",
                e->id, out->story.wo_bars_drawn,
                out->story.wo_spawn_count, out->story.wo_particle_count,
+               e->object20.family == AOS_OBJECT20_FAMILY_STORY
+                   ? e->object20.v.story.wo_spark_count : 0,
                out->story.wo_purge_547, out->story.wo_purge_flagged,
                out->story.wo_burst_63aec, out->story.wo_burst_x,
                out->story.wo_burst_y);
@@ -1588,6 +1719,42 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
             continue;
         }
         bi++;
+    }
+    /* sub_08063024 sparkle particles: each wo_particles event
+     * instantiates one AosWoSpark on the story family's pool —
+     * the same-frame spawn convention the burst pool uses (the
+     * native entity's first sub_08065858 update runs on the
+     * next entity pass; the advance below runs it this frame,
+     * the same one-frame-early approximation the bursts
+     * already make). The +0x65 RNG pick was consumed inside
+     * the renderer; the probe is the same screen-rect test
+     * computed from the 16.16 accumulators. Gated on the story
+     * family: wo_sparks lives in the v.story union member. */
+    if (e->object20.family == AOS_OBJECT20_FAMILY_STORY) {
+        AosObject20Story *st = &e->object20.v.story;
+        for (uint8_t s = 0; s < out->story.wo_particle_count; ++s) {
+            if (st->wo_spark_count >= AOS_WO_MAX_EVENTS) break;
+            aos_wo_spark_spawn(&st->wo_sparks[st->wo_spark_count],
+                               &out->story.wo_particles[s]);
+            st->wo_spark_count++;
+        }
+        for (uint8_t si = 0; si < st->wo_spark_count;) {
+            AosWoSpark *sp = &st->wo_sparks[si];
+            int32_t sx = sp->field_40 >> 16;
+            int32_t sy = sp->field_44 >> 16;
+            AosWoSparkIn sin = {
+                .probe_inside = sx >= -0x80 && sx <= 0x1F0 &&
+                                sy >= -0x40 && sy <= 0x120,
+            };
+            AosWoSparkOut sout;
+            aos_wo_spark_update(sp, &sin, &sout);
+            if (sout.done) {
+                st->wo_sparks[si] =
+                    st->wo_sparks[--st->wo_spark_count];
+                continue;
+            }
+            si++;
+        }
     }
     if (set42c || clear42c) {
         aria_pickup_state.global_flags |= set42c;
@@ -2920,14 +3087,24 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             };
             if (!aos_object14_update(&e->object14, &o14env))
                 e->spawned = false;
+            /* song is sub_08013D60 for 0x136 (the rolling-boulder
+             * hold) and a plain PlaySong for 0xAC; song_stop is
+             * sub_08013E18 — both were printf-only before. The
+             * `sound` return is ignored by update_entities' callers,
+             * so the plain play goes out directly too. */
             if (e->object14.song >= 0) {
-                sound = e->object14.song;
+                if (e->object14.song == 0x136)
+                    aos_audio_hold(0x136);
+                else
+                    aos_audio_play_song((uint16_t)e->object14.song);
                 printf("Object14 %zu: song 0x%X\n", i,
                        e->object14.song);
             }
-            if (e->object14.song_stop >= 0)
+            if (e->object14.song_stop >= 0) {
+                aos_audio_release((uint16_t)e->object14.song_stop);
                 printf("Object14 %zu: song stop 0x%X\n", i,
                        e->object14.song_stop);
+            }
             for (unsigned c = 0; c < e->object14.child_count &&
                  room->effect_count < MAX_EFFECTS; ++c)
                 room->effects[room->effect_count++] = (AosEffect){
@@ -3089,14 +3266,25 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                 0, 0);
             if (e->object17.locked)
                 input->held = 0;
+            /* song is sub_08013D60 for 0x116 (the pan director's hold)
+             * and a plain PlaySong for 0x117 (asm code_08050A3C.s:
+             * 5399-5402); song_stop is sub_08013E18 — both were
+             * printf-only before, and the `sound` return is ignored
+             * by update_entities' callers, so the plain play goes out
+             * directly too. */
             if (e->object17.song >= 0) {
-                sound = e->object17.song;
+                if (e->object17.song == 0x116)
+                    aos_audio_hold(0x116);
+                else
+                    aos_audio_play_song((uint16_t)e->object17.song);
                 printf("Object17 %zu: song 0x%X\n", i,
                        e->object17.song);
             }
-            if (e->object17.song_stop >= 0)
+            if (e->object17.song_stop >= 0) {
+                aos_audio_release((uint16_t)e->object17.song_stop);
                 printf("Object17 %zu: song stop 0x%X\n", i,
                        e->object17.song_stop);
+            }
             if (e->object17.fade)
                 printf("Object17 %zu: fade (sub_08011FC0)\n", i);
             continue;

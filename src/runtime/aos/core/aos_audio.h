@@ -98,6 +98,12 @@ const AosAudioState *aos_audio_state(void);
  * the last slot; already listed or no free slot leaves the list as is) and
  * plays. Returns whether it was already listed. */
 bool aos_audio_hold(uint16_t song);
+/* sub_08013DA8: like sub_08013D60 but only plays when the sound was not
+ * already listed — an already-held sound is a no-op. With a full list and
+ * no match the native still plays without storing (its second scan finds
+ * no free slot). The native function has no return (decompiler BUG); the
+ * port reports whether the sound was already listed. */
+bool aos_audio_hold_if_new(uint16_t song);
 /* sub_08013E18: a held sound leaves the list and stops (PlaySong with
  * STOP_SONG). Returns whether it was listed. */
 bool aos_audio_release(uint16_t song);
@@ -107,6 +113,26 @@ uint16_t aos_audio_held(int slot);
  * nonzero unk_254C4 slot, highest index first. Runs inside the
  * room-transition teardown (sub_0806C354) before sub_08013F38. */
 void aos_audio_release_held(void);
+
+/* sub_08013E74: PlaySong(AUDIO_RESUME), then replay every held sound,
+ * unk_254C4 index 3 down to 0. Native callers are the Chronomage
+ * time-stop release and the sub_080235C8 soul-clear resume (both in
+ * code_080211F0), which follow it with raw PlaySong on +0x254CC and
+ * +0x254CE — see aos_audio_ambient() and aos_audio_special(). */
+void aos_audio_resume_held(void);
+/* sub_08013EAC: PlaySong(AUDIO_PAUSE), then PlaySong(song | STOP_SONG)
+ * for every held sound, index 3 down to 0. No caller exists in the ROM
+ * (dead code in the decompilation); ported for parity. */
+void aos_audio_pause_held(void);
+
+/* gEwramData +0x254CE: the room's special-song word. sub_08013960
+ * clears it on every normal room enter and sets it for the four
+ * special rooms; save/warp/transition early-outs leave the previous
+ * value, which aos_room_music_enter mirrors by storing only on the
+ * normal path. The Chronomage release and sub_080235C8 replay it raw
+ * after aos_audio_resume_held(). */
+uint16_t aos_audio_special(void);
+void aos_audio_special_store(uint16_t song);
 
 /* gEwramData +0x254CC: the ambient/temporary song slot. Entity
  * sequences plant a song here (the opening guard's 0x26) and the

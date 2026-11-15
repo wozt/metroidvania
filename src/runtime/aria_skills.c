@@ -25,6 +25,22 @@ static void place(AriaSkill *skill, int32_t x, int32_t y, bool facing_left, int 
 
 static AriaSkill *spawn_child(AriaSouls *souls, int kind);
 
+/* The audio tail shared by the Chronomage release branch
+ * (code_080211F0.c:3139-3155, asm code_080211F0.s:7270-7297) and the
+ * sub_080235C8 soul-clear resume (code_080211F0.c:2144-2159, asm
+ * :4668-4695): PlaySong(0x1038) unless the transition music-fade latch
+ * (unk_42C bit 0x40000) is set, sub_08013E74's AUDIO_RESUME plus held
+ * replay, then the raw +0x254CC ambient and +0x254CE special songs,
+ * and sub_08013E18(0x16E) dropping the Chronomage tick from the held
+ * list. */
+static void chronomage_release_audio(const AriaSouls *souls) {
+    if (!souls->music_fade) aos_audio_play_song(0x1038);
+    aos_audio_resume_held();
+    if (aos_audio_ambient()) aos_audio_play_song(aos_audio_ambient());
+    if (aos_audio_special()) aos_audio_play_song(aos_audio_special());
+    aos_audio_release(0x16E);
+}
+
 /* Soma's cast hook: sub_08019478's guards and bookkeeping, then the skill
  * entity; souls whose routine is not ported are refused rather than
  * spending MP on nothing. */
@@ -1355,9 +1371,12 @@ void update_skills(AriaSouls *souls) {
              * sub_08031EA4(entity, source, 0, 0) glue and the source facing
              * bit mirrored onto + 0x58 bit 6 each frame (the place() call
              * already follows Soma's facing). At animation frame 0xC it
-             * requests song 0xCE through the sub_08013D60 history dedup
-             * (approximated by a plain play); the delete paths run
-             * sub_08013E18(0xCE), a history removal with no sound. It ends
+             * requests song 0xCE through sub_08013D60 (asm
+             * code_080211F0.s:21970 — the native re-issues it while the
+             * frame holds; the volley_count guard keeps the port's
+             * single request); both end paths run sub_08013E18(0xCE)
+             * (asm :21978, :21997 — history removal with no sound),
+             * funneled here through the update's false return. It ends
              * on the animation end or the (source + 0x10 & 0x80) != 0
              * check, approximated as never-gone while the cast lives. */
             if (!skill->started) {
@@ -1369,11 +1388,13 @@ void update_skills(AriaSouls *souls) {
             place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, 0);
             if (!skill->volley_count && skill->anim.frame == 0xC) {
                 skill->volley_count = 1;
-                aos_audio_play_song(0xCE);
+                aos_audio_hold(0xCE);
             }
             bool legion_anim_done = aos_anim_step(&skill->anim, souls->legion) == 3;
-            if (!aos_were_beast_update(&skill->were_beast, legion_anim_done, false))
+            if (!aos_were_beast_update(&skill->were_beast, legion_anim_done, false)) {
+                aos_audio_release(0xCE);
                 end_skill(souls, skill);
+            }
             break;
         case SKILL_STUDENT_WITCH: {
             /* SkillStudentWitchUse (red soul 15, shared by the Student
@@ -1599,8 +1620,10 @@ void update_skills(AriaSouls *souls) {
              * toward 0x10000 while the + 0x4BE hold counts down with a
              * 0x16E tick every sixteenth frame, state 2 releases over
              * 0x20 frames and deletes; the published + 0x12FE4 time
-             * value, the sub_0803E654 variant pick, the sub_0803E058
-             * visual and the conditional release songs are not ported. */
+             * value, the sub_0803E654 variant pick and the
+             * sub_0803E058 visual are not ported. The release songs
+             * are: the conditional 0x1038, sub_08013E74, the raw
+             * +0x254CC/+0x254CE replays and sub_08013E18(0x16E). */
             if (!skill->started) {
                 skill->started = true;
                 souls->caster.active++;
@@ -1615,7 +1638,12 @@ void update_skills(AriaSouls *souls) {
                 end_skill(souls, skill);
                 break;
             }
-            if (skill->chronomage.tick) aos_audio_play_song(0x16E);
+            if (skill->chronomage.tick)
+                /* sub_08013DA8(0x16E): hold only when not already
+                 * listed — no replay while the tick stays held. */
+                aos_audio_hold_if_new(0x16E);
+            if (skill->chronomage.release)
+                chronomage_release_audio(souls);
             break;
         case SKILL_DISC_ARMOR:
             /* SkillDiscArmorUse: counted on its first update, sequence
@@ -1649,7 +1677,12 @@ void update_skills(AriaSouls *souls) {
              * variant | facing bit 6, + 0x2C = 0x2800 (mirrored
              * -0x8000 - 0x2800) with + 0x2E = -+0x40, + 0x4A = -+8,
              * + 0x4E = -+0x1A, attack box preset 5, + 0x72 |= 4, song
-             * history 0xCD requested once; state 1 spins the angle for
+             * history 0xCD held once through sub_08013D60 (asm
+             * code_080211F0.s:16789); both delete paths — the state-1
+             * timer end and the sub_0806D128(e, 2) margin probe — run
+             * sub_08013E18(0xCD) (asm :16898, :16962), funneled here
+             * through the update's false return; state 1 spins the
+             * angle for
              * 0x20 frames while + 0x50/+ 0x54 = sine(angle +/- 0x4000)
              * * 32 shape the dynamic box, then deletes; the
              * sub_08023530(e, sub_08029568) partner registration, the
@@ -1659,11 +1692,12 @@ void update_skills(AriaSouls *souls) {
             if (!skill->started) {
                 skill->started = true;
                 souls->caster.active++;
-                aos_audio_play_song(0xCD);
+                aos_audio_hold(0xCD);
                 aos_anim_start(&skill->anim, souls->cockatrice, 0, false);
             }
             if (!aos_cockatrice_update(&skill->cockatrice,
                                        skill_outside(souls, skill, 2))) {
+                aos_audio_release(0xCD);
                 end_skill(souls, skill);
                 break;
             }
@@ -2752,8 +2786,23 @@ int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack attack
     return count;
 }
 
-/* A room change deletes the skill entities with the room's. */
+/* A room change deletes the skill entities with the room's. The
+ * sub_080235C8 soul-clear tail runs first: a live Chronomage hold
+ * (its + 0x4BE countdown copy, `field`) resumes the paused audio —
+ * conditional 0x1038, sub_08013E74, the +0x254CC/+0x254CE replays and
+ * sub_08013E18(0x16E) — then sub_08013D30 releases every held sound
+ * unconditionally (sub_080235C8 also ends with it; the room-music
+ * teardown already runs the same release on room enter). */
 void clear_skills(AriaSouls *souls) {
+    for (int i = 0; i < MAX_SKILLS; ++i) {
+        AriaSkill *skill = &souls->skills[i];
+        if (skill->alive && skill->kind == SKILL_CHRONOMAGE &&
+            skill->chronomage.field != 0) {
+            chronomage_release_audio(souls);
+            break;
+        }
+    }
+    aos_audio_release_held();
     for (int i = 0; i < MAX_SKILLS; ++i) souls->skills[i].alive = false;
     homing_clear();
     souls->caster = (AosRedSoulCaster){.last_used = souls->caster.last_used};

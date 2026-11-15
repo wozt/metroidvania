@@ -150,13 +150,32 @@ typedef struct {
 } AosWoSpawn;
 
 /* sub_08063024 sparkle/particle spawn: entity type 0x1B range
- * 0x48, update sub_08065858, velocity signs flipped when dir!=0. */
+ * 0x48 (the shared sub_08062B60 prologue — graphics 0x08260390,
+ * frames 0x08267EE4 anim 0xE, draw sub_0803B9D0), update
+ * sub_08065858, velocity signs flipped when dir!=0. The native
+ * routine consumes ONE RandomNumberGenerator draw per successful
+ * alloc for the +0x65 pick — variant 0 indexes the three u32
+ * words at 0x081189A0 {0xA,0xB,0xC} by rng % 3 (low byte stored),
+ * any other variant stores (rng % 7) + 2 — so wo_particle draws
+ * it here and reports the result in field_65. The draw is
+ * unconditional in the port: natively it is gated on the
+ * sub_08062B60(0) alloc succeeding, which the renderer cannot
+ * observe (documented approximation — only host pool exhaustion
+ * would skip it). The fixed velocity/accel quad (+0x48 = 0x30000,
+ * +0x4C = -0x8000, +0x50 = 0x800, +0x54 = -0x100, all negated
+ * when dir != 0), +0xD = 0x40, +0x5C = 3 and +0x63 = 0x80 are
+ * decoded constants the host reapplies in aos_wo_spark_spawn;
+ * +0x40/+0x44 stay at the fresh-entity 0 like the burst
+ * particles (documented approximation). */
 typedef struct {
-    int16_t  x;             /* arg0 s16 */
-    int16_t  y;             /* arg1 s16 */
+    int16_t  x;             /* arg0 s16 -> +0x42 */
+    int16_t  y;             /* arg1 s16 -> +0x46 */
     uint8_t  dir;           /* arg2 (0/1) — negates the velocity
                              * quad when nonzero */
-    uint8_t  variant;       /* arg3 (always 0 on this path) */
+    uint8_t  variant;       /* arg3 — 0 on every sub_08064518
+                             * call site; the +0x65 pick formula
+                             * is still ported for completeness */
+    uint8_t  field_65;      /* +0x65 — the RNG-picked frame byte */
 } AosWoParticle;
 
 typedef struct {
@@ -523,5 +542,76 @@ void aos_wo_carrier_update(AosWoBurstCarrier *c,
 void aos_wo_particle_update(AosWoBurstParticle *p,
                             const AosWoBurstParticleIn *in,
                             AosWoBurstParticleOut *out);
+
+/* ------------------------------------------------------------------
+ * sub_08063024 / sub_08065858 — the renderer's sparkle particles.
+ *
+ * sub_08063024(x, y, dir, variant) is the spawn behind every
+ * AosWoParticle event (code_08060B98.s:4624-4719): after the
+ * sub_08062B60(0) alloc it writes +0 = sub_08065858, +0x42/+0x46 =
+ * the s16 args, the fixed velocity/accel quad (+0x48 = 0x30000,
+ * +0x4C = -0x8000, +0x50 = 0x800, +0x54 = -0x100, negated when
+ * dir != 0), +0xD = 0x40, +0x5C = 3, +0x63 = 0x80 and the +0x65
+ * RNG pick reported in AosWoParticle::field_65. +0x40/+0x44 are
+ * left at the fresh-entity zero — the same documented
+ * approximation the burst particles make.
+ *
+ * sub_08065858 (code_08060B98.s:9701-9746) is its update: the
+ * ballistic step (position += velocity, velocity += accel on
+ * +0x40/+0x44/+0x48/+0x4C/+0x50/+0x54) then the sub_08068AD4
+ * probe — the same (-0x80, -0x40, 0x1F0, 0x120) rect the
+ * sub_080630E8 particle uses — and a miss sets +0x59 bit 3.
+ * aos_flyer_step_65858 (aos_flyer.c) ports the same native
+ * routine for the thrown-object record; this variant runs on the
+ * spark's own field layout like the sub_080630E8 particle does.
+ * Unlike sub_080630E8 there is no +0xA delay phase: every call
+ * integrates and probes. The host computes probe_inside from the
+ * 16.16 accumulators exactly like the burst-particle path.
+ * Draw assets are the shared 0x1B/0x48 entity (graphics
+ * 0x08260390, frames 0x08267EE4 anim 0xE) — the same export the
+ * wo_bursts draw path already consumes; wiring the spark pool
+ * into the draw pass is host-side work outside this module.
+ * ------------------------------------------------------------------ */
+
+/* One sub_08063024 sparkle entity — every byte the spawn and the
+ * sub_08065858 update touch. */
+typedef struct {
+    int16_t  scr_42;    /* +0x42 screen X (strh at spawn) */
+    int16_t  scr_46;    /* +0x46 screen Y */
+    int32_t  field_40;  /* +0x40 position X accumulator — fresh
+                         * entity zero (documented) */
+    int32_t  field_44;  /* +0x44 position Y accumulator */
+    int32_t  field_48;  /* +0x48 velocity X = ±0x30000 */
+    int32_t  field_4c;  /* +0x4C velocity Y = ∓0x8000 */
+    int32_t  field_50;  /* +0x50 accel X = ±0x800 */
+    int32_t  field_54;  /* +0x54 accel Y = ∓0x100 */
+    uint8_t  field_59;  /* +0x59: bit3 = delete */
+    uint8_t  field_65;  /* +0x65 frame pick (from the Out event) */
+    uint8_t  field_d;   /* +0xD = 0x40 (spawn write; the update
+                         * never reads it) */
+    uint8_t  field_5c;  /* +0x5C = 3 */
+    uint8_t  field_63;  /* +0x63 = 0x80 */
+} AosWoSpark;
+
+/* Fill *p from a reported AosWoParticle spawn event: the decoded
+ * spawn writes of sub_08063024. The +0x65 pick already consumed
+ * its RNG draw inside the renderer. */
+void aos_wo_spark_spawn(AosWoSpark *p, const AosWoParticle *ev);
+
+/* Injected reads for the sub_08065858 update — the same probe
+ * contract as AosWoBurstParticleIn. */
+typedef struct {
+    bool probe_inside;  /* sub_08068AD4(entity, -0x80, -0x40,
+                     * 0x1F0, 0x120) result */
+} AosWoSparkIn;
+
+typedef struct {
+    bool probe_missed;  /* probe returned 0 -> +0x59 |= 8 */
+    bool done;          /* +0x59 bit3 after this call */
+} AosWoSparkOut;
+
+/* sub_08065858: ballistic step + probe; a miss sets +0x59 bit3. */
+void aos_wo_spark_update(AosWoSpark *p, const AosWoSparkIn *in,
+                         AosWoSparkOut *out);
 
 #endif /* AOS_OBJECT20_WHITEOUT_RENDER_H */

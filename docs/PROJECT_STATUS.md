@@ -37,6 +37,106 @@
   soul message decorations, and the Sleep enter-path window
   rectangles documented in Patch 1144.
 
+## Patch 1147 - held-sound wiring, scroll room-load D288, opening approach decode
+
+- **Held-sound callers wired** (`aria_skills.c`, `aria_entities.c`,
+  `aos_soul.c`): Chronomage release and `clear_skills` run the
+  native `sub_080235C8` tail — `PlaySong(0x1038)` gated on the
+  `unk_42C & 0x40000` fade latch (published as `souls.music_fade`,
+  fed from `room_music.fade_requested` which now clears on
+  non-transition enters like the native `sub_08067A04` clear),
+  `aos_audio_resume_held` (sub_08013E74), raw `+0x254CC`/`+0x254CE`
+  plays, `aos_audio_release(0x16E)` and `aos_audio_release_held`
+  (sub_08013D30). The tick uses `aos_audio_hold_if_new(0x16E)`
+  (sub_08013DA8 dedup) instead of a replaying hold. Object14
+  `0x136` and Object17 `0x116` song/song_stop reports route to
+  `aos_audio_hold`/`aos_audio_release`; Legion `0xCE`,
+  Cockatrice `0xCD` and Persephone `0x9C` use hold semantics
+  (`0x9C` via `hold_if_new` — native sub_08013DA8 does not
+  replay a listed song).
+- **Audio helpers completed** (`aos_audio.c/.h`):
+  `aos_audio_resume_held` (sub_08013E74), `aos_audio_pause_held`
+  (sub_08013EAC, dead code natively, ported for parity),
+  `aos_audio_hold_if_new` (sub_08013DA8) and the `+0x254CE`
+  special-song mirror (`aos_audio_special`/`_store`, written only
+  on the normal `sub_08013960` path — save/warp/transition
+  early-outs leave the stale word, matching native).
+- **Scroll room-load tail** (`aria_entities.c` scroll sections):
+  `object20_scroll_ensure` reproduces `sub_0800F9EC`'s load —
+  `bgInfo[1..3]` bind, descriptor `display_control` seeds
+  `object20_disp_cnt`, one zero-velocity `sub_0800D288` pass
+  applies the meta<=1 axis pins, one-time mode-8/9/10 `bgOfs`
+  writes and mode-19/21 `DCNT_BG2` clears; `unk_4C8` gets a real
+  per-frame phase (`aria_scroll_frame_phase`). BG2/BG3 modes
+  0-36 verified against all 343 room descriptors (24 affine BG2
+  layers, mostly Chaotic Realm). New `aria_scroll_bgofs` exposes
+  the faithful `bgOfs` shadow. No BG2/BG3 draw consumer exists —
+  the exporter composites into one BG1 bitmap — documented.
+- **Opening approach decode** (`aos_opening_event.*`): the
+  skeleton stop test is now camera-relative-exact (`+0x42` vs
+  `0xCA` minus the `+0xA094+6` camera word) with the
+  `sub_0806E140`/`sub_080698A8` double-integration motion and
+  floor-probe gating; `sub_0803F2C8`'s loop arg (`+0x6C` bit 3)
+  verified at all seven call sites and carried as `anim_loop[]`,
+  so `actor_animation_done` never latches on looping sequences.
+  The `0x081186DC` table is confirmed sprite/palette resources
+  only. Arikado's `+0x48` integrator/stop consumer remains
+  unidentified (documented).
+- Registries synced (`aos.audio.play_song`, `aos.core.scroll`,
+  `aos.events.opening_scene`, `features.tsv`).
+
+## Patch 1145 - whiteout sparkle particles, session window channels
+
+- **sub_08063024 / sub_08065858 sparkle path ported.** The
+  `sub_08064518` renderer's `wo_particle` helper now consumes the
+  native post-alloc `RandomNumberGenerator` draw for the `+0x65`
+  frame pick (variant 0: `0x081189A0` table `{0xA,0xB,0xC}` by
+  `rng % 3`, low byte; other variants `(rng % 7) + 2`) and reports
+  it in `AosWoParticle::field_65`; the x/y RNG draws were hoisted
+  into locals so the unspecified C argument-evaluation order
+  cannot reorder them ahead of the `+0x65` draw (native order per
+  spawn: x, y, then the callee's pick — verified against
+  `code_08060B98.s` `_08064D28`-`_08064DAA`). `AosObject20StoryOut`
+  now forwards the full `wo_particles[AOS_WO_MAX_EVENTS]` array
+  beside `wo_particle_count`, and `AosObject20Story` owns an
+  `AosWoSpark wo_sparks[8]` host pool (same-frame spawn
+  convention as `wo_bursts`). `aos_wo_spark_spawn` reapplies the
+  decoded spawn writes (s16 `+0x42/+0x46`, the ± velocity/accel
+  quad negated as a unit on `dir != 0`, `+0xD = 0x40`, `+0x5C = 3`,
+  `+0x63 = 0x80`) and `aos_wo_spark_update` ports `sub_08065858`'s
+  unconditional integrate-then-`sub_08068AD4`-probe step — no `+0xA`
+  delay phase, a miss sets `+0x59` bit 3. `object20_apply_out`
+  consumes `out->story.wo_particles` only for the story family
+  (the pool lives in the `v.story` union member), computes the
+  same screen-rect probe from the 16.16 accumulators as the burst
+  path, and the diagnostic printf now reports the live spark
+  count. `aos_flyer_step_65858` already ports the same native
+  update for the thrown-object record; the spark variant keeps its
+  own field layout like the `sub_080630E8` particle does.
+  Unit-tested in `test_aos_object20_whiteout_render` (RNG draw
+  positions, `+0x65` picks, spawn writes, integrate/probe/delete).
+- **`sub_08067934` window-open session stores channelled.** The
+  remaining `gEwramData` clears land on new session channels:
+  `+0x410` word = 0, `+0x418/+0x419` halfword = 0 and `+0x41A` byte
+  = 0, alongside the already modelled `+0x417 = 0` / `+0x416 = 1`.
+  No ported consumer exists — the only writer in the dumped
+  Object20 code is `sub_08067934` itself and no reader of these
+  offsets appears in `code_08050A3C.s`/`code_08060B98.s` (the
+  consumers live in the undumped window-manager/display code), so
+  the channels preserve write history only and feed no In field.
+  The sibling `+0x40C` store (the `sub_08041434`-resolved pointer
+  into the `0x08506B38` language text table) stays unchannelled:
+  it is a ROM address the host's dialogue bridge resolves itself.
+- **Stale notes corrected.** The apply-path comment claiming the
+  whiteout renderer was unported and the diagnostic claiming the
+  carrier/burst callees were unforwarded are updated: the renderer,
+  spawn-child pool, carrier/burst pool and now the spark pool all
+  run; still unforwarded are the `sub_08063AEC` burst, the two
+  purge scans, and the display/DMA/fade/palette effects. Spark
+  draw records are not yet wired into `aria_draw.c` (outside this
+  change's scope) — sparks simulate natively but draw nothing.
+- Registries synced (`features.tsv` opening_scene note).
+
 ## Patch 1144 - save-screen tiles, ambient audio channel, pause overlay fix, opening homing
 
 - **Save screen native frame**: `sub_08054280`'s seven BG0

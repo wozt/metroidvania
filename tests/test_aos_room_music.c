@@ -133,6 +133,31 @@ int main(void) {
     aos_audio_clear();
     assert(aos_room_music_change(&tracked, 2));
     assert(aos_audio_count() == 0);
+
+    /* gEwramData +0x254CE: sub_08013960 clears the word on every
+     * normal-path enter and sets it with the special song; the
+     * save/warp/transition early-outs return before the write, so a
+     * stale special song survives them (the Chronomage release and
+     * sub_080235C8 replay it raw through aos_audio_special()). */
+    aos_audio_reset();
+    AosRoomMusic special = {0};
+    assert(!aos_room_music_enter(&special, 4, 0xA, &plain));
+    assert(aos_audio_special() == 0x2A && special.special_song == 0x2A);
+    aos_audio_clear();
+    assert(!aos_room_music_enter(&special, 0, 3, &plain));
+    assert(aos_audio_special() == 0 && special.special_song == 0);
+    assert(!aos_room_music_enter(&special, 4, 0xA, &plain));
+    assert(aos_audio_special() == 0x2A);
+    /* A save-room enter returns before sub_08013960's +0x254CE write:
+     * the word keeps the previous room's special song. */
+    const AosRoomMusicFlags save2 = {true, false, false};
+    aos_audio_clear();
+    assert(!aos_room_music_enter(&special, 0, 5, &save2));
+    assert(aos_audio_special() == 0x2A);
+    /* A transition-room enter likewise leaves it. */
+    const AosRoomMusicFlags trans = {false, false, true};
+    assert(!aos_room_music_enter(&special, 1, 9, &trans));
+    assert(aos_audio_special() == 0x2A);
     puts("aos room music tests passed");
     return 0;
 }

@@ -46,6 +46,12 @@
  *   interpolation, direct bgOfs writes, and hblank/affine/scanline
  *   effects that are reported through AosScrollOut::fx instead of
  *   applied). A BG1 unk_18 of 0x1A first calls sub_0800CDAC.
+ *   Native callers: sub_0800ED24 (the gated transaction below),
+ *   sub_0800ECA0's room-load tail (sub_0800EBE0 -> ECA0 -> F9EC ->
+ *   D288, once per room entry while bgInfo[1]'s velocities are
+ *   still 0 — reproduce it by calling aos_scroll_apply once right
+ *   after binding the room's layers), and a few camera-mode
+ *   updates in code_08036B40.c that the host does not run.
  * - sub_0800ED24 (src/code_0800CB00.c): the gated transaction —
  *   gEwramData +0x427 (unk_60.unk_427) > param0 suppresses it;
  *   otherwise request(1) + entity compensation + apply.
@@ -118,8 +124,10 @@ typedef struct {
 /* Native globals sub_0800D288 reads besides bgInfo: the
  * gEwramData unk_60.unk_33C[3] flag word (modes 10/19/21 gates),
  * unk_60.unk_4CC_0 (mode 19's BG2 keep bit) and unk_60.unk_4C8
- * (the hblank/affine wave parameter modes 20/21/27/30/36 feed to
- * the hBlankEffect buffer and BgAffineSet). entities is the
+ * (the hblank/affine wave phase: sub_0800C8C8/sub_0800CA40
+ * increment it once per in-game frame and the room transition
+ * clears it; modes 20/21/27/30/36 feed it to the hBlankEffect
+ * buffer and BgAffineSet — see the fx bits below). entities is the
  * sub_08000F60 list (native loops the 0xD0 entityData slots);
  * NULL/0 means no flagged entities are bound. */
 typedef struct {

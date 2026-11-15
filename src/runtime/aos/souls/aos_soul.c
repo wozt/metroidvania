@@ -190,7 +190,9 @@ bool aos_persephone_guardian_update(AosPersephoneGuardian *maid, AosGuardian *gu
         maid->timer--;
         return true;
     }
-    aos_audio_hold(0x9C);
+    /* sub_08013DA8 does not replay a song already in the held list —
+     * hold_if_new, not hold (which would restart it every frame). */
+    aos_audio_hold_if_new(0x9C);
     guardian->state = 2;
     maid->facing_left = soma_facing_left;
     maid->x = soma_x;

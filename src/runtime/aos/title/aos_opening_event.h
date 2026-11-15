@@ -204,6 +204,12 @@ typedef struct {
     int32_t y[AOS_OPENING_ACTOR_COUNT];
     uint8_t animation[AOS_OPENING_ACTOR_COUNT];
     uint16_t animation_age[AOS_OPENING_ACTOR_COUNT];
+    /* sub_0803F2C8's third argument lands in +0x6C bit 3, the sequence
+     * loop bit: a looping sequence never latches +0x59 bit 0, so
+     * actor_animation_done can never report done for it. The spawn-time
+     * values are sub_0805D198's record 0 anim 4 arg3=0, record 1 anim 1
+     * arg3=1 and record 8 anim 4 arg3=1. */
+    uint8_t anim_loop[AOS_OPENING_ACTOR_COUNT];
     bool visible[AOS_OPENING_ACTOR_COUNT];
     uint8_t state;
     uint8_t step;
@@ -306,6 +312,13 @@ typedef struct {
     uint8_t skeleton_step;
     uint8_t skeleton_timer;
     uint16_t skeleton_phase;
+    /* sub_0805DAA0 +0xB==2,+0xC==2 compares entity +0x42 against
+     * 0xCA minus the camera scroll word (gEwramData+0xA094+6). +0x42
+     * was baked at spawn as 0x16F minus that word, so the world-space
+     * guard needs the spawn-time camera latched on the first update;
+     * scene_camera_x holds it and scene_camera_set marks the latch. */
+    int32_t scene_camera_x;
+    bool scene_camera_set;
     /* Parent +0x20 bit 1 (value 2): +0xB==4 sub-state 3 sets it when
      * child18's +0x59 animation-finished flag arrives. Emitted
      * children poll it every frame and only then enter their

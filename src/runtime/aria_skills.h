@@ -282,6 +282,11 @@ typedef struct {
     const AosBox *archer_attacks;   /* their static_attack rows, by frame id */
     const int16_t (*margins)[2];    /* sub_0806D128's table */
     int cam_x, cam_y;
+    /* gEwramData + 0x60 unk_42C bit 0x40000 (the transition music-fade
+     * latch, AosRoomMusic.fade_requested), published per frame by the
+     * runtime. The Chronomage release and the sub_080235C8 soul-clear
+     * resume skip PlaySong(0x1038) while it is set. */
+    bool music_fade;
 } AriaSouls;
 
 /* The blue soul guardian (gEwramData + 0x13144) and its routine. */

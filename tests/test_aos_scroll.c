@@ -543,6 +543,44 @@ int main(void) {
     assert(aos_scroll_origin_x(36, 2, 0, 0, 0x77) == 0x77);
     assert(aos_scroll_origin_y(36, 2, 0, 0, 0x77) == 0xA7);
 
+    /* ---- room-load sub_0800D288 (sub_0800ECA0's tail) ----
+     * The native runs D288 once per room entry right after
+     * sub_0800F9EC bound the layers, while bgInfo[1]'s velocities
+     * are still 0. The scroll modes then call sub_0803FBBC with
+     * (0, 0): a layer whose pBgMetadata dimension is <= 1 has the
+     * axis pinned (x -> 0, y -> 0x30 << 16) regardless of the
+     * ED5C/EE54 origin the bind stored; a multi-screen layer keeps
+     * its origin. Non-request modes still run their direct
+     * bgOfs writes once (mode 8: hOfs + 1). */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 2, 2, 0, 0, 0, 0x10 << 16, 0x40 << 16);
+    /* BG2: mode 1 (1:1 request) but a 1x1 metadata — both axes
+     * pin at load even though its bound origin was nonzero. */
+    aos_scroll_bind(&s, 2, 1, 1, 1, 0, 0, 0x33 << 16, 0x44 << 16);
+    /* BG3: mode 1 on a 2x2 metadata — keeps its origin, gains
+     * zero velocity. */
+    aos_scroll_bind(&s, 3, 2, 2, 1, 0, 0, 0x55 << 16, 0x66 << 16);
+    memset(&out, 0, sizeof out);
+    aos_scroll_apply(&s, NULL, &out);
+    assert(s.bg[2].x_pos == 0 && s.bg[2].y_pos == (int32_t)0x30 << 16);
+    assert(s.bg[2].x_vel == 0 && s.bg[2].y_vel == 0);
+    assert(s.disp_h[2] == 0 && s.disp_v[2] == 0x30);
+    assert(s.bg[3].x_pos == (int32_t)0x55 << 16);
+    assert(s.bg[3].y_pos == (int32_t)0x66 << 16);
+    assert(s.disp_h[3] == 0x55 && s.disp_v[3] == 0x66);
+    /* The two mode-1 requests ran (one per layer). */
+    assert(out.requests == 2);
+
+    /* Mode 8 at load: hOfs += 1 on top of the seeded shadow. */
+    memset(&s, 0, sizeof s);
+    aos_scroll_bind(&s, 1, 2, 2, 0, 0, 0, 0, 0);
+    aos_scroll_bind(&s, 2, 2, 2, 8, 0, 0, 0x20 << 16, 0x30 << 16);
+    aos_scroll_bind(&s, 3, 2, 2, 0, 0, 0, 0, 0);
+    memset(&out, 0, sizeof out);
+    aos_scroll_apply(&s, NULL, &out);
+    assert(s.disp_h[2] == 0x21);
+    assert(out.requests == 0);
+
     puts("aos_scroll: ok");
     return 0;
 }

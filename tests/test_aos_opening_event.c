@@ -237,6 +237,60 @@ static void test_emitted_attack_tails(void) {
     assert(actors.projectiles[0].events == AOS_OPENING_ENTITY_EVENT_NONE);
 }
 
+static void test_skeleton_approach(void) {
+    /* sub_0805DAA0 +0xB==2,+0xC==2: the stop guard compares entity
+     * +0x42 against 0xCA minus the camera scroll word, and the move
+     * integrates -0x30000/+0x14000 twice per frame (sub_0806E140 ->
+     * sub_080698A8's sub_0806D430/sub_0806D460 plus the caller's own
+     * adds). */
+    AosOpeningActors actors;
+    aos_opening_actors_init(&actors);
+    actors.state = 2;
+    actors.camera_active = false;
+    actors.skeleton_state = 2;
+    actors.skeleton_step = 2;
+    actors.x[2] = AOS_OPENING_SKELETON_X << 16;
+    actors.y[2] = AOS_OPENING_SKELETON_Y << 16;
+    int32_t camera_x = 0x30;
+    /* The first update latches the spawn camera (0x30); with the
+     * camera held there the guard stays at world X 0xCA. */
+    aos_opening_actors_update(&actors, NULL, &camera_x, 0);
+    assert(actors.scene_camera_x == 0x30 && camera_x == 0x30);
+    assert(actors.x[2] == ((AOS_OPENING_SKELETON_X << 16) - 0x60000));
+    /* Open air: +0x44 gains +0x14000 from sub_0806D460 and again from
+     * the caller, i.e. +0x28000 per frame. */
+    assert(actors.y[2] == ((AOS_OPENING_SKELETON_Y << 16) + 0x28000));
+    /* One frame from 0xCB crosses the 0xCA guard on the next check:
+     * sub_0805DBFC selects animation 2 (loop bit set, arg3=1) and
+     * +0xA becomes 3. */
+    actors.x[2] = 0xCB << 16;
+    aos_opening_actors_update(&actors, NULL, &camera_x, 0);
+    assert(actors.skeleton_state == 2);
+    aos_opening_actors_update(&actors, NULL, &camera_x, 0);
+    assert(actors.skeleton_state == 3 && actors.animation[2] == 2 &&
+           actors.anim_loop[2]);
+    /* A camera that advanced past the spawn value moves the guard
+     * left: stop_x = 0xCA + cam_spawn - cam_now. */
+    AosOpeningActors moved;
+    aos_opening_actors_init(&moved);
+    moved.state = 2;
+    moved.camera_active = false;
+    moved.skeleton_state = 2;
+    moved.skeleton_step = 2;
+    moved.x[2] = 0xCB << 16;
+    moved.y[2] = AOS_OPENING_SKELETON_Y << 16;
+    int32_t moved_camera = 0x50;
+    aos_opening_actors_update(&moved, NULL, &moved_camera, 0);
+    /* cam_spawn=0x50, cam_now=0x50 -> guard 0xCA; 0xCB still walks. */
+    assert(moved.skeleton_state == 2);
+    /* The latch keeps the spawn value while cam_now moves: a camera
+     * that panned left to 0x40 shifts the guard to
+     * 0xCA + 0x50 - 0x40 = 0xDA, and the walked 0xC5 stops on it. */
+    moved_camera = 0x40;
+    aos_opening_actors_update(&moved, NULL, &moved_camera, 0);
+    assert(moved.skeleton_state == 3);
+}
+
 static void test_trigger(void) {
     assert(AOS_OPENING_SOMA_X == 168 && AOS_OPENING_SOMA_Y == 704);
     assert(AOS_OPENING_ACTOR_COUNT == 3);
@@ -261,8 +315,10 @@ static void test_trigger(void) {
     aos_opening_actors_update(&actors, NULL, NULL, 0);
     assert(actors.x[1] < (0x119 << 16));
     /* sub_0805D198's +0x48 velocity is -0x6000 (~0.37 px/frame); the
-     * 0x119->0xD0 walk-on takes about 195 frames. The 0xD0 guard is a
-     * documented approximation of type 1's undecoded stop condition. */
+     * 0x119->0xD0 walk-on takes about 195 frames. The 0x081186DC record
+     * table is decoded as sprite resources only and no dumped routine
+     * integrates this child's +0x48, so the 0xD0 guard remains a
+     * documented approximation of the unidentified stop consumer. */
     unsigned walk_guard = 0;
     while (actors.state == 1 && walk_guard++ < 400)
         aos_opening_actors_update(&actors, NULL, NULL, 0);
@@ -603,6 +659,7 @@ int main(int argc, char **argv) {
     assert(AOS_OPENING_PROMPT_X == 216 && AOS_OPENING_PROMPT_Y == 140);
     test_emitted_motion();
     test_skeleton_collision_flight();
+    test_skeleton_approach();
     test_emitted_attack_tails();
     test_trigger();
     test_intro_transition();

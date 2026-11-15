@@ -25,6 +25,52 @@
   and all 256 painted piece pixels. `ctest -R` pause/title/intro/
   menu-sprites/object suites all pass.
 
+## Patch 1152 - Object20 held-sound consumers wired (shop 0x2B, NPC 0x26, story 0x2D)
+
+- **Shop held sound 0x2B** (`src/runtime/aria_entities.c`,
+  `object20_apply_out`). `aos_shop.c`'s `sound_2b`/
+  `release_sound_2b` out-flags were printf-only. Verified against
+  `code_08060B98.s` `sub_08061ABC` (the give/sell sequence):
+  state 0 runs `sub_08013D60(0x2B)` -> `aos_audio_hold(0x2B)`;
+  the state-3 window-done exit runs `sub_08013E18(0x2B)` ->
+  `aos_audio_release(0x2B)` (held-list removal + PlaySong
+  STOP_SONG). The paired `sub_08013CF0(0x14)` music change
+  remains diagnostic-only (no `AosRoomMusic` channel reaches
+  `object20_apply_out`).
+- **NPC-talk 0x26 release** (same file). `sub_08065DB8`'s
+  state-1 entry runs `sub_08013E18(0x26)` — the held-list
+  release — reported as `AosNpcLoop.sfx_26`; it now runs
+  `aos_audio_release(0x26)` instead of folding into the generic
+  effect-pulse printf. The `song_26` PlaySong(0x26) and
+  `wrote_254cc` +0x254CC store were already routed through
+  `aos_audio_play_song`/`aos_audio_ambient_store`, and the
+  guard family's `sfx_26_entry` `sub_08013EEC(0x26)` through
+  `aos_audio_ambient_set` — the ambient channel keeps sole
+  ownership of +0x254CC, no double-own. `ev_1e`/`ev_1d`
+  (`sub_08013CF0`) stay printf-only for the same missing
+  `AosRoomMusic` channel.
+- **Object20 story 0x2D release** (same file). `sub_080620E8`'s
+  state-2 sub-state-3 countdown reports `e18 = 0x2D`
+  (`sub_08013E18(0x2D)`); `object20_apply_out` now runs
+  `aos_audio_release` for `out->story.e18` (and `aos_audio_hold`
+  for the sibling `d60` report, currently unset). The paired
+  `sub_08013CF0(0x24)` (`out->story.cf0`, plus `dirs.cf0`,
+  `slots.call_13cf0`, `shop.song`) is now surfaced as an
+  explicit "13CF0 music change (unforwarded)" diagnostic instead
+  of being silently dropped — the `aos_room_music_change`
+  counterpart needs the `AosRoomMusic` instance owned by the
+  room loop in `aria_runtime.c`, which this TU cannot reach.
+- **Per-site native->port map**: `sub_08013D60` ->
+  `aos_audio_hold`, `sub_08013DA8` -> `aos_audio_hold_if_new`,
+  `sub_08013E18` -> `aos_audio_release`, `sub_08013EEC` ->
+  `aos_audio_ambient_set`, raw `+0x254CC` word stores ->
+  `aos_audio_ambient_store`, `PlaySong`/`sub_0805B878` ->
+  `aos_audio_play_song`, `sub_08013CF0` -> `aos_room_music_change`
+  (unreachable from `object20_apply_out`, diagnostic only).
+- Registries synced (`aos.audio.play_song` notes/next_action,
+  `aos.objects.shop_sequences` notes/next_action in
+  `data/native_parity/annotations.tsv`).
+
 ## Patch 1151 - Sleep page three-band render, Item Use icon audit
 
 - **Sleep page bands corrected** (`aos_pause_graphics_render_sleep`,

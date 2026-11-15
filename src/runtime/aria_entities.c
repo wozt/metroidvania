@@ -1867,6 +1867,29 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
         printf("Object20 %d: 13EEC song 0x%X (+0x254CC)\n",
                e->id, out->slots.sfx_13eec);
     }
+    /* sub_08013D60/sub_08013E18 held-sound reports (the story
+     * family's d60/e18 ints): the 4-slot held list unk_254C4
+     * owned by aos_audio — hold on the request, release
+     * (PlaySong STOP_SONG) on the drop. sub_080620E8's state-2
+     * sub-state-3 countdown reports e18 = 0x2D here; its paired
+     * sub_08013CF0(0x24) (cf0) is a tracked-music change whose
+     * AosRoomMusic owner lives in the room loop — no channel
+     * reaches it from this TU, so the cf0 reports below stay
+     * diagnostic-only like the npc families' ev_1d/ev_1e. */
+    if (out->story.d60 >= 0) {
+        aos_audio_hold((uint16_t)out->story.d60);
+        printf("Object20 %d: held sound 0x%X\n", e->id,
+               out->story.d60);
+    }
+    if (out->story.e18 >= 0) {
+        aos_audio_release((uint16_t)out->story.e18);
+        printf("Object20 %d: release sound 0x%X\n", e->id,
+               out->story.e18);
+    }
+    if (out->dirs.cf0 >= 0 || out->story.cf0 >= 0 ||
+        out->slots.call_13cf0 >= 0 || out->shop.song >= 0)
+        printf("Object20 %d: 13CF0 music change (unforwarded)\n",
+               e->id);
     /* gEwramData +0xA094 + 4 = bgInfo[1].xPos whole: the dirs
      * param0-6 escort clamps it to 0 once the scroll countdown
      * drains. The write lands on the ported scroll accumulator
@@ -1973,8 +1996,17 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
             aos_audio_ambient_store(0x26);
             printf("Object20 %d: +0x254CC = 0x26\n", e->id);
         }
-        if (g->sfx_26 || g->ev_1e || g->froze_player ||
-            g->facing_mirror)
+        /* sub_08065DB8's state-1 entry runs sub_08013E18(0x26) —
+         * the held-list release (aos_audio), distinct from the
+         * +0x254CC ambient stores and the raw PlaySong(0x26)
+         * handled above. sub_08013CF0(0x1E) (ev_1e) is a
+         * tracked-music change whose AosRoomMusic owner lives in
+         * the room loop — no channel reaches it from this TU. */
+        if (g->sfx_26) {
+            aos_audio_release(0x26);
+            printf("Object20 %d: release held sound 0x26\n", e->id);
+        }
+        if (g->ev_1e || g->froze_player || g->facing_mirror)
             printf("Object20 %d: loop npc effect pulse\n", e->id);
         break;
     }
@@ -2017,10 +2049,19 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     default:
         break;
     }
-    /* Held/directional sound requests with no direct channel. */
-    if (out->shop.sound_2b) printf("Object20 %d: held sound 0x2B\n", e->id);
-    if (out->shop.release_sound_2b)
+    /* sub_08061ABC's give/sell sequence owns the shop's held
+     * sound: state 0 runs sub_08013D60(0x2B) and the state-3
+     * window-done exit runs sub_08013E18(0x2B). Both name the
+     * 4-slot held list unk_254C4 owned by aos_audio — hold on
+     * entry, release (PlaySong STOP_SONG) on the done exit. */
+    if (out->shop.sound_2b) {
+        aos_audio_hold(0x2B);
+        printf("Object20 %d: held sound 0x2B\n", e->id);
+    }
+    if (out->shop.release_sound_2b) {
+        aos_audio_release(0x2B);
         printf("Object20 %d: release sound 0x2B\n", e->id);
+    }
     if (out->shop.side_record_53c || out->shop.side_record_58 ||
         out->shop.side_player_58 || out->shop.andnot_player58 ||
         out->shop.andnot_ent58) {

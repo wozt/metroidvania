@@ -1,3 +1,30 @@
+## Patch 1153 - Pause hand cursor decode fixed (29-step animation cap)
+
+- **Root cause.** `aos_obj_sheet_decode`
+  (`src/runtime/aos/game/aos_obj_rom.c`) rejected the pause-menu hand
+  cursor's frame descriptor: both language descriptors
+  (`0x08256EF8` English/French, `0x0827B1F0` German — the pair
+  `sub_08048B0C` selects for `sub_08048C74`) declare a **29-step**
+  animation cycling records 2-26 at four ticks a step, but
+  `AOS_OBJ_MAX_STEPS` was 8, so decode returned "unsupported Aria
+  object animation", `cursor_ready` stayed false and `draw_cursor`
+  was a no-op on every pause page (hub, sleep, item use, etc.). The
+  sheet itself decoded fine — 38 records, ~5k nonzero pixels per
+  language.
+- **Fix.** `AOS_OBJ_MAX_STEPS` raised 8 -> 32 in
+  `src/runtime/aos/game/aos_obj.h` (comment records the native
+  evidence; +624 bytes per `AosObjSheet`). No render-path changes:
+  `draw_cursor`'s existing anim-0 timing and `sub_08048018` wiggle
+  model now receives real data. Verified on the real ROM: the hub
+  render paints 61 hand-palette pixels exactly inside the expected
+  16x16 piece box (x3-18/y91-106 at tick 1) and none elsewhere.
+- **Test.** `tests/test_aos_pause_graphics.c`'s synthetic ROM now
+  carries a cursor fixture (raw sheet at `0x082052D8`, descriptor at
+  `0x08256EF8`, all-white palette) with a ten-step animation — past
+  the old cap — and asserts `cursor_ready`, the decoded step count
+  and all 256 painted piece pixels. `ctest -R` pause/title/intro/
+  menu-sprites/object suites all pass.
+
 ## Patch 1151 - Sleep page three-band render, Item Use icon audit
 
 - **Sleep page bands corrected** (`aos_pause_graphics_render_sleep`,

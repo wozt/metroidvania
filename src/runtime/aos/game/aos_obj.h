@@ -10,8 +10,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+/* AOS_OBJ_MAX_STEPS bounds one animation's step list. The pause-menu hand
+ * cursor's descriptor (0x08256EF8 / 0x0827B1F0, loaded by sub_08048C74 via
+ * sub_08048B0C) cycles 29 pointing poses of 4 ticks each, so the cap must
+ * clear 29; 32 keeps the rows power-of-two sized. */
 enum { AOS_OBJ_SHEET_SIZE = 128, AOS_OBJ_MAX_FRAMES = 64, AOS_OBJ_MAX_PIECES = 9,
-       AOS_OBJ_MAX_ANIMS = 13, AOS_OBJ_MAX_STEPS = 8, AOS_OBJ_SCREEN_W = 240, AOS_OBJ_SCREEN_H = 160 };
+       AOS_OBJ_MAX_ANIMS = 13, AOS_OBJ_MAX_STEPS = 32, AOS_OBJ_SCREEN_W = 240, AOS_OBJ_SCREEN_H = 160 };
 
 /* One OAM component of a frame record (12 bytes): its offset from the
  * entity, its size and its place on the sheet in pixels, and its flips

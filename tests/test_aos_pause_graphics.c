@@ -118,6 +118,40 @@ int main(int argc, char **argv) {
     for (unsigned block = 0; block < 64; ++block)
         write_u16(bytes, MAP_OFFSET + block * 2, 1);
 
+    /* sub_08048C74's hand cursor for language 1: the raw (uncompressed)
+     * 16 x 16-tile sheet at 0x082052D8, frame descriptor 0x08256EF8 and
+     * the OBJ palette block at 0x0820C2C0 + 36/+ 68. The real cursor
+     * animation cycles 29 poses, so the fixture uses 10 steps — past the
+     * old 8-step cap — to prove the decode accepts it. The sheet is all
+     * colour index 15 and the palette all white, so every cursor pixel is
+     * (255,255,255), a colour nothing else in this fixture produces. */
+    {
+        const size_t cursor_graphics = 0x2052D8, cursor_tiles = 0x2052DC;
+        bytes[cursor_graphics] = 0;      /* raw resource */
+        bytes[cursor_graphics + 1] = 4;
+        bytes[cursor_graphics + 2] = 0x10;
+        bytes[cursor_graphics + 3] = 0x10;
+        memset(bytes + cursor_tiles, 0xFF, 0x2000);
+        memset(bytes + 0x20C2E4, 0xFF, 16);  /* palette rows 0-7 */
+        memset(bytes + 0x20C304, 0xFF, 16);  /* palette rows 8-15 */
+        const size_t descriptor = 0x256EF8;
+        write_u16(bytes, descriptor, 1);      /* one frame record */
+        write_u16(bytes, descriptor + 2, 1);  /* one animation */
+        write_u32(bytes, descriptor + 4, 0x0850C000);  /* records */
+        write_u32(bytes, descriptor + 12, 0x0850C200); /* animation table */
+        bytes[0x50C005] = 1;                  /* one piece in record 0 */
+        write_u32(bytes, 0x50C00C, 0x0850C100); /* components */
+        bytes[0x50C106] = 16;                 /* width */
+        bytes[0x50C107] = 16;                 /* height */
+        write_u32(bytes, 0x50C200, 0x0850C300); /* anim data */
+        write_u16(bytes, 0x50C300, 10);       /* ten 4-tick steps */
+        write_u16(bytes, 0x50C302, 1);
+        for (unsigned step = 0; step < 10; ++step) {
+            bytes[0x50C304 + step * 4] = 0;   /* frame 0 */
+            bytes[0x50C305 + step * 4] = 4;   /* duration */
+        }
+    }
+
     FusionRom rom = {bytes, ROM_SIZE, FUSION_ASSET_GAME_ARIA};
     AosPauseGraphics graphics;
     char error[160];
@@ -136,6 +170,24 @@ int main(int argc, char **argv) {
     assert((graphics.bg0_map[12 * 32 + 2] & 0xF000) == 0x3000);
     assert((graphics.bg0_map[13 * 32 + 2] & 0xF000) == 0x7000);
     assert(graphics.bg0_map[2 * 32 + 14] == 0x3300);
+    /* The hand cursor decoded: one record, a ten-step animation (past the
+     * former 8-step cap) and a painted 16 x 16 piece. sub_08048AD8(1, 12)
+     * anchors it at pixel (14 + wiggle, 99); tick 1 gives wiggle -3 and a
+     * 16 x 16 white piece at x 11..26, y 99..114. */
+    assert(graphics.cursor_ready);
+    assert(graphics.cursor_sheet.frame_count == 1);
+    assert(graphics.cursor_sheet.anim_count == 1);
+    assert(graphics.cursor_sheet.anim_length[0] == 10);
+    {
+        unsigned white = 0;
+        for (unsigned y = 95; y <= 118; ++y)
+            for (unsigned x = 8; x <= 30; ++x) {
+                const uint8_t *p = rgba + ((size_t)y * 240 + x) * 4;
+                if (p[0] == 255 && p[1] == 255 && p[2] == 255 && p[3] == 255)
+                    ++white;
+            }
+        assert(white == 256);
+    }
 
     AosPauseSoulSetValues soul = {
         .stats = {11, 12, 13, 14},

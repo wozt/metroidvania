@@ -51,9 +51,12 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
 /* Object20's first-room actors (sub_0805D198's Mina/Arikado/skeleton). */
 void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
                          const AosOpeningActors *actors, int cam_x, int cam_y);
-/* Per-actor animation durations in ticks for the opening actors. */
+/* Per-actor animation durations in ticks for the opening actors. Also
+ * (re)binds each actor's flattened {entry,ticks} sequences into
+ * actors->anim_seqs so aos_opening_actors_update can run the real
+ * sub_0803F17C-style tick chain; actors must be non-const for that. */
 void opening_actor_durations(const AriaObjects *objects,
-                             const AosOpeningActors *actors,
+                             AosOpeningActors *actors,
                              uint16_t durations[AOS_OPENING_ACTOR_COUNT]);
 /* The motion callbacks aos_opening_actors_set_motion consumes. */
 uint32_t opening_random(void *context);

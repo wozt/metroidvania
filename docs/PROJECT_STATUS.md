@@ -1,3 +1,62 @@
+## Patch 1148 - opening actors run the real animation tick chain; Arikado walk consumer proven absent
+
+- **GAP 1 — real per-frame animation ticks.** The opening actors
+  (Mina/Arikado/distant skeleton, Object20's `sub_0805D198` children)
+  previously measured animation completion with a host-supplied total
+  duration (`opening_actor_durations`) as a `+0x59`-bit-0 proxy. The
+  per-entry `{frame,ticks}` data was already exported —
+  `Enemy/opening_actor_N/anim_M` rows in the object runtime index carry
+  one u8 duration per sequence entry, and `aria_assets.c` stores them
+  in `opening_actors[actor].ticks[anim][entry]` — so no pipeline or
+  export change was needed. `opening_actor_durations`
+  (`src/runtime/aria_draw.c`) now also (re)binds every animation slot
+  into `AosOpeningActors.anim_seqs` as `AosOpeningAnimSeq{ticks,count}`
+  (the entry index is the `+0x65` analogue, matching the Object1C
+  flattened model); its `actors` parameter became non-const, which the
+  single call site in `aria_runtime.c` already satisfies.
+  `aos_opening_actors_update` steps each actor once per frame through
+  `actor_anim_step`, a `sub_0803F17C -> sub_0803EE24`-style chain
+  mirroring `child_seq_step`: `+0x6F` counts frames against the current
+  entry's ticks, `+0x6E` advances at entry boundaries, `+0x59` bit 0
+  (`anim_finished`) latches at sequence end — including loop wraps,
+  as native does — `+0x6C` bit 2 (`anim_ended`) pins non-looping
+  sequences on their last entry, and `actor_animation`
+  (`sub_0803F2C8`) resets the chain on every animation switch. Actors
+  without a bound sequence keep the total-duration fallback, so
+  editor previews and unloaded art behave exactly as before. Done-flag
+  timing is unchanged (sum of entry ticks == old total); the win is
+  the real `+0x6E` sub-frame state and faithful end/latch semantics.
+- **GAP 2 — Arikado's walk-on stop: consumer proven absent from the
+  dump.** `sub_0805D198` writes `+0x48 = 0xFFFFA000` (-0x6000) into
+  child18 (Arikado), but his only per-frame routine is
+  `sub_0805B748 -> sub_0803F17C`, the `+0x5B`-mode animation
+  dispatcher with no position or velocity work. The generic
+  integrators exist — `sub_0806D430` (`+0x48 += +0x50`, caller-bounded
+  clamp, `+0x40 += +0x48`), `sub_0806D460` (same for `+0x4C/+0x54/
+  +0x44`), `sub_0806E140` (presets both velocities then runs
+  `sub_080698A8`'s collision probe) — yet every call site in
+  `code_08050A3C.s` belongs to other Object20 callbacks
+  (`sub_0805C628`'s assault children, `sub_0805DAA0`'s scripted
+  skeleton, `sub_0805DD7C`, `sub_0805E5D4`, `sub_0805F7C8`,
+  `sub_0805FB3C`). No dumped routine reads child18's `+0x48`, so the
+  routine that walks Arikado left and stops him is absent from this
+  dump; the `0xD0`-pixel screen-x guard in `aos_opening_event.c`
+  remains a documented approximation (comment updated with the full
+  call-site map).
+- **Tests.** `tests/test_aos_opening_event.c` gains
+  `test_actor_anim_ticks` covering per-entry tick accumulation, the
+  loop-wrap `+0x59` latch without `+0x6C` end, the non-loop end pin,
+  `sub_0803F2C8` chain reset on animation switch and the unbound
+  fallback. `fusion_aos_opening_event_tests` and
+  `fusion_assets_aos_tests` pass; build is warning-clean.
+- **Remaining hooks (outside this change's owned files).**
+  `draw_opening_actors` still derives its frame from
+  `animation_age % total` walked by ticks — visually equivalent to the
+  tick chain but it could read `anim_subframe` directly for exactness;
+  emitted Object20 children (`AosOpeningEntity`) still use age-based
+  timing because their private resource-table animations have no
+  exported `{frame,ticks}` binding yet.
+
 ## Patch 1146 - opening/epilogue window stack gated out of the pause menu
 
 - **Root cause of the remaining pause overlay.** Patch 1144 gated the

@@ -453,6 +453,52 @@ static void draw_object20_wo_bursts(SDL_Renderer *renderer,
     }
 }
 
+/* One whiteout still-frame particle (sub_08063024 sparkle /
+ * sub_08063AEC burst particle / sub_080630E8 burst particle —
+ * all share graphics 0x08260390, frames 0x08267EE4 and draw
+ * sub_0803B9D0): +0x65 indexes the still frame inside the
+ * whiteout_burst_particle export (native record index; only
+ * frames 0xB/0xC are exported — 0xA picks draw nothing,
+ * documented gap), position is the +0x40/+0x44 16.16 pair's
+ * high words (+0x42/+0x46 aliases). */
+static void draw_object20_wo_particle(
+        SDL_Renderer *renderer, const AriaObjects *objects,
+        uint8_t field_65, int32_t fx, int32_t fy) {
+    const __typeof__(objects->special_objects[0]) *particle =
+        &objects->wo_burst_particle;
+    if (!particle->loaded || field_65 >= MAX_FRAMES)
+        return;
+    const AriaFrame *frame = &particle->frames[0][field_65];
+    if (!frame->texture) return;
+    SDL_FRect rect = {
+        (float)((fx >> 16) + frame->offset_x),
+        (float)((fy >> 16) + frame->offset_y),
+        frame->w, frame->h};
+    SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+}
+
+/* The story family's host pools drawn with the shared particle
+ * art: wo_sparks (sub_08063024/sub_08065858) and wo_63aec
+ * (sub_08063AEC/sub_08063944). Screen-space positions — no
+ * camera, like the bars and bursts. */
+static void draw_object20_wo_particles(SDL_Renderer *renderer,
+                                       const AriaObjects *objects,
+                                       const AriaEntity *e) {
+    if (e->object20.family != AOS_OBJECT20_FAMILY_STORY)
+        return;
+    const AosObject20Story *s = &e->object20.v.story;
+    for (uint8_t i = 0; i < s->wo_spark_count; ++i) {
+        const AosWoSpark *sp = &s->wo_sparks[i];
+        draw_object20_wo_particle(renderer, objects, sp->field_65,
+                                  sp->field_40, sp->field_44);
+    }
+    for (uint8_t i = 0; i < s->wo_63aec_count; ++i) {
+        const AosWo63AEC *p = &s->wo_63aec[i];
+        draw_object20_wo_particle(renderer, objects, p->field_65,
+                                  p->field_40, p->field_44);
+    }
+}
+
 static void draw_object20_entity(SDL_Renderer *renderer,
                                  const AriaObjects *objects,
                                  const AriaEntity *e, int cam_x, int cam_y,
@@ -461,6 +507,7 @@ static void draw_object20_entity(SDL_Renderer *renderer,
      * under this entity's own sprite. */
     draw_object20_wo_bars(renderer, e);
     draw_object20_wo_bursts(renderer, objects, e, step);
+    draw_object20_wo_particles(renderer, objects, e);
     /* Child sprites draw under the parent (native entity order is
      * unverified): the story family's +0x14 child14 and +0x18
      * link18 (param0 9/23/31) and the param0-26 companion's +0x18
@@ -990,15 +1037,34 @@ void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
 }
 
 void opening_actor_durations(
-    const AriaObjects *objects, const AosOpeningActors *actors,
+    const AriaObjects *objects, AosOpeningActors *actors,
     uint16_t durations[AOS_OPENING_ACTOR_COUNT]) {
     memset(durations, 0, sizeof(uint16_t) * AOS_OPENING_ACTOR_COUNT);
-    if (!objects || !actors) return;
+    if (!actors) return;
     for (int actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor) {
         int animation = actors->animation[actor];
         const __typeof__(objects->opening_actors[0]) *art =
-            &objects->opening_actors[actor];
-        if (!art->loaded || animation < 0 || animation >= AOS_ENEMY_MAX_ANIMS)
+            objects ? &objects->opening_actors[actor] : NULL;
+        /* Rebind the flattened {entry,ticks} sequences the tick chain
+         * in aos_opening_actors_update consumes. The runtime art stores
+         * one rendered frame and one u8 duration per sequence entry, so
+         * the entry index is the +0x65 analogue; binding every animation
+         * slot (not just the current one) keeps actor_animation switches
+         * covered. Entries without exported frames stay NULL so the
+         * duration fallback applies; a missing objects library clears
+         * every binding rather than leaving stale pointers. */
+        for (unsigned anim = 0; anim < AOS_OPENING_ACTOR_ANIMS; ++anim) {
+            AosOpeningAnimSeq *seq = &actors->anim_seqs[actor][anim];
+            seq->ticks = NULL;
+            seq->count = 0;
+            if (!art || !art->loaded || anim >= OBJECT_MAX_ANIMS ||
+                !art->defs[anim].count)
+                continue;
+            seq->ticks = art->ticks[anim];
+            seq->count = art->defs[anim].count;
+        }
+        if (!art || !art->loaded || animation < 0 ||
+            animation >= AOS_ENEMY_MAX_ANIMS)
             continue;
         unsigned total = 0;
         for (unsigned frame = 0; frame < art->defs[animation].count; ++frame)

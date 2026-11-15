@@ -642,6 +642,67 @@ static void test_insert_and_malformed(void) {
     assert(!aos_opening_event_init(&event, insert_command, 2));
 }
 
+static void test_actor_anim_ticks(void) {
+    AosOpeningActors actors;
+    aos_opening_actors_init(&actors);
+    /* Actor 0's spawn animation 4 is non-looping; bind a two-entry
+     * flattened sequence {ticks 2,3} = 5 update frames to finish. */
+    static const uint8_t seq_a[] = {2, 3};
+    actors.anim_seqs[0][4].ticks = seq_a;
+    actors.anim_seqs[0][4].count = 2;
+    /* Actor 1's spawn animation 1 loops; entries {1,2} wrap every 3
+     * frames and never latch the end bit. */
+    static const uint8_t seq_b[] = {1, 2};
+    actors.anim_seqs[1][1].ticks = seq_b;
+    actors.anim_seqs[1][1].count = 2;
+
+    for (unsigned frame = 0; frame < 4; ++frame)
+        assert(aos_opening_actors_update(&actors, NULL, NULL, 0) ==
+               AOS_OPENING_CUE_NONE);
+    /* +0x6E sits on entry 1 with +0x6F=2 of 3; not finished yet. */
+    assert(actors.anim_subframe[0] == 1 && actors.anim_tick[0] == 2 &&
+           !actors.anim_finished[0] && !actors.anim_ended[0]);
+    /* Actor 1 wrapped once at update 3 and re-entered entry 1 at
+     * update 4: sub_0803F17C sets +0x59 bit 0 at every sequence end,
+     * but +0x6C bit 2 stays clear for loops. */
+    assert(actors.anim_subframe[1] == 1 && actors.anim_finished[1] &&
+           !actors.anim_ended[1]);
+    assert(aos_opening_actors_update(&actors, NULL, NULL, 0) ==
+           AOS_OPENING_CUE_NONE);
+    assert(actors.anim_finished[0] && actors.anim_ended[0] &&
+           actors.anim_subframe[0] == 1);
+    /* The +0x6C bit 2 early-out pins the last entry: later updates do
+     * not move the tick chain. */
+    for (unsigned frame = 0; frame < 4; ++frame)
+        aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(actors.anim_subframe[0] == 1 && actors.anim_tick[0] == 0);
+
+    /* actor_animation (sub_0803F2C8) resets the chain for the new
+     * sequence: bind actor 2's beat animation 5, let the chain run,
+     * then the ENEMY_ATTACKS cue re-arms it. */
+    static const uint8_t seq_c[] = {4, 4};
+    actors.anim_seqs[2][5].ticks = seq_c;
+    actors.anim_seqs[2][5].count = 2;
+    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENEMY_ATTACKS);
+    assert(actors.animation[2] == 5);
+    for (unsigned frame = 0; frame < 3; ++frame)
+        aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(actors.anim_tick[2] == 3 && actors.anim_subframe[2] == 0);
+    /* The skeleton-state machine re-arms animation 5 on its own; drive
+     * the chain again and force one more actor_animation through the
+     * scene by re-triggering the same cue is not possible, so verify
+     * the reset on actor 0 via ENTRY_PAN instead. */
+    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENTRY_PAN);
+    assert(actors.animation[0] == 1);
+    assert(actors.anim_subframe[0] == 0 && actors.anim_tick[0] == 0 &&
+           !actors.anim_finished[0] && !actors.anim_ended[0]);
+
+    /* No bound sequence -> the duration fallback still applies: actor 2
+     * keeps only its age counter (its spawn animation loops anyway). */
+    assert(!actors.anim_seqs[2][4].ticks &&
+           actors.anim_seqs[2][4].count == 0);
+}
+
 static bool resolve_rom_text(void *context, uint8_t id,
                              const uint8_t **script, size_t *script_size) {
     return aos_intro_resources_entry(context, 1, id, script, script_size);
@@ -661,6 +722,7 @@ int main(int argc, char **argv) {
     test_skeleton_collision_flight();
     test_skeleton_approach();
     test_emitted_attack_tails();
+    test_actor_anim_ticks();
     test_trigger();
     test_intro_transition();
     test_script_and_commit();

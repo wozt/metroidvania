@@ -25,6 +25,9 @@ enum {
     AOS_OPENING_ARIKADO_Y = 0x2C0,
     AOS_OPENING_SKELETON_X = 0x16F,
     AOS_OPENING_SKELETON_Y = 0x268,
+    /* The opening actors' exported art stores OBJECT_MAX_ANIMS
+     * animation slots; animation indices stay far below this bound. */
+    AOS_OPENING_ACTOR_ANIMS = 24,
     /* sub_08067934 writes WIN0H=0x08E8 (x=8..232). sub_08067804 opens
      * WIN0V around y=124 to y=88..160. sub_08067A04 maps the speaker row
      * at screen y=100 and the dialogue canvas at (40,116). */
@@ -196,6 +199,18 @@ typedef struct {
     void *resolve_context;
 } AosOpeningEvent;
 
+/* One flattened animation sequence in the Object1C tick model
+ * (AosObject1CAnimTick): ticks[i] is entry i's duration in update
+ * frames and the entry index is the +0x65 frame selector, because the
+ * exported opening-actor art keeps one rendered frame per sequence
+ * entry. A NULL ticks pointer or zero count means the host has no
+ * exported sequence for that animation and the duration fallback in
+ * actor_animation_done applies. */
+typedef struct {
+    const uint8_t *ticks;
+    uint16_t count;
+} AosOpeningAnimSeq;
+
 /* The three child entities created by Object20/sub_0805D198. This compact
  * controller covers the source-visible entry movement while the complete
  * sub_0805D410 callback graph remains a later parity slice. */
@@ -210,6 +225,18 @@ typedef struct {
      * values are sub_0805D198's record 0 anim 4 arg3=0, record 1 anim 1
      * arg3=1 and record 8 anim 4 arg3=1. */
     uint8_t anim_loop[AOS_OPENING_ACTOR_COUNT];
+    /* The sub_0803F17C -> sub_0803EE24 tick chain state per actor,
+     * mirroring the native child records: anim_seqs[actor][animation]
+     * is the bound flattened {entry,ticks} sequence (filled by the
+     * host's opening_actor_durations from the loaded opening_actor_*
+     * art each frame), anim_subframe is +0x6E, anim_tick is +0x6F,
+     * anim_finished is +0x59 bit 0 and anim_ended is +0x6C bit 2. */
+    AosOpeningAnimSeq anim_seqs[AOS_OPENING_ACTOR_COUNT]
+                               [AOS_OPENING_ACTOR_ANIMS];
+    uint8_t anim_subframe[AOS_OPENING_ACTOR_COUNT];
+    uint8_t anim_tick[AOS_OPENING_ACTOR_COUNT];
+    bool anim_finished[AOS_OPENING_ACTOR_COUNT];
+    bool anim_ended[AOS_OPENING_ACTOR_COUNT];
     bool visible[AOS_OPENING_ACTOR_COUNT];
     uint8_t state;
     uint8_t step;
@@ -367,9 +394,11 @@ void aos_opening_actors_input(AosOpeningActors *actors, uint16_t new_input);
  * of accepting the next page early, so rapid A presses cannot skip or strand
  * the enemy reveal, attack or soul absorption. */
 bool aos_opening_actors_blocks_script(const AosOpeningActors *actors);
-/* Advances one frame and returns one audio cue due on that frame. Animation
- * durations are supplied by the exported actor library, keeping this model
- * independent from SDL and usable by editor previews. camera_x is a whole-
+/* Advances one frame and returns one audio cue due on that frame. Each
+ * actor's bound animation sequence is ticked once per frame through the
+ * sub_0803F17C-style {entry,ticks} chain; animation_durations remains the
+ * fallback for animations without an exported sequence. camera_x is a
+ * whole-
  * pixel host camera position; Object20 retains the horizontal fractional
  * part itself. camera_y is read by sub_08068AD4's portable margin test. */
 AosOpeningCue aos_opening_actors_update(

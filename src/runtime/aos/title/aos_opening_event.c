@@ -229,23 +229,64 @@ static void actor_animation(AosOpeningActors *actors, unsigned actor,
     actors->animation[actor] = animation;
     actors->animation_age[actor] = 0;
     actors->anim_loop[actor] = loop ? 1 : 0;
+    /* sub_0803F2C8 resets +0x6D/+0x6E/+0x6F and clears +0x6C's end bit;
+     * the +0x59 finished flag belongs to the old sequence. */
+    actors->anim_subframe[actor] = 0;
+    actors->anim_tick[actor] = 0;
+    actors->anim_finished[actor] = false;
+    actors->anim_ended[actor] = false;
+}
+
+/* The bound flattened sequence for one actor's current animation, or
+ * NULL when the host exported no {entry,ticks} table for it. */
+static const AosOpeningAnimSeq *actor_anim_seq(
+    const AosOpeningActors *actors, unsigned actor) {
+    int animation = actors->animation[actor];
+    if (animation < 0 || animation >= AOS_OPENING_ACTOR_ANIMS) return NULL;
+    const AosOpeningAnimSeq *seq =
+        &actors->anim_seqs[actor][animation];
+    return seq->ticks && seq->count ? seq : NULL;
+}
+
+/* One sub_0803F17C -> sub_0803EE24-style step for a single actor,
+ * matching child_seq_step in the Object1C port: +0x6F counts frames
+ * against the current entry's ticks, +0x6E advances at each entry
+ * boundary, +0x59 bit 0 latches at sequence end and +0x6C bit 2 pins a
+ * non-looping sequence on its last entry. Looping sequences wrap and
+ * never set the end bit. Actors without a bound sequence keep their
+ * duration-driven age counter only. */
+static void actor_anim_step(AosOpeningActors *actors, unsigned actor) {
+    const AosOpeningAnimSeq *seq = actor_anim_seq(actors, actor);
+    if (!seq || actors->anim_ended[actor]) return;
+    if (actors->anim_subframe[actor] >= seq->count)
+        actors->anim_subframe[actor] = 0;
+    uint16_t ticks = seq->ticks[actors->anim_subframe[actor]];
+    if (!ticks) ticks = 1;
+    if (++actors->anim_tick[actor] < ticks) return;
+    actors->anim_tick[actor] = 0;
+    if (++actors->anim_subframe[actor] < seq->count) return;
+    actors->anim_finished[actor] = true;
+    if (actors->anim_loop[actor]) {
+        actors->anim_subframe[actor] = 0;
+    } else {
+        actors->anim_subframe[actor] = (uint8_t)(seq->count - 1);
+        actors->anim_ended[actor] = true;
+    }
 }
 
 /* The child entities' +0x59 bit 0 is their animation-finished flag,
- * which sub_0805D410's +0xB==4 and +0xB==5 sub-states 3/5 poll. The
- * portable model approximates it with the exported per-animation
- * duration; a missing duration table cannot measure the wait and is
- * treated as already satisfied rather than stranding the beat. A
- * looping sequence can never raise the flag, matching +0x6C bit 3.
- * The native flag is latched by the sub_0803F17C -> sub_0803EE24 ->
- * sub_0803F224 tick chain off +0x6D/+0x6E/+0x6F per-frame records;
- * reproducing it needs the flattened {frame,ticks} table the Object1C
- * port already models, which the host's opening_actor_durations does
- * not yet export — a runtime hook outside this module's scope. */
+ * which sub_0805D410's +0xB==4 and +0xB==5 sub-states 3/5 poll. When the
+ * host bound the flattened {entry,ticks} sequence the flag comes from
+ * the real tick chain in actor_anim_step; otherwise the exported
+ * per-animation total duration is the fallback, and a missing duration
+ * table cannot measure the wait and is treated as already satisfied
+ * rather than stranding the beat. A looping sequence can never raise
+ * the flag, matching +0x6C bit 3. */
 static bool actor_animation_done(const AosOpeningActors *actors,
                                  const uint16_t durations[AOS_OPENING_ACTOR_COUNT],
                                  unsigned actor) {
     if (actors->anim_loop[actor]) return false;
+    if (actor_anim_seq(actors, actor)) return actors->anim_finished[actor];
     uint16_t duration = durations ? durations[actor] : 0;
     return !duration || actors->animation_age[actor] >= duration;
 }
@@ -1060,9 +1101,13 @@ AosOpeningCue aos_opening_actors_update(
      * reads soul_events once per frame after this update returns. */
     actors->soul_events = 0;
     ++actors->frame;
-    for (unsigned actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor)
+    for (unsigned actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor) {
         if (actors->animation_age[actor] < UINT16_MAX)
             ++actors->animation_age[actor];
+        /* sub_0805B748 runs sub_0803F17C once per entity per frame;
+         * the three opening actors get the same tick-chain step. */
+        actor_anim_step(actors, actor);
+    }
     update_debris(actors);
     update_projectiles(actors);
     update_emitted(actors);
@@ -1096,11 +1141,20 @@ AosOpeningCue aos_opening_actors_update(
      * resources (three words fed to sub_0803B800/sub_08068264/
      * sub_0803B924 by sub_0805B5E8), so record 1 carries no behavior.
      * The child's only per-frame routine is sub_0805B748 ->
-     * sub_0803F17C, and no dumped routine integrates +0x48 for it;
-     * the consumer — likely the same sub_0806D430/sub_0806D460 +
-     * caller-add pattern sub_0805DAA0 uses, or a dispatch not in this
-     * dump — remains unidentified, so the source-position guard keeps
-     * this partial controller bounded until it is found. */
+     * sub_0803F17C, the +0x5B-mode animation dispatcher
+     * (sub_0803EE24/sub_0803EEFC family) with no position or velocity
+     * work. The generic integrators exist — sub_0806D430 adds +0x50 to
+     * +0x48, clamps to its caller's bound and applies +0x40 += +0x48;
+     * sub_0806D460 does the same for +0x4C/+0x54/+0x44; sub_0806E140
+     * presets both velocities then runs them through sub_080698A8's
+     * collision probe — but every call site in this object file belongs
+     * to other callbacks (sub_0805C628's assault children,
+     * sub_0805DAA0's scripted skeleton, sub_0805DD7C, sub_0805E5D4,
+     * sub_0805F7C8, sub_0805FB3C). No dumped routine reads child18's
+     * +0x48, so the routine that walks Arikado left and stops him is
+     * absent from this dump (likely an undumped update or an entity-
+     * system pass outside code_08050A3C.s); the source-position guard
+     * keeps this partial controller bounded until it is found. */
     if (actors->state == 1) {
         const int32_t stop_x = 0xD0 << 16;
         if (actors->x[1] > stop_x) {

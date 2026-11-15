@@ -1,3 +1,46 @@
+## Patch 1154 - Headless `--simulate` room transitions
+
+- **Gap.** The `--simulate` loop in `fusion_aria_runtime` ran the
+  player, stats, save-room and entity updates but never the exit
+  check, so scripted movement stopped at room boundaries while the
+  SDL loop transitioned through `take_exit`.
+- **Change.** `src/runtime/aria_runtime.c`: the simulate frame now
+  runs the same exit check as the SDL loop, in the same position —
+  after the entity/door bookkeeping and before the save-room update,
+  combat tick, camera follow and `update_entities`. It reuses
+  `project_door_touched`/`project_door_latch` for editor doors and
+  `aos_room_outside` + `take_exit` for native exits, then refreshes
+  the collision layer, resets the save-room state and counts the
+  change for the summary line. `take_exit` itself now accepts a NULL
+  renderer (headless): the background texture load and the
+  `SDL_DestroyTexture` are skipped/guarded, everything else —
+  `aos_room_exit_velocity`, `aos_room_arrival`, the room-folder load
+  through `load_room_folder` (overlays included), the
+  `aos_room_dialogue_close` and `aos_object01_reset` — is unchanged
+  and shared with the SDL path.
+- **Native basis.** Unchanged from Patch 0206: `sub_08011A44` /
+  `sub_08010244` / `sub_08010350` drive the trigger, entry choice and
+  arrival placement; `sub_0800F9EC` + `sub_0800ED24` perform the room
+  load and scroll settle while the display is blanked, so the port's
+  instant swap matches the native visible result. The staged
+  `unk_65` transition timing is still not reproduced frame-by-frame.
+- **Test.** New `tests/test_aria_simulate_transition.sh` (CTest
+  `aria_simulate_room_transition`, skip code 77 without the extracted
+  assets): spawn (400,680) in room 0/0 holding RIGHT crosses the
+  0/0 -> 0/3 exit and ends in another room. Manual runs also chained
+  0/0 -> 0/3 -> 0/5, 0/6 -> 0/9 -> 0/10 -> 0/35 and 0/24 -> 0/25 ->
+  0/26 -> 0/32 -> area 1/4. `tests/compare_aos_movement.py` now runs
+  end-to-end against the real ROM and mGBA lab; the measured stretch
+  stays inside room 0/3, where native Soma is blocked early (x 6->55)
+  while the runtime walks to x 244 — a pre-existing movement/behaviour
+  divergence unrelated to transitions, still open.
+- **Registries.** `data/native_parity/annotations.tsv` gains
+  `aos.transitions.room_exits` (functional; divergences: collapsed
+  transition stages, the two door-gated 0xF0 exit-cell crossings of
+  rooms 5/5 and 9/1 still unresolved, no emulator comparison).
+  `features.tsv` has no row covering the Aria runtime simulate path,
+  so it is unchanged.
+
 ## Patch 1153 - Pause hand cursor decode fixed (29-step animation cap)
 
 - **Root cause.** `aos_obj_sheet_decode`

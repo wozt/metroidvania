@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 198 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 199 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2241 | 1332 |
+| Castlevania: Aria of Sorrow | 2248 | 1325 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2860,6 +2860,15 @@ Next action: Spawn the three particle children through the entity-create path on
 ### Transitions
 
 [?] **`aos.transitions.inventory-boundary` — source coverage.** The current classifier assigns 1 discovered routine(s) to this category (1 by native name). Category completeness has not been established.
+
+[+] **`aos.transitions.room_exits` — Aria room exits and room transitions.** sub_08011A44's bounds and exit-cell test, sub_08010244's exit velocity clamp, sub_08010350's transition-entry choice and arrival placement, sub_0800F9EC's room load with the sub_0800ED5C/sub_0800EE54 BG1 offsets and sub_0803FBBC's one-screen pinning are ported in aos_room.c and driven by take_exit in both the SDL loop and the headless --simulate loop (renderer NULL skips only the background texture). --audit-transitions matches all 725 entries; 723 edge arrivals land inside their target. The simulate path now crosses rooms: room 0/0 -> 0/3 -> 0/5 and onward into area 1 verified headless.
+
+Native evidence: `aos:c:src/code/code_08039340.c:sub_0803FBBC`, `aos:c:src/code_0800B700.c:GameModeInGameUpdate`, `aos:c:src/code_0800CB00.c:sub_0800ED24`, `aos:c:src/code_0800CB00.c:sub_0800ED5C`, `aos:c:src/code_0800CB00.c:sub_0800EE54`, `aos:c:src/code_0800F1FC.c:sub_0800F9EC`, `aos:c:src/code_0800F1FC.c:sub_08010244`, `aos:c:src/code_0800F1FC.c:sub_08010350`, `aos:c:src/code_0800F1FC.c:sub_080104EC`, `aos:c:src/code_080109F4.c:sub_08011A44`.  
+Local implementation: [`src/runtime/aos/game/aos_room.c`](../src/runtime/aos/game/aos_room.c), [`src/runtime/aos/game/aos_room.h`](../src/runtime/aos/game/aos_room.h), [`src/runtime/aria_room_io.c`](../src/runtime/aria_room_io.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c).  
+Tests: [`tests/test_aos_room.c`](../tests/test_aos_room.c), [`tests/test_aria_simulate_transition.sh`](../tests/test_aria_simulate_transition.sh), [`tests/compare_aos_movement.py`](../tests/compare_aos_movement.py).
+Known divergences: The staged transition of unk_65 (black screen, entity cleanup, BG1 velocity seed, room load, scroll settle, display restore) collapses to an instant room swap: the native result is a blanked display, so no visible difference is modelled, but the per-stage timing is not reproduced. The two exit-cell (0xF0) transitions of rooms 5/5 and 9/1 sit behind door entities that are not ported and stay unresolved. take_exit fails fatally in the SDL loop and stops the simulate run when a leaving position matches no transition entry.  
+Next action: Port the door-gated 0xF0 exit-cell crossings once their door entities exist; compare a scripted multi-room walk against the mGBA lab.
+Evidence: in game: `fusion_aria_runtime --simulate 1200 --simulate-hold 16 --area 0 --room 0 --spawn 400 680 crosses the 0/0 -> 0/3 exit into 0/5 (tests/test_aria_simulate_transition.sh); chained edge transitions 0/6 -> 0/9 -> 0/10 -> 0/35 and into area 1/4 also verified; the SDL loop uses the same take_exit path.`.
 
 ### Events and scripts
 

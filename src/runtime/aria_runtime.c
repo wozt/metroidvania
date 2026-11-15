@@ -258,8 +258,11 @@ static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **backg
                 target_area, target_room);
         return 0;
     }
-    SDL_Texture *texture = load_background(renderer, folder);
-    if (!texture) { free_room(&target); return forced ? 0 : -1; }
+    /* --simulate passes renderer NULL: no background texture exists
+     * headless, so the texture step is skipped like the rest of the
+     * renderer-only work in that mode. */
+    SDL_Texture *texture = renderer ? load_background(renderer, folder) : NULL;
+    if (renderer && !texture) { free_room(&target); return forced ? 0 : -1; }
     aos_room_exit_velocity(soma, x - cam_x, y - cam_y);
     int32_t ax, ay;
     if (spawn) {
@@ -283,7 +286,7 @@ static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **backg
     free_room(room);
     *room = target;
     aos_object01_reset();   /* the + 0x1316C claim is per-room here */
-    SDL_DestroyTexture(*background);
+    if (*background) SDL_DestroyTexture(*background);
     *background = texture;
     return 1;
 }
@@ -935,11 +938,13 @@ int aria_runtime_main(int argc, char **argv) {
     if (simulate_frames > 0) {
         /* Headless gameplay tick: the same data loads as the SDL runtime
          * (renderer NULL, so no textures) and the player, stats, save-room
-         * and entity updates run with neutral input for N frames. This is
-         * the only automated exercise of update_entities' SPECIAL dispatch.
-         * Out of scope: room transitions, pause/save menus, rendering,
-         * audio mixing, guardian and soul-skill attacks, the opening
-         * scene and death/game-over handling. */
+         * and entity updates run with the scripted input for N frames. This
+         * is the only automated exercise of update_entities' SPECIAL dispatch.
+         * Room transitions run through the same take_exit path as the SDL
+         * loop (edge/exit-cell trigger plus editor doors, instant swap like
+         * the native blanked-display result). Out of scope: pause/save
+         * menus, rendering, audio mixing, guardian and soul-skill attacks,
+         * the opening scene and death/game-over handling. */
         if (!load_library(library_path, &library, NULL)) {
             fprintf(stderr, "Cannot load the Soma library: %s\n", library_path);
             aos_mp2k_engine_destroy(&mp2k);
@@ -1079,6 +1084,10 @@ int aria_runtime_main(int argc, char **argv) {
         long sim_timed_end = -1;
         unsigned sim_timed_held = 0, sim_base = 0, sim_held = 0;
         unsigned sim_prev_held = 0;
+        /* take_exit's renderer/background pair: both stay NULL/empty
+         * headless, so only the room data swap and arrival placement run. */
+        SDL_Texture *sim_background = NULL;
+        long sim_room_changes = 0;
         for (long frame = 0; frame < simulate_frames; ++frame) {
             if (!moves_override) soma.moves = progress.abilities[0] & 0x1Fu;
             soma.abilities = progress.flags;
@@ -1142,6 +1151,31 @@ int aria_runtime_main(int argc, char **argv) {
                 aos_yellow_soul_regen(&yellow_soul, &progress, yellow_souls, &soma.hp,
                                       soma.max_hp, soma.vx, soma.flags, door_held);
             }
+            /* The same exit check the SDL loop runs before the save-room,
+             * combat and camera steps: sub_08011A44/sub_08010244/
+             * sub_08010350 through take_exit — Soma outside the room or
+             * standing in an editor door. The HUD notice and soul-skill
+             * clears of the SDL path have no headless counterpart (no
+             * hud/souls objects exist in this mode). */
+            const AosProjectDoor *sim_door =
+                project_door_touched(&room, soma.x >> 16, soma.y >> 16);
+            if (!sim_door) project_door_latch = false;
+            if (project_door_latch) sim_door = NULL;
+            bool sim_leaving = aos_room_outside(&layer, room.width_screens,
+                                                room.height_screens,
+                                                soma.x >> 16, soma.y >> 16);
+            int sim_exited = sim_leaving || sim_door
+                ? take_exit(NULL, &room, &sim_background, &soma, cam_x, cam_y,
+                            sim_leaving ? NULL : sim_door)
+                : 0;
+            if (sim_exited < 0) break;   /* native exit failed: stop honestly */
+            if (sim_door && !sim_exited) project_door_latch = true;
+            if (sim_exited > 0) {
+                project_door_latch = true;
+                ++sim_room_changes;
+                layer = room_layer(&room);
+                save_room = (AosSaveRoom){0};
+            }
             if (aos_save_room_update(&save_room, room_has_save_point(&room), soma.x >> 16,
                                      soma.y >> 16, 0)) {
                 soma.hp = soma.max_hp;
@@ -1159,9 +1193,10 @@ int aria_runtime_main(int argc, char **argv) {
             aos_enemy_set_soul_attacks(NULL, 0);
         }
         int spawned_special = 0, active_special = 0, enemies_alive = 0;
-        printf("Aria simulate: %ld frames, room %d/%d, spawn %d,%d, Soma %d,%d hp %d/%d\n",
+        printf("Aria simulate: %ld frames, room %d/%d, spawn %d,%d, Soma %d,%d hp %d/%d, room changes %ld\n",
                simulate_frames, room.area, room.number, spawn_x, spawn_y,
-               (int)(soma.x >> 16), (int)(soma.y >> 16), soma.hp, soma.max_hp);
+               (int)(soma.x >> 16), (int)(soma.y >> 16), soma.hp, soma.max_hp,
+               sim_room_changes);
         if (use_sim_script)
             printf("Aria simulate: script %s: %zu directives, final held 0x%x\n",
                    simulate_script_path, sim_dir_count, sim_held);
@@ -1187,6 +1222,7 @@ int aria_runtime_main(int argc, char **argv) {
         printf("Aria simulate: SPECIAL %d/%d spawned, %d enemies alive\n",
                spawned_special, active_special, enemies_alive);
         free(sim_dirs);
+        if (sim_background) SDL_DestroyTexture(sim_background);
         aos_mp2k_engine_destroy(&mp2k);
         free_room(&room);
         return 0;

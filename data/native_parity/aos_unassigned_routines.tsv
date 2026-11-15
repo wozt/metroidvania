@@ -1013,7 +1013,6 @@ aos:c:src/code_080096AC.c:sub_0800A2AC	sub_0800A2AC	unclassified				c_function	0
 aos:c:src/code_080096AC.c:sub_0800B5E8	sub_0800B5E8	unclassified				c_function	0x0800B5E8	src/code_080096AC.c	1582	1	4
 aos:c:src/code_080096AC.c:sub_0800B634	sub_0800B634	unclassified				c_function	0x0800B634	src/code_080096AC.c	1605	1	5
 aos:c:src/code_080096AC.c:sub_0800B6B8	sub_0800B6B8	unclassified		technical	exclusive_callees	c_function	0x0800B6B8	src/code_080096AC.c	1650	1	2
-aos:c:src/code_0800B700.c:GameModeInGameUpdate	GameModeInGameUpdate	unclassified				c_function	0x0800BEC0	src/code_0800B700.c	835	2	39
 aos:c:src/code_0800B700.c:GameModeInGameUpdate_inline_0	GameModeInGameUpdate_inline_0	unclassified				c_function		src/code_0800B700.c	825	1	0
 aos:c:src/code_0800B700.c:GameModeSoundTestMenu	GameModeSoundTestMenu	menus	name			c_function	0x0800B8D0	src/code_0800B700.c	612	1	20
 aos:c:src/code_0800B700.c:GameModeSoundTestMenu_inline_0	GameModeSoundTestMenu_inline_0	menus	name			c_function		src/code_0800B700.c	520	1	5
@@ -1046,8 +1045,6 @@ aos:c:src/code_0800CB00.c:sub_0800E40C	sub_0800E40C	unclassified				c_function	0
 aos:c:src/code_0800CB00.c:sub_0800E40C_inline_0	sub_0800E40C_inline_0	unclassified				c_function		src/code_0800CB00.c	1330	3	0
 aos:c:src/code_0800CB00.c:sub_0800E540	sub_0800E540	unclassified				c_function	0x08003540	src/code_0800CB00.c	1392	1	10
 aos:c:src/code_0800CB00.c:sub_0800EBE0	sub_0800EBE0	unclassified				c_function	0x0800EBE0	src/code_0800CB00.c	1714	1	5
-aos:c:src/code_0800CB00.c:sub_0800ED5C	sub_0800ED5C	unclassified				c_function	0x0800ED5C	src/code_0800CB00.c	1798	2	0
-aos:c:src/code_0800CB00.c:sub_0800EE54	sub_0800EE54	unclassified				c_function	0x0800EE54	src/code_0800CB00.c	1878	2	0
 aos:c:src/code_0800CB00.c:sub_0800EF58	sub_0800EF58	environment	referrers			c_function	0x0800EF58	src/code_0800CB00.c	1959	1	2
 aos:c:src/code_0800CB00.c:sub_0800EF6C	sub_0800EF6C	unclassified				c_function	0x0800EF6C	src/code_0800CB00.c	1969	2	0
 aos:c:src/code_0800CB00.c:sub_0800EF94	sub_0800EF94	unclassified				c_function	0x0800EF94	src/code_0800CB00.c	1979	1	0
@@ -1065,11 +1062,8 @@ aos:c:src/code_0800F1FC.c:sub_0800FDC8	sub_0800FDC8	unclassified				c_function	0
 aos:c:src/code_0800F1FC.c:sub_0800FE98	sub_0800FE98	unclassified				c_function	0x0800FE98	src/code_0800F1FC.c	963	1	5
 aos:c:src/code_0800F1FC.c:sub_0800FFCC	sub_0800FFCC	unclassified				c_function	0x0800FFCC	src/code_0800F1FC.c	1020	1	7
 aos:c:src/code_0800F1FC.c:sub_08010144	sub_08010144	unclassified				c_function	0x08010144	src/code_0800F1FC.c	1102	3	2
-aos:c:src/code_0800F1FC.c:sub_08010244	sub_08010244	unclassified				c_function	0x08010244	src/code_0800F1FC.c	1141	7	3
 aos:c:src/code_0800F1FC.c:sub_08010244_inline_0	sub_08010244_inline_0	unclassified				c_function		src/code_0800F1FC.c	1126	1	0
 aos:c:src/code_0800F1FC.c:sub_08010244_inline_1	sub_08010244_inline_1	unclassified				c_function		src/code_0800F1FC.c	1131	1	0
-aos:c:src/code_0800F1FC.c:sub_08010350	sub_08010350	unclassified		technical	exclusive_callees	c_function	0x08010350	src/code_0800F1FC.c	1189	2	5
-aos:c:src/code_0800F1FC.c:sub_080104EC	sub_080104EC	unclassified		rooms	exclusive_callees	c_function	0x080104EC	src/code_0800F1FC.c	1291	7	12
 aos:c:src/code_0800F1FC.c:sub_080106DC	sub_080106DC	unclassified		input	exclusive_callees	c_function	0x080106DC	src/code_0800F1FC.c	1383	1	10
 aos:c:src/code_0800F1FC.c:sub_080108DC	sub_080108DC	unclassified				c_function	0x080108DC	src/code_0800F1FC.c	1490	5	1
 aos:c:src/code_0800F1FC.c:sub_080108FC	sub_080108FC	unclassified				c_function	0x080108FC	src/code_0800F1FC.c	1508	5	2
@@ -1079,7 +1073,6 @@ aos:c:src/code_080109F4.c:sub_080109F4_inline_0	sub_080109F4_inline_0	unclassifi
 aos:c:src/code_080109F4.c:sub_08010D60_inline_0	sub_08010D60_inline_0	unclassified				c_function		src/code_080109F4.c	345	1	0
 aos:c:src/code_080109F4.c:sub_080114FC	sub_080114FC	unclassified		audio	exclusive_callees	c_function	0x080114FC	src/code_080109F4.c	694	1	1
 aos:c:src/code_080109F4.c:sub_080116A8	sub_080116A8	unclassified				c_function	0x080116A8	src/code_080109F4.c	762	1	21
-aos:c:src/code_080109F4.c:sub_08011A44	sub_08011A44	unclassified				c_function	0x08011A44	src/code_080109F4.c	907	7	1
 aos:c:src/code_080109F4.c:sub_08011B2C	sub_08011B2C	unclassified		rooms	exclusive_callees	c_function	0x08011B2C	src/code_080109F4.c	974	1	5
 aos:c:src/code_080109F4.c:sub_08011CD0	sub_08011CD0	unclassified		technical	exclusive_callees	c_function	0x08011CD0	src/code_080109F4.c	1031	4	1
 aos:c:src/code_08011DD0.c:sub_08011DD0	sub_08011DD0	unclassified				c_function	0x08011DD0	src/code_08011DD0.c	37	0	0

@@ -1529,6 +1529,16 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_door_tests)
     add_test(NAME aos_door COMMAND fusion_aos_door_tests)
 
+    # Headless --simulate room-transition contract: walks Soma through
+    # the room 0/0 -> 0/3 exit with the same take_exit path the SDL loop
+    # uses. Needs the extracted runtime assets (fusion_rebuild output);
+    # the script exits 77 when they are absent.
+    add_test(NAME aria_simulate_room_transition
+             COMMAND ${CMAKE_COMMAND} -E env
+                     FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>
+                     sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_transition.sh")
+    set_tests_properties(aria_simulate_room_transition PROPERTIES SKIP_RETURN_CODE 77)
+
     add_executable(fusion_aos_object02_tests tests/test_aos_object02.c
                    src/runtime/aos/game/aos_object02.c src/runtime/aos/core/aos_collision.c)
     target_include_directories(fusion_aos_object02_tests PRIVATE src/runtime)

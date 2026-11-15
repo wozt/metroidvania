@@ -1,3 +1,58 @@
+## Patch 1156 - Ability description + Sleep save-result band
+
+- **Gap.** Two pause-page bands still drew nothing where the native
+  game prints text. The Ability page's bottom window
+  (`sub_0804BCA0`/`sub_0804BB40`) shows the selected entry's
+  description — text `0x257+cursor` while the ability is owned
+  (`SoulInventory_GetSoulTotal(3,cursor)`), else `0x34F` "---" — but
+  the port left it empty. The Sleep page's shared bottom band is
+  empty on entry (`sub_0804BD38`) yet `sub_0804BE0C` fills it with
+  `0x36B` "Game was saved" or `0x386` "Save failed." after a
+  quicksave attempt; the port had no channel to carry that outcome
+  from the save path into the next render.
+- **Change.** `AosSoulMenu` gains a `sleep_result` field
+  (`AOS_SLEEP_RESULT_NONE/SAVED/FAILED`) that Sleep-page entry
+  clears and `aos_pause_sleep_result` sets from the host's quicksave
+  boolean — the same state object the renderer already reads.
+  `aos_pause_graphics_render_sleep` takes that outcome and commits
+  `0x36B`/`0x386` through the shared `place_text_cells` bottom-band
+  path (tile origin `(0,15)`, window `0x1A x 3`) only when a result
+  is pending, keeping band 3 empty on entry. `draw_native_sleep`
+  passes `menu->sleep_result`; `aria_runtime.c`'s
+  `AOS_SOUL_MENU_SLEEP_SAVE_REQUESTED` handler already routes the
+  real `aos_save_quick_path`/`aos_save_store` result into
+  `aos_pause_sleep_result`, so the message now reflects the actual
+  write. `aos_pause_graphics_render_ability` prints the selected
+  description — `0x257+cursor` when `values->owned[cursor]`, else
+  `0x34F` — through `place_text_cells` into the
+  `sub_08040748(0,0,0x1F,4)` bottom window at tile origin `(6,15)`,
+  below the name rows and inside the `sub_080472B0(6,0xD,…)` frame.
+- **Evidence.** Native disassembly of `sub_0804BCA0` (selected index
+  at state `+0x15`, owned -> `0x257+selected`, else `0x34F`, then
+  `sub_08040FE0` + `sub_08046BC8`) and `sub_0804BE0C` (`0x36B`/`0x386`)
+  drove the IDs; a headless mGBA BG0-map peek of the Ability page
+  confirmed the `0x3200` frame at native map cols 4-26 (screen
+  cols 6-28 under `scroll_x` -16) with the name rows above it, so the
+  description commits at the frame's left column, row 15. Text IDs
+  decoded from the language bank.
+- **Test.** `tests/test_aos_pause_graphics.c` asserts the Sleep band
+  stays empty for `NONE`, renders result cells for `SAVED`/`FAILED`,
+  and that the Ability page commits description cells for an owned
+  selection but fewer `0x34F` cells for an unowned one;
+  `tests/test_aos_soul_menu.c` now asserts entry clears
+  `sleep_result`, failure sets `FAILED`, success sets `SAVED`, and
+  re-entry clears it again. `ctest -R` pause-graphics/soul-menu/
+  save-bridge all pass.
+- **Honest limits.** The description tile origin `(6,15)` is inferred
+  from the frame geometry and a `ref_ability` capture rather than a
+  pixel-exact native text placement; the ON/OFF markers and the
+  selection hand remain OBJ-layer approximations, and the Sleep
+  result's exact on-screen persistence through the fade is
+  state-timed, not emulator-compared.
+- **Registries.** `aos.menus.sleep` and `aos.souls.equipment_menu`
+  in `annotations.tsv` updated (`sub_0804BCA0` added); status stays
+  `partial`.
+
 ## Patch 1155 - layered BG1-BG3 draw from the bound ROM
 
 - **Gap.** BG2/BG3 scroll state was already faithful — modes,

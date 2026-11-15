@@ -221,21 +221,36 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
 bool aos_pause_graphics_render_item_use(AosPauseGraphics *graphics,
                                         const AosPauseItemUseValues *values,
                                         uint8_t *rgba, size_t rgba_size);
-/* sub_0804BA18/sub_0804BB40: the Ability page. The bottom message window
- * (sub_080472B0), the twelve baked row strips, the per-ability ON/OFF tile
- * pairs and the localized names (0x156-0x15B, or 0x34F "---") are BG0. The
- * selection arrow, window frame and description popup remain OBJ/other
- * layers and are unrendered. */
+/* sub_0804BA18/sub_0804BB40/sub_0804BCA0: the Ability page. The bottom
+ * message window (sub_080472B0), the twelve baked row strips, the
+ * per-ability ON/OFF tile pairs, the localized names (0x156-0x15B, or
+ * 0x34F "---") and the selected entry's description are BG0. The
+ * description is text 0x257+cursor while the ability is owned
+ * (SoulInventory_GetSoulTotal(3,cursor) != 0), else 0x34F, printed by
+ * sub_08046BC8 into window sub_08040748(0,0,0x1F,4). The selection
+ * arrow and icon layers remain OBJ and are unrendered. */
 bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
                                        const AosPauseAbilityValues *values,
                                        uint8_t *rgba, size_t rgba_size);
+/* sub_0804BE0C's sleep outcome as the renderer sees it — the same
+ * 0/1/2 values as the AOS_SLEEP_RESULT_* state owned by
+ * aos_soul_menu.h: none, saved (text 0x36B) or failed (text 0x386). */
+enum {
+    AOS_PAUSE_SLEEP_RESULT_NONE = 0,
+    AOS_PAUSE_SLEEP_RESULT_SAVED = 1,
+    AOS_PAUSE_SLEEP_RESULT_FAILED = 2,
+};
+
 /* sub_0804BD38/sub_0804BE0C: the Sleep confirm page's native strings
  * (0x36A "Pause the game?", 0x34B "Yes", 0x34D "No") or the 0x361
- * cannot-save message. The selection arrow and window frame are OBJ and
- * remain unrendered. */
+ * cannot-save message. `sleep_result` is an AOS_PAUSE_SLEEP_RESULT_*
+ * value: sub_0804BE0C prints 0x36B "Game was saved" or 0x386 "Save
+ * failed." into the shared bottom window after a save attempt, while
+ * sub_0804BD38 leaves that band empty on entry. The selection arrow and
+ * window frame are OBJ and remain unrendered. */
 bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
-                                     bool can_sleep, uint8_t *rgba,
-                                     size_t rgba_size);
+                                     bool can_sleep, unsigned sleep_result,
+                                     uint8_t *rgba, size_t rgba_size);
 void aos_pause_graphics_free(AosPauseGraphics *graphics);
 
 #endif /* AOS_PAUSE_GRAPHICS_H */

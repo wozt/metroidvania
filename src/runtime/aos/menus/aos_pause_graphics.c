@@ -1148,6 +1148,20 @@ bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
                            (12u + i / 2u) * 8u, 78, 3, &next_tile))
             return false;
     }
+    /* sub_0804BCA0 on entry and sub_0804BB40 after each update print the
+     * selected entry's description through the context-A cell engine:
+     * text 0x257+cursor while SoulInventory_GetSoulTotal(3,cursor)
+     * reports the ability owned, else 0x34F "---". The native window is
+     * sub_08040748(0,0,0x1F,4) set up by sub_080472B0's tail; its cell
+     * canvas lands inside the bottom frame below the name rows, with
+     * the first text row at screen y120 — the port commits the canvas
+     * cells at tile origin (6,15), the frame's left column and the
+     * shared bottom band's row. */
+    if (!place_text_cells(graphics,
+                          values->owned[values->cursor]
+                              ? (uint16_t)(0x257 + values->cursor) : 0x34F,
+                          false, 6, 15, 0, 0, 0x1F, 4, 3, &next_tile))
+        return false;
     composite(graphics, rgba);
     /* sub_0804BA18's placement: column 2 or 0x10 on cursor bit 0, row
      * 4 + 2*(cursor>>1) — the hand sits left of the selected strip. */
@@ -1552,8 +1566,8 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
 }
 
 bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
-                                     bool can_sleep, uint8_t *rgba,
-                                     size_t rgba_size) {
+                                     bool can_sleep, unsigned sleep_result,
+                                     uint8_t *rgba, size_t rgba_size) {
     if (!valid_output(graphics, rgba, rgba_size)) return false;
     reset_bg0(graphics);
     unsigned next_tile = 0;
@@ -1595,10 +1609,22 @@ bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
      * uses: sub_08040748(0,0,0x1a,3) + sub_08040FE0 commits the cell
      * canvas at tile (0,15), so window pixels map to screen y120-156.
      * sub_0804BD38 prints nothing there on entry — the native captures
-     * (pgb_2 available, pgb_6 unavailable) show the band empty until
-     * sub_0804BE0C writes a result message (0x36B saved / 0x386
-     * failed) after an action, so the port leaves it blank rather than
-     * inventing a description the native page does not show. */
+     * (pgb_2 available, pgb_6 unavailable) show the band empty — and
+     * only sub_0804BE0C writes a result message after a save attempt:
+     * 0x36B "Game was saved/successfully." on success, 0x386 "Save
+     * failed." on failure, through sub_0804728C -> sub_08046BC8 into
+     * the same window. The outcome arrives as sleep_result — the
+     * AOS_PAUSE_SLEEP_RESULT_* value the caller fills from the
+     * AOS_SLEEP_RESULT_* state owned by aos_soul_menu.h (identical
+     * 0/1/2 codes) — and stays visible until the page is re-entered. */
+    if (sleep_result == AOS_PAUSE_SLEEP_RESULT_SAVED ||
+        sleep_result == AOS_PAUSE_SLEEP_RESULT_FAILED) {
+        if (!place_text_cells(graphics,
+                              sleep_result == AOS_PAUSE_SLEEP_RESULT_SAVED
+                                  ? 0x36B : 0x386,
+                              false, 0, 15, 0, 0, 0x1A, 3, 3, &next_tile))
+            return false;
+    }
     (void)next_tile;
     composite(graphics, rgba);
     /* sub_0804BD38 writes the hand entity's anchor directly to

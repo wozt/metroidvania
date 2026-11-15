@@ -341,6 +341,9 @@ static unsigned update_hub(AosSoulMenu *menu, const AosStats *stats,
         menu->sleep_choice = 1;
         menu->sleep_stage = AOS_SLEEP_CONFIRM;
         menu->sleep_timer = 0;
+        /* sub_0804BD38's enter path prints no result into the bottom
+         * window, so a stale outcome from a previous visit is dropped. */
+        menu->sleep_result = AOS_SLEEP_RESULT_NONE;
         return AOS_SOUL_MENU_ACCEPTED;
     }
     if (menu->hub_cursor == AOS_PAUSE_CONFIG) {
@@ -490,6 +493,10 @@ void aos_pause_sleep_result(AosSoulMenu *menu, bool saved) {
     menu->sleep_stage = saved ? AOS_SLEEP_FADING : AOS_SLEEP_CONFIRM;
     menu->sleep_choice = 1;
     menu->sleep_timer = 0;
+    /* sub_0804BE0C writes the outcome into the bottom window: 0x36B on
+     * a successful save, 0x386 on failure. The stage transitions above
+     * keep it visible through the fade / until the page is re-entered. */
+    menu->sleep_result = saved ? AOS_SLEEP_RESULT_SAVED : AOS_SLEEP_RESULT_FAILED;
 }
 
 static unsigned update_sleep(AosSoulMenu *menu, uint16_t new_input,

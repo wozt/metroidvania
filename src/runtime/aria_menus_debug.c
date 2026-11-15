@@ -265,6 +265,7 @@ bool draw_native_sleep(SDL_Renderer *renderer, SDL_Texture *texture,
         return false;
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_sleep(graphics, menu->sleep_available,
+                                         menu->sleep_result,
                                          pixels, sizeof pixels) ||
         !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
         return false;

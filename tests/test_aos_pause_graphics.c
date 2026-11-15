@@ -316,8 +316,9 @@ int main(int argc, char **argv) {
                                                     rgba, 240 * 160 * 4));
             write_ppm(argv[4], rgba);
         }
-        assert(aos_pause_graphics_render_sleep(&graphics, false,
-                                               rgba, 240 * 160 * 4));
+        assert(aos_pause_graphics_render_sleep(
+            &graphics, false, AOS_PAUSE_SLEEP_RESULT_NONE,
+            rgba, 240 * 160 * 4));
         /* sub_0804BD38 renders three bands, not one shared bottom window:
          * the 0x361 refusal must land in the narrow upper-left question
          * box (tile rows ~8-10), not only the bottom description band. */
@@ -329,8 +330,14 @@ int main(int argc, char **argv) {
                         ++upper;
             assert(upper > 0);
         }
-        assert(aos_pause_graphics_render_sleep(&graphics, true,
-                                               rgba, 240 * 160 * 4));
+        /* Band 3 stays empty on entry: sub_0804BD38 prints no result
+         * into the shared bottom window (tile rows 15-19). */
+        for (unsigned row = 15; row <= 19; ++row)
+            for (unsigned col = 0; col <= 25; ++col)
+                assert(graphics.bg0_map[row * 32 + col] == 0x330D);
+        assert(aos_pause_graphics_render_sleep(
+            &graphics, true, AOS_PAUSE_SLEEP_RESULT_NONE,
+            rgba, 240 * 160 * 4));
         /* The available path draws the 0x36A question in the same upper
          * band plus vertically stacked Yes/No labels in the middle
          * parallelogram frame (place_text_id at pixels y96/y104). */
@@ -341,6 +348,21 @@ int main(int argc, char **argv) {
                     if (graphics.bg0_map[row * 32 + col] != 0x330D)
                         ++upper;
             assert(upper > 0);
+        }
+        /* sub_0804BE0C: a successful save prints 0x36B "Game was saved/
+         * successfully." and a failed one 0x386 "Save failed." into the
+         * shared bottom window (tile rows 15-19, cols 0-25) as
+         * palette-3 text tiles; the result persists until re-entry. */
+        for (unsigned result = AOS_PAUSE_SLEEP_RESULT_SAVED;
+             result <= AOS_PAUSE_SLEEP_RESULT_FAILED; ++result) {
+            assert(aos_pause_graphics_render_sleep(
+                &graphics, true, result, rgba, 240 * 160 * 4));
+            unsigned result_cells = 0;
+            for (unsigned row = 15; row <= 19; ++row)
+                for (unsigned col = 0; col <= 25; ++col)
+                    if ((graphics.bg0_map[row * 32 + col] & 0x3FF) < 0x200)
+                        ++result_cells;
+            assert(result_cells > 0);
         }
         /* sub_0804BA18/sub_0804BB40: window fill, strips, ON/OFF pairs and
          * names. Ability 0 owned+enabled, 1 owned+disabled, 2 unowned. */
@@ -353,9 +375,11 @@ int main(int argc, char **argv) {
             ability.enabled[3] = 1;
             assert(aos_pause_graphics_render_ability(&graphics, &ability,
                                                      rgba, 240 * 160 * 4));
-            /* Window fill at tilemap (6,13), 23x6: cell (17,10) is
-             * i=4,j=4 -> 0x3200+4*32+4 = 0x3284; (18,26) -> 0x32D4. */
-            assert(graphics.bg0_map[17 * 32 + 10] == 0x3284);
+            /* Window fill at tilemap (6,13), 23x6: cell (14,6) is
+             * i=1,j=0 -> 0x3200+1*32+0 = 0x3220; (18,26) -> 0x32B4. The
+             * left column stays clear of the description canvas that
+             * sub_0804BCA0 commits at tile origin (6,15). */
+            assert(graphics.bg0_map[14 * 32 + 6] == 0x3220);
             assert(graphics.bg0_map[18 * 32 + 26] == 0x32B4);
             /* Strips: byte14>>1 = 3 iterations give rows 4,6,8 only —
              * i=0 row 4 -> 0x3380/0x3390, i=2 row 8 -> 0x33C0/0x33D0.
@@ -375,6 +399,29 @@ int main(int argc, char **argv) {
             assert(graphics.bg0_map[6 * 32 + 0x1B] == 0xB31E);
             /* Unowned ability 2 writes no marker. */
             assert(graphics.bg0_map[4 * 32 + 0xD] != 0xB30E);
+            /* sub_0804BCA0/sub_0804BB40: cursor 0 is owned, so the
+             * bottom window shows text 0x257+0 = 0x257 "Backdash by
+             * pressing B." through the context-A cell path committed at
+             * tile origin (6,15) — cells land on tile rows 15-18,
+             * columns 6+, as palette-3 text tiles (index < 0x200),
+             * below the name rows 12-14 and inside the frame. */
+            unsigned description_cells = 0;
+            for (unsigned row = 15; row <= 18; ++row)
+                for (unsigned col = 6; col <= 28; ++col)
+                    if ((graphics.bg0_map[row * 32 + col] & 0x3FF) < 0x200)
+                        ++description_cells;
+            assert(description_cells > 0);
+            /* Selecting an unowned ability prints 0x34F "---" instead —
+             * still text cells, but far fewer than a full description. */
+            ability.cursor = 2;
+            assert(aos_pause_graphics_render_ability(&graphics, &ability,
+                                                     rgba, 240 * 160 * 4));
+            unsigned unowned_cells = 0;
+            for (unsigned row = 15; row <= 18; ++row)
+                for (unsigned col = 6; col <= 28; ++col)
+                    if ((graphics.bg0_map[row * 32 + col] & 0x3FF) < 0x200)
+                        ++unowned_cells;
+            assert(unowned_cells > 0 && unowned_cells < description_cells);
         }
         /* sub_0804B6C4/sub_0804B494: slot strips rows 11-14, bottom bars
          * rows 16-18, dashes for empty slots, quantity digits. */
@@ -548,9 +595,41 @@ int main(int argc, char **argv) {
                     &graphics, config, 1, rgba, 240 * 160 * 4));
                 write_ppm(argv[7], rgba);
             }
-            assert(aos_pause_graphics_render_sleep(&graphics, true,
-                                                   rgba, 240 * 160 * 4));
+            assert(aos_pause_graphics_render_sleep(
+                &graphics, true, AOS_PAUSE_SLEEP_RESULT_NONE,
+                rgba, 240 * 160 * 4));
             write_ppm(argv[8], rgba);
+            if (argc >= 14) {
+                /* sub_0804BE0C's result lines for capture comparison. */
+                assert(aos_pause_graphics_render_sleep(
+                    &graphics, true, AOS_PAUSE_SLEEP_RESULT_SAVED,
+                    rgba, 240 * 160 * 4));
+                write_ppm(argv[11], rgba);
+                assert(aos_pause_graphics_render_sleep(
+                    &graphics, true, AOS_PAUSE_SLEEP_RESULT_FAILED,
+                    rgba, 240 * 160 * 4));
+                write_ppm(argv[12], rgba);
+                /* Ability page with the cursor on an unowned entry so
+                 * sub_0804BCA0 prints 0x34F "---". */
+                AosPauseAbilityValues unowned = {.cursor = 2};
+                assert(aos_pause_graphics_render_ability(
+                    &graphics, &unowned, rgba, 240 * 160 * 4));
+                write_ppm(argv[13], rgba);
+            }
+            if (argc >= 20) {
+                /* One dump per ability cursor (all owned) so each
+                 * 0x257+cursor description can be compared natively. */
+                AosPauseAbilityValues sweep = {0};
+                for (unsigned i = 0; i < AOS_PAUSE_ABILITY_COUNT; ++i)
+                    sweep.owned[i] = 1;
+                for (unsigned cursor = 0; cursor < AOS_PAUSE_ABILITY_COUNT;
+                     ++cursor) {
+                    sweep.cursor = (uint8_t)cursor;
+                    assert(aos_pause_graphics_render_ability(
+                        &graphics, &sweep, rgba, 240 * 160 * 4));
+                    write_ppm(argv[14 + cursor], rgba);
+                }
+            }
             {
                 AosPauseEnemyValues enemy = {.top = 0, .cursor = 0,
                                              .intro_phase = 2};

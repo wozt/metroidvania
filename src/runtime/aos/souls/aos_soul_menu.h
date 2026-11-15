@@ -71,6 +71,16 @@ enum {
     AOS_SLEEP_FADING,
 };
 
+/* sub_0804BE0C's sleep-page outcome carried into the next render:
+ * which result line the shared bottom window shows. Cleared when the
+ * Sleep page is entered (sub_0804BD38 prints nothing there) and set by
+ * aos_pause_sleep_result from the host's quicksave result. */
+enum {
+    AOS_SLEEP_RESULT_NONE,
+    AOS_SLEEP_RESULT_SAVED,   /* success: text 0x36B "Game was saved" */
+    AOS_SLEEP_RESULT_FAILED,  /* failure: text 0x386 "Save failed." */
+};
+
 typedef struct {
     uint8_t icon;
     uint8_t effect;
@@ -98,6 +108,7 @@ typedef struct {
     uint8_t sleep_choice; /* 0 Yes, 1 No, as in sub_0804BD38. */
     uint8_t sleep_stage;
     uint8_t sleep_timer;
+    uint8_t sleep_result; /* AOS_SLEEP_RESULT_* outcome for the render. */
     AosPickupRecent *recent_items;
     /* sub_08049E64's recent-soul caches for the Soul Set ordering. */
     AosRecentSouls *recent_souls;

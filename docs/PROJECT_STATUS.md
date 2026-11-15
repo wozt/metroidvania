@@ -1,3 +1,54 @@
+## Patch 1157 - opening actor draw reads +0x6E; emitted children get real tick bindings
+
+- **Drawn frame now comes from the tick chain.** Patch 1148 wired
+  `anim_subframe`/`anim_tick`/`anim_finished`/`anim_ended` into
+  `AosOpeningActors` but `draw_opening_actors`
+  (`src/runtime/aria_draw.c`) still derived the drawn entry from
+  `animation_age % total` walked by ticks — visually equivalent for a
+  constant sequence but not the real `+0x6E` state. The actor loop now
+  selects `frames[animation][anim_subframe]` whenever the host bound
+  the flattened `{entry,ticks}` sequence into `anim_seqs` (the same
+  binding `aos_opening_actors_update` ticks), clamped to the sequence
+  count as a guard; the age walk remains only for unbound animations,
+  matching the `actor_animation_done` fallback. The animation bound
+  was also tightened from `AOS_ENEMY_MAX_ANIMS` to
+  `OBJECT_MAX_ANIMS`, the actual slot count of the
+  `opening_actors[actor].defs` table the index reads.
+- **Emitted Object20 children: real bindings found, age model
+  retired.** The earlier note claimed the children's private
+  resource-table animations had no exported `{frame,ticks}` binding.
+  That was wrong: type-8 children draw `Enemy/opening_actor_8` (the
+  same export as actor slot 2, anims 0-8 exported) and type-10
+  children draw `Enemy/skeleton_knight` (anims 0-7 exported); both
+  carry per-entry u8 durations in the object runtime index that
+  `aria_assets.c` already loads into `ticks[anim][entry]`.
+  `AosOpeningEntity` gains `anim_subframe`/`anim_tick` (+0x6E/+0x6F
+  analogues) and `AosOpeningActors` gains `emitted_seqs[24]`, bound
+  by `opening_actor_durations` from the Skeleton Knight art each
+  frame; type-8 children reuse `anim_seqs[2]` with no extra table.
+  `update_emitted` steps each active child once per frame through
+  `emitted_anim_step` — a wrapping `sub_0803F17C`-style chain,
+  because the private `sub_0805E2D8`/`sub_0805E5D4` callbacks'
+  `+0x6C` bit-3 loop argument is not yet traced (wrap preserves the
+  former age model's looping visuals; documented in the header).
+  The two animation-switch sites (`update_skeleton_flight`'s
+  animation 1, the `parameter & 0x10` state-2 animation 2) now run
+  `emitted_anim_reset`, the `sub_0803F2C8` reset of age/+0x6E/+0x6F —
+  guarded on an actual animation change because the `& 0x10` branch
+  re-assigns every state-2 frame. `draw_opening_actors`' emitted loop
+  reads the bound sequence's subframe the same way as the actors.
+- **Tests.** `tests/test_aos_opening_event.c` gains
+  `test_emitted_anim_ticks`: per-entry tick accumulation and wrap for
+  both entity types (type 10 via `emitted_seqs`, type 8 via
+  `anim_seqs[2]`), the unbound-animation age fallback, and the
+  animation-switch chain reset. `ctest -R 'opening|object20'` 6/6
+  pass; `--capture` smoke runs on area 0 room 0 with the ROM produce
+  advancing frames at 1200 and 4000.
+- **Remaining hooks.** The emitted children's native loop bit and
+  end-pin behavior remain untraced (sequences wrap); actor_done
+  timing is unchanged — the tick chain semantics are identical, only
+  the drawn frame source moved from age-walk to `+0x6E`.
+
 ## Patch 1156 - Ability description + Sleep save-result band
 
 - **Gap.** Two pause-page bands still drew nothing where the native

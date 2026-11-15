@@ -117,6 +117,14 @@ typedef struct {
     uint8_t parameter;
     uint8_t variant;
     uint8_t animation;
+    /* +0x6E/+0x6F analogues for the entity type's bound flattened
+     * {entry,ticks} sequence: type 8 children reuse anim_seqs[2]
+     * (the shared Enemy/opening_actor_8 binding) and type 10 children
+     * use emitted_seqs (the Skeleton Knight enemy art), both filled
+     * by the host's opening_actor_durations each frame. Unbound
+     * animations keep the animation_age fallback. */
+    uint8_t anim_subframe;
+    uint8_t anim_tick;
     uint8_t state;
     uint8_t step;
     uint8_t timer;
@@ -233,6 +241,13 @@ typedef struct {
      * anim_finished is +0x59 bit 0 and anim_ended is +0x6C bit 2. */
     AosOpeningAnimSeq anim_seqs[AOS_OPENING_ACTOR_COUNT]
                                [AOS_OPENING_ACTOR_ANIMS];
+    /* Flattened {entry,ticks} bindings for the emitted Skeleton
+     * Knight children (entity_type 10 -> Enemy/skeleton_knight,
+     * animation slots 0-7 are exported). Filled by the host's
+     * opening_actor_durations next to anim_seqs; type-8 emitted
+     * children need no table of their own because they draw the
+     * same Enemy/opening_actor_8 art as actor slot 2. */
+    AosOpeningAnimSeq emitted_seqs[AOS_OPENING_ACTOR_ANIMS];
     uint8_t anim_subframe[AOS_OPENING_ACTOR_COUNT];
     uint8_t anim_tick[AOS_OPENING_ACTOR_COUNT];
     bool anim_finished[AOS_OPENING_ACTOR_COUNT];

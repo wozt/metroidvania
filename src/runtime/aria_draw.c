@@ -905,15 +905,33 @@ void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
         if (!actors->visible[actor]) continue;
         const __typeof__(objects->opening_actors[0]) *art = &objects->opening_actors[actor];
         int animation = actors->animation[actor];
-        if (!art->loaded || animation >= AOS_ENEMY_MAX_ANIMS || !art->defs[animation].count)
+        /* The export keeps OBJECT_MAX_ANIMS slots; the wider
+         * AOS_ENEMY_MAX_ANIMS bound would index past defs. */
+        if (!art->loaded || animation >= OBJECT_MAX_ANIMS ||
+            !art->defs[animation].count)
             continue;
-        unsigned total = 0;
-        for (unsigned i = 0; i < art->defs[animation].count; ++i)
-            total += art->ticks[animation][i];
-        if (!total) continue;
-        unsigned t = (unsigned)(actors->animation_age[actor] % total), index = 0;
-        while (index + 1 < art->defs[animation].count && t >= art->ticks[animation][index])
-            t -= art->ticks[animation][index++];
+        unsigned index;
+        /* +0x6E is the sequence entry index itself: when the host
+         * bound the flattened {entry,ticks} sequence the tick chain
+         * in aos_opening_actors_update already advanced it (loop
+         * wrap or the +0x6C-bit-2 last-entry pin keep it inside
+         * [0,count); the clamp only guards a hand-built state). */
+        const AosOpeningAnimSeq *seq =
+            &actors->anim_seqs[actor][animation];
+        if (seq->ticks && seq->count) {
+            index = actors->anim_subframe[actor];
+            if (index >= seq->count) index = seq->count - 1;
+        } else {
+            unsigned total = 0;
+            for (unsigned i = 0; i < art->defs[animation].count; ++i)
+                total += art->ticks[animation][i];
+            if (!total) continue;
+            unsigned t = (unsigned)(actors->animation_age[actor] % total);
+            index = 0;
+            while (index + 1 < art->defs[animation].count &&
+                   t >= art->ticks[animation][index])
+                t -= art->ticks[animation][index++];
+        }
         const AriaFrame *frame = &art->frames[animation][index];
         if (!frame->texture) continue;
         int x = actors->x[actor] >> 16, y = actors->y[actor] >> 16;
@@ -925,37 +943,54 @@ void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
     for (unsigned actor = 0; actor < actors->emitted_count; ++actor) {
         const AosOpeningEntity *entity = &actors->emitted[actor];
         if (!entity->active || entity->hidden) continue;
-        const AriaFrame *frame = NULL;
-        unsigned total = 0, count = 0;
+        /* Type 8 draws Enemy/opening_actor_8 (the actor slot-2 export)
+         * and type 10 draws the Skeleton Knight enemy art; both carry
+         * exported {frame,ticks} rows, so a bound sequence selects the
+         * frame from the child's real +0x6E subframe and only an
+         * unbound animation falls back to the age walk. */
+        const AriaFrame *row = NULL;
         const uint8_t *ticks = NULL;
+        unsigned count = 0;
+        const AosOpeningAnimSeq *seq = NULL;
+        int animation = entity->animation;
         if (entity->entity_type == 8) {
             const __typeof__(objects->opening_actors[0]) *art =
                 &objects->opening_actors[2];
-            if (!art->loaded || entity->animation >= AOS_ENEMY_MAX_ANIMS)
+            if (!art->loaded || animation >= OBJECT_MAX_ANIMS ||
+                !art->defs[animation].count)
                 continue;
-            count = art->defs[entity->animation].count;
-            ticks = art->ticks[entity->animation];
-            for (unsigned i = 0; i < count; ++i) total += ticks[i];
-            if (!total) continue;
-            unsigned age = entity->animation_age % total, index = 0;
-            while (index + 1 < count && age >= ticks[index])
-                age -= ticks[index++];
-            frame = &art->frames[entity->animation][index];
+            row = art->frames[animation];
+            ticks = art->ticks[animation];
+            count = art->defs[animation].count;
+            seq = &actors->anim_seqs[2][animation];
         } else if (entity->entity_type == 10) {
             const __typeof__(objects->enemies[0]) *art =
                 &objects->enemies[AOS_ENEMY_SKELETON_KNIGHT];
-            if (!art->loaded || entity->animation >= AOS_ENEMY_MAX_ANIMS)
+            if (!art->loaded || animation >= AOS_ENEMY_MAX_ANIMS ||
+                !art->defs[animation].count)
                 continue;
-            count = art->defs[entity->animation].count;
-            ticks = art->ticks[entity->animation];
+            row = art->frames[animation];
+            ticks = art->ticks[animation];
+            count = art->defs[animation].count;
+            if (animation < AOS_OPENING_ACTOR_ANIMS)
+                seq = &actors->emitted_seqs[animation];
+        }
+        if (!row) continue;
+        unsigned index;
+        if (seq && seq->ticks && seq->count) {
+            index = entity->anim_subframe;
+            if (index >= seq->count) index = seq->count - 1;
+        } else {
+            unsigned total = 0;
             for (unsigned i = 0; i < count; ++i) total += ticks[i];
             if (!total) continue;
-            unsigned age = entity->animation_age % total, index = 0;
+            unsigned age = entity->animation_age % total;
+            index = 0;
             while (index + 1 < count && age >= ticks[index])
                 age -= ticks[index++];
-            frame = &art->frames[entity->animation][index];
         }
-        if (!frame || !frame->texture) continue;
+        const AriaFrame *frame = &row[index];
+        if (!frame->texture) continue;
         int x = entity->x >> 16, y = entity->y >> 16;
         float draw_x = entity->mirrored
                            ? (float)(x - frame->offset_x) - frame->w
@@ -1074,6 +1109,24 @@ void opening_actor_durations(
         for (unsigned frame = 0; frame < art->defs[animation].count; ++frame)
             total += art->ticks[animation][frame];
         durations[actor] = total > UINT16_MAX ? UINT16_MAX : (uint16_t)total;
+    }
+    /* The emitted Skeleton Knight children (entity_type 10) tick
+     * through the same chain against Enemy/skeleton_knight's exported
+     * sequences; type-8 children reuse actor slot 2's anim_seqs
+     * (Enemy/opening_actor_8) and need no binding here. Animations
+     * past AOS_OPENING_ACTOR_ANIMS stay unbound and keep the age
+     * fallback in both the tick step and the draw. */
+    const __typeof__(objects->enemies[0]) *knight =
+        objects ? &objects->enemies[AOS_ENEMY_SKELETON_KNIGHT] : NULL;
+    for (unsigned anim = 0; anim < AOS_OPENING_ACTOR_ANIMS; ++anim) {
+        AosOpeningAnimSeq *seq = &actors->emitted_seqs[anim];
+        seq->ticks = NULL;
+        seq->count = 0;
+        if (!knight || !knight->loaded || anim >= AOS_ENEMY_MAX_ANIMS ||
+            !knight->defs[anim].count)
+            continue;
+        seq->ticks = knight->ticks[anim];
+        seq->count = knight->defs[anim].count;
     }
 }
 

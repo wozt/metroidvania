@@ -703,6 +703,73 @@ static void test_actor_anim_ticks(void) {
            actors.anim_seqs[2][4].count == 0);
 }
 
+static void test_emitted_anim_ticks(void) {
+    AosOpeningActors actors;
+    aos_opening_actors_init(&actors);
+    aos_opening_actors_set_motion(&actors, zero_random, full_sine,
+                                  zero_angle, NULL, NULL, NULL);
+    /* Type-10 children tick against emitted_seqs (Skeleton Knight
+     * art); type-8 children reuse actor slot 2's anim_seqs binding
+     * (the shared opening_actor_8 export). */
+    static const uint8_t knight_seq[] = {2, 3};
+    actors.emitted_seqs[0].ticks = knight_seq;
+    actors.emitted_seqs[0].count = 2;
+    static const uint8_t winged_seq[] = {1, 2};
+    actors.anim_seqs[2][4].ticks = winged_seq;
+    actors.anim_seqs[2][4].count = 2;
+    actors.emitted_count = 3;
+    /* State 2 with no parameter bits keeps both state machines idle. */
+    actors.emitted[0] = (AosOpeningEntity){
+        .entity_type = 10, .animation = 0, .state = 2, .active = true};
+    actors.emitted[1] = (AosOpeningEntity){
+        .entity_type = 8, .animation = 4, .state = 2, .active = true};
+    /* Animation 5 has no bound sequence: only the age counter moves. */
+    actors.emitted[2] = (AosOpeningEntity){
+        .entity_type = 10, .animation = 5, .state = 2, .active = true};
+    AosOpeningEntity *knight = &actors.emitted[0];
+    AosOpeningEntity *winged = &actors.emitted[1];
+    AosOpeningEntity *unbound = &actors.emitted[2];
+
+    aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(knight->anim_tick == 1 && knight->anim_subframe == 0);
+    /* {1,2}: entry 0's single tick advances to entry 1 immediately. */
+    assert(winged->anim_tick == 0 && winged->anim_subframe == 1);
+    assert(unbound->anim_subframe == 0 && unbound->anim_tick == 0 &&
+           unbound->animation_age == 1);
+    aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(knight->anim_tick == 0 && knight->anim_subframe == 1);
+    assert(winged->anim_tick == 1 && winged->anim_subframe == 1);
+    aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(knight->anim_tick == 1 && knight->anim_subframe == 1);
+    aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(knight->anim_tick == 2 && knight->anim_subframe == 1);
+    /* {2,3} wraps after five update frames: entry 1's third tick
+     * returns to entry 0. */
+    aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(knight->anim_tick == 0 && knight->anim_subframe == 0);
+    /* {1,2} wrapped at update 3 already: two more frames put it back
+     * on entry 1's first tick. */
+    assert(winged->anim_tick == 1 && winged->anim_subframe == 1);
+    assert(unbound->animation_age == 5 &&
+           unbound->anim_subframe == 0 && unbound->anim_tick == 0);
+
+    /* Parameter bit 4's state-2 tail switches animation 0 -> 2 through
+     * the same reset sub_0803F2C8 performs: age, +0x6E and +0x6F all
+     * restart on the frame of the switch. */
+    static const uint8_t run_seq[] = {4, 4};
+    actors.emitted_seqs[2].ticks = run_seq;
+    actors.emitted_seqs[2].count = 2;
+    knight->parameter = 0x10;
+    knight->animation_age = 100;
+    knight->anim_subframe = 1;
+    knight->anim_tick = 2;
+    aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(knight->animation == 2 && knight->animation_age == 0 &&
+           knight->anim_subframe == 0 && knight->anim_tick == 0);
+    aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(knight->anim_tick == 1 && knight->anim_subframe == 0);
+}
+
 static bool resolve_rom_text(void *context, uint8_t id,
                              const uint8_t **script, size_t *script_size) {
     return aos_intro_resources_entry(context, 1, id, script, script_size);
@@ -723,6 +790,7 @@ int main(int argc, char **argv) {
     test_skeleton_approach();
     test_emitted_attack_tails();
     test_actor_anim_ticks();
+    test_emitted_anim_ticks();
     test_trigger();
     test_intro_transition();
     test_script_and_commit();

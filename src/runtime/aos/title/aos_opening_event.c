@@ -291,6 +291,50 @@ static bool actor_animation_done(const AosOpeningActors *actors,
     return !duration || actors->animation_age[actor] >= duration;
 }
 
+/* The bound flattened sequence for an emitted child's current
+ * animation. Type 8 children draw Enemy/opening_actor_8, whose
+ * per-animation bindings opening_actor_durations already fills into
+ * actor slot 2's anim_seqs; type 10 children draw the Skeleton
+ * Knight enemy art bound into emitted_seqs. Other entity types have
+ * no exported binding and keep the animation_age fallback. */
+static const AosOpeningAnimSeq *emitted_anim_seq(
+    const AosOpeningActors *actors, const AosOpeningEntity *entity) {
+    unsigned animation = entity->animation;
+    if (animation >= AOS_OPENING_ACTOR_ANIMS) return NULL;
+    if (entity->entity_type == 8) return &actors->anim_seqs[2][animation];
+    if (entity->entity_type == 10) return &actors->emitted_seqs[animation];
+    return NULL;
+}
+
+/* sub_0803F17C-style tick for one emitted child, mirroring
+ * actor_anim_step: +0x6F counts frames against the current entry's
+ * ticks and +0x6E advances at entry boundaries. The native +0x6C
+ * bit-3 loop argument of the private sub_0805E2D8/sub_0805E5D4
+ * callbacks is not yet traced, so the sequence wraps like the
+ * pre-tick age model did instead of latching an end bit; children
+ * without a bound sequence keep only their age counter. */
+static void emitted_anim_step(AosOpeningActors *actors,
+                              AosOpeningEntity *entity) {
+    const AosOpeningAnimSeq *seq = emitted_anim_seq(actors, entity);
+    if (!seq || !seq->ticks || !seq->count) return;
+    if (entity->anim_subframe >= seq->count) entity->anim_subframe = 0;
+    uint16_t ticks = seq->ticks[entity->anim_subframe];
+    if (!ticks) ticks = 1;
+    if (++entity->anim_tick < ticks) return;
+    entity->anim_tick = 0;
+    entity->anim_subframe =
+        (uint8_t)((entity->anim_subframe + 1) % seq->count);
+}
+
+/* sub_0803F2C8's reset for an emitted child's animation switch:
+ * +0x6D/+0x6E/+0x6F all restart, so the age fallback and the tick
+ * chain begin the new sequence together. */
+static void emitted_anim_reset(AosOpeningEntity *entity) {
+    entity->animation_age = 0;
+    entity->anim_subframe = 0;
+    entity->anim_tick = 0;
+}
+
 static void append_emission(AosOpeningActors *actors,
                             AosOpeningEmission emission) {
     AosOpeningSpawn spawns[AOS_OPENING_EMISSION_MAX_SPAWNS];
@@ -731,7 +775,10 @@ static void update_skeleton_flight(AosOpeningActors *actors,
      * pixels down. In open air it restores X and applies only the vertical
      * motion; on a floor it retains X and snaps Y by the returned depth. */
     if (entity->step == 0) {
-        entity->animation = 1;
+        if (entity->animation != 1) {
+            entity->animation = 1;
+            emitted_anim_reset(entity);
+        }
         entity->timer = 0xA0;
         entity->step = 1;
     }
@@ -767,6 +814,10 @@ static void update_emitted(AosOpeningActors *actors) {
         if (!entity->active) continue;
         entity->events = AOS_OPENING_ENTITY_EVENT_NONE;
         if (entity->animation_age < UINT16_MAX) ++entity->animation_age;
+        /* sub_0805B748 runs sub_0803F17C once per entity per frame;
+         * emitted children get the same tick-chain step before their
+         * state machine can switch animations. */
+        emitted_anim_step(actors, entity);
         if (!entity->disappearing && entity->entity_type == 8) {
             /* sub_0805E2D8 states 0-2: a phase-randomized quarter-amplitude
              * sine bob, followed by the parent-bit-8 state handoff. The
@@ -818,7 +869,13 @@ static void update_emitted(AosOpeningActors *actors) {
                 if (entity->parameter & 8)
                     update_skeleton_flight(actors, entity);
                 else if (entity->parameter & 0x10) {
-                    entity->animation = 2;
+                    /* The assignment repeats every state-2 frame;
+                     * sub_0803F2C8's chain reset only applies on the
+                     * actual switch. */
+                    if (entity->animation != 2) {
+                        entity->animation = 2;
+                        emitted_anim_reset(entity);
+                    }
                     if (entity->step == 0) entity->step = 1;
                 }
             }

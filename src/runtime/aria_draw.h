@@ -54,7 +54,8 @@ void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
                          const AosOpeningActors *actors, int cam_x, int cam_y);
 /* Per-actor animation durations in ticks for the opening actors. Also
  * (re)binds each actor's flattened {entry,ticks} sequences into
- * actors->anim_seqs so aos_opening_actors_update can run the real
+ * actors->anim_seqs — and the emitted Skeleton Knight children's into
+ * actors->emitted_seqs — so aos_opening_actors_update can run the real
  * sub_0803F17C-style tick chain; actors must be non-const for that. */
 void opening_actor_durations(const AriaObjects *objects,
                              AosOpeningActors *actors,

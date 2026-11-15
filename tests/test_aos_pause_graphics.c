@@ -266,8 +266,30 @@ int main(int argc, char **argv) {
         }
         assert(aos_pause_graphics_render_sleep(&graphics, false,
                                                rgba, 240 * 160 * 4));
+        /* sub_0804BD38 renders three bands, not one shared bottom window:
+         * the 0x361 refusal must land in the narrow upper-left question
+         * box (tile rows ~8-10), not only the bottom description band. */
+        {
+            unsigned upper = 0;
+            for (unsigned row = 8; row <= 10; ++row)
+                for (unsigned col = 8; col <= 19; ++col)
+                    if (graphics.bg0_map[row * 32 + col] != 0x330D)
+                        ++upper;
+            assert(upper > 0);
+        }
         assert(aos_pause_graphics_render_sleep(&graphics, true,
                                                rgba, 240 * 160 * 4));
+        /* The available path draws the 0x36A question in the same upper
+         * band plus vertically stacked Yes/No labels in the middle
+         * parallelogram frame (place_text_id at pixels y96/y104). */
+        {
+            unsigned upper = 0;
+            for (unsigned row = 8; row <= 10; ++row)
+                for (unsigned col = 8; col <= 19; ++col)
+                    if (graphics.bg0_map[row * 32 + col] != 0x330D)
+                        ++upper;
+            assert(upper > 0);
+        }
         /* sub_0804BA18/sub_0804BB40: window fill, strips, ON/OFF pairs and
          * names. Ability 0 owned+enabled, 1 owned+disabled, 2 unowned. */
         {

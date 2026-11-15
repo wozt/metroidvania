@@ -1,3 +1,53 @@
+## Patch 1151 - Sleep page three-band render, Item Use icon audit
+
+- **Sleep page bands corrected** (`aos_pause_graphics_render_sleep`,
+  `src/runtime/aos/menus/aos_pause_graphics.c`). Patch 1143's native
+  captures showed the page is not one `sub_08040748(0,0,26,3)` commit
+  at tile row 15. Tracing `sub_0804BD38` (enter) and `sub_0804BE0C`
+  (update) confirms three separate bands: the `0x36A` "Pause the game?"
+  question — or the `0x361` cannot-save refusal — printed through the
+  small-font cell path into the narrow framed box at pixels
+  x64-131/y61-82; the `0x34B` "Yes"/`0x34D` "No" labels stacked
+  vertically inside the middle parallelogram frame (native capture
+  shows them at y98-102 and y106-110, not side-by-side); and the shared
+  bottom description band, which `sub_0804BD38` leaves empty until
+  `sub_0804BE0C` writes a result message, so the port draws nothing
+  there rather than inventing a description. The large right-side Sleep
+  artwork is BG1 backdrop, not BG0 text. The selection hand's native
+  anchor is written directly as pixel `(0x95,0x89)` = (149,137);
+  `draw_cursor` is now placed at the matching cell. The render matches
+  the near-native reference `/tmp/pgb_2.ppm` within 79 px and
+  `/tmp/native_sleep.ppm` within 610 px (of 38400), the residual being
+  capture-state differences (bottom-band message text and cursor
+  frame), not geometry.
+- **Item Use icon audit — no per-slot icons exist natively.**
+  `sub_0804B6C4` (init) and `sub_0804B808` (update) each spawn exactly
+  one `sub_08048804` icon entity for the selected item at pixel anchor
+  `(0x1C,0x94)` -> 16x16 top-left `(20,132)`, rebuilt only when the
+  selection changes; `sub_0804B494` fills the 4x2 grid with names and
+  `0x3300` quantity digits only. The port already draws just the
+  selected icon via `draw_icon`, matching native — adding per-slot
+  icons would be an unsupported approximation, so none was added. The
+  `values.icons[]` table stays populated for the selected lookup.
+- **Title/frame investigation.** The Soul Set, Equip, Ability and
+  Config page frame strips are already drawn from decoded BG0 tiles
+  (`0x3380`/`0x3390` slot strips, `0x3200`/`0x33D0` window fills) — the
+  Config page matches its native capture at 0 differing pixels. There
+  is no separate page-title banner asset in the pause graphics decode
+  tables; page titles are text in the shared bottom description band
+  (e.g. `sub_0804BCA0` prints `0x257`+cursor / `0x34F`), which remains
+  OBJ/cell-layer work. No title art was invented.
+- **Known pre-existing gap surfaced:** the shared hand-cursor object
+  (`sub_08048C74` sheet/frame decode via `aos_obj_sheet_decode`) loads
+  valid ROM data but currently produces no visible pixels in any pause
+  page render, so `draw_cursor` is a no-op until that decode path is
+  debugged — it affects every page equally and is unrelated to the
+  Sleep geometry.
+- `tests/test_aos_pause_graphics.c` gained BG0-map assertions proving
+  the Sleep question/refusal text lands in the upper band (tile rows
+  8-10) for both the available and unavailable paths, not only the
+  bottom window.
+
 ## Patch 1150 - remaining native held-sound sites audited and wired
 
 - **Newly wired held sounds** (`aos/enemies/`): Arachne's web rain

@@ -1224,9 +1224,14 @@ bool aos_pause_graphics_render_item_use(
                        false, 40, 128, 192, 3, &next_tile))
         return false;
     composite(graphics, rgba);
-    /* sub_08048804 anchors the icon entity at pixel (0x1C, 0x94); its
-     * frame's (-8, -16) piece offset puts the 16x16 icon's top-left at
-     * (20, 132). */
+    /* sub_0804B6C4 (init) and sub_0804B808 (update) each spawn exactly
+     * ONE sub_08048804 icon entity at pixel anchor (0x1C, 0x94), rebuilt
+     * only when the selection changes. Its frame's (-8, -16) piece
+     * offset puts the 16x16 icon's top-left at (20, 132). The native
+     * renderer sub_0804B494 fills the 4x2 grid with names and quantity
+     * digits only — no per-slot icon entities exist — so the port draws
+     * just the selected item's icon, matching native rather than
+     * inventing per-slot icons the game does not show. */
     if (values->selected < AOS_PAUSE_ITEM_USE_RECORDS &&
         values->counts[values->selected])
         draw_icon(graphics, rgba, values->icons[values->selected], 20, 132);
@@ -1552,27 +1557,55 @@ bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
     if (!valid_output(graphics, rgba, rgba_size)) return false;
     reset_bg0(graphics);
     unsigned next_tile = 0;
-    /* sub_0804BD38/sub_0804BE0C run on the same pause text layer as the
-     * hub: sub_0804728C prints the question/refusal through
-     * sub_08046BC8, then sub_0804066C(4,1) + sub_08041434(0x34B) and
-     * sub_0804066C(0xC,1) + sub_08041434(0x34D) print Yes/No through
-     * sub_08041318 — all context A inside the shared
-     * sub_08040748(0,0,0x1a,3) window on the cell canvas at tile
-     * (0,15). The selection arrow stays OBJ and unrendered. */
-    if (!cells_begin(graphics, false, 0, 0, 26, 3))
+    /* sub_0804BD38/sub_0804BE0C draw three separate bands, not one shared
+     * bottom window. Band 1 is the question/refusal: sub_0804728C ->
+     * sub_08046BC8 prints 0x36A ("Pause the game?") or 0x361 ("Cannot
+     * save until you have / saved once in a save room.") through the
+     * small-font cell path into the narrow framed box at pixels
+     * x64-131, y61-82 (native capture pgb_2/pgb_6). The ~11-column
+     * window wraps each display line, so the message occupies two or
+     * three rows; it is placed at pixel (68,64). The cell engine is
+     * used (not place_text_id) because only it wraps the string at the
+     * window edge the way sub_08046BC8 does natively. */
+    if (!cells_begin(graphics, true, 0, 0, 11, 3))
         return false;
-    if (!can_sleep) {
-        if (!cells_print_id(graphics, 0x361, false, 0, 0) ||
-            !cells_commit(graphics, 0, 15, 0, 0, 26, 3, 3, &next_tile))
-            return false;
-    } else {
-        if (!cells_print_id(graphics, 0x36A, false, 0, 0) ||
-            !cells_print_id(graphics, 0x34B, false, 4, 1) ||
-            !cells_print_id(graphics, 0x34D, false, 0xC, 1) ||
-            !cells_commit(graphics, 0, 15, 0, 0, 26, 3, 3, &next_tile))
+    if (!cells_print_id(graphics, can_sleep ? 0x36A : 0x361,
+                        true, 0, 0) ||
+        !cells_commit(graphics, 8, 8, 0, 0, 11, 3, 3, &next_tile))
+        return false;
+    if (can_sleep) {
+        /* Band 2 is the framed Yes/No prompt: sub_0804066C(4,1) +
+         * sub_08041434(0x34B) and sub_0804066C(0xC,1) +
+         * sub_08041434(0x34D) print the two labels through the native
+         * small-font printer. The native window wraps the second
+         * cursor onto the next row, so the labels stack vertically
+         * inside the parallelogram frame — native capture shows "Yes"
+         * at y98-102 and "No" at y106-110, both left aligned near
+         * x108. place_text_id uses the intro small-font span (not the
+         * cells_char_b path the question band uses); the two native
+         * fonts are close enough that the labels land within a few
+         * pixels of the capture. */
+        if (!place_text_id(graphics, 0x34B, true, 106, 96, 48, 3,
+                           &next_tile) ||
+            !place_text_id(graphics, 0x34D, true, 106, 104, 48, 3,
+                           &next_tile))
             return false;
     }
+    /* Band 3 is the shared bottom description window every pause page
+     * uses: sub_08040748(0,0,0x1a,3) + sub_08040FE0 commits the cell
+     * canvas at tile (0,15), so window pixels map to screen y120-156.
+     * sub_0804BD38 prints nothing there on entry — the native captures
+     * (pgb_2 available, pgb_6 unavailable) show the band empty until
+     * sub_0804BE0C writes a result message (0x36B saved / 0x386
+     * failed) after an action, so the port leaves it blank rather than
+     * inventing a description the native page does not show. */
+    (void)next_tile;
     composite(graphics, rgba);
-    if (can_sleep) draw_cursor(graphics, rgba, 1, 16);
+    /* sub_0804BD38 writes the hand entity's anchor directly to
+     * (0x95, 0x89) = pixel (149, 137) — below-right of the Yes/No
+     * parallelogram, pointing up-left at the selection. draw_cursor's
+     * anchor is cell_x*8+6 / cell_y*8+3, so cell (18,17) lands at
+     * (150,139), within the native wiggle range. */
+    if (can_sleep) draw_cursor(graphics, rgba, 18, 17);
     return true;
 }

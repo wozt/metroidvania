@@ -1017,7 +1017,6 @@ aos:c:src/code_0800B700.c:GameModeSoundTestMenu_inline_2	GameModeSoundTestMenu_i
 aos:c:src/code_0800B700.c:GameModeSoundTestMenu_inline_3	GameModeSoundTestMenu_inline_3	menus	name			c_function		src/code_0800B700.c	602	1	0
 aos:c:src/code_0800B700.c:GameModeUnk3Update	GameModeUnk3Update	startup	referrers			c_function	0x0800C5D4	src/code_0800B700.c	1219	1	0
 aos:c:src/code_0800B700.c:UpdateInGameTimer	UpdateInGameTimer	unclassified				c_function	0x0800CADC	src/code_0800B700.c	1511	5	0
-aos:c:src/code_0800B700.c:sub_0800B700	sub_0800B700	menus	referrers			c_function	0x0800B700	src/code_0800B700.c	48	1	15
 aos:c:src/code_0800B700.c:sub_0800C5D8	sub_0800C5D8	unclassified		technical	exclusive_callees	c_function	0x0800C5D8	src/code_0800B700.c	1232	4	9
 aos:c:src/code_0800B700.c:sub_0800C6F8	sub_0800C6F8	unclassified				c_function	0x0800C6F8	src/code_0800B700.c	1295	1	1
 aos:c:src/code_0800B700.c:sub_0800C72C	sub_0800C72C	unclassified				c_function	0x0800C72C	src/code_0800B700.c	1313	1	2
@@ -1060,7 +1059,6 @@ aos:c:src/code_0800F1FC.c:sub_0800FFCC	sub_0800FFCC	unclassified				c_function	0
 aos:c:src/code_0800F1FC.c:sub_08010144	sub_08010144	unclassified				c_function	0x08010144	src/code_0800F1FC.c	1102	3	2
 aos:c:src/code_0800F1FC.c:sub_08010244_inline_0	sub_08010244_inline_0	unclassified				c_function		src/code_0800F1FC.c	1126	1	0
 aos:c:src/code_0800F1FC.c:sub_08010244_inline_1	sub_08010244_inline_1	unclassified				c_function		src/code_0800F1FC.c	1131	1	0
-aos:c:src/code_0800F1FC.c:sub_080106DC	sub_080106DC	unclassified		input	exclusive_callees	c_function	0x080106DC	src/code_0800F1FC.c	1383	1	10
 aos:c:src/code_0800F1FC.c:sub_080108DC	sub_080108DC	unclassified				c_function	0x080108DC	src/code_0800F1FC.c	1490	5	1
 aos:c:src/code_0800F1FC.c:sub_080108FC	sub_080108FC	unclassified				c_function	0x080108FC	src/code_0800F1FC.c	1508	5	2
 aos:c:src/code_0800F1FC.c:sub_0801093C	sub_0801093C	unclassified				c_function	0x0801093C	src/code_0800F1FC.c	1530	5	1

@@ -1,3 +1,44 @@
+## Patch 1160 - Aria in-game event-mode channel (unk_64/unk_65) and player-input lock
+
+- **Gap.** `GameModeInGameUpdate` (`sub_0800B700`) dispatches on
+  `gEwramData +0x64/+0x65` while `gameMode` is 1 or 4, and most cases
+  call `SetPlayerInput(1, 0)` every frame, which parks a priority-1
+  override in `inputData` so `playerHeldInput` reads 0 while the
+  global input words the entity pass reads stay live. The runtime had
+  `AosInput`'s priority semantics and a staged room transition, but no
+  representation of the dispatch channel itself.
+- **Port.** New `src/runtime/aos/game/aos_in_game_mode.{c,h}` tracks
+  `unk_64`/`unk_65`/`unk_66`/`unk_4CC_6` and
+  `aos_in_game_mode_locks_input` reproduces the per-frame
+  `SetPlayerInput(1, 0)` predicate of `sub_0800B700` (cases 0/3/4/5/6;
+  cases 7/8 issue none in the decompiled source). `aria_runtime.c`
+  latches case 3 from the `sub_080104EC` stage machine, case 4 from
+  the SELECT quick map (with `unk_65` following the native stage
+  numbering, including the stage-2 `KEY_B | KEY_SELECT` wait) and
+  case 6 from the START soul menu, then applies the lock through
+  `aos_input_set_player` so only the player words are masked — the
+  entity pass still reads the global words, as natively.
+- **Corrections.** The earlier reading that room 0/3's `unk_64 == 4`
+  sequence was a staged room-transition fade was wrong: case 4 is
+  `sub_080110E4`, the SELECT quick map (the reported ~130-frame lock
+  therefore needs re-verification, not replication). Cases 5
+  (`sub_080106DC` fade transition), 7/8 (`sub_080116A8`/`sub_08011AD0`/
+  `sub_08011B2C` map warp) and 9-14 (`unk_66`-timed cutscene modes)
+  still have no runtime counterpart; `unk_4CC_6` has no writer; the
+  entity `AosForcedInput` slot still substitutes the global held mask
+  rather than the player-only words. The x ~= 120 stop in room 0/3 is
+  consistent with enemy hit-stun — the runtime reproduces the same
+  class of stall (a 7-damage hit stands Soma still ~26 frames near
+  x ~= 186) — not a confirmed body block.
+- **Evidence.** `tests/test_aos_in_game_mode.c` covers the channel
+  latch and the per-case lock predicate; `tests/compare_aos_movement.py`
+  comments corrected and its comments now flag the case-4 identity
+  question. Settled room-0/3 comparison unchanged in shape: native
+  x 6 -> 55 vs runtime x 6 -> 244 over 200 frames (the dominant gap
+  remains the unmodelled ~130-frame post-commit input suppression).
+- Validation: warning-clean build, `ctest`/`fusion_dashboard --run-tests`
+  and `fusion_check_generated` results recorded in this patch's cycle.
+
 ## Patch 1159 - native OBJ-vs-BG priority interleave for retained bands
 
 - **Gap.** Patch 1155's layered BG draw painted every decoded BG

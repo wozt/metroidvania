@@ -22,11 +22,12 @@ never committed):
    walking Soma through the room 0/0 exit into room 0/3 -> "entered.state".
    A fifth "entry settle" run tapping A|B every 30 frames for
    --entry-settle-frames lets the native room-entry sequence finish
-   (the fade holds input via gEwramData +0x42C for ~130 frames, then
-   sub_080110E4 stage 2 waits for KEY_B | KEY_SELECT while game-mode
-   case 4 locks player input) -> "moved.state". Measuring before that
-   settle compares settled runtime movement against a native side
-   that is still input-locked.
+   (the fade holds input via gEwramData +0x42C for ~130 frames; the
+   earlier reading of a following sub_080110E4 stage-2 KEY_B|
+   KEY_SELECT wait needs re-verification — case 4 is the SELECT
+   quick map, which this schedule never opens) -> "moved.state".
+   Measuring before that settle compares settled runtime movement
+   against a native side that is still input-locked.
 2. Native measurement: from moved.state, RIGHT held from frame 0 with
    A taps every --a-every frames; per-frame peeks of 0x02000524:8 give
    posX,posY as 16.16 fixed point (entityData[0] +0x40/+0x44; see
@@ -188,9 +189,10 @@ def ensure_native_states(rom, workdir, lab, story_frames, pulse,
     # The walk ends the frame the room-0/3 transition commits, so the
     # saved state still sits inside the native entry sequence: the fade
     # (gEwramData +0x42C bit 15) suppresses all input for ~130 frames,
-    # then sub_080110E4 stage unk_65 == 2 waits for KEY_B | KEY_SELECT
-    # while GameModeInGameUpdate case 4 holds SetPlayerInput(1, 0)
-    # (unk_64 == 4). Pure A taps never satisfy that wait, so the settle
+    # then a further input-locked sequence (reported as unk_64 == 4,
+    # which is the quick-map case and needs re-verification) holds
+    # SetPlayerInput(1, 0). Pure A taps never satisfy a B|Select
+    # wait, so the settle
     # taps A|B together: A keeps dialogue advancing and B both satisfies
     # the stage and swings the whip (clearing the room's zombies, which
     # keeps them from drifting into the measured stretch). Settle long
@@ -217,12 +219,13 @@ def native_measure(rom, state, workdir, lab, frames, direction):
     """Hold `direction` with A|B taps every A_EVERY frames; per-frame
     posX/posY peeks. Returns list of (frame, x16.16, y16.16).
 
-    B is tapped together with A: room 0/3's native entry/event
-    sequences park in sub_080110E4 stage unk_65 == 2, which only
-    advances on KEY_B | KEY_SELECT while game-mode case 4 holds
-    SetPlayerInput(1, 0). Without a B press the native side stays
-    input-locked and the comparison measures nothing. The runtime
-    script taps the same mask, so both sides whip-swing symmetrically."""
+    B is tapped together with A: the earlier measurement reported a
+    stage-2 KEY_B | KEY_SELECT wait (sub_080110E4 stage unk_65 == 2)
+    while game-mode case 4 held SetPlayerInput(1, 0); the case-4
+    identity needs re-verification, but the B taps keep whichever
+    native wait exists satisfied so the native side is not stuck
+    input-locked. The runtime script taps the same mask, so both
+    sides whip-swing symmetrically."""
     base = RIGHT if direction == "right" else LEFT
     keys = tap_keys(frames, base, A_EVERY, A | 2)
     peeks = ",".join(f"{f}:{POS_ADDR:x}:8" for f in range(frames))
@@ -254,9 +257,9 @@ def write_sim_script(path: str, frames: int, direction: str) -> None:
         if gap > 0:
             lines.append(f"tap {base} {gap}")
             cursor = f
-        # A|B: A advances text/jumps, B satisfies the native
-        # sub_080110E4 stage-2 KEY_B|KEY_SELECT wait (see
-        # native_measure); the runtime maps B to the whip attack.
+        # A|B: A advances text/jumps, B satisfies the reported
+        # stage-2 KEY_B|KEY_SELECT wait (see native_measure); the
+        # runtime maps B to the whip attack.
         lines.append(f"tap {base | A | 2} 3")
         cursor += 3
         f += A_EVERY

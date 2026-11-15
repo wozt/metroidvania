@@ -601,26 +601,50 @@ reproduces `sub_080104EC`'s `unk_65` stage ordering around `take_exit`
 
 In-game event locks. While `gameMode` (`gEwramData + 0x10`) is 1 or 4,
 `GameModeInGameUpdate` (`sub_0800B700`) dispatches on
-`unk_60.unk_64`/`unk_65` (`gEwramData + 0x64/+0x65`). Several stages call
+`unk_60.unk_64`/`unk_65` (`gEwramData + 0x64/+0x65`). Several cases call
 `SetPlayerInput(1, 0)` every frame, which parks a priority-1 override in
-`inputData` so `playerHeldInput` reads 0 regardless of the pad: case 4 runs
-`sub_080110E4`, the staged room-transition fade whose stage `unk_65 == 2`
-draws `sub_08010FF4` and only advances on `new_input & (KEY_B |
-KEY_SELECT)`; case 6 runs `sub_08047764`, a room event script; cases 5, 7
-and 8 run `sub_080106DC`, `sub_080116A8`/`sub_08011AD0` and
-`sub_08011B2C`. `gEwramData + 0x42C` (`unk_60.unk_42C`) is the matching
-global bitfield: the wooden door sets bits `0x101` while Soma passes
-(`sub_0800C5A8(0)` also clears `unk_A074` bit 1, freezing entity updates)
-and the fade path holds bit `0x80000000`. Measured on the real ROM in
-room 0/3 (`tests/compare_aos_movement.py` artifacts): a state saved at
-the room-0/3 transition commit keeps `unk_64 == 4` with `0x42C ==
+`inputData` so `playerHeldInput` reads 0 regardless of the pad while the
+global `heldInput`/`newInput` the entity pass reads stay untouched:
+case 0 stages `unk_65` 1 and 3 (boot fade), case 3 only while
+`unk_4CC_6` holds, and cases 4, 5 and 6 unconditionally — `sub_080110E4`
+(the SELECT quick map, whose stage `unk_65 == 2` draws `sub_08010FF4`
+and only advances on `new_input & (KEY_B | KEY_SELECT)`), `sub_080106DC`
+(the faded room transition with camera movement, which calls
+`SetPlayerInput(1, 0)` internally) and `sub_08047764` (the START soul
+menu). Cases 7 and 8 run `sub_080116A8`/`sub_08011AD0` and `sub_08011B2C`
+(the quick-map warp chain and the map-driven room warp) and issue no
+`SetPlayerInput` in the decompiled source. `gEwramData + 0x42C`
+(`unk_60.unk_42C`) is the matching global bitfield: the wooden door sets
+bits `0x101` while Soma passes (`sub_0800C5A8(0)` also clears `unk_A074`
+bit 1, freezing entity updates) and the fade path holds bit
+`0x80000000`.
+
+The runtime now carries the dispatch channel itself:
+`src/runtime/aos/game/aos_in_game_mode.{c,h}` models `unk_64`/`unk_65`/
+`unk_66`/`unk_4CC_6` and `aos_in_game_mode_locks_input` reproduces the
+per-frame `SetPlayerInput(1, 0)` predicate; `aria_runtime.c` latches case
+3 from the `sub_080104EC` stage machine, case 4 from the SELECT quick map
+(with `unk_65` tracking the native stage numbering: open fade = 1, idle
+map = the stage-2 B|Select wait, close ramp = 3) and case 6 from the
+START soul menu, then applies the lock through `aos_input_set_player` so
+only the player words are masked. Cases 5, 7, 8 and 9-14 (the
+`unk_66`-timed cutscene modes) have no runtime counterpart yet, and
+`unk_4CC_6` has no writer; the entity-driven `AosForcedInput` slot still
+substitutes the global held mask rather than the player-only words
+(documented divergence). Measured on the real ROM in room 0/3
+(`tests/compare_aos_movement.py` artifacts): a state saved at the
+room-0/3 transition commit reportedly keeps `unk_64 == 4` with `0x42C ==
 0x81010000` for ~130 frames of suppressed input, then `0x01010000` while
-the door pass and the stage-2 B/Select wait hold the lock; only after a
-B or Select press does `unk_64` return to 1. Later in the same room a
-second sequence (`unk_64 == 6`, `sub_08047764`) locks input around
-x ~= 100-120, and a further stationary stop near x ~= 120 persists with
-input free — consistent with an enemy body block (zombies converge on
-Soma there) but the exact native mechanism is not yet confirmed.
+a door pass and a stage-2 B/Select wait hold the lock; only after a B or
+Select press does `unk_64` return to 1 — but case 4 is the quick map, so
+that reading needs re-verification (no SELECT is pressed by the
+schedule). A later stationary stop near x ~= 120 persists with input
+free; the runtime reproduces the same class of stall as enemy
+hit-stun — in `--simulate` room 0/3 Soma takes a 7-damage hit and stands
+still for ~26 frames at x ~= 186 before resuming — so the native stop is
+consistent with enemy contact damage rather than a confirmed body block.
+The dominant remaining divergence is the ~130-frame post-commit input
+suppression the runtime does not reproduce.
 
 Animation palettes: every direct animation change compares the byte
 `0x080E126C[id]` with `+0x26` and, when it differs, loads that bank of

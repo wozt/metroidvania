@@ -314,7 +314,7 @@ add_executable(fusion_aria_runtime src/runtime/aria_runtime.c src/runtime/aria_w
                src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c src/runtime/aos/game/aos_room.c
                src/runtime/aos/game/aos_door.c src/runtime/aos/game/aos_object01.c src/runtime/aos/game/aos_object02.c src/runtime/aos/game/aos_object03.c src/runtime/aos/game/aos_object04.c src/runtime/aos/game/aos_object05.c src/runtime/aos/game/aos_object06.c src/runtime/aos/game/aos_object07.c src/runtime/aos/game/aos_object0c.c src/runtime/aos/game/aos_object0f.c src/runtime/aos/game/aos_object0d.c src/runtime/aos/game/aos_object0e.c src/runtime/aos/game/aos_object10.c src/runtime/aos/game/aos_object11.c src/runtime/aos/game/aos_object12.c src/runtime/aos/game/aos_object13.c src/runtime/aos/game/aos_object14.c src/runtime/aos/game/aos_object19.c src/runtime/aos/game/aos_object20_story.c src/runtime/aos/game/aos_object20_whiteout_render.c src/runtime/aos/game/aos_object20_dirs.c src/runtime/aos/game/aos_object20_slots.c src/runtime/aos/game/aos_object20.c src/runtime/aos/game/aos_npc_talk.c src/runtime/aos/game/aos_shop.c src/runtime/aos/game/aos_room_dialogue.c src/runtime/aos/game/aos_object1b.c src/runtime/aos/game/aos_object1a.c src/runtime/aos/game/aos_object1e.c src/runtime/aos/game/aos_object15.c src/runtime/aos/game/aos_object16.c src/runtime/aos/game/aos_object24.c src/runtime/aos/game/aos_object27.c src/runtime/aos/game/aos_object2a.c src/runtime/aos/game/aos_object2b.c src/runtime/aos/game/aos_object2f.c src/runtime/aos/game/aos_object36.c src/runtime/aos/game/aos_object23.c src/runtime/aos/game/aos_object2d.c src/runtime/aos/game/aos_object2e.c src/runtime/aos/game/aos_object26.c src/runtime/aos/game/aos_object28.c src/runtime/aos/game/aos_object34.c src/runtime/aos/game/aos_object2c.c src/runtime/aos/game/aos_object17.c src/runtime/aos/game/aos_object18.c src/runtime/aos/game/aos_object30.c src/runtime/aos/game/aos_object21.c src/runtime/aos/game/aos_object25.c src/runtime/aos/game/aos_object31.c src/runtime/aos/game/aos_object33.c src/runtime/aos/game/aos_object22.c src/runtime/aos/game/aos_object29.c src/runtime/aos/game/aos_object32.c src/runtime/aos/game/aos_object35.c src/runtime/aos/game/aos_object37.c src/runtime/aos/game/aos_object1d.c src/runtime/aos/game/aos_object1f.c src/runtime/aos/game/aos_object1c.c src/runtime/aos/core/aos_wall.c src/runtime/aos/weapons/aos_weapon.c ${AOS_ENEMY_SOURCES} src/runtime/aos/core/aos_damage_popup.c src/runtime/aos/core/aos_effect.c
                src/runtime/gba_input.c src/runtime/aos/core/aos_input.c src/runtime/aos/game/aos_save.c
-               src/runtime/aos/game/aos_game_mode.c src/runtime/aos/game/aos_game_lifecycle.c src/runtime/aos/intro/aos_game_over.c src/runtime/aos/menus/aos_main_menu.c
+               src/runtime/aos/game/aos_game_mode.c src/runtime/aos/game/aos_in_game_mode.c src/runtime/aos/game/aos_game_lifecycle.c src/runtime/aos/intro/aos_game_over.c src/runtime/aos/menus/aos_main_menu.c
                src/runtime/aos/intro/aos_intro_cutscene.c src/runtime/aos/intro/aos_intro_entities.c
                src/runtime/aos/intro/aos_intro_resources.c src/runtime/aos/intro/aos_intro_font.c
                src/runtime/aos/title/aos_opening_event.c
@@ -1489,6 +1489,12 @@ if(BUILD_TESTING)
     target_include_directories(fusion_aos_input_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_input_tests)
     add_test(NAME aos_input COMMAND fusion_aos_input_tests)
+
+    add_executable(fusion_aos_in_game_mode_tests tests/test_aos_in_game_mode.c
+                   src/runtime/aos/game/aos_in_game_mode.c)
+    target_include_directories(fusion_aos_in_game_mode_tests PRIVATE src/runtime)
+    fusion_enable_warnings(fusion_aos_in_game_mode_tests)
+    add_test(NAME aos_in_game_mode COMMAND fusion_aos_in_game_mode_tests)
 
     add_executable(fusion_gba_input_tests tests/test_gba_input.c src/runtime/gba_input.c)
     target_include_directories(fusion_gba_input_tests PRIVATE src/runtime)

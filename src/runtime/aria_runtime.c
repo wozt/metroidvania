@@ -156,6 +156,7 @@
 #include "aria_menus_debug.h"
 #include "aria_weapons.h"
 #include "aos/core/aos_input.h"
+#include "aos/game/aos_in_game_mode.h"
 #include "fusion/assets/rom.h"
 
 #include <SDL3/SDL.h>
@@ -336,6 +337,15 @@ typedef struct {
     AosProjectDoor door;
 } AriaRoomTransition;
 static AriaRoomTransition room_transition;
+/* GameModeInGameUpdate's unk_60.unk_64/+0x65 dispatch channel
+ * (sub_0800B700): the ported counterparts latch their case here —
+ * room_transition -> 3, the SELECT quick map -> 4, the START soul
+ * menu -> 6 — and aos_in_game_mode_locks_input reports the frames
+ * the native code parks SetPlayerInput(1, 0). Cases 5 (sub_080106DC
+ * transition fades), 7/8 (sub_080116A8/sub_08011AD0/sub_08011B2C
+ * map warp) and 9-14 (cutscene modes) have no runtime counterpart
+ * yet and stay documented in aos_in_game_mode.h. */
+static AosInGameMode in_game_mode = { .unk_64 = AOS_INGAME_PLAY };
 
 static void room_transition_begin(AriaRoomTransition *t,
                                   const AosProjectDoor *door) {
@@ -343,6 +353,9 @@ static void room_transition_begin(AriaRoomTransition *t,
     t->active = true;
     t->stage = 1;           /* stage 0 (fade + cleanup) ran inline */
     t->settle_left = 1;
+    /* sub_08010244 latches unk_64 = 3, unk_65 = 0. */
+    aos_in_game_mode_enter(&in_game_mode, AOS_INGAME_ROOM_TRANSITION,
+                           false);
     if (door) {
         t->has_door = true;
         t->door = *door;
@@ -358,6 +371,11 @@ static int room_transition_tick(AriaRoomTransition *t,
                                 SDL_Renderer *renderer, AriaRoom *room,
                                 SDL_Texture **background, AosSoma *soma,
                                 int *cam_x, int *cam_y) {
+    /* unk_65 mirrors the native stage this frame's branch runs:
+     * the runtime's stage 1 commit is native stage 1 (the
+     * sub_08010350/sub_0800F9EC load), stage 2 the sub_0800ED24
+     * settle and stage 3 the register restore. */
+    in_game_mode.unk_65 = (uint8_t)t->stage;
     if (t->stage == 1) {
         /* unk_65 == 1: sub_08010350 picks the entry and sub_0800F9EC
          * loads the target room while dispCnt = 0 blanks the display. */
@@ -368,6 +386,9 @@ static int room_transition_tick(AriaRoomTransition *t,
         if (result <= 0) {
             t->active = false;
             t->stage = 0;
+            /* The native failure paths leave unk_64 = 3 only via
+             * the case tail; a failed load returns to play. */
+            aos_in_game_mode_resume(&in_game_mode);
             return result;
         }
         t->settle_left = room_transition_settle_frames;
@@ -384,9 +405,11 @@ static int room_transition_tick(AriaRoomTransition *t,
         return 0;
     }
     /* unk_65 == 3: bldY = 0 and the display/blend registers come
-     * back; sub_080104EC returns 1 and the mode leaves unk_64 = 3. */
+     * back; sub_080104EC returns 1 and the mode leaves unk_64 = 3
+     * (unk_65 keeps its last stage, like the native tail). */
     t->stage = 0;
     t->active = false;
+    aos_in_game_mode_resume(&in_game_mode);
     return 2;
 }
 
@@ -1279,8 +1302,15 @@ int aria_runtime_main(int argc, char **argv) {
              * lock zeroes the gameplay mask below. */
             uint16_t sim_new_input = (uint16_t)(held & ~sim_prev_held);
             sim_prev_held = held;
+            /* Headless has no AosInput channel, so the mode lock
+             * folds into the same player-only mask the dialogue and
+             * Object1C locks use; the entity pass still reads the
+             * raw sim_held/sim_new_input pair below. */
             unsigned held_eff = (room_dialogue_input_lock ||
-                                 object1c_input_lock) ? 0 : held;
+                                 object1c_input_lock ||
+                                 aos_in_game_mode_locks_input(&in_game_mode))
+                                    ? 0
+                                    : held;
             aos_soma_update(&soma, &layer, (uint16_t)held_eff, 0);
             bool door_held = false;
             for (size_t k = 0; k < room.entity_count && !door_held; ++k)
@@ -2099,6 +2129,17 @@ int aria_runtime_main(int argc, char **argv) {
             if (forced.active) held = forced.held;
             forced.active = false;
             aos_input_update(&aria_input, held);
+            /* GameModeInGameUpdate's locked cases (boot fade stages,
+             * quick map, transition fade, soul menu, and the
+             * unk_4CC_6-gated transition) park SetPlayerInput(1, 0)
+             * every frame: the priority-1 override zeroes
+             * playerHeldInput/playerNewInput while the global
+             * held/new words the entity pass reads stay untouched.
+             * aos_input_set_player reproduces exactly that; the
+             * one-frame priority reset inside aos_input_update
+             * matches the native per-frame override. */
+            if (aos_in_game_mode_locks_input(&in_game_mode))
+                (void)aos_input_set_player(&aria_input, 1, 0);
             lifecycle.input = aria_input;
             aos_game_lifecycle_update(&lifecycle);
             /* The room's area music enters with the room like the native
@@ -2241,13 +2282,22 @@ int aria_runtime_main(int argc, char **argv) {
             soul_menu.sleep_available = has_active_save;
             unsigned soul_menu_event = 0;
             if (quick_map_open) {
-                /* BLDY ramps 4/frame like sub_080110E4's stages. */
+                /* BLDY ramps 4/frame like sub_080110E4's stages.
+                 * unk_65 tracks the native stage numbering: the
+                 * open fade covers stages 8->1, the idle map is the
+                 * stage-2 B|Select wait (sub_08010FF4) and the
+                 * close ramp is stage 3; stages 4-5 (cleanup and
+                 * register restore) collapse into the close frame. */
+                in_game_mode.unk_65 = quick_map_closing ? 3
+                    : quick_map_bldY > 0 ? 1 : 2;
                 if (quick_map_closing) {
                     quick_map_bldY += 4;
                     if (quick_map_bldY >= 16) {
                         quick_map_bldY = 16;
                         quick_map_open = false;
                         quick_map_closing = false;
+                        /* sub_080110E4's return: unk_64 = 1. */
+                        aos_in_game_mode_resume(&in_game_mode);
                         printf("Quick map closed\n");
                     }
                 } else if (quick_map_bldY > 0) {
@@ -2273,6 +2323,10 @@ int aria_runtime_main(int argc, char **argv) {
                     quick_map_open = true;
                     quick_map_bldY = 16;
                     quick_map_closing = false;
+                    /* sub_08011338 latches unk_64 = 4, unk_65 = 0
+                     * (GameModeInGameUpdate case 4). */
+                    aos_in_game_mode_enter(&in_game_mode,
+                                           AOS_INGAME_QUICK_MAP, false);
                     aos_audio_play_song(AOS_AUDIO_SONG_QUIET);
                     printf("Quick map opened\n");
                 } else {
@@ -2304,6 +2358,11 @@ int aria_runtime_main(int argc, char **argv) {
                 if (combat.derive_def) player_stats.def = progress.def;
             }
             if (soul_menu_event & AOS_SOUL_MENU_OPENED) {
+                /* sub_080473F4's START press latches unk_64 = 6:
+                 * GameModeInGameUpdate case 6 runs sub_08047764,
+                 * the soul-menu update, behind SetPlayerInput(1, 0). */
+                aos_in_game_mode_enter(&in_game_mode, AOS_INGAME_SOUL_MENU,
+                                       false);
                 aos_pickup_icon_backup(&room.pickup_icons);
                 aos_audio_play_song(AOS_AUDIO_SONG_QUIET);
                 printf("Pause hub opened\n");
@@ -2384,6 +2443,8 @@ int aria_runtime_main(int argc, char **argv) {
                            progress.abilities[1], progress.abilities[0]);
             }
             if (soul_menu_event & AOS_SOUL_MENU_CLOSED) {
+                /* sub_08047764's return tail: unk_64 = 1. */
+                aos_in_game_mode_resume(&in_game_mode);
                 aos_pickup_icon_restore(&room.pickup_icons);
                 aos_audio_play_song(AOS_AUDIO_SONG_LOUD);
                 printf("Pause hub closed\n");

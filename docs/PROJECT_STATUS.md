@@ -1,3 +1,43 @@
+## Patch 1185 - opening Skeleton Knights floor-snap at spawn; Arikado's walk cycles anim_0
+
+- **Floating skeletons fixed at the root.** Every type-10 emitted
+  child is created by `sub_0805E528`, which calls `sub_0806AF98`
+  before the parameter-bit-2 drop: the routine probes
+  `sub_08001D94` at the camera-relative spawn point (exactly the
+  world pixel the port stores — the camera terms cancel), walks
+  entity `+0x46` in 8-pixel steps until the probe reports 0, backs
+  off 7 pixels, then adds the final probe depth into fixed-point
+  `+0x44`, snapping the child onto the floor surface. The port
+  stored the raw `0x29F` record height for every Skeleton Knight,
+  so they floated above the ground. `append_emission` now runs the
+  same probe sequence through the injected `floor_depth` callback
+  (`aos_floor_depth` = `sub_08001D94`) before the existing bit-2
+  `+8px` advance, preserving the native order. Type-8 children are
+  untouched — `sub_0805E260` never calls `sub_0806AF98`.
+- **Genya/Arikado walk animation.** `sub_0805D198` binds child18
+  (the merchant) to `opening_actor_1` anim_1 — a single held
+  frame — and the routine that consumes his `+0x48 = -0x6000`
+  velocity remains absent from the disassembly dump (Patch 1148's
+  audit stands). With the bounded walk approximation in place the
+  actor slid as a statue. `opening_actor_1`'s only multi-frame
+  non-attack sequence is anim_0 (10 entries), so the state-1 walk
+  now binds it through the real `sub_0803F2C8`/tick chain and
+  restores anim_1 at the `0xD0` stop. The animation index choice
+  is documented as an approximation: the missing native routine
+  may select differently.
+- **Tests.** `tests/test_aos_opening_event.c` gains
+  `test_emitted_floor_snap`: a flat-floor `floor_depth` stub pins
+  the `+0x46` walk/back-off/probe-add arithmetic (spawn `0x29F`
+  snaps to `204`, then the bit-2 drop yields `212 << 16`) and
+  confirms type-8 children keep their raw spawn height.
+  `fusion_aos_opening_event_tests` passes.
+- **Registries.** `annotations.tsv` `aos.events.opening_scene`
+  gains `sub_0806AF98|sub_08001D94` in native_routines and notes
+  the approximation; `features.tsv` `story.aria_opening_event`
+  limitations updated. Status stays `partial` — the walk consumer
+  and the exact walk animation index are still unverified against
+  native.
+
 ## Patch 1184 - sub_0800CDAC BG1 mode-0x1A hblank program ported; WIN1H circular-window family audited out of scope
 
 - **Gap A closed.** Patch 1181's last scroll-FX limit,

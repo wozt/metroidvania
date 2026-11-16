@@ -361,6 +361,39 @@ static void append_emission(AosOpeningActors *actors,
         };
         if (entity->entity_type == 8 && actors->random)
             entity->phase = (uint16_t)((actors->random(actors->motion_context) & 0x7F) << 9);
+        /* sub_0805E528 calls sub_0806AF98 on every type-10 child before
+         * the parameter-bit-2 drop: the routine probes sub_08001D94 at
+         * the camera-relative spawn point — which is exactly the world
+         * pixel the port stores — walks entity +0x46 by 8-pixel steps
+         * until the probe reports 0, backs off 7 pixels, then adds the
+         * final probe depth into fixed-point +0x44. The net effect is a
+         * snap onto the floor surface, so Skeleton Knights stand on the
+         * ground instead of floating at the record's spawn height. */
+        if (entity->entity_type == 10 && actors->floor_depth) {
+            int32_t snap_x = spawns[i].x;
+            int32_t snap_y = spawns[i].y;
+            int depth = actors->floor_depth(snap_x, snap_y,
+                                            actors->motion_context);
+            if (depth < 0) {
+                /* Inside the floor: +0x46 -= 8 until the probe clears. */
+                do {
+                    snap_y -= 8;
+                    depth = actors->floor_depth(snap_x, snap_y,
+                                                actors->motion_context);
+                } while (depth != 0);
+                snap_y += 7;
+            } else {
+                /* Above the floor: +0x46 += 8 until the probe enters it. */
+                while (depth == 0) {
+                    snap_y += 8;
+                    depth = actors->floor_depth(snap_x, snap_y,
+                                                actors->motion_context);
+                }
+            }
+            depth = actors->floor_depth(snap_x, snap_y,
+                                        actors->motion_context);
+            entity->y = (snap_y + depth) << 16;
+        }
         /* sub_0805E528 advances parameter-bit-2 Skeleton Knights by sixteen
          * half-pixel steps during creation. */
         if (entity->entity_type == 10 && (entity->parameter & 4))
@@ -1375,9 +1408,20 @@ AosOpeningCue aos_opening_actors_update(
         if (actors->x[1] > stop_x) {
             actors->x[1] -= 0x6000;
             if (actors->x[1] < stop_x) actors->x[1] = stop_x;
+            /* The missing native walk routine plausibly also rebinds
+             * child18's animation: opening_actor_1's only multi-frame
+             * non-attack sequence is anim_0 (the 10-entry cycle), while
+             * the spawn/default pick anim_1 is a single held frame.
+             * Playing anim_0 for the bounded walk keeps the ported
+             * movement from reading as a sliding statue; the sequence
+             * loops through the real sub_0803F17C tick chain. */
+            if (actors->animation[1] != 0)
+                actor_animation(actors, 1, 0, true);
         } else {
             actors->state = 2;
             actors->step = 0;
+            if (actors->animation[1] != 1)
+                actor_animation(actors, 1, 1, true);
         }
     }
 

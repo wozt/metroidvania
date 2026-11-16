@@ -78,6 +78,32 @@ static void test_emitted_motion(void) {
     assert(actors.emitted[2].state == 0);
 }
 
+/* sub_0806AF98's floor snap for type-10 children: a flat floor 2 pixels
+ * below y=200 reports -2 inside it and 0 above it. The distant batch's
+ * first child spawns at y=0x29F inside the floor, so the +0x46 -= 8 walk
+ * climbs to y=199, the +7 back-off lands at 206 and the final probe adds
+ * -2, snapping the spawn to y=204 before the parameter-bit-2 +8 drop. */
+static int snap_floor(int32_t x, int32_t y, void *context) {
+    (void)x;
+    (void)context;
+    return y > 200 ? -2 : 0;
+}
+
+static void test_emitted_floor_snap(void) {
+    AosOpeningActors actors;
+    aos_opening_actors_init(&actors);
+    aos_opening_actors_set_motion(&actors, zero_random, full_sine,
+                                  zero_angle, snap_floor, NULL, NULL);
+    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENEMY_APPEARS);
+    assert(actors.emitted_count == 6);
+    /* emitted[0] is distant record 0: type 10, parameter 4. */
+    assert(actors.emitted[0].entity_type == 10);
+    assert(actors.emitted[0].y == (204 + 8) << 16);
+    /* The type-8 child never gets the sub_0806AF98 snap. */
+    assert(actors.emitted[5].entity_type == 8);
+    assert(actors.emitted[5].y == (0x288) << 16);
+}
+
 static void test_skeleton_collision_flight(void) {
     AosOpeningActors actors;
     aos_opening_actors_init(&actors);
@@ -884,6 +910,7 @@ int main(int argc, char **argv) {
     assert(AOS_OPENING_TEXT_X == 40 && AOS_OPENING_TEXT_Y == 116);
     assert(AOS_OPENING_PROMPT_X == 216 && AOS_OPENING_PROMPT_Y == 140);
     test_emitted_motion();
+    test_emitted_floor_snap();
     test_skeleton_collision_flight();
     test_skeleton_approach();
     test_emitted_attack_tails();

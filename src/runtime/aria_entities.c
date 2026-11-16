@@ -233,6 +233,15 @@ static uint8_t object20_ewram_427;
  * enemy callers whose native sites map to unported state
  * machines or unmodelled gate globals. */
 static int8_t c5a8_pending = -1;
+/* Debug-only reporter identity for ARIA_DEBUG_C5A8 (diagnostic;
+ * never gameplay state): the entity and source line of the last
+ * write. */
+static const void *c5a8_dbg_ent;
+static int c5a8_dbg_line;
+#define C5A8_REPORT(val, ent) do { \
+    c5a8_pending = (int8_t)(val); \
+    c5a8_dbg_ent = (ent); c5a8_dbg_line = __LINE__; \
+} while (0)
 /* gEwramData bgInfo[4] scroll state (+0xA078): the ported
  * sub_0803FBBC/sub_08000F60/sub_0800D288 behind every
  * sub_0800ED24 call (aos/core/aos_scroll). The Object20 shop sell
@@ -1405,6 +1414,13 @@ int aria_entities_c5a8_result(void) {
     return c5a8_pending;
 }
 
+/* ARIA_DEBUG_C5A8 diagnostics: the last reporter's entity pointer
+ * and source line (NULL/-1 after a silent frame). */
+void aria_entities_c5a8_debug(const void **ent, int *line) {
+    if (ent) *ent = c5a8_dbg_ent;
+    if (line) *line = c5a8_dbg_line;
+}
+
 /* Forward one update's Out effects. The window triple goes through
  * the shared room dialogue first (open -> poll -> close, the native
  * order inside a single update); the rest follow the sibling
@@ -1694,7 +1710,7 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
                    : out->dirs.c5a8 >= 0 ? out->dirs.c5a8
                    : out->story.c5a8 >= 0 ? out->story.c5a8
                    : out->slots.c5a8;
-        if (c5a8 >= 0) c5a8_pending = (int8_t)c5a8;
+        if (c5a8 >= 0) C5A8_REPORT(c5a8, e);
     }
     /* sub_0800ED24 consumers: the shop transaction
      * (transaction/transaction_arg1, arg0 always 1) and the
@@ -2497,6 +2513,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
      * the entity pass runs; reset so a frozen pass cannot leak
      * last frame's report into the room loop's store. */
     c5a8_pending = -1;
+    c5a8_dbg_ent = NULL;
+    c5a8_dbg_line = -1;
     int sound = 0;
     /* Object10's create installs sub_08050F1C as the entity
      * drawFunc; it writes sub_0800C5A8(0) on every invocation.
@@ -2694,7 +2712,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * reports at the same slot in entity order (repeated
              * hits while dead re-write 0 like the native calls). */
             if (hit.soma_damage > 0 && soma->hp <= 0)
-                c5a8_pending = 0;
+                C5A8_REPORT(0, e);
             /* sub_080D26A8 (Graham's state-1 partner machine)
              * writes sub_0800C5A8(0) at routine entry — every
              * frame the conductor dispatches state 1. The clone
@@ -2703,7 +2721,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (e->id == AOS_ENEMY_GRAHAM && pre_enemy_state == 1 &&
                 e->enemy.role != AOS_ROLE_GRAHAM_CLONE &&
                 e->enemy.role != AOS_ROLE_GRAHAM_CORE)
-                c5a8_pending = 0;
+                C5A8_REPORT(0, e);
             if (hit.targetable) homing_register((int)i);
             /* EnemyImpUpdate calls SetPlayerInput(1, B/0) on alternating
              * frames while its linked helper controls Soma. As with doors,
@@ -3525,7 +3543,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  * the create-time event test stays clear. */
                 aos_object15_create(&e->object15, e->param0, false);
                 if (e->object15.c5a8 >= 0)
-                    c5a8_pending = (int8_t)e->object15.c5a8;
+                    C5A8_REPORT(e->object15.c5a8, e);
                 continue;
             }
             int32_t osx = e->x - cam_x, osy = e->y - cam_y;
@@ -3540,7 +3558,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * approximations keep the machine reachable. */
             aos_object15_update(&e->object15, near1, near2, true,
                                 true, 0, soma->x < ((int32_t)e->x) << 16);
-            if (e->object15.c5a8 >= 0) c5a8_pending = (int8_t)e->object15.c5a8;
+            if (e->object15.c5a8 >= 0) C5A8_REPORT(e->object15.c5a8, e);
             if (e->object15.forced == 0)
                 input->held = 0;
             else if (e->object15.forced == 1)
@@ -3575,7 +3593,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             aos_object16_update(&e->object16, flag0, near,
                                 soma->x < ((int32_t)e->x) << 16,
                                 aos_sine);
-            if (e->object16.c5a8 >= 0) c5a8_pending = (int8_t)e->object16.c5a8;
+            if (e->object16.c5a8 >= 0) C5A8_REPORT(e->object16.c5a8, e);
             if (e->object16.forced == 0)
                 input->held = 0;
             else if (e->object16.forced == 1)
@@ -4016,7 +4034,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * children never call it — only the dead sub_0805632C
              * free child does. */
             if (e->object1f.sound >= 0)
-                c5a8_pending = (int8_t)e->object1f.sound;
+                C5A8_REPORT(e->object1f.sound, e);
             /* Children: sub_08055DF8 ring x9 + sub_08056130 flank
              * x2. record_state is the parent's own +0xA byte —
              * gEwramData + 0x4E4 + slot*132 IS entityData[slot]
@@ -4893,8 +4911,15 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
             e->spawned = true;
             aos_door_create(&e->door, layer, e->x, e->y, soma, cam_x, input);
-            /* Object00Create's tail calls sub_0800C5A8(0). */
-            c5a8_pending = 0;
+            /* Object00Create's sub_0800C5A8(0) sits inside the
+             * Soma-near branch only (the same branch that ORs
+             * +0x42C 0x101, presets swing 0x4000 and state 0xA —
+             * the port's door->holding). A far spawn writes
+             * nothing natively; reporting 0 unconditionally left
+             * unk_A074_1 clear in every room a passive door
+             * spawned in, which is what froze the START poll. */
+            if (e->door.holding)
+                C5A8_REPORT(0, e);
             continue;
         }
         /* Object00Update's sub_0800C5A8 calls: 0 on the engage and
@@ -4906,16 +4931,16 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         bool door_was_holding = e->door.holding;
         int played = aos_door_update(&e->door, layer, soma, input, cam_x, cam_y);
         if (e->door.holding)
-            c5a8_pending = 0;
+            C5A8_REPORT(0, e);
         else if (door_was_holding)
-            c5a8_pending = 1;
+            C5A8_REPORT(1, e);
         if (played) sound = played;
     }
     /* The drawFunc-order write: sub_08050F1C's sub_0800C5A8(0)
      * lands after every entity update natively, so it is the
      * frame's last writer while a save statue is active. */
     if (object10_draw_armed)
-        c5a8_pending = 0;
+        C5A8_REPORT(0, NULL);
     /* The blink pattern 0x08118CE0, shared by every enemy kind. */
     const uint8_t *blink = NULL;
     for (int id = 0; id < ENEMY_KINDS && !blink; ++id)

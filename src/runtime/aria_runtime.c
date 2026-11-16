@@ -1087,6 +1087,10 @@ static uint16_t keyboard_buttons(void) {
     if (keys[SDL_SCANCODE_X] || keys[SDL_SCANCODE_F]) held |= AOS_KEY_ATTACK;
     if (keys[SDL_SCANCODE_Q] || keys[SDL_SCANCODE_LSHIFT]) held |= AOS_KEY_ABILITY;
     if (keys[SDL_SCANCODE_E] || keys[SDL_SCANCODE_V]) held |= AOS_KEY_GUARDIAN;
+    /* Keyboard START/SELECT: mirrors the gamepad Start/Select buttons
+     * so pause-menu flows can be driven without a controller. */
+    if (keys[SDL_SCANCODE_RETURN]) held |= AOS_KEY_START;
+    if (keys[SDL_SCANCODE_TAB]) held |= AOS_KEY_SELECT;
     return held;
 }
 
@@ -1197,7 +1201,9 @@ static void usage(const char *name) {
             "       (--area A --room R | room-folder)\n"
             "       --simulate-script FILE: per-frame held input; lines are\n"
             "         hold MASK [FRAMES] | tap MASK FRAMES | release | wait FRAMES\n"
-            "         ('#' comments; MASK = AOS_KEY_* bits, strtoul base 0)\n",
+            "         ('#' comments; MASK = AOS_KEY_* bits, strtoul base 0)\n"
+            "       --capture-script FILE: the same per-frame held input for\n"
+            "         --capture runs (replaces the constant BUTTONS mask)\n",
             name);
 }
 
@@ -1213,6 +1219,9 @@ int aria_runtime_main(int argc, char **argv) {
     long simulate_frames = 0;
     unsigned simulate_hold = 0;   /* --simulate-hold: AOS_KEY_* bits held every frame */
     const char *simulate_script_path = NULL;   /* --simulate-script: per-frame held input */
+    const char *capture_script_path = NULL;    /* --capture-script: per-frame held input */
+    AriaSimDirective *capture_dirs = NULL;      /* --capture-script parsed directives */
+    size_t capture_dir_count = 0;
     unsigned long capture_buttons = 0;
     /* A new file owns no ability soul. In particular, Malphas' mid-air jump
      * must be collected before AOS_MOVE_AIR_JUMP becomes available. Saves and
@@ -1249,6 +1258,8 @@ int aria_runtime_main(int argc, char **argv) {
             simulate_hold = (unsigned)strtoul(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--simulate-script") && i + 1 < argc)
             simulate_script_path = argv[++i];
+        else if (!strcmp(argv[i], "--capture-script") && i + 1 < argc)
+            capture_script_path = argv[++i];
         else if (!strcmp(argv[i], "--audit-transitions")) {
             aria_overlays_enabled = false;
             return audit_transitions();
@@ -1798,6 +1809,32 @@ int aria_runtime_main(int argc, char **argv) {
              * Object1F writers, same ordering as the SDL loop. */
             warp_room_discovery(&room);
             poll_object1f_mode_triggers(&room);
+            /* ARIA_DEBUG_C5A8: dump the frame's sub_0800C5A8 report
+             * and the reporter identity (diagnostic only). */
+            if (getenv("ARIA_DEBUG_C5A8")) {
+                const void *dbg_ent = NULL;
+                int dbg_line = -1;
+                int c5a8 = aria_entities_c5a8_result();
+                aria_entities_c5a8_debug(&dbg_ent, &dbg_line);
+                const AriaEntity *de = dbg_ent;
+                printf("C5A8DBG frame=%ld room=%d/%d unk64=%d gflags=0x%x "
+                       "c5a8=%d line=%d", frame, room.area, room.number,
+                       in_game_mode.unk_64,
+                       (unsigned)aria_pickup_state.global_flags,
+                       c5a8, dbg_line);
+                if (de) {
+                    printf(" ent kind=%d id=%d pos=%d,%d",
+                           de->kind, de->id, de->x, de->y);
+                    if (de->kind == ARIA_KIND_SPECIAL && de->id == 32)
+                        printf(" fam=%u param0=%u state=%d",
+                               de->object20.family, de->param0,
+                               de->object20.v.npc_loop.state);
+                    if (de->kind == ARIA_KIND_ENEMY)
+                        printf(" estate=%d role=%d", de->enemy.state,
+                               de->enemy.role);
+                }
+                printf("\n");
+            }
             homing_age();
             aos_enemy_set_soul_attacks(NULL, 0);
         }
@@ -2466,6 +2503,20 @@ int aria_runtime_main(int argc, char **argv) {
     debug_menu_value(&debug, "Room", &debug_room, 0, 999, 1, NULL, DEBUG_ROOM);
     debug_menu_action(&debug, "Teleport", DEBUG_TELEPORT);
     debug.open = debug_at_start;
+    /* --capture-script: the same per-frame held-input script
+     * --simulate-script parses, applied to the capture path's held
+     * mask instead of the constant --capture BUTTONS value. */
+    if (capture_script_path) {
+        if (aria_load_sim_script(capture_script_path, &capture_dirs,
+                                 &capture_dir_count) != 0) {
+            fprintf(stderr, "Cannot load the capture script: %s\n",
+                    capture_script_path);
+            goto cleanup;
+        }
+    }
+    size_t capture_next = 0;
+    long capture_timed_end = -1;
+    unsigned capture_timed_held = 0, capture_base = 0, capture_held = 0;
     uint16_t menu_previous = 0;
     while (running) {
         SDL_Event event;
@@ -2576,8 +2627,30 @@ int aria_runtime_main(int argc, char **argv) {
                     continue;
                 }
             }
-            uint16_t held = capture_path ? (uint16_t)capture_buttons
-                                         : player_buttons(&gamepad);
+            uint16_t held;
+            if (capture_path) {
+                if (capture_dirs) {
+                    while (capture_next < capture_dir_count &&
+                           capture_dirs[capture_next].pos <= step) {
+                        const AriaSimDirective *d =
+                            &capture_dirs[capture_next++];
+                        if (d->timed) {
+                            capture_timed_held = d->held;
+                            capture_timed_end = d->end;
+                        } else {
+                            capture_base = d->held;
+                        }
+                    }
+                    capture_held = step < capture_timed_end
+                                       ? capture_timed_held
+                                       : capture_base;
+                    held = (uint16_t)capture_held;
+                } else {
+                    held = (uint16_t)capture_buttons;
+                }
+            } else {
+                held = player_buttons(&gamepad);
+            }
             if (capture_path && repeat > 0 && step % repeat == repeat - 1) held = 0;
             if (debug.open && !capture_path) held = 0;     /* a menu frame step */
             bool forced_frame = forced.active;
@@ -4751,6 +4824,7 @@ aria_render_frame:
     }
     rc = 0;
 cleanup:
+    free(capture_dirs);
     if (quick_map_texture) SDL_DestroyTexture(quick_map_texture);
     if (pause_texture) SDL_DestroyTexture(pause_texture);
     aos_pause_graphics_free(&pause_graphics);

@@ -176,8 +176,11 @@ bool draw_native_pause_hub(SDL_Renderer *renderer, SDL_Texture *texture,
     memcpy(values.stats, stats->current, sizeof values.stats);
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_hub(graphics, &values, menu->hub_cursor,
-                                       pixels, sizeof pixels))
+                                       pixels, sizeof pixels)) {
+        if (getenv("ARIA_DEBUG_MENU_DRAW"))
+            fprintf(stderr, "menu draw: hub render failed\n");
         return false;
+    }
     pause_transition_pixels(texture, menu, pixels);
     if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
@@ -209,8 +212,11 @@ bool draw_native_soul_set(SDL_Renderer *renderer, SDL_Texture *texture,
 
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_soul_set(graphics, &values,
-                                            pixels, sizeof pixels))
+                                            pixels, sizeof pixels)) {
+        if (getenv("ARIA_DEBUG_MENU_DRAW"))
+            fprintf(stderr, "menu draw: soul_set render failed\n");
         return false;
+    }
     pause_transition_pixels(texture, menu, pixels);
     if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
@@ -275,8 +281,11 @@ bool draw_native_equip(SDL_Renderer *renderer, SDL_Texture *texture,
 
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_equip(graphics, &values,
-                                         pixels, sizeof pixels))
+                                         pixels, sizeof pixels)) {
+        if (getenv("ARIA_DEBUG_MENU_DRAW"))
+            fprintf(stderr, "menu draw: equip render failed\n");
         return false;
+    }
     pause_transition_pixels(texture, menu, pixels);
     if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
@@ -292,8 +301,11 @@ bool draw_native_config(SDL_Renderer *renderer, SDL_Texture *texture,
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_config(graphics, menu->config_buttons,
                                           menu->config_cursor,
-                                          pixels, sizeof pixels))
+                                          pixels, sizeof pixels)) {
+        if (getenv("ARIA_DEBUG_MENU_DRAW"))
+            fprintf(stderr, "menu draw: config render failed\n");
         return false;
+    }
     pause_transition_pixels(texture, menu, pixels);
     if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
@@ -309,8 +321,11 @@ bool draw_native_sleep(SDL_Renderer *renderer, SDL_Texture *texture,
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_sleep(graphics, menu->sleep_available,
                                          menu->sleep_result,
-                                         pixels, sizeof pixels))
+                                         pixels, sizeof pixels)) {
+        if (getenv("ARIA_DEBUG_MENU_DRAW"))
+            fprintf(stderr, "menu draw: sleep render failed\n");
         return false;
+    }
     pause_transition_pixels(texture, menu, pixels);
     if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
@@ -334,8 +349,11 @@ bool draw_native_ability(SDL_Renderer *renderer, SDL_Texture *texture,
     }
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_ability(graphics, &values,
-                                           pixels, sizeof pixels))
+                                           pixels, sizeof pixels)) {
+        if (getenv("ARIA_DEBUG_MENU_DRAW"))
+            fprintf(stderr, "menu draw: ability render failed\n");
         return false;
+    }
     pause_transition_pixels(texture, menu, pixels);
     if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
@@ -369,8 +387,11 @@ bool draw_native_item_use(SDL_Renderer *renderer, SDL_Texture *texture,
         values.selected = menu->item_cursor;
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_item_use(graphics, &values,
-                                            pixels, sizeof pixels))
+                                            pixels, sizeof pixels)) {
+        if (getenv("ARIA_DEBUG_MENU_DRAW"))
+            fprintf(stderr, "menu draw: item_use render failed\n");
         return false;
+    }
     pause_transition_pixels(texture, menu, pixels);
     if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
@@ -550,7 +571,11 @@ bool draw_native_enemy(SDL_Renderer *renderer, SDL_Texture *texture,
                                                     pixels, sizeof pixels);
     if (ok && menu->enemy.detail && objects)
         enemy_portrait_blit(objects, menu->enemy.cursor, pixels);
-    if (!ok) return false;
+    if (!ok) {
+        if (getenv("ARIA_DEBUG_MENU_DRAW"))
+            fprintf(stderr, "menu draw: enemy render failed\n");
+        return false;
+    }
     /* The enemy detail portrait is part of the page pixels, so the
      * transition dim applies after it is blitted. */
     pause_transition_pixels(texture, menu, pixels);

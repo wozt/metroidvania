@@ -1558,6 +1558,18 @@ if(BUILD_TESTING)
                      sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_transition.sh")
     set_tests_properties(aria_simulate_room_transition PROPERTIES SKIP_RETURN_CODE 77)
 
+    # START pause-gate contract in a later room: room 0/19 spawns a
+    # passive Object00 door; native Object00Create only reports
+    # sub_0800C5A8(0) when Soma is near, so a far spawn must leave
+    # unk_A074_1 set and START must still open the pause hub. Runs on
+    # SDL's dummy video driver (no X server); the script exits 77 when
+    # the extracted runtime assets are absent.
+    add_test(NAME aria_pause_late_room
+             COMMAND ${CMAKE_COMMAND} -E env
+                     FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>
+                     sh "${CMAKE_SOURCE_DIR}/tests/test_aria_pause_late_room.sh")
+    set_tests_properties(aria_pause_late_room PROPERTIES SKIP_RETURN_CODE 77)
+
     add_executable(fusion_aos_object02_tests tests/test_aos_object02.c
                    src/runtime/aos/game/aos_object02.c src/runtime/aos/core/aos_collision.c)
     target_include_directories(fusion_aos_object02_tests PRIVATE src/runtime)

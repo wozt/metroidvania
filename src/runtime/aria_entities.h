@@ -124,6 +124,10 @@ void room_dialogue_bind(void);
  * matching the native suspension of sub_08000B64. */
 int aria_entities_c5a8_result(void);
 
+/* ARIA_DEBUG_C5A8 diagnostics only: the entity and source line of
+ * the frame's last sub_0800C5A8 report (NULL/-1 when silent). */
+void aria_entities_c5a8_debug(const void **ent, int *line);
+
 /* Object1C's SetPlayerInput(1, 0x40) host channel: freezes Soma's
  * player_* input words while the save sequence runs WITHOUT touching
  * the global held/new words the entity dispatch reads (the shared

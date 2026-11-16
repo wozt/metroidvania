@@ -1364,13 +1364,28 @@ static void creaking_skull_tests(void) {
     assert(bones == 5 && e.spawned_count == 13 &&
            e.boss_parts_spawned);
 
-    /* A bone child tracks its parent and dies with it. */
+    /* The create record bake: unlaunched records sit on their
+     * variant-0 home pairs, record 2 keeps its 0x085280B0 angle and
+     * the bake armed records 12/1/2 toward anchors 11/0/1. */
+    assert(e.cs_init);
+    assert(e.cs_rec[0].x == (int32_t)(-13 * 0x10000) &&
+           e.cs_rec[0].y == (int32_t)(-31 * 0x10000));
+    assert(e.cs_rec[2].ang == 0x15000);
+    assert(e.cs_rec[12].flag == 0x80000000u && e.cs_rec[12].sub == 11);
+    assert(e.cs_rec[1].flag == 0x80000000u && e.cs_rec[1].sub == 0);
+    assert(e.cs_rec[2].flag == 0x80000000u && e.cs_rec[2].sub == 1);
+
+    /* A bone child tracks its parent; a state-2 parent detaches it
+     * into the sub_0809808C state-1 death fall (0x08119081 timer by
+     * record index), which deletes after the countdown. */
     AosEnemy b;
     memset(&b, 0, sizeof b);
     b.id = 0x21;
     b.role = AOS_ROLE_CS_BONE;
     b.parent = &e;
     b.cs_bone = 3;
+    b.cs_pose = 3;
+    b.cs_tgt = 3;
     b.x = AOS_FIXED(150);
     b.y = AOS_FIXED(120);
     aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL,
@@ -1379,6 +1394,12 @@ static void creaking_skull_tests(void) {
     e.state = 2;
     aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 0, 0, always_zero);
+    /* Record 3's 0x08119081 entry timer is 96: the bone enters the
+     * death fall and is removed once the countdown ends. */
+    assert(b.state == 1 && !b.removed);
+    for (int i = 0; i < 100 && !b.removed; ++i)
+        aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
     assert(b.removed);
     e.state = 0;
 

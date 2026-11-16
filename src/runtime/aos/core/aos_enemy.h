@@ -317,6 +317,19 @@ typedef struct {
     int32_t sub;
 } AosStoRec;
 
+/* One of the Creaking Skull container's thirteen 0x30-byte bone
+ * records (the + 0x1C container's slots at container + i * 0x30):
+ * x/y the 16.16 offset from the body, ang the + 8 held aim angle,
+ * spd/ang2 the + 0x10/+ 0x14 eased orbit pair, flag the + 0x18
+ * 0x80000000 anchor mask, sub the + 0x1C anchor record index, dist
+ * the + 0x28 orbit radius and sx/sy the + 0x20/+ 0x24 positions
+ * sub_08098C1C snapshots and sub_08098C38 restores. */
+typedef struct {
+    int32_t x, y, ang, spd, ang2, dist;
+    uint32_t flag;
+    int32_t sub, sx, sy;
+} AosCsRec;
+
 typedef struct AosEnemy {
     uint8_t id;             /* + 0x36 */
     int32_t x, y;           /* + 0x40, + 0x44 (room pixels, 16.16) */
@@ -834,12 +847,20 @@ typedef struct AosEnemy {
     uint8_t mt_f6f, mt_cnt24, mt_var25, mt_launched;
     uint8_t mt_slot, mt_act;
     /* Creaking Skull / Giant Skeleton (EnemyCreakingSkullCreate
-     * 0x0809549C, EnemyCreakingSkullUpdate 0x08095320): `cs_bone` is
-     * the 0..12 bone index of an AOS_ROLE_CS_BONE child, `cs_pose`
-     * the second sub_08098BE0 pose the create bakes, `cs_cool` the
-     * state-0 attack cooldown and `cs_hits` the landed-shot count
-     * the state-1 gates read. */
-    uint8_t cs_bone, cs_pose, cs_cool, cs_hits;
+     * 0x0809549C, EnemyCreakingSkullUpdate 0x08095320): `cs_rec[13]`
+     * folds the + 0x1C container's thirteen 0x30-byte bone records,
+     * `cs_var` the + 0x20 variant byte that selects the 0x08527FD8
+     * home tables and the 0x085280B0 bone-2 angle table, `cs_init`
+     * the create-time record bake and `cs_cool` the + 0xD launch
+     * divider that gates sub_08098BC0/sub_08098BE0.  On a bone child
+     * `cs_bone` is the 0..12 child slot, `cs_pose` its + 0x20 record
+     * index, `cs_tgt` the + 0x21 aim target, `cs_land` the + 0x14
+     * state-2 landing line and `cs_hits` the landed-shot count the
+     * state-1 gates read. */
+    AosCsRec cs_rec[13];
+    uint8_t cs_bone, cs_pose, cs_cool, cs_hits, cs_tgt, cs_var;
+    int32_t cs_land;
+    bool cs_init;
     /* Legion (EnemyLegionCreate 0x0809C6BC, EnemyLegionUpdate
      * 0x0809C5E8): `lg_slot` is the 0..4 soldier index of an
      * AOS_ROLE_LG_SOLDIER child (the native sub_0809DF7C room

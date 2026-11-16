@@ -7,10 +7,12 @@
  *
  * Native layout folded into AosEnemy:
  * - the + 0x1C container entity and its thirteen child slots fold
- *   into the AOS_ROLE_CS_BONE persistent children emitted over the
- *   first updates under the 8-child cap, chained in slot order like
- *   the native container records;
- * - each child's + 0x21/+ 0x65 table bytes, the + 0x36 variant byte
+ *   into `cs_rec[13]` plus the AOS_ROLE_CS_BONE persistent children
+ *   emitted over the first updates under the 8-child cap, chained in
+ *   slot order like the native container records;
+ * - each child's + 0x20 record index, + 0x21 aim target and + 0x65
+ *   frame byte come from the create tables 0x08119056/0x08119049/
+ *   0x0811903C indexed through 0x08119056; the + 0x36 variant byte
  *   and the sub_0804277C hurt/death callbacks (sub_08098C54 /
  *   sub_08098C84) fold into the shared collide and the bone role;
  * - the attack shots of the state-1 machine become
@@ -20,16 +22,27 @@
  *   machine and the + 0xD death countdown fold into step/substep/
  *   timer with the cs_* counters.
  *
+ * The container record machinery is ported: the create's variant
+ * home tables (0x08527FD8 x/y pairs and the 0x085280B0 bone-2 angle
+ * dwords), the sub_08097D84/sub_08097EC4 record arming, the
+ * sub_08097B94 orbit/unlaunched-lerp step driven in the 0x08119063
+ * order by sub_08098BE0, and the sub_0809808C bone brain's state 0
+ * record ride with the ArcTan2 aim of records {0,1,11} and the held
+ * angle of records {2,8}.
+ *
  * Documented approximations: the two ~2000-line choreography
  * machines keep their case order, the song stingers (0x8C bone
  * creaks, 0x86/0x80/0x84/0x76/0x77/0x7A/0x97/0xE0/0x1C/0x29/0x6B)
  * and the state transitions, while the per-case bone-target tables
- * collapse to a documented spine cycle; the sub_0809808C bone brain
- * keeps its parent lock, sine wobble and death-on-parent, with the
- * full case tables approximated; the sub_08097D84/sub_08098BE0 bone
- * placement folds into fixed spine offsets; the sub_08098E00 room
- * gate, the gEwramData flag checks and the + 0x5A palette merge are
- * covered by the shared spawn/collide paths. */
+ * and the sub_08097D84/sub_08097EC4 record re-arms the cases perform
+ * collapse to the create bake plus a per-frame record step; the
+ * sub_0809808C state-1/state-2 death machines keep their timers and
+ * deletes while the sub_08042848/428B4/429D0 palette writes, the
+ * sub_0806D3D8/sub_0806D5C0/sub_0806D518 spark helpers, the
+ * sub_0803E058 affine sprite setup and the sub_0806DFF8 child
+ * creation flags are not modeled; the sub_08098E00 room gate, the
+ * gEwramData flag checks and the + 0x5A palette merge are covered by
+ * the shared spawn/collide paths. */
 
 #include "../core/aos_enemy_internal.h"
 #include "../core/aos_audio.h"
@@ -56,30 +69,219 @@ static bool cs_is_boss(uint8_t id) {
     return id == 0x21 || id == 0x5C;
 }
 
-static int32_t cs_sin(uint32_t angle) { return aos_sine(angle & 0xFFFF); }
-static int32_t cs_cos(uint32_t angle) {
-    return aos_sine((angle + 0x4000) & 0xFFFF);
+/* The five 13-byte create tables of EnemyCreakingSkullCreate:
+ * 0x0811903C is the child + 0x65 frame byte by record index (20 for
+ * the fifth record), 0x08119049 the + 0x21 aim target, 0x08119056
+ * the + 0x20 record index (bones 8/9 swapped), 0x08119063 the
+ * sub_08098BE0 record step order and 0x08119081 the state-1 entry
+ * timer by record index. */
+static const uint8_t cs_frame_tab[CS_BONES] = {
+    0, 1, 2, 3, 4, 20, 5, 6, 7, 8, 9, 10, 11,
+};
+static const uint8_t cs_tgt_tab[CS_BONES] = {
+    1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 12,
+};
+static const uint8_t cs_rec_tab[CS_BONES] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 9, 8, 10, 11, 12,
+};
+static const uint8_t cs_perm_tab[CS_BONES] = {
+    4, 5, 6, 7, 8, 9, 10, 3, 0, 1, 2, 11, 12,
+};
+static const uint8_t cs_death_tab[CS_BONES] = {
+    58, 50, 42, 96, 88, 88, 88, 80, 72, 64, 60, 58, 50,
+};
+
+/* The per-variant home offsets: the 0x08527FD8 pointer table selects
+ * one of thirteen 26-byte rows of signed (x, y) pixel pairs, stored
+ * << 16 like the native ldrsb << 16 writes. */
+static const int8_t cs_home[13][CS_BONES][2] = {
+    {{-13,-31},{-41,-30},{-69,-31},{22,-25},{6,-32},{10,-34},{6,-32},
+     {-11,-39},{-26,-44},{-26,-44},{12,-36},{-6,-31},{-35,-31}},
+    {{-13,-29},{-41,-28},{-69,-29},{22,-25},{6,-30},{10,-32},{6,-30},
+     {-11,-37},{-26,-44},{-26,-44},{12,-35},{-6,-31},{-35,-31}},
+    {{-13,-29},{-41,-28},{-69,-29},{22,-25},{6,-30},{10,-32},{6,-30},
+     {-11,-37},{-26,-42},{-26,-42},{12,-35},{-6,-31},{-35,-31}},
+    {{-13,-31},{-41,-30},{-69,-31},{22,-25},{6,-32},{10,-34},{6,-32},
+     {-11,-39},{-26,-42},{-26,-42},{12,-36},{-6,-31},{-35,-31}},
+    {{-13,-31},{-41,-30},{-69,-31},{22,-25},{7,-32},{10,-34},{5,-32},
+     {-11,-39},{-26,-44},{-26,-44},{11,-36},{-7,-31},{-35,-31}},
+    {{-13,-29},{-41,-28},{-69,-29},{22,-25},{6,-30},{10,-32},{6,-30},
+     {-11,-37},{-26,-42},{-26,-42},{12,-34},{-6,-29},{-35,-29}},
+    {{-13,-31},{-41,-30},{-69,-31},{22,-25},{7,-32},{10,-34},{5,-32},
+     {-11,-39},{-26,-44},{-26,-44},{11,-36},{-7,-31},{-35,-31}},
+    {{-13,-29},{-41,-28},{-69,-29},{22,-25},{8,-30},{10,-32},{4,-30},
+     {-11,-37},{-26,-42},{-26,-42},{10,-34},{-8,-29},{-35,-29}},
+    {{-13,-29},{-41,-28},{-69,-29},{22,-25},{7,-30},{10,-32},{5,-30},
+     {-11,-37},{-26,-42},{-26,-42},{11,-37},{-7,-32},{-35,-29}},
+    {{-13,-31},{-41,-30},{-69,-31},{22,-25},{7,-32},{10,-34},{5,-32},
+     {-11,-39},{-26,-42},{-26,-42},{11,-36},{-7,-31},{-35,-31}},
+    {{-13,-29},{-41,-28},{-69,-29},{22,-25},{6,-30},{10,-32},{6,-30},
+     {-11,-37},{-26,-44},{-26,-44},{12,-34},{-6,-29},{-35,-29}},
+    {{-13,-31},{-41,-30},{-69,-31},{22,-25},{7,-32},{10,-34},{5,-32},
+     {-11,-39},{-26,-42},{-26,-42},{11,-36},{-7,-31},{-35,-31}},
+    {{-13,-29},{-41,-28},{-69,-29},{22,-25},{8,-30},{10,-32},{4,-30},
+     {-11,-37},{-26,-44},{-26,-44},{10,-34},{-8,-29},{-35,-29}},
+};
+
+/* The 0x085280B0 pointer table: the dword record 2's + 8 angle eases
+ * toward (0x20000 - value when mirrored). */
+static const int32_t cs_bone2_ang[13] = {
+    0x15000, 0x14E00, 0x15000, 0x15200, 0x17000, 0x15000,
+    0x15800, 0x15000, 0x15800, 0x17000, 0x15000, 0x15800, 0x15000,
+};
+
+static int32_t cs_div(int32_t v, int d) {
+    return d ? v / d : 0;
 }
-static int32_t cs_mul(int32_t a, int32_t b) {
-    return (int32_t)(((int64_t)a * b) >> 16);
+/* The ROM's sign-fix >> 16: truncation toward zero, like C division. */
+static int32_t cs_px(int32_t v) { return v / 0x10000; }
+
+/* sub_08097D84 (snap) and sub_08097EC4 (no snap): arm record idx —
+ * flag 0x80000000, anchor sub, orbit radius (explicit or measured to
+ * the anchor through two sub_0803E86C squares and Sqrt << 8) and the
+ * + 0x10/+ 0x14 launch pair.  The angle toward the anchor reversed by
+ * 0x10000 seeds ang2; a speed within 0xFFFF offsets that angle by the
+ * facing sign, a larger one is an absolute target (mirrored speeds
+ * cap through 0x28000/0x38000).  97D84 compares the signed speed and
+ * snaps ang2 to spd; 97EC4 compares |speed| and leaves ang2. */
+static void cs_config_ex(AosEnemy *e, int idx, int sub, int32_t speed,
+                         int32_t dist, bool snap, bool abs_cmp) {
+    AosCsRec *r = &e->cs_rec[idx];
+    r->flag = 0x80000000u;
+    r->sub = sub;
+    if (dist) {
+        r->dist = dist;
+    } else {
+        int32_t dx = e->cs_rec[sub].x - r->x;
+        int32_t dy = e->cs_rec[sub].y - r->y;
+        int64_t d2 = (int64_t)aos_fixed_mul(dx, dx) +
+                     (int64_t)aos_fixed_mul(dy, dy);
+        r->dist = d2 > 0 ? (int32_t)(aos_isqrt((uint32_t)d2) << 8) : 0;
+    }
+    int32_t dx = r->x - e->cs_rec[sub].x;
+    int32_t dy = r->y - e->cs_rec[sub].y;
+    int32_t base =
+        (int32_t)aos_arctan2((int16_t)cs_px(dx), (int16_t)cs_px(dy)) +
+        0x10000;
+    r->ang2 = base;
+    int32_t cmp = abs_cmp ? (speed < 0 ? -speed : speed) : speed;
+    int32_t spd;
+    if (cmp <= 0xFFFF) {
+        spd = e->mirrored ? base - speed : base + speed;
+    } else if (e->mirrored) {
+        spd = speed > 0x18000 ? 0x38000 - speed : 0x28000 - speed;
+    } else {
+        spd = speed;
+    }
+    r->spd = spd;
+    if (snap)
+        r->ang2 = r->spd;
 }
 
-/* The native container records hold per-bone home offsets indexed
- * by the state-0 tables; the port reproduces the spine layout:
- * bone 0 is the skull cap, bones 1..11 the spine/rib segments and
- * bone 12 the tail, spaced 0x18000 vertically with a small x
- * stagger. */
-static void cs_bone_offset(int bone, int32_t *ox, int32_t *oy) {
-    *ox = (bone == 2 ? 0x8000 : 0) + (bone % 3) * 0x4000 - 0x8000;
-    *oy = -bone * 0x18000 - 0x40000;
+/* sub_08097B94: one record's per-frame step.  An unlaunched record
+ * (spd and ang2 both 0) eases toward its variant home pair by the + 0xD
+ * divider — record 2 also eases its + 8 angle toward the variant's
+ * 0x085280B0 dword (0x20000 - value when mirrored).  A launched
+ * record eases ang2 toward spd and sits at cos/sin * dist around its
+ * anchor — the anchor's x/y pixel-aligned when the 0x80000000 flag
+ * is set, else + 0x18/+ 0x1C double as the x/y base offsets. */
+static void cs_step_rec(AosEnemy *e, int idx) {
+    int d = e->cs_cool;
+    if (!d)
+        return;
+    AosCsRec *r = &e->cs_rec[idx];
+    int var = e->cs_var < 13 ? e->cs_var : 0;
+    if (!r->spd && !r->ang2) {
+        int32_t hx = (int32_t)cs_home[var][idx][0] << 16;
+        int32_t hy = (int32_t)cs_home[var][idx][1] << 16;
+        if (e->mirrored)
+            hx = -hx;
+        r->x += cs_div(hx - r->x, d);
+        r->y += cs_div(hy - r->y, d);
+        if (idx == 2) {
+            int32_t t = cs_bone2_ang[var];
+            if (e->mirrored)
+                t = 0x20000 - t;
+            e->cs_rec[2].ang += cs_div(t - e->cs_rec[2].ang, d);
+        }
+        return;
+    }
+    r->ang2 += cs_div(r->spd - r->ang2, d);
+    int32_t c = aos_fixed_mul(aos_sine((uint32_t)r->ang2 + 0x4000u),
+                              r->dist);
+    int32_t s = aos_fixed_mul(aos_sine((uint32_t)r->ang2), r->dist);
+    if (r->sub >= 0 && r->sub < CS_BONES) {
+        AosCsRec *anc = &e->cs_rec[r->sub];
+        if (r->flag == 0x80000000u) {
+            r->x = (anc->x & (int32_t)0xFFFF0000) + c;
+            r->y = (anc->y & (int32_t)0xFFFF0000) + s;
+        } else {
+            r->x = (int32_t)r->flag + c;
+            r->y = r->sub + s;
+        }
+    }
+}
+
+/* sub_08098BE0: step every record once in the permuted order (the
+ * create's 0x08119063 table); sub_08098BC0 is the identity order —
+ * both gate on the + 0xD divider through cs_cool. */
+static void cs_step_perm(AosEnemy *e, const uint8_t *perm) {
+    for (int i = 0; i < CS_BONES; ++i)
+        cs_step_rec(e, perm[i]);
+}
+
+/* sub_08097D1C: when the facing bit disagrees with sub_0806CF2C the
+ * create negates records 0/1 x and mirrors their + 8 angle
+ * (0x20000 - ang).  The port applies it once at init when the spawn
+ * mirrored bit is set (documented approximation of the bit-0 probe). */
+static void cs_mirror_records(AosEnemy *e) {
+    for (int i = 0; i < 2; ++i) {
+        e->cs_rec[i].x = -e->cs_rec[i].x;
+        e->cs_rec[i].ang = 0x20000 - e->cs_rec[i].ang;
+    }
+}
+
+/* EnemyCreakingSkullCreate's record bake: home pairs for the + 0x20
+ * variant (0 at create), record 2's angle dword, then the two
+ * literal sub_08097D84 passes over records {12->11, 1->0, 2->1}
+ * separated by a sub_08098BE0 step. */
+static void cs_init_records(AosEnemy *e) {
+    int var = e->cs_var < 13 ? e->cs_var : 0;
+    for (int i = 0; i < CS_BONES; ++i) {
+        AosCsRec *r = &e->cs_rec[i];
+        r->x = (int32_t)cs_home[var][i][0] << 16;
+        r->y = (int32_t)cs_home[var][i][1] << 16;
+        r->ang = i == 2 ? cs_bone2_ang[var] : 0x10000;
+    }
+    e->cs_cool = 1; /* + 0xD = 1 at create; state 3 clears it below */
+    /* Bake A: the three armed records at their launch offsets. */
+    cs_config_ex(e, 0xC, 0xB, (int32_t)0xFFFFC000, 0x7C0000,
+                 true, false);
+    cs_config_ex(e, 1, 0, (int32_t)0xFFFFF800, 0x780000,
+                 true, false);
+    cs_config_ex(e, 2, 1, 0x6000, 0x700000, true, false);
+    cs_step_perm(e, cs_perm_tab);
+    /* Bake B: the same arms with a zero speed target. */
+    cs_config_ex(e, 0xC, 0xB, 0, 0x7C0000, true, false);
+    cs_config_ex(e, 1, 0, 0, 0x780000, true, false);
+    cs_config_ex(e, 2, 1, 0, 0x700000, true, false);
+    cs_step_perm(e, cs_perm_tab);
+    /* sub_08097D1C runs at the create tail, after the bakes. */
+    if (e->mirrored)
+        cs_mirror_records(e);
+    if (e->state == 3)
+        e->cs_cool = 0; /* the dormant branch clears + 0xD */
 }
 
 /* Emit the thirteen bone children over the first updates, at most
- * the room child cap per call like the other multipart ports. */
+ * the room child cap per call like the other multipart ports.  Each
+ * child takes its + 0x20 record index, + 0x21 aim target and + 0x65
+ * frame from the create tables indexed by that record. */
 static void cs_emit_bones(AosEnemy *e, AosHitReport *hit) {
     while (e->spawned_count < CS_BONES &&
            hit->child_count < AOS_ENEMY_MAX_CHILDREN) {
         int i = e->spawned_count++;
+        int rec = cs_rec_tab[i];
         AosEnemy c;
         memset(&c, 0, sizeof c);
         c.id = e->id;
@@ -88,9 +290,10 @@ static void cs_emit_bones(AosEnemy *e, AosHitReport *hit) {
         c.x = e->x;
         c.y = e->y;
         c.cs_bone = (uint8_t)i;
-        c.cs_pose = 0;
+        c.cs_pose = (uint8_t)rec;
+        c.cs_tgt = cs_tgt_tab[rec];
         c.hp = 1;
-        c.static_frame = (int16_t)i;
+        c.static_frame = (int16_t)cs_frame_tab[rec];
         hit->children[hit->child_count++] = c;
     }
 }
@@ -133,23 +336,123 @@ static void cs_spawn_gore(AosEnemy *e, AosHitReport *hit) {
     e->cs_hits++;
 }
 
-/* sub_0809808C: a bone child tracks its container record around the
- * parent with the sine wobble, mirrors the parent's facing and dies
- * with the parent's state 2 or removal. */
-static void cs_bone_update(AosEnemy *e, const AosAnimSet *anims) {
-    AosEnemy *p = e->parent;
-    if (!p || !cs_is_boss(p->id) || p->state == 2 || p->removed) {
+/* sub_0809808C state 2: the thrown bone — step 1 falls toward the
+ * + 0x14 landing line while + 0x18 drifts by + 0x10, step 2 flashes
+ * frame 0x17 and hops, step 3 drifts and fades out on the + 0xD
+ * timer.  The sub_0806D3D8/sub_0806D518 spark helpers, the PlaySong
+ * 0x7C stinger keep, the palette writes and the sub_0803E6BC slot
+ * free are folded into the timer; no ported path enters this state
+ * yet (documented gap). */
+static void cs_bone_state2(AosEnemy *e) {
+    if (!e->timer)
+        e->timer = cs_death_tab[e->cs_pose < CS_BONES ? e->cs_pose : 0];
+    if (e->step == 0)
+        e->step = 1;
+    e->mirrored = false; /* + 0x58 &= ~0x40 every state-2 update */
+    if (e->step == 1) {
+        if (e->timer <= 0x32)
+            e->angle = (uint32_t)((int32_t)e->angle + e->spin);
+        if (e->y >= e->cs_land) {
+            e->y = e->cs_land;
+            e->vx = e->vy = e->ax = e->ay = 0;
+            e->step = 2;
+        }
+    } else if (e->step == 2) {
+        e->step = 3;
+        e->substep = 0;
+        e->static_frame = 0x17;
+        e->x -= 0x110000; /* the + 0x58 bit 6 was just cleared */
+        e->y += 0x80000;
+    } else if (e->step == 3) {
+        if (!e->substep) {
+            e->substep = 1;
+            aos_audio_play_song(0x7C);
+        }
+        if (e->angle > 0xE00000u)
+            e->angle -= 0x400;
+        else if (e->angle <= 0x11FFFu)
+            e->angle += 0x400;
+    }
+    e->timer = (uint8_t)(e->timer - 1);
+    if ((int8_t)e->timer <= 0)
         e->removed = true;
+}
+
+/* sub_0809808C: a bone child of the + 0x1C container.  State 0 rides
+ * its record — position is the parent's plus the record offset, the
+ * + 0x58 bit 6 mirror and the + 0x5A palette bits fold into the
+ * shared fields; records {0,1,11} aim at their + 0x21 target through
+ * ArcTan2 and write the held angle back to the record's + 8, records
+ * {2,8} hold it, and the Giant Skeleton's fifth record hides.  A
+ * state-2 parent detaches the bone into the state-1 death fall whose
+ * + 0xD timer is the 0x08119081 table; the palette flashes, spark
+ * helpers and affine sprite setup are not modeled. */
+static void cs_bone_update(AosEnemy *e, const AosAnimSet *anims,
+                           uint32_t (*random)(void)) {
+    (void)anims;
+    AosEnemy *p = e->parent;
+    if (e->state == 0) {
+        if (!p || p->removed || !cs_is_boss(p->id) || p->id != e->id) {
+            e->removed = true;
+            return;
+        }
+        e->mirrored = p->mirrored;
+        e->timer++; /* + 0xD frame counter */
+        int rec = e->cs_pose < CS_BONES ? e->cs_pose : 0;
+        AosCsRec *r = &p->cs_rec[rec];
+        e->x = p->x + r->x;
+        e->y = p->y + r->y;
+        if (p->id == 0x5C && rec == 5)
+            e->hidden = true; /* + 0x58 |= 0x20 */
+        if (rec <= 1 || rec == 11) {
+            int32_t dx = p->cs_rec[e->cs_tgt < CS_BONES ? e->cs_tgt : 0].x -
+                         r->x;
+            int32_t dy = p->cs_rec[e->cs_tgt < CS_BONES ? e->cs_tgt : 0].y -
+                         r->y;
+            int32_t ang = (int32_t)aos_arctan2((int16_t)cs_px(dx),
+                                               (int16_t)cs_px(dy));
+            e->vx = e->mirrored ? ang : ang - 0x8000; /* + 0x48 */
+            r->ang = e->vx;
+        } else if (rec == 2 || rec == 8) {
+            e->vx = r->ang;
+        }
+        if (p->state == 2) {
+            /* The native detach into the state-1 death fall. */
+            e->state = 1;
+            e->step = 0;
+            e->substep = 0;
+            e->angle = (uint32_t)e->vx; /* + 0x18 = the held + 0x48 */
+            e->spin = (int32_t)((random ? random() : 0) & 0xFF) - 0x80;
+            e->ax = 0;
+            e->ay = 0x1800;
+            e->vx = (int32_t)((random ? random() : 0) & 0x3FFF) - 0x2000;
+            e->vy = 0;
+            e->timer = cs_death_tab[rec];
+            if (rec == 8)
+                e->cs_land = p->y - 0xA0000;
+        }
         return;
     }
-    e->mirrored = p->mirrored;
-    e->phase += 0x800 + e->cs_bone * 0x100;
-    int32_t ox, oy;
-    cs_bone_offset(e->cs_bone, &ox, &oy);
-    int32_t wob = cs_mul(0x20000, cs_sin(e->phase + e->cs_bone * 0x800));
-    e->x = p->x + ox + (e->mirrored ? -wob : wob);
-    e->y = p->y + oy + cs_mul(0x10000, cs_cos(e->phase));
-    (void)anims;
+    if (e->state == 1) {
+        /* State 1: the death fall — + 0x18 drifts by + 0x10 while the
+         * + 0xD timer runs out, then the bone deletes (the palette
+         * fade through sub_0803E6BC is not modeled). */
+        if (e->step == 0)
+            e->step = 1;
+        if (p && p->id == 0x5C && e->cs_pose == 5)
+            e->hidden = true;
+        if (e->timer <= 0x32)
+            e->angle = (uint32_t)((int32_t)e->angle + e->spin);
+        e->timer = (uint8_t)(e->timer - 1);
+        if ((int8_t)e->timer <= 0)
+            e->removed = true;
+        return;
+    }
+    if (e->state == 2) {
+        cs_bone_state2(e);
+        return;
+    }
+    e->removed = true;
 }
 
 /* A shot flies straight until it leaves the room margins or its
@@ -179,8 +482,8 @@ static void cs_gore_update(AosEnemy *e) {
 /* sub_08095898 state 0: the sixteen-case machine — approach with
  * wall probes, random attack entries into state 1, the 0x8C bone
  * creak stingers on case boundaries and the return cycle.  The
- * per-case bone-target choreography collapses to this documented
- * cycle. */
+ * per-case bone-target tables and record re-arms collapse to this
+ * documented cycle while cs_step_perm keeps the records live. */
 static void cs_state0(AosEnemy *e, AosSoma *soma,
                       const AosCollision *layer, const AosAnimSet *anims,
                       uint32_t (*random)(void)) {
@@ -279,7 +582,7 @@ AosHitReport aos_enemy_creaking_skull_update(
 
     /* Children dispatch on their roles. */
     if (e->role == AOS_ROLE_CS_BONE) {
-        cs_bone_update(e, anims);
+        cs_bone_update(e, anims, random);
         return hit;
     }
     if (e->role == AOS_ROLE_CS_SHOT) {
@@ -306,7 +609,12 @@ AosHitReport aos_enemy_creaking_skull_update(
     }
     e->hidden = e->y + 0x20 >= 0x44000;
 
-    /* The thirteen bone children emit on the first updates. */
+    /* The create's record bake runs once, then the thirteen bone
+     * children emit on the first updates. */
+    if (!e->cs_init) {
+        cs_init_records(e);
+        e->cs_init = true;
+    }
     if (!e->boss_parts_spawned) {
         cs_emit_bones(e, &hit);
         if (e->spawned_count >= CS_BONES)
@@ -336,6 +644,13 @@ AosHitReport aos_enemy_creaking_skull_update(
         /* State 3 dormant (sub_08097A14). */
         break;
     }
+
+    /* The state machines step the container records through
+     * sub_08098BE0 in their cases; the ported machines keep the case
+     * order but not the per-case arms, so the records take one
+     * sub_08098BE0 pass per update outside the death state. */
+    if (e->state != 2)
+        cs_step_perm(e, cs_perm_tab);
 
     /* Lethal: hp 0 enters the state-2 death machine (the native
      * hurt callbacks sub_08098E74/sub_08098EA4 fold into the

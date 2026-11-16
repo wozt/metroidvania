@@ -1,3 +1,48 @@
+## Patch 1179 - Creaking Skull container records ported: cs_rec[13], orbit math and the bone ride
+
+- **Records (`aos_enemy.h`, `creaking_skull.c`).** The previous
+  agent's unused `AosCsRec` is now integrated: `AosEnemy` gains
+  `cs_rec[13]` (the + 0x1C container's thirteen 0x30-byte bone
+  records), `cs_var` (the + 0x20 variant byte), `cs_init`, and the
+  bone-child `cs_tgt`/`cs_land` fields. All choreography data was
+  decoded from the local ROM (never committed): the five 13-byte
+  create tables 0x0811903C/49/56/63/81, the thirteen 26-byte
+  (x, y) home-pair rows behind the 0x08527FD8 pointer table, the
+  0x085280B0 bone-2 angle dwords and the 0x08119063 step order.
+- **Record machinery.** `cs_config_ex` ports sub_08097D84
+  (signed-speed compare, ang2 snap) and sub_08097EC4 (|speed|
+  compare, no snap); `cs_step_rec` ports sub_08097B94 — unlaunched
+  records ease toward their variant home pair by the + 0xD divider
+  (record 2 also eases its + 8 angle toward the variant dword),
+  launched records ease ang2 toward spd and orbit their anchor
+  with the 0x80000000 pixel-align mask; `cs_step_perm` is the
+  sub_08098BE0 permuted pass (sub_08098BC0's identity order is the
+  same loop). `cs_init_records` reproduces the create bake: home
+  pairs, record 2's angle, the three sub_08097D84 arms
+  {12->11, 1->0, 2->1} at the literal speeds/distances and the two
+  sub_08098BE0 passes; sub_08097D1C's facing flip is applied once
+  when the spawn mirrored bit is set.
+- **Bone brain (sub_0809808C).** State 0 now rides the record —
+  position = parent + record offset, + 0x58 bit 6 mirror, the
+  Giant Skeleton fifth-record hide, the ArcTan2 aim of records
+  {0,1,11} writing back to the record's + 8 and the held angle of
+  {2,8}; a state-2 parent detaches the bone into the state-1
+  death fall seeded by the 0x08119081 timer table instead of
+  deleting it outright. State 2 (thrown bone) is ported as a
+  timer/step machine; the palette writes, spark helpers, affine
+  sprite setup (sub_0803E058 is the OAM matrix filler, not
+  movement), sub_0803E6BC slot free, the sub_08098C1C/38 snapshot
+  pairs and the sub_08098C54/84 hurt-forwarding callbacks remain
+  unported, and no ported path enters state 2 yet.
+- **Still approximated.** The two ~2000-line choreography machines
+  (sub_08095898/sub_08096A94) keep their case order, songs and
+  state transitions but not the per-case record re-arms; one
+  sub_08098BE0 pass per update with cs_cool = 1 stands in for
+  them, so the bones hold the baked/native home pose rather than
+  animating through the case tables.
+- Unit-tested in `creaking_skull_tests` (record bake asserts added;
+  the bone death test now follows the native state-1 fall).
+
 ## Patch 1178 - sub_0800C5A8 channel extended to ported non-Object20 objects; room music anchor-cell flags; case-5 gap pinned
 
 - **Item 1 — `sub_0800C5A8` audit and channel (`aria_entities.c`,
@@ -324,7 +369,8 @@
   Phase machines, bullet patterns and grab attacks are ported per
   boss with the documented approximations each module header lists;
   the largest remaining approximations are Creaking Skull's two
-  ~2000-line choreography machines, Big Golem's sub_080AC6E8
+  ~2000-line choreography machines (its container records and bone
+  ride are now ported — Patch 1179), Big Golem's sub_080AC6E8
   (~1000 lines undecoded), Headhunter's dash cases and the
   sub_08073568 Manticore child brain.
 - **Evidence and limits.** Source-derived from sub_080733D4 /

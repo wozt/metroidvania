@@ -2805,19 +2805,24 @@ int aria_runtime_main(int argc, char **argv) {
             if (soul_menu_event & AOS_SOUL_MENU_CONFIG_EDITED) aos_audio_play_song(0xF4);
             if (soul_menu_event & AOS_SOUL_MENU_ACCEPTED) aos_audio_play_song(0xF3);
             if (soul_menu_event & AOS_SOUL_MENU_BACK) aos_audio_play_song(0xF0);
-            if (soul_menu_event & AOS_SOUL_MENU_ITEM_USED) {
-                if (item_use[soul_menu.last_item].effect == 3) {
+            if (soul_menu_event & (AOS_SOUL_MENU_ITEM_USED | AOS_SOUL_MENU_REFUSED)) {
+                /* sub_0804B36C plays the kind's song on every attempt,
+                 * success or refusal: kind 3 gets 0x198 + 0xEF, every
+                 * other kind 0xF8. */
+                if (soul_menu.last_item < AOS_ITEM_RECORDS &&
+                    item_use[soul_menu.last_item].effect == 3) {
                     aos_audio_play_song(0x198);
                     aos_audio_play_song(0xEF);
                 } else {
                     aos_audio_play_song(0xF8);
                 }
-                printf("Used %s: HP %d/%d, MP %d/%u, remaining %u\n",
-                       aos_item_name(soul_menu.last_item), soma.hp, soma.max_hp,
-                       progress.mp, progress.max_mp,
-                       progress.item_counts[soul_menu.last_item]);
+                if (soul_menu_event & AOS_SOUL_MENU_ITEM_USED) {
+                    printf("Used %s: HP %d/%d, MP %d/%u, remaining %u\n",
+                           aos_item_name(soul_menu.last_item), soma.hp, soma.max_hp,
+                           progress.mp, progress.max_mp,
+                           progress.item_counts[soul_menu.last_item]);
+                }
             }
-            if (soul_menu_event & AOS_SOUL_MENU_REFUSED) aos_audio_play_song(0xEF);
             if (soul_menu_event & AOS_SOUL_MENU_CONFIG_APPLIED)
                 printf("Buttons: Attack %s, Jump %s, Ability %s, Guardian %s\n",
                        aos_button_config_button_name(aos_button_config_index(

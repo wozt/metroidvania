@@ -1,3 +1,45 @@
+## Patch 1173 - Item Use audit: status-cure timers, refusal sounds, native MP floor
+
+- **Scope.** Audit of whether pause Item Use entries actually do
+  anything, plus the equipment path. The Item Use page already ran
+  `sub_0804B36C`'s four effect kinds through `aos_item_use`
+  (`src/runtime/aos/souls/aos_soul_menu.c`) over the 32-record
+  `metadata/item_use.tsv` table; this patch closes the remaining
+  fidelity gaps found against `third_party/cvaos/asm/code/
+  code_08040A38.s`.
+- **Item coverage.** All 32 native records are usable-or-refused
+  exactly as the source: kinds 0-3 (HP heal, proportional MP
+  recovery, status cure, rotten-food damage floored at 1 HP) consume
+  the item on success; kind 4 (Skull Key, Ancient Books 1-3, Castle
+  Maps 1-3) is refused without decrementing, matching the source
+  switch which has no kind-4 arm. Aria has no throwable items — the
+  throwable-style weapons (Handgun, Silver Gun, Positron Rifle,
+  Valmanway) are equipment records, already applied through
+  `aos_stats_refresh` on the Equip page together with armor and
+  accessory ATK/DEF/stat/resist sums.
+- **Fixes.** Kind-2 cures now zero each cured status bit's
+  `0x13272`/`0x13274`/`0x13276` timer like `sub_08021E50` (previously
+  only `status` was cleared, so a cured poison/curse could re-expire
+  on its old timer). The kind-1 MP recovery keeps the native
+  `max_mp / (100 / amount)` u16 truncation with no floor — a zero
+  recovery still consumes the item as the source does. Refused
+  attempts now record `last_item` and play the kind's song
+  (`0x198`+`0xEF` for kind 3, `0xF8` otherwise) because
+  `sub_0804B36C` plays the sound on every A-press, success or
+  refusal; the runtime previously played `0xEF` on refusal.
+- **Evidence and limits.** Source-derived from `sub_0804B36C`,
+  `sub_0804B494`, `sub_0804B808`, `sub_08021E38`/`sub_08021E50`;
+  unit-tested in `tests/test_aos_soul_menu.c` (cure now asserts the
+  timer reset, refusal asserts `last_item`). Still not
+  emulator-compared; the kind-3 HP-set helper `sub_08048B0C` (hurt
+  flash entity) and the `gEwramData+0x344` use-gate have no runtime
+  equivalent. Key items have no native use effect — their
+  progression consumers remain open.
+- **Registries.** `annotations.tsv` (`aos.menus.item_use`) notes and
+  next actions updated; `features.tsv`
+  (`assets.aria_frontend_save_0478`) notes updated. Statuses
+  unchanged.
+
 ## Patch 1172 - Tiny Devil native state machines: hover, attack dash and death
 
 - **Scope.** Enemy-coverage audit follow-up: Tiny Devil (enemy 0x10,

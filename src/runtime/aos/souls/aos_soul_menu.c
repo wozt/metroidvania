@@ -203,16 +203,23 @@ bool aos_item_use(AosStats *stats, const AosItemUseRecord items[AOS_ITEM_RECORDS
         break;
     case 1: {
         if (stats->mp >= (int16_t)stats->max_mp || !record->amount) return false;
+        /* sub_0804B36C kind 1: max_mp / (100 / amount), truncated to u16
+         * with no floor; a zero recovery still consumes the item. */
         int divisor = 100 / record->amount;
         int recovery = divisor ? stats->max_mp / divisor : stats->max_mp;
-        if (!recovery) recovery = 1;
         stats->mp = (int16_t)(stats->mp + recovery);
         if (stats->mp > (int16_t)stats->max_mp) stats->mp = (int16_t)stats->max_mp;
         break;
     }
     case 2:
+        /* sub_08021E50: for each of the three status bits in `amount`,
+         * zero its 0x13272/0x13274/0x13276 timer and clear the bit. */
         if (!(stats->status & record->amount)) return false;
-        stats->status &= (uint16_t)~record->amount;
+        for (int bit = 0; bit < 3; ++bit)
+            if (record->amount & (1u << bit)) {
+                stats->status &= (uint16_t)~(1u << bit);
+                stats->status_timers[bit] = 0;
+            }
         break;
     case 3:
         if (vitals->hp <= 1) return false;
@@ -500,8 +507,10 @@ static unsigned update_item_use(AosSoulMenu *menu, AosStats *stats,
     }
     if (!(new_input & AOS_KEY_A)) return 0;
     uint8_t used = menu->item_cursor;
-    if (!aos_item_use(stats, items, vitals, used)) return AOS_SOUL_MENU_REFUSED;
+    /* sub_0804B808 keeps the attempted record for the sound pick even
+     * when sub_0804B36C refuses the use. */
     menu->last_item = used;
+    if (!aos_item_use(stats, items, vitals, used)) return AOS_SOUL_MENU_REFUSED;
     if (!stats->item_counts[used]) move_item_cursor(menu, stats, 1);
     return AOS_SOUL_MENU_ITEM_USED;
 }

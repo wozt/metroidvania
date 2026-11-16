@@ -221,6 +221,7 @@ int main(void) {
     stats.item_counts[5] = stats.item_counts[8] = 1;
     stats.item_counts[23] = stats.item_counts[25] = 1;
     stats.status = 1;
+    stats.status_timers[0] = 0x258;
     menu.hub_cursor = AOS_PAUSE_ITEM_USE;
     assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
                                  AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_ACCEPTED);
@@ -242,13 +243,14 @@ int main(void) {
     assert(stats.mp == 26 && !stats.item_counts[5] && menu.item_cursor == 8);
     aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
                           AOS_KEY_A, AOS_KEY_A);
-    assert(stats.status == 0 && !stats.item_counts[8] && menu.item_cursor == 23);
+    assert(stats.status == 0 && stats.status_timers[0] == 0 &&
+           !stats.item_counts[8] && menu.item_cursor == 23);
     aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
                           AOS_KEY_A, AOS_KEY_A);
     assert(vitals.hp == 120 && !stats.item_counts[23] && menu.item_cursor == 25);
     assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
                                  AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_REFUSED);
-    assert(stats.item_counts[25] == 1);
+    assert(stats.item_counts[25] == 1 && menu.last_item == 25);
     assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
                                  AOS_KEY_B, AOS_KEY_B) == AOS_SOUL_MENU_BACK);
     settle_fade(&menu, &stats, &equipment);

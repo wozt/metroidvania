@@ -59,12 +59,13 @@ int main(void) {
     assert(o.motes[0].state == 1);
     assert(o.motes[0].fx != fx0 || o.motes[0].fy != fy0);
 
-    /* Anchored drift: fx += 0x80<<16, scroll/0xC subtracted. */
+    /* Anchored drift: + 0x40 += + 0x48 verbatim (vel 0x80 is already
+     * 16.16 — no << 16), scroll/0xC subtracted. */
     int64_t ax = o.anchors[0].fx;
     aos_object07_update(&o, 0, 0, 0xC00 << 16, 0, rng);
     aos_object07_update(&o, 0, 0, 0xC00 << 16, 0, rng);
-    /* two drift frames: +0x80 px - (0xC00<<16)/0xC each */
-    assert(o.anchors[0].fx == ax + 2 * ((0x80 << 16) - (0xC00 << 16) / 0xC));
+    /* two drift frames: +0x80 - (0xC00<<16)/0xC each */
+    assert(o.anchors[0].fx == ax + 2 * (0x80 - (int32_t)((0xC00 << 16) / 0xC)));
 
     printf("aos_object07: ok\n");
     return 0;

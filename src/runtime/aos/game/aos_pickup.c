@@ -17,6 +17,27 @@ enum {
 const AosBox aos_pickup_box = {-8, -8, 16, 16};
 const AosBox aos_soul_container_box = {-8, -32, 16, 32};
 
+/* sub_0806AF98 for a pickup record: the same iterative sub_08001D94
+ * floor-depth snap aos_enemy_snap_to_floor runs for enemies — native
+ * sub_08044980/sub_08044054 call it inside the create, so a placed
+ * weapon, item, money bag or soul pedestal lands on the floor instead
+ * of hovering at the record's raw y. */
+void aos_pickup_snap_to_floor(AosPickup *pickup, const AosCollision *layer) {
+    if (!pickup || !layer) return;
+    int32_t x = pickup->x >> 16;
+    int y = pickup->y >> 16;
+    if (aos_floor_depth(layer, x, y, 0, false) < 0) {
+        for (int guard = 0; guard < 512 && aos_floor_depth(layer, x, y, 0, false); ++guard)
+            y -= 8;
+        y += 7;
+    } else {
+        for (int guard = 0; guard < 512 && !aos_floor_depth(layer, x, y, 0, false); ++guard)
+            y += 8;
+    }
+    y += aos_floor_depth(layer, x, y, 0, false);
+    pickup->y = (int32_t)((uint32_t)y << 16) | (pickup->y & 0xFFFF);
+}
+
 void aos_pickup_icon_slots_reset(AosPickupIconSlots *slots) {
     if (slots) memset(slots, 0, sizeof *slots);
 }

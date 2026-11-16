@@ -19,6 +19,7 @@
 #include "aos/game/aos_object0f.h"
 #include "aos/game/aos_object0d.h"
 #include "aos/game/aos_object0e.h"
+#include "aos/game/aos_breakable.h"
 #include "aos/game/aos_object10.h"
 #include "aos/game/aos_object11.h"
 #include "aos/game/aos_object12.h"
@@ -2582,6 +2583,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                                      (uint16_t)e->param1,
                                                      (uint16_t)e->param0, e->x, e->y,
                                                      aria_pickup_state.placed);
+                if (created) aos_pickup_snap_to_floor(&pickup, layer);
                 if (room->pickup_count < MAX_PICKUPS && created)
                     room->pickups[room->pickup_count++] = pickup;
             }
@@ -2947,6 +2949,52 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 if (combat->progress) aos_yellow_soul_hit(combat->progress, hit.soma_damage);
                 printf("Soma hit: %d damage, HP %d/%d\n", hit.soma_damage, soma->hp, soma->max_hp);
             }
+            continue;
+        }
+        if (e->kind == ARIA_KIND_BREAKABLE) {
+            /* sub_0800F1FC case 3: the generic breakable record.
+             * Native creates it in the room-load pass unconditionally
+             * (no camera window), so the first update spawns it like
+             * the kind-1 enemies do. */
+            if (!e->spawned) {
+                e->spawned = true;
+                aos_breakable_create(&e->breakable, e->param0, e->param1);
+                e->band5c = 0x14;    /* + 0x5C set by sub_08046080 */
+                continue;
+            }
+            if (e->breakable.finished) continue;
+            /* sub_08045EE0's sub_08068AD4 probe (-0x10, -0x10, 0x110,
+             * 0xC0) against Soma approximated like Object0E's. */
+            int32_t bsx = e->x - cam_x, bsy = e->y - cam_y;
+            int32_t bssx = (int32_t)(soma->x >> 16) - cam_x;
+            int32_t bssy = (int32_t)(soma->y >> 16) - cam_y;
+            bool near = (uint16_t)(bssx - bsx + 0x10) <= 0x110 &&
+                        (uint16_t)(bssy - bsy + 0x10) <= 0xC0;
+            int wx, wy, ww, wh;
+            bool hit = combat->weapon && combat->weapon_frames &&
+                       aos_weapon_hitbox(combat->weapon, soma,
+                                         combat->weapon_frames,
+                                         &wx, &wy, &ww, &wh) &&
+                       ww > 1 && wh > 1 &&
+                       !(wx + ww - 1 < e->x - 8 || e->x + 8 < wx ||
+                         wy + wh - 1 < e->y - 16 || e->y < wy);
+            /* sub_08046100's bounce gate: gEwramData word 0 bit 1 is
+             * the whip-swing flag — approximated by the live weapon. */
+            aos_breakable_update(&e->breakable, near, hit,
+                                 combat->weapon != NULL);
+            if (e->breakable.song >= 0) {
+                sound = e->breakable.song;
+                printf("Breakable %zu: song 0x%X\n", i, e->breakable.song);
+            }
+            for (int fx = 0; fx < e->breakable.content_fx +
+                 e->breakable.gore_fx && room->effect_count < MAX_EFFECTS;
+                 fx++) {
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_SPARKLE, .direct = true,
+                    .x = e->x, .y = e->y - 8};
+            }
+            e->breakable.content_fx = 0;
+            e->breakable.gore_fx = 0;
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && (e->id == 10 || e->id == 11)) {

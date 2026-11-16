@@ -1,3 +1,51 @@
+## Patch 1196 - room objects: ambient-mote drift fix, kind-3 breakables, placed-pickup floor snap
+
+- **Ambient motes (Object07).** `aos_object07_update` integrated the
+  mote and anchored-child positions as `pos += vel << 16`, but the
+  velocities are already 16.16 fixed point — native `sub_0804F160` /
+  `sub_0804F504` do `+0x40 += +0x48` verbatim. The extra shift threw
+  every ambient child ~16k pixels off-screen on its second update
+  frame, so the drifting background creatures (the report's "bats")
+  drew once at spawn and vanished. The wrap reseed now also writes
+  the +0x42/+0x46 integer words like the native `strh` pair (the
+  16.16 fraction survives) instead of leaving `fx`/`fy` and the
+  `sx`/`sy` anchors inconsistent. `tests/test_aos_object07` updated
+  to the corrected scale. The hanging Bat *enemy* (id 0) was audited
+  against `sub_080AD364`/`sub_080AD44C`/`sub_080AD700` — hang, alert
+  boxes, swoop and the +0x4A-bound delete are faithful; headless
+  `--simulate` shows hang -> swoop -> off-screen removal working.
+- **Kind-3 breakable records.** Room kind-3 records (352 across the
+  runtime rooms — the chandeliers/candles class) were loaded but had
+  no runtime kind, so they never spawned or drew. New
+  `src/runtime/aos/game/aos_breakable.c/.h` ports `sub_08046080`
+  (create: shared tiles 0x081C15F4 / frames 0x0820ED60 anim 3 /
+  palette row 7, band +0x5C = 0x14) and `sub_08045EE0` (probe
+  -0x10/-0x10/0x110/0xC0, `sub_08045F9C` hit -> PlaySong 0xA2,
+  +0xD = 0x28, state 1; gore burst every fourth frame while the
+  timer exceeds 0x1E, +0x59 bit 3 on the u8 wrap). `aria_entities`
+  spawns them unconditionally on first update like the kind-1
+  enemies (native creates them in the room-load pass);
+  `draw_special_objects` draws them through the `special_15_v7`
+  export's animation 3. Honest gaps: the `sub_08046148` variant tile
+  DMA (0x081C3E00 table, per-param0 prop look) is not exported, so
+  every kind-3 record draws the shared frame; the `sub_08045F9C`
+  content/drop tables (sub_08043C10/sub_08043F70/sub_08044054) and
+  persistent-bit marking on break are unported — breaks report
+  `content_fx`/`gore_fx` like Object0E. Room kinds 5/6 (six
+  conditional-pickup records) remain unhandled.
+- **Placed pickups floor snap.** Kind-4 records (weapons, items,
+  armor, money, and the ids 5-8 soul pedestals) spawned at the raw
+  record y and, for `placed` pickups, never ran the floor probe —
+  they floated. `aos_pickup_snap_to_floor` ports `sub_0806AF98`
+  (the same iterative `sub_08001D94` depth walk
+  `aos_enemy_snap_to_floor` uses) and `update_entities` applies it
+  at create, matching native `sub_08044980`'s create-time snap.
+  Dropped pickups keep their own fall/land physics.
+- **Checks.** `fusion_aos_object07_tests`, `aos_object0e`,
+  `aos_enemy`, `aos_room`, `aria_simulate_room_transition` pass;
+  headless sims of rooms 0/0, 0/5, 0/16 run clean with kind-3
+  entities spawning.
+
 ## Patch 1195 - room BLDCNT/BLDALPHA alpha blend: water surfaces draw semi-transparent
 
 - **Bug.** Water surfaces rendered fully opaque: the layered BG

@@ -32,6 +32,7 @@
 #include "aos/game/aos_object0f.h"
 #include "aos/game/aos_object0d.h"
 #include "aos/game/aos_object0e.h"
+#include "aos/game/aos_breakable.h"
 #include "aos/game/aos_object10.h"
 #include "aos/game/aos_object11.h"
 #include "aos/game/aos_object12.h"
@@ -158,6 +159,7 @@ enum { SKILL_ART_BAT, SKILL_ART_ARCHER, SKILL_ART_BONE, SKILL_ART_SHARED, SKILL_
 #define MAX_EFFECTS 32      /* shared effects (flames, blood) alive at once */
 #define MAX_DAMAGE_POPUPS 32
 #define ARIA_KIND_SPECIAL 2
+#define ARIA_KIND_BREAKABLE 3   /* sub_0800F1FC case 3 records */
 #define ARIA_KIND_PICKUP 4
 #define ARIA_OBJECT_WOODEN_DOOR 0x00
 #define ARIA_OBJECT_WALL 0x08           /* Object08: a breakable wall */
@@ -185,6 +187,7 @@ typedef struct {
     AosObject0f object0f;   /* object 0x0F: destructible prop */
     AosObject0d object0d;   /* object 0x0D: swinging object */
     AosObject0e object0e;   /* object 0x0E: breakable prop variants */
+    AosBreakable breakable; /* kind-3 record: sub_08046080 prop */
     AosObject10 object10;   /* object 0x10: save point statue */
     AosObject11 object11;   /* object 0x11: save-point remover marker */
     AosObject12 object12;   /* object 0x12: param-driven animated sprite */

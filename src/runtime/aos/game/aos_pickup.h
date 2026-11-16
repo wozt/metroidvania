@@ -161,6 +161,10 @@ bool aos_pickup_create_placed(AosPickup *pickup,
                               uint8_t entity_id, uint16_t variant,
                               uint16_t persistent_index, int32_t x, int32_t y,
                               const uint32_t collected[AOS_PLACED_ITEM_WORDS]);
+/* sub_0806AF98 run inside the create paths (sub_08044980 calls it on the
+ * new entity): placed records land on the floor below/above their raw y
+ * instead of hovering. */
+void aos_pickup_snap_to_floor(AosPickup *pickup, const AosCollision *layer);
 bool aos_pickup_placed_collected(
     const uint32_t collected[AOS_PLACED_ITEM_WORDS], uint16_t persistent_index);
 void aos_pickup_mark_placed(const AosPickup *pickup,

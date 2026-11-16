@@ -146,37 +146,47 @@ void aos_object07_update(AosObject07 *o, int32_t cam_x, int32_t cam_y,
         AosObject07Mote *m = &o->motes[i];
         if (!m->alive) continue;
         if (m->state == 0) { m->state = 1; continue; }
-        /* pos += vel; the + 0x48 = + 0x50 / + 0x4C = f(+ 0x54, + 0x14)
-         * split is approximated by the raw speeds (the sine lookup
+        /* sub_0804F160 tail: + 0x40 += + 0x48, + 0x44 += + 0x4C —
+         * the velocities are already 16.16, so the position words
+         * take them verbatim (no extra << 16; the old shift threw
+         * every mote ~16k pixels off-screen on its second frame).
+         * The + 0x48 = + 0x50 / + 0x4C = f(+ 0x54, + 0x14) split is
+         * approximated by the raw speeds (the sine lookup
          * sub_080009E4 is not modelled). */
-        m->fx += (int64_t)m->vx << 16;
-        m->fy += (int64_t)m->vy << 16;
+        m->fx += m->vx;
+        m->fy += m->vy;
         /* Parallax: fixed pos -= scroll * factor[layer] >> 8. */
         m->fx -= ((int64_t)scroll_x * parallax[m->layer]) >> 8;
         m->fy -= ((int64_t)scroll_y * parallax[m->layer]) >> 8;
-        /* Screen-anchor wrap (sub_0804F160 tail): re-randomize the
-         * anchor on each edge. */
-        if (m->sx > 0x110) {
-            m->sy = (int16_t)(rnd(rng) & 0xBF);
-            m->sx = -0x20;
-        } else if (m->sx < -0x20) {
-            m->sy = (int16_t)(rnd(rng) & 0x7F);
-            m->sx = 0x110;
+        /* Screen-anchor wrap on the + 0x42/+ 0x46 integer words
+         * (sub_0804F160 tail): x > 0x110 reseeds y and pins x at
+         * 0x110; a y wrap reseeds x. The strh writes keep the 16.16
+         * fraction, mirrored by masking the low word back in. */
+        int px = (int)(m->fx >> 16), py = (int)(m->fy >> 16);
+        if (px > 0x110) {
+            py = (int)((rnd(rng) & 0x7F) + 1);
+            px = 0x110;
+        } else if (py > 0xC0) {
+            py = -0x10;
+            px = (int)(rnd(rng) & 0xBF);
+        } else if (py < -0x20) {
+            py = 0xB0;
+            px = (int)(rnd(rng) & 0xBF);
+        } else {
+            continue;
         }
-        if (m->sy > 0xC0) {
-            m->sy = -0x10;
-            m->sx = (int16_t)(rnd(rng) & 0xBF);
-        } else if (m->sy < -0x20) {
-            m->sy = 0xB0;
-            m->sx = (int16_t)(rnd(rng) & 0xBF);
-        }
+        m->fx = (m->fx & 0xFFFF) | ((int32_t)px << 16);
+        m->fy = (m->fy & 0xFFFF) | ((int32_t)py << 16);
+        m->sx = (int16_t)px;
+        m->sy = (int16_t)py;
     }
-    /* Anchored children: state 1 pos += vel, scroll / 0xC subtracted. */
+    /* Anchored children (sub_0804F504): + 0x40 += + 0x48 verbatim,
+     * then scroll / 0xC subtracted — same 16.16 scale fix. */
     for (int i = 0; i < o->anchor_count; ++i) {
         AosObject07Anchor *a = &o->anchors[i];
         if (!a->alive || a->state == 0) { a->state = 1; continue; }
-        a->fx += (int64_t)a->vx << 16;
-        a->fy += (int64_t)a->vy << 16;
+        a->fx += a->vx;
+        a->fy += a->vy;
         a->fx -= scroll_x / 0xC;
         a->fy -= scroll_y / 0xC;
     }

@@ -670,8 +670,44 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                                  unsigned step, int prio_slot) {
     for (size_t i = 0; i < room->entity_count; ++i) {
         const AriaEntity *e = &room->entities[i];
-        if (!e->spawned || e->kind != ARIA_KIND_SPECIAL || e->id < 0 || e->id >= 64)
+        if (!e->spawned ||
+            (e->kind != ARIA_KIND_SPECIAL &&
+            e->kind != ARIA_KIND_BREAKABLE) ||
+            e->id < 0 || e->id >= 64)
             continue;
+        if (e->kind == ARIA_KIND_BREAKABLE) {
+            /* sub_08046080's breakable record: the same tile sheet
+             * 0x081C15F4 / frames 0x0820ED60 / palette row 7 triple
+             * Object0F's special_15_v7 exports, animation 3 (the
+             * sub_08046148 variant tile DMA is not exported — every
+             * kind-3 record draws the shared prop frame). Band
+             * + 0x5C = 0x14 draws in the front pass like Object0E. */
+            if (prio_slot >= 0 || e->breakable.finished) continue;
+            const __typeof__(objects->special_objects[0]) *art = NULL;
+            for (int v = 0; v < SPECIAL_VARIANTS; ++v)
+                if (objects->special_variants[v].id == 15 &&
+                    objects->special_variants[v].param0 == 7 &&
+                    objects->special_variants[v].loaded) {
+                    art = &objects->special_variants[v];
+                    break;
+                }
+            if (!art || !art->defs[3].count) continue;
+            unsigned total = 0;
+            for (unsigned f = 0; f < art->defs[3].count; ++f)
+                total += art->ticks[3][f];
+            if (!total) continue;
+            unsigned t = (step / 4) % total, index = 0;
+            while (index + 1 < art->defs[3].count &&
+                   t >= art->ticks[3][index])
+                t -= art->ticks[3][index++];
+            const AriaFrame *frame = &art->frames[3][index];
+            if (!frame->texture) continue;
+            SDL_FRect rect = {(float)(e->x + frame->offset_x - cam_x),
+                              (float)(e->y + frame->offset_y - cam_y),
+                              frame->w, frame->h};
+            SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+            continue;
+        }
         /* Every special object but Object1F lacks a retained
          * +0x5C band, so a priority slot skips them outright;
          * they all draw in the front pass. */

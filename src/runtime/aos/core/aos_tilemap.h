@@ -29,10 +29,11 @@
  * from the native reads, all unreachable for clamped scroll states:
  *   - coordinates outside the decoded map return 0 where the native
  *     code would index past the block map;
- *   - affine layers (metadata flags bit 0) stay
- *     FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE and look up as 0 — the
- *     native affine path sub_0803F7C8 uses a different 8x4 tiling
- *     that is not modelled here.
+ *   - affine layers (metadata flags bit 0) decode only for BG2 —
+ *     the sub_0803F7C8 routine is a BG2 no-op elsewhere — into a
+ *     32x32 map of 8-bit tile indices (4x4-tile blocks behind an
+ *     8x8 u16 block map, cells stored as u16 tile numbers);
+ *     non-BG2 affine layers stay FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE.
  */
 #ifndef AOS_TILEMAP_H
 #define AOS_TILEMAP_H

@@ -1347,13 +1347,16 @@ void draw_damage_popup(SDL_Renderer *renderer, const AriaObjects *objects,
  * track BG1 exactly like the hardware.
  *
  * Honest limits, matching the scroll port's documented gaps:
- *  - affine tile arrays (FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE)
- *    produce no texture; the layer simply does not draw, exactly
- *    like the composite which also skips it.
+ *  - affine tile arrays now decode through the sub_0803F7C8
+ *    4x4-block/8-bit-entry tiling (BG2 only, like the native
+ *    routine) and draw under the load-time identity
+ *    BgAffineSet transform; non-BG2 affine metadata still
+ *    produces no texture.
  *  - scanline/hblank/affine fx modes update the layer's base
  *    bgOfs but their per-scanline wave / BgAffineSet transform is
- *    still unported — the layer draws flat at its faithful offset
- *    (a documented approximation, never an invented offset).
+ *    still unported — text layers draw flat at their faithful
+ *    offset and affine layers keep the static frame-0 transform
+ *    (documented approximations, never invented offsets).
  * OBJ-vs-BG priority now follows the native tables: the room
  * load's sub_0803DD14/sub_0803FD60 chain turns each BG
  * record's field_0 layer byte into a BGxCNT priority (kept in
@@ -1383,6 +1386,8 @@ typedef struct {
                                depth.bg_priority tables derive
                                from (kept for provenance) */
     bool enabled;           /* DISPCNT BG-enable bit at load */
+    bool affine;            /* tilemap flags bit 0: BG2 affine
+                               8-bit tilemap (sub_0803F7C8) */
 } AriaBgLayerDraw;
 
 typedef struct {
@@ -1509,6 +1514,7 @@ static bool aria_bg_room_ensure(SDL_Renderer *renderer,
         AriaBgLayerDraw *layer = &aria_bg_room.layer[i];
         const FusionAosBackground *rec = &backgrounds.entries[i];
         layer->rank = rec->field_0;
+        layer->affine = false;
         /* DISPCNT bits 9..11 enable BG1..BG3 (DCNT_BG2 = 0x0400);
          * display_control is sub_0800F9EC's gUnk_03002CB0.dispCnt
          * seed. */
@@ -1521,6 +1527,7 @@ static bool aria_bg_room_ensure(SDL_Renderer *renderer,
                                               sizeof error))
             continue;
         if (tilemap.status == FUSION_AOS_TILEMAP_DECODED) {
+            layer->affine = (tilemap.flags & 1) != 0;
             FusionAosRenderedBackground rendered;
             memset(&rendered, 0, sizeof rendered);
             if (fusion_aos_render_background(rec, &tilemap, memory,
@@ -1674,6 +1681,25 @@ void aria_bg_draw_priority(SDL_Renderer *renderer, int priority,
         /* bgOfs shadow: BG1 is the drawn camera+delta position;
          * BG2/BG3 are the scroll state's faithful integer offsets
          * (absolute positions in each layer's own map space). */
+        SDL_SetTextureColorMod(layer->texture, fade_mod, fade_mod,
+                               fade_mod);
+        if (layer->affine) {
+            /* Affine BG (BG2 only, sub_0803F7C8 + the load-time
+             * BgAffineSet): the hardware ignores bgOfs — the
+             * transform is texX=texY=0x8000, scr=(0x78,0x50),
+             * unit scale, alpha 0, i.e. screen pixel (x,y) samples
+             * texel (x+8, y+48) of the 256x256 tilemap. The
+             * per-frame BgAffineSet/hblank modes (unk_18 18/21/27
+             * and the scanline writers) stay unported, so rooms
+             * using them draw this static frame-0 transform —
+             * documented approximation, never an invented offset. */
+            SDL_FRect src = {8.0f, 48.0f, (float)VIEW_W,
+                             (float)VIEW_H};
+            SDL_FRect dst = {0.0f, 0.0f, (float)VIEW_W,
+                             (float)VIEW_H};
+            SDL_RenderTexture(renderer, layer->texture, &src, &dst);
+            continue;
+        }
         int32_t h_ofs, v_ofs;
         if (bg == 1) {
             h_ofs = aria_bg_room.ofs_bx; v_ofs = aria_bg_room.ofs_by;
@@ -1685,8 +1711,6 @@ void aria_bg_draw_priority(SDL_Renderer *renderer, int priority,
         size_t count = aos_scroll_bgofs_blits(
             h_ofs, v_ofs, layer->width, layer->height,
             VIEW_W, VIEW_H, blits);
-        SDL_SetTextureColorMod(layer->texture, fade_mod, fade_mod,
-                               fade_mod);
         for (size_t b = 0; b < count; ++b) {
             SDL_FRect src = {(float)blits[b].src_x,
                              (float)blits[b].src_y,

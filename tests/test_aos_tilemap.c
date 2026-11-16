@@ -17,11 +17,14 @@ enum {
     ROOM_DESC_OFFSET = 0x1000,
     BG_DESC_OFFSET = 0x1100,
     META1_OFFSET = 0x1200,
+    META2_OFFSET = 0x1240,
     META3_OFFSET = 0x1280,
     TILES1_OFFSET = 0x1400,
     MAP1_OFFSET = 0x1600,
     LZ77_BG3_OFFSET = 0x1800,
     MAP3_OFFSET = 0x1900,
+    LZ77_AFFINE_OFFSET = 0x1A00,
+    AFFINE_MAP_OFFSET = 0x1C00,
     ROM_SIZE = AREA_DIRECTORY_OFFSET + FUSION_AOS_AREA_COUNT * 4
 };
 
@@ -93,15 +96,36 @@ int main(void) {
               GBA_ROM_BASE + BG_DESC_OFFSET);
     write_u32(bytes, ROOM_DESC_OFFSET + 24,
               GBA_ROM_BASE + ROOM_DESC_OFFSET);
-    /* BG1 decoded, BG2 absent (metadata_pointer 0), BG3 LZ77. */
+    /* BG1 decoded, BG2 affine (flags 3: affine + LZ77), BG3 LZ77. */
     write_background(bytes, BG_DESC_OFFSET + 0 * 12,
                      GBA_ROM_BASE + META1_OFFSET);
-    write_background(bytes, BG_DESC_OFFSET + 1 * 12, 0);
+    write_background(bytes, BG_DESC_OFFSET + 1 * 12,
+                     GBA_ROM_BASE + META2_OFFSET);
     write_background(bytes, BG_DESC_OFFSET + 2 * 12,
                      GBA_ROM_BASE + META3_OFFSET);
     write_metadata(bytes, META1_OFFSET, 1, 1, 0,
                    GBA_ROM_BASE + TILES1_OFFSET,
                    GBA_ROM_BASE + MAP1_OFFSET);
+    /* Affine BG2 (sub_0803F7C8): 8x8 u16 block map, each entry a
+     * 1-based index into 16-byte blocks of four u32 words (four
+     * rows of four 8-bit tile indices). Map cells 0,1,8,9 select
+     * blocks 1-4 so the decoded 32x32 tilemap exercises every
+     * quadrant; block b byte i holds b*16+i+1. */
+    write_metadata(bytes, META2_OFFSET, 1, 1, 3,
+                   GBA_ROM_BASE + LZ77_AFFINE_OFFSET,
+                   GBA_ROM_BASE + AFFINE_MAP_OFFSET);
+    {
+        uint8_t expanded_affine[4 + 64];
+        memset(expanded_affine, 0, sizeof expanded_affine);
+        for (size_t index = 0; index < 64; ++index)
+            expanded_affine[4 + index] = (uint8_t)(index + 1);
+        write_lz77_literals(bytes, LZ77_AFFINE_OFFSET, expanded_affine,
+                            sizeof expanded_affine);
+        write_u16(bytes, AFFINE_MAP_OFFSET + 0 * 2, 1);
+        write_u16(bytes, AFFINE_MAP_OFFSET + 1 * 2, 2);
+        write_u16(bytes, AFFINE_MAP_OFFSET + 8 * 2, 3);
+        write_u16(bytes, AFFINE_MAP_OFFSET + 9 * 2, 4);
+    }
     write_metadata(bytes, META3_OFFSET, 1, 1, 2,
                    GBA_ROM_BASE + LZ77_BG3_OFFSET,
                    GBA_ROM_BASE + MAP3_OFFSET);
@@ -142,7 +166,7 @@ int main(void) {
     assert(aos_room_tilemap_load(&tilemap, &rom, &directory, 0, 0,
                                  error, sizeof error));
     assert(aos_tilemap_status(&tilemap, 1) == FUSION_AOS_TILEMAP_DECODED);
-    assert(aos_tilemap_status(&tilemap, 2) == FUSION_AOS_TILEMAP_ABSENT);
+    assert(aos_tilemap_status(&tilemap, 2) == FUSION_AOS_TILEMAP_DECODED);
     assert(aos_tilemap_status(&tilemap, 3) == FUSION_AOS_TILEMAP_DECODED);
     assert(aos_tilemap_status(&tilemap, 0) == FUSION_AOS_TILEMAP_ABSENT);
     assert(aos_tilemap_status(&tilemap, 4) == FUSION_AOS_TILEMAP_ABSENT);
@@ -169,7 +193,6 @@ int main(void) {
     assert(aos_tilemap_lookup(&tilemap, 1, 32, 0) == 0);
     assert(aos_tilemap_lookup(&tilemap, 1, 0, 32) == 0);
     /* Absent and invalid layers. */
-    assert(aos_tilemap_lookup(&tilemap, 2, 0, 0) == 0);
     assert(aos_tilemap_lookup(&tilemap, 0, 0, 0) == 0);
     assert(aos_tilemap_lookup(NULL, 1, 0, 0) == 0);
     /* BG3's LZ77 payload decodes like the native unk_2&2 path. */
@@ -177,6 +200,26 @@ int main(void) {
     assert(aos_tilemap_lookup(&tilemap, 3, 1, 0) == 0x3001);
     assert(aos_tilemap_lookup(&tilemap, 3, 4, 0) == 0x3010);
     assert(aos_tilemap_lookup(&tilemap, 3, 12, 0) == 0);
+
+    /* Affine BG2 (sub_0803F7C8): a 32x32 map of 8-bit tile
+     * indices. cell = (block-1)*16 + (tile_y&3)*4 + (tile_x&3) + 1
+     * inside the selected 16-byte block. */
+    const FusionAosBackgroundTilemap *affine = &tilemap.layers[1];
+    assert(affine->flags & 1);
+    assert(affine->width_tiles == 32 && affine->height_tiles == 32);
+    assert(affine->cell_count == 1024 && affine->maximum_block == 4);
+    assert(aos_tilemap_lookup(&tilemap, 2, 0, 0) == 1);
+    assert(aos_tilemap_lookup(&tilemap, 2, 3, 0) == 4);
+    assert(aos_tilemap_lookup(&tilemap, 2, 0, 1) == 5);
+    assert(aos_tilemap_lookup(&tilemap, 2, 3, 3) == 16);
+    assert(aos_tilemap_lookup(&tilemap, 2, 4, 0) == 17);
+    assert(aos_tilemap_lookup(&tilemap, 2, 0, 4) == 33);
+    assert(aos_tilemap_lookup(&tilemap, 2, 7, 7) == 64);
+    /* Unmapped cells and out-of-map coordinates read as 0. */
+    assert(aos_tilemap_lookup(&tilemap, 2, 8, 0) == 0);
+    assert(aos_tilemap_lookup(&tilemap, 2, 0, 8) == 0);
+    assert(aos_tilemap_lookup(&tilemap, 2, 32, 0) == 0);
+    assert(aos_tilemap_lookup(&tilemap, 2, 0, 32) == 0);
 
     /* Rebuild spans: the x-scroll column fixes tile_x and steps
      * tile_y (sub_0803F3F8/3F4C8, native count 0x15); the y-scroll

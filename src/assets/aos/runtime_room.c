@@ -279,8 +279,11 @@ bool fusion_aos_render_background(const FusionAosBackground *background,
         set_error(error, error_size, "invalid Aria background-render request");
         return false;
     }
-    /* BGCNT bit 7: 256 colours, 64-byte tiles indexing the whole palette. */
-    bool full_color = (background->control & 0x80) != 0;
+    /* BGCNT bit 7: 256 colours, 64-byte tiles indexing the whole
+     * palette. Affine tilemaps (metadata flags bit 0) ignore bit 7
+     * entirely — their tiles are always 8bpp. */
+    bool full_color = (background->control & 0x80) != 0 ||
+                      (tilemap->flags & 1) != 0;
     size_t tile_bytes = full_color ? 64 : 32;
     size_t width = tilemap->width_tiles * 8;
     size_t height = tilemap->height_tiles * 8;
@@ -679,7 +682,82 @@ bool fusion_aos_read_background_tiles(const FusionRom *rom,
         return false;
     }
     if (tilemap->flags & 1) {
-        tilemap->status = FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE;
+        /* Affine layer (metadata flags bit 0): the native affine
+         * decode sub_0803F7C8 runs only for BG2 — every other
+         * layer keeps the unsupported status like the native
+         * no-op. The affine tilemap is a square map of 8-bit tile
+         * indices (no flips, no palette banks, always 256-colour
+         * tiles): the block map is 8x8 u16 entries regardless of
+         * the metadata screen counts, and each nonzero entry m
+         * (1-based) selects a 16-byte block of four u32 words —
+         * one word per row of a 4x4-tile block, each word holding
+         * four consecutive tile bytes. Tilemap row = 32 entries;
+         * map cell (cx,cy) covers tile columns 4*cx..+3 and rows
+         * 4*cy..+3, so a size-1 BG2CNT (32x32 tiles) fills the
+         * whole 0x400-byte VRAM tilemap at 0x0600F000. */
+        if (background->layer != 2) {
+            tilemap->status = FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE;
+            if (error && error_size > 0) error[0] = '\0';
+            return true;
+        }
+        enum { AOS_AFFINE_MAP_CELLS = 64,
+               AOS_AFFINE_TILES = 32,
+               AOS_AFFINE_BLOCK_BYTES = 16 };
+        size_t affine_map_offset;
+        if (!pointer_offset(rom, tilemap->map_pointer,
+                            AOS_AFFINE_MAP_CELLS * sizeof(uint16_t),
+                            &affine_map_offset)) {
+            set_error(error, error_size,
+                      "Aria affine background block map points outside the ROM");
+            return false;
+        }
+        const uint8_t *affine_map = rom->data + affine_map_offset;
+        for (size_t index = 0; index < AOS_AFFINE_MAP_CELLS; ++index) {
+            uint16_t block = read_u16(affine_map + index * 2);
+            if (block > tilemap->maximum_block)
+                tilemap->maximum_block = block;
+        }
+        MetadataPayload affine_blocks;
+        if (!read_metadata_payload(rom, tilemap->blocks_pointer,
+                                   (tilemap->flags & 2) != 0,
+                                   &affine_blocks, error, error_size)) {
+            return false;
+        }
+        size_t required_bytes =
+            (size_t)tilemap->maximum_block * AOS_AFFINE_BLOCK_BYTES;
+        if (required_bytes > affine_blocks.size) {
+            free_payload(&affine_blocks);
+            set_error(error, error_size,
+                      "Aria affine background block table is truncated");
+            return false;
+        }
+        tilemap->width_tiles = AOS_AFFINE_TILES;
+        tilemap->height_tiles = AOS_AFFINE_TILES;
+        tilemap->cell_count =
+            tilemap->width_tiles * tilemap->height_tiles;
+        tilemap->cells = calloc(tilemap->cell_count,
+                                sizeof *tilemap->cells);
+        if (!tilemap->cells) {
+            free_payload(&affine_blocks);
+            set_error(error, error_size,
+                      "cannot allocate Aria affine background tilemap");
+            return false;
+        }
+        for (size_t tile_y = 0; tile_y < AOS_AFFINE_TILES; ++tile_y) {
+            for (size_t tile_x = 0; tile_x < AOS_AFFINE_TILES; ++tile_x) {
+                uint16_t block = read_u16(
+                    affine_map + ((tile_x >> 2) + (tile_y >> 2) * 8) * 2);
+                if (block == 0) continue;
+                uint32_t word = read_u32(
+                    affine_blocks.data +
+                    (size_t)(block - 1) * AOS_AFFINE_BLOCK_BYTES +
+                    (tile_y & 3) * 4);
+                tilemap->cells[tile_x + tile_y * AOS_AFFINE_TILES] =
+                    (uint16_t)((word >> ((tile_x & 3) * 8)) & 0xFF);
+            }
+        }
+        free_payload(&affine_blocks);
+        tilemap->status = FUSION_AOS_TILEMAP_DECODED;
         if (error && error_size > 0) error[0] = '\0';
         return true;
     }

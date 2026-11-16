@@ -1,3 +1,47 @@
+## Patch 1161 - combat-feel parity audit; witch guard skips the hit flash
+
+- **Audit.** A systematic pass over the player/enemy combat paths
+  compared the runtime against the cvaos decompilation and ROM data:
+  - Player damage `sub_08021654`: runtime `aos_player_damage`
+    `(ATK*4 - DEF*2) >> 1`, minimum 1 — matches the normal-mode
+    formula; ATK = STR + equipment, DEF = CON/2 + equipment
+    (`aos_stats_derive`).
+  - Enemy damage `sub_0806B7D8`: runtime `aos_enemy_damage` keeps the
+    weakness/resistance element modifiers and the
+    `(power - DEF/2) * (256 - DEF) >> 8`, minimum 1 structure.
+  - Enemy hit flash: `sub_0806E218` writes `+0x2D = 8`;
+    `sub_0806AE54` decrements it and gates the AI — the runtime's
+    `hit_flash = 8` and the per-enemy collision-only flash updates
+    reproduce this.
+  - Player reaction `sub_0801B0D8`: ground flinch (state 12,
+    animation-length, 50-frame enemy immunity via the 0x32 cooldown
+    overwrite) and knockback (state 13, vx ±0x18000 = ±1.5 px/frame,
+    vy -0x20000 = -2.0, gravity_mod -0x1000 = -0.0625) match
+    `react_to_hit` in `aos_soma.c`.
+  - Whip: class-0 weapons use the frame-data hitboxes of
+    `weapon_frames.tsv`; the weapon entity's recent-hit cooldown is
+    `interval + 1` = 16 frames for the whip record; swing lifetimes
+    and the class-1 arc constants are unchanged.
+  - Hit-effect sounds: the `0x08526D0C` element table decodes to
+    `{0xA4, 0x9E, 0xA1, 0xA5, 0xA8, 0xA0, 0xA6}` — identical to the
+    runtime table.
+- **Fix.** `sub_080B9F2C` (the Witch hurt callback) returns before
+  `sub_0806E218` while `+0x14` bit 0 stands: sound 0x69 and the
+  `sub_08042B8C` popup, but no `+0x2D` flash, no hit effect and no HP
+  loss. The runtime zeroed the damage but still set `hit_flash = 8`,
+  freezing her AI for eight frames on a blocked blow. The shared
+  collide path in `aos_enemy.c` now skips the flash for that guard;
+  the dead-crusader guard (`sub_0808F848`) is unchanged because the
+  native callback does run `sub_0806E218` there (flash with zero
+  damage). `witch_tests` asserts both branches.
+- **Remaining gaps.** Native i-frame bookkeeping beyond the
+  recent-hit slots (`sub_08041BDC`/`sub_080426B0` field layout) is
+  modelled but not field-verified; `sub_0806D4C0`'s per-enemy stun
+  gate is folded into `hit_flash` per enemy; no emulator damage-number
+  comparison was run this cycle.
+- Validation: warning-clean build, `ctest -R aos_enemy` and the full
+  `fusion_dashboard --run-tests` / `fusion_check_generated` cycle.
+
 ## Patch 1160 - Aria in-game event-mode channel (unk_64/unk_65) and player-input lock
 
 - **Gap.** `GameModeInGameUpdate` (`sub_0800B700`) dispatches on

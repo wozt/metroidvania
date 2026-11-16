@@ -2677,9 +2677,12 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
             }
             /* sub_080B9F2C: while + 0x14 bit 0 stands (the attack
              * charge) the witch shrugs blows off — sound 0x69 and the
-             * sub_08042B8C popup, no damage. */
-            if (enemy->id == AOS_ENEMY_WITCH &&
-                enemy->role == AOS_ROLE_ENEMY && (enemy->variant & 1)) {
+             * sub_08042B8C popup, no damage. The native callback returns
+             * before sub_0806E218, so no hit flash either. */
+            bool witch_blocked = enemy->id == AOS_ENEMY_WITCH &&
+                                 enemy->role == AOS_ROLE_ENEMY &&
+                                 (enemy->variant & 1);
+            if (witch_blocked) {
                 report.enemy_damage = 0;
                 aos_audio_play_song(0x69);
             }
@@ -2690,7 +2693,7 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 spawn_hit_effect(hit_effect_type(elements, enemy->stats.weak,
                                                   enemy->stats.resist),
                                  contact_x, contact_y, &report);
-            enemy->hit_flash = 8;
+            if (!witch_blocked) enemy->hit_flash = 8;
             enemy->hp = (int16_t)(enemy->hp - report.enemy_damage);
             if (enemy->id == AOS_ENEMY_ARACHNE &&
                 enemy->role == AOS_ROLE_ENEMY && enemy->hp > 0 &&

@@ -6275,6 +6275,36 @@ static void witch_tests(void) {
         }
     }
     assert(d.removed && sparks > 0 && bolts == 1);
+
+    /* sub_080B9F2C: while + 0x14 bit 0 stands (the attack charge) the
+     * hurt callback plays 0x69, draws the sub_08042B8C popup and
+     * returns before sub_0806E218 — no hit flash and no hit effect,
+     * though the weapon contact still registers. */
+    AosEnemy g;
+    assert(aos_enemy_create(&g, AOS_ENEMY_WITCH, 250, 140, 0, 0, &soma,
+                            &layer, &kind, &stats));
+    g.variant |= 1;
+    soma.x = AOS_FIXED(240);
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    static const uint8_t guard_steps[] = {8};
+    const AosAnimDef guard_def = {1, guard_steps};
+    const AosAnimSet guard_set = {&guard_def, 1};
+    const AosHitbox guard_box[] = {{0, -30, 30, 20, true}};
+    const AosWeaponFrames guard_blade = {&guard_set, guard_box};
+    AosWeaponEntity guard_weapon = {.active = true};
+    const int hp_before = g.hp;
+    AosHitReport gh = aos_enemy_update(&g, &soma, &layer, &kind,
+                                       &guard_weapon, &guard_blade, 10,
+                                       4, 100, 48, always_zero);
+    assert(gh.enemy_hit && gh.enemy_damage == 0 && gh.has_damage_popup &&
+           g.hit_flash == 0 && g.hp == hp_before && gh.effect_count == 0);
+    /* Once the charge bit clears the same blow lands and flashes. */
+    g.variant &= 0xFE;
+    g.combat = (AosCombat){0};    /* the weapon's recent-hit slot is spent */
+    gh = aos_enemy_update(&g, &soma, &layer, &kind, &guard_weapon,
+                          &guard_blade, 10, 4, 100, 48, always_zero);
+    assert(gh.enemy_hit && gh.enemy_damage > 0 && g.hit_flash == 8 &&
+           g.hp < hp_before);
 }
 
 

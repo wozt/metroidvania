@@ -71,6 +71,15 @@ enum {
     AOS_SLEEP_FADING,
 };
 
+/* sub_08047764's screen fade phases: the +0x4C brightness counter runs
+ * 0 (bright) to 16 (black) in steps of 3 per frame. OUT dims the current
+ * screen, IN restores the next one. */
+enum {
+    AOS_MENU_FADE_NONE,
+    AOS_MENU_FADE_OUT,
+    AOS_MENU_FADE_IN,
+};
+
 /* sub_0804BE0C's sleep-page outcome carried into the next render:
  * which result line the shared bottom window shows. Cleared when the
  * Sleep page is entered (sub_0804BD38 prints nothing there) and set by
@@ -109,6 +118,18 @@ typedef struct {
     uint8_t sleep_stage;
     uint8_t sleep_timer;
     uint8_t sleep_result; /* AOS_SLEEP_RESULT_* outcome for the render. */
+    /* sub_08047764's +0x4C fade state. pending_page holds the hub entry
+     * (0..AOS_PAUSE_ENTRIES-1) or 0xFE for a plain return to the hub or
+     * 0xFF for none; it is applied when the fade-out reaches black.
+     * fade_open marks the open transition, whose fade-out covers the
+     * room rather than a menu page. room_black counts the black frames
+     * held after a close before the room is shown again. */
+    uint8_t fade;
+    uint8_t fade_phase;
+    uint8_t pending_page;
+    bool pending_close;
+    bool fade_open;
+    uint8_t room_black;
     AosPickupRecent *recent_items;
     /* sub_08049E64's recent-soul caches for the Soul Set ordering. */
     AosRecentSouls *recent_souls;
@@ -126,7 +147,10 @@ typedef struct {
  * runs the source fade after its host result. Config remaps the four native
  * action buttons and refuses duplicate assignments. Enemy exposes the
  * defeated-enemy list and its source record statistics. B returns to the hub
- * and START closes pages that accept it.
+ * and B on the hub closes; START is ignored inside the menu, as the native
+ * state machine does. Page, open and close changes run the source
+ * sub_08047764 fade (3 brightness steps per frame) except Sleep, which the
+ * native machine enters and leaves instantly.
  * The return value is an AOS_SOUL_MENU_* event mask. */
 unsigned aos_pause_menu_update(AosSoulMenu *menu, AosStats *stats,
                                const AosEquipmentTables *equipment,

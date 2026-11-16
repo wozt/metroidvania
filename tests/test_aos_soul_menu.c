@@ -6,6 +6,19 @@
 #include "aos/core/aos_input.h"
 #include "aos/souls/aos_soul_menu.h"
 
+/* sub_08047764's +0x4C fade runs 6 frames out and 6 frames in at 3
+ * brightness steps per frame; the pending page applies at the bottom
+ * of the fade-out. Pump no-input frames until it settles and return
+ * any events the tail produced (CLOSED on a hub close). */
+static unsigned settle_fade(AosSoulMenu *menu, AosStats *stats,
+                            const AosEquipmentTables *equipment) {
+    unsigned events = 0;
+    for (int frame = 0; frame < 16 && menu->fade_phase != AOS_MENU_FADE_NONE;
+         ++frame)
+        events |= aos_soul_menu_update(menu, stats, equipment, 0, 0);
+    return events;
+}
+
 int main(void) {
     AosStats stats = {0};
     AosEquipmentTables equipment = {0};
@@ -43,6 +56,7 @@ int main(void) {
     assert(menu.open && menu.page == AOS_SOUL_MENU_PAGE_HUB && menu.hub_cursor == 0);
     assert(!strcmp(aos_pause_entry_name(0), "SOUL SET"));
     assert(!strcmp(aos_pause_entry_name(6), "ENEMY"));
+    settle_fade(&menu, &stats, &equipment);
 
     /* The hub wraps exactly seven native entries. Enemy lists only defeated
      * records and refuses an undiscovered detail page. */
@@ -51,6 +65,7 @@ int main(void) {
     assert(menu.hub_cursor == AOS_PAUSE_ENEMY);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
            AOS_SOUL_MENU_ACCEPTED);
+    settle_fade(&menu, &stats, &equipment);
     assert(menu.page == AOS_SOUL_MENU_PAGE_ENEMY && menu.enemy.cursor == 0 &&
            aos_bestiary_discovered_count(&stats) == 3 &&
            !strcmp(aos_bestiary_name(0), "Bat") && aos_bestiary_is_boss(33));
@@ -75,10 +90,12 @@ int main(void) {
            AOS_SOUL_MENU_BACK && !menu.enemy.detail && menu.page == AOS_SOUL_MENU_PAGE_ENEMY);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
            AOS_SOUL_MENU_BACK);
+    settle_fade(&menu, &stats, &equipment);
     assert(menu.page == AOS_SOUL_MENU_PAGE_HUB && menu.open);
     menu.hub_cursor = AOS_PAUSE_SOUL_SET;
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
            AOS_SOUL_MENU_ACCEPTED);
+    settle_fade(&menu, &stats, &equipment);
     assert(menu.page == AOS_SOUL_MENU_PAGE_SOUL_SET && menu.category == AOS_SOUL_MENU_RED &&
            menu.cursor[0] == 2);
     assert(!strcmp(aos_soul_menu_name(menu.category, menu.cursor[0]), "Bat"));
@@ -110,9 +127,11 @@ int main(void) {
     /* Ability is the hub's separate native entry, not a fourth Soul Set family. */
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
            AOS_SOUL_MENU_BACK);
+    settle_fade(&menu, &stats, &equipment);
     menu.hub_cursor = AOS_PAUSE_ABILITY;
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
            AOS_SOUL_MENU_ACCEPTED);
+    settle_fade(&menu, &stats, &equipment);
     assert(menu.page == AOS_SOUL_MENU_PAGE_ABILITY && menu.category == AOS_SOUL_MENU_ABILITY &&
            menu.cursor[3] == 2);
     assert(!aos_soul_menu_enabled(&menu, &stats));
@@ -121,12 +140,14 @@ int main(void) {
 
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
            AOS_SOUL_MENU_BACK);
+    settle_fade(&menu, &stats, &equipment);
     assert(menu.open && menu.page == AOS_SOUL_MENU_PAGE_HUB);
 
     /* EQUIP exposes only owned records, previews names and refreshes derived stats. */
     menu.hub_cursor = AOS_PAUSE_EQUIP;
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
            AOS_SOUL_MENU_ACCEPTED);
+    settle_fade(&menu, &stats, &equipment);
     assert(menu.page == AOS_SOUL_MENU_PAGE_EQUIP && menu.equip_slot == AOS_EQUIP_WEAPON);
     assert(!strcmp(aos_equipment_name(AOS_EQUIP_WEAPON, 7), "Gram"));
     assert(aos_equipment_choice_count(&stats, AOS_EQUIP_WEAPON) == 3);
@@ -155,7 +176,9 @@ int main(void) {
     aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
     assert(stats.accessory == 25 && stats.def == 21);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
-           AOS_SOUL_MENU_BACK && menu.page == AOS_SOUL_MENU_PAGE_HUB);
+           AOS_SOUL_MENU_BACK);
+    settle_fade(&menu, &stats, &equipment);
+    assert(menu.page == AOS_SOUL_MENU_PAGE_HUB);
 
     /* sub_0804A2A4 presents recent valid equipment before the remaining
      * table-order inventory. Re-equipping the cached Knife rotates Gram
@@ -173,6 +196,7 @@ int main(void) {
                                            AOS_EQUIP_WEAPON, 2) == 7);
     menu.hub_cursor = AOS_PAUSE_EQUIP;
     aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
+    settle_fade(&menu, &stats, &equipment);
     aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
     assert(menu.equip_selecting && menu.equip_choice == 7);
     aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_UP);
@@ -181,7 +205,9 @@ int main(void) {
            (AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_CHANGED));
     assert(stats.weapon == 0 && recent.item[AOS_EQUIP_WEAPON][3] == 7);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
-           AOS_SOUL_MENU_BACK && menu.page == AOS_SOUL_MENU_PAGE_HUB);
+           AOS_SOUL_MENU_BACK);
+    settle_fade(&menu, &stats, &equipment);
+    assert(menu.page == AOS_SOUL_MENU_PAGE_HUB);
 
     /* ITEM USE applies the four native effect kinds and never consumes keys. */
     AosItemUseRecord items[AOS_ITEM_RECORDS] = {0};
@@ -198,6 +224,7 @@ int main(void) {
     menu.hub_cursor = AOS_PAUSE_ITEM_USE;
     assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
                                  AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_ACCEPTED);
+    settle_fade(&menu, &stats, &equipment);
     assert(menu.page == AOS_SOUL_MENU_PAGE_ITEM_USE && menu.item_cursor == 0);
     assert(aos_item_choice_count(&stats) == 5 && !strcmp(aos_item_name(23), "Rotten Meat"));
     assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
@@ -223,8 +250,9 @@ int main(void) {
                                  AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_REFUSED);
     assert(stats.item_counts[25] == 1);
     assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
-                                 AOS_KEY_B, AOS_KEY_B) == AOS_SOUL_MENU_BACK &&
-           menu.page == AOS_SOUL_MENU_PAGE_HUB);
+                                 AOS_KEY_B, AOS_KEY_B) == AOS_SOUL_MENU_BACK);
+    settle_fade(&menu, &stats, &equipment);
+    assert(menu.page == AOS_SOUL_MENU_PAGE_HUB);
     /* With Flesh Golem's soul (0x13260 bit 0x100000) a harmful item heals
      * like kind 0 (sub_0804B36C), refused at full HP. */
     stats.item_counts[23] = 2;
@@ -241,6 +269,7 @@ int main(void) {
     menu.hub_cursor = AOS_PAUSE_CONFIG;
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
            AOS_SOUL_MENU_ACCEPTED);
+    settle_fade(&menu, &stats, &equipment);
     assert(menu.page == AOS_SOUL_MENU_PAGE_CONFIG && menu.config_cursor == 0);
     assert(menu.config_buttons[AOS_BUTTON_ATTACK] == 1 &&
            menu.config_buttons[AOS_BUTTON_JUMP] == 0 &&
@@ -261,6 +290,7 @@ int main(void) {
            AOS_SOUL_MENU_CONFIG_EDITED);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
            (AOS_SOUL_MENU_BACK | AOS_SOUL_MENU_CONFIG_APPLIED));
+    settle_fade(&menu, &stats, &equipment);
     assert(menu.page == AOS_SOUL_MENU_PAGE_HUB &&
            stats.buttons.action[AOS_BUTTON_ATTACK] == AOS_KEY_R &&
            stats.buttons.action[AOS_BUTTON_GUARDIAN] == AOS_KEY_B);
@@ -269,12 +299,14 @@ int main(void) {
 
     menu.hub_cursor = AOS_PAUSE_CONFIG;
     aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
+    settle_fade(&menu, &stats, &equipment);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_SELECT,
                                 AOS_KEY_SELECT) == AOS_SOUL_MENU_CONFIG_EDITED);
     assert(menu.config_buttons[AOS_BUTTON_ATTACK] == 1 &&
            menu.config_buttons[AOS_BUTTON_GUARDIAN] == 2);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
            (AOS_SOUL_MENU_BACK | AOS_SOUL_MENU_CONFIG_APPLIED));
+    settle_fade(&menu, &stats, &equipment);
 
     /* SLEEP defaults to No, waits for the host quicksave result and follows
      * the native 64-frame darkening plus 33-frame reset tail. */
@@ -316,8 +348,15 @@ int main(void) {
     (void)aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B);
     assert(menu.page == AOS_SOUL_MENU_PAGE_HUB);
 
+    /* sub_08047764 ignores START inside the menu; B on the hub runs the
+     * fade-out, then the state-7 black hold, and only then reports the
+     * close. */
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_START, AOS_KEY_START) ==
-           AOS_SOUL_MENU_CLOSED && !menu.open);
+           0);
+    assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
+           AOS_SOUL_MENU_BACK);
+    assert(settle_fade(&menu, &stats, &equipment) & AOS_SOUL_MENU_CLOSED);
+    assert(!menu.open);
     puts("aos soul menu tests passed");
     return 0;
 }

@@ -10,11 +10,11 @@
  * src/code_0800B700.c). While the game mode is IN_GAME (or the
  * intro-cutscene return, mode 4) the update switches on unk_64;
  * each case owns a stage counter unk_65 (and the shared unk_66
- * timer of the cutscene cases 11-14). Several cases park a
- * priority-1 SetPlayerInput(1, 0) override in inputData every
- * frame, so playerHeldInput/playerNewInput read 0 regardless of
- * the pad while the global heldInput/newInput the entity pass
- * reads stay untouched.
+ * timer of the cutscene cases 11-14 and sub_0800FFCC's banner
+ * fade). Several cases park a priority-1 SetPlayerInput(1, 0)
+ * override in inputData every frame, so playerHeldInput/
+ * playerNewInput read 0 regardless of the pad while the global
+ * heldInput/newInput the entity pass reads stay untouched.
  *
  * This module is the host-side state channel for that dispatch:
  * the room runtime latches the case its ported counterpart owns
@@ -23,13 +23,31 @@
  * once per frame, mirroring the native per-frame SetPlayerInput
  * call through aos_input_set_player. The stage machines
  * themselves stay with their owners (room_transition,
- * quick_map_bldY, soul_menu); unk_65 here records the native
- * stage numbering for traceability, not a second implementation. */
+ * quick_map_bldY, soul_menu, the sub_0800FFCC banner fields
+ * below); unk_65 here records the native stage numbering for
+ * traceability, not a second implementation. */
 typedef struct {
     uint8_t unk_64;     /* gEwramData + 0x64: dispatch case */
     uint8_t unk_65;     /* gEwramData + 0x65: stage within the case */
-    uint8_t unk_66;     /* gEwramData + 0x66: shared counter */
+    uint16_t unk_66;    /* gEwramData + 0x66: shared counter (native u16) */
     bool unk_4cc_6;     /* unk_60.unk_4CC_6: gates cases 1/3/11 entity updates */
+    /* sub_0800FFCC area-name banner (code_0800F1FC.c): unk_42C bit
+     * 0x80 arms it at sub_080104EC's stage-2 settle end when
+     * sub_0800FCB8 returns a banner area in [0, 0xC]; unk_4CD is
+     * the routine's own stage (0 idle, 1-4 the timed sequence);
+     * unk_37C is the per-area already-shown bitmask sub_0800FE98
+     * sets and sub_0800FCB8 tests; banner_area latches the FCB8
+     * result. unk_A074_0/unk_A074_1 are the gEwramData +0xA074
+     * bitfield bits this routine owns: bit 0 suspends
+     * sub_08000B64's entity pass (and sub_0800CA40/sub_08011CD0
+     * and the case-1 exit check), bit 1 is the sub_0800C5A8
+     * menu/cutscene gate the SELECT/START edges test. */
+    uint8_t unk_4CD;
+    bool unk_42C_80;
+    int8_t banner_area;
+    uint16_t unk_37C;
+    bool unk_A074_0;
+    bool unk_A074_1;
 } AosInGameMode;
 
 /* Native unk_64 case numbers (sub_0800B700 switch). */
@@ -48,9 +66,10 @@ enum {
     AOS_INGAME_CUTSCENE_B = 11      /* cases 11-14: unk_66 camera modes */
 };
 
-/* Fresh in-game state: unk_64 = 1 (normal play). Native room init
- * clears unk_64 = unk_65 = 0 and the boot fade (case 0) walks it to
- * 1; a room loaded mid-game starts directly in play. */
+/* Fresh in-game state: unk_64 = 1 (normal play), unk_A074_1 set
+ * (the menu gate is open). Native room init clears unk_64 =
+ * unk_65 = 0 and the boot fade (case 0) walks it to 1; a room
+ * loaded mid-game starts directly in play. */
 void aos_in_game_mode_init(AosInGameMode *mode);
 
 /* Latch a new case like the native writers do: sub_08010244 ->
@@ -74,8 +93,58 @@ void aos_in_game_mode_resume(AosInGameMode *mode);
  * and every frame of cases 4 (sub_080110E4), 5 (sub_080106DC
  * calls it internally) and 6 (sub_08047764). Cases 7/8 issue no
  * SetPlayerInput in the decompiled source; cases 2 and 9-14
- * suspend the player update through the mode switch itself. */
+ * suspend the player update through the mode switch itself.
+ * The sub_0800FFCC banner never touches SetPlayerInput — it
+ * freezes the entity pass through unk_A074_0 instead. */
 bool aos_in_game_mode_locks_input(const AosInGameMode *mode);
+
+/* sub_080104EC's unk_65 == 2 tail: when BG1's scroll velocities
+ * reach zero the native code runs sub_0800FCB8 and, for a result
+ * in [0, 0xC], sets unk_42C bit 0x80 — arming sub_0800FFCC on the
+ * first case-1 frame after the transition resumes. `area` is that
+ * FCB8 result (see aos_area_banner_area); call only in range. */
+void aos_in_game_mode_arm_area_banner(AosInGameMode *mode, int area);
+
+/* One sub_0800FFCC call. GameModeInGameUpdate's case 1 runs it
+ * every frame after sub_08011CD0; call this once per unk_64 == 1
+ * frame and only then — other cases return immediately like the
+ * native `!(unk_42C & 0x80)` early-out combined with the case
+ * dispatch (the routine itself is only reached from case 1).
+ * `door_bit0` reproduces the `(unk_42C & 0x101) == 1` abort check
+ * at the top of the routine — pass true only when unk_42C bit 0
+ * is set and bit 8 clear (the runtime's door-hold approximation
+ * never produces that exact pattern; the door sets both bits).
+ * Read mode->unk_A074_0 BEFORE calling to gate the frame's entity
+ * pass: native runs sub_08000B64 before sub_0800FFCC, so the bit
+ * this call leaves decides the NEXT frame's update. */
+void aos_in_game_mode_area_banner_step(AosInGameMode *mode,
+                                       bool door_bit0);
+
+/* sub_08010244's prologue (and sub_0801093C's armed branch): a new
+ * room transition requested while the banner holds runs
+ * sub_08010144 — unk_A074_0 = 0, sub_0800C5A8(1) -> unk_A074_1 = 1,
+ * unk_4CD = 0 — then clears unk_42C bit 0x80. Cancels a pending
+ * banner without touching unk_37C (the area stays marked shown,
+ * like the native abort). */
+void aos_in_game_mode_area_banner_cancel(AosInGameMode *mode);
+
+/* sub_0800FCB8: pick the area-name banner for a room. `cell` is
+ * the castle map-table u16 under the room's map anchor (bit 15 =
+ * save room, bit 14 = warp room, bits 6-9 = area, bits 0-5 =
+ * room); `transition_room`/`save_room`/`warp_room` are the
+ * CheckRoomTransition list hit and the GetSaveRoomFlagFromMap-
+ * Position/GetWarpRoomFlagFromMapPosition cell bits resolved by
+ * the caller for the cell's decoded room; `unk_37C` is the
+ * already-shown bitmask. Returns the banner area index 0-12 or
+ * -1. The native scroll-position chain (bgInfo[1].xPos.
+ * part8.integer1 >> 8 inside GetAreaFromMapPosition) always
+ * collapses to the room's map-anchor cell for in-game scroll
+ * distances, so only (map_x, map_y) matters. The (7,13)->12,
+ * (8,9)->13, (8,10)->14, (8,11)->15 room-pair remaps are kept;
+ * results above 12 fail sub_080104EC's `<= 0xC` arm check. */
+int aos_area_banner_area(uint16_t cell, bool transition_room,
+                         bool save_room, bool warp_room,
+                         uint16_t unk_37C);
 
 /* Diagnostic case label for logs; "unknown" outside 0-14. */
 const char *aos_in_game_mode_case_name(uint8_t unk_64);

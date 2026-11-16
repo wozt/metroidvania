@@ -621,30 +621,66 @@ bit 1, freezing entity updates) and the fade path holds bit
 
 The runtime now carries the dispatch channel itself:
 `src/runtime/aos/game/aos_in_game_mode.{c,h}` models `unk_64`/`unk_65`/
-`unk_66`/`unk_4CC_6` and `aos_in_game_mode_locks_input` reproduces the
-per-frame `SetPlayerInput(1, 0)` predicate; `aria_runtime.c` latches case
+`unk_66`/`unk_4CC_6` plus the `sub_0800FFCC` banner fields (`unk_4CD`,
+the `unk_42C` bit-`0x80` arm, `unk_37C` shown bits, `unk_A074` bits 0/1)
+and `aos_in_game_mode_locks_input` reproduces the per-frame
+`SetPlayerInput(1, 0)` predicate; `aria_runtime.c` latches case
 3 from the `sub_080104EC` stage machine, case 4 from the SELECT quick map
 (with `unk_65` tracking the native stage numbering: open fade = 1, idle
 map = the stage-2 B|Select wait, close ramp = 3) and case 6 from the
 START soul menu, then applies the lock through `aos_input_set_player` so
-only the player words are masked. Cases 5, 7, 8 and 9-14 (the
-`unk_66`-timed cutscene modes) have no runtime counterpart yet, and
-`unk_4CC_6` has no writer; the entity-driven `AosForcedInput` slot still
-substitutes the global held mask rather than the player-only words
-(documented divergence). Measured on the real ROM in room 0/3
-(`tests/compare_aos_movement.py` artifacts): a state saved at the
-room-0/3 transition commit reportedly keeps `unk_64 == 4` with `0x42C ==
-0x81010000` for ~130 frames of suppressed input, then `0x01010000` while
-a door pass and a stage-2 B/Select wait hold the lock; only after a B or
-Select press does `unk_64` return to 1 — but case 4 is the quick map, so
-that reading needs re-verification (no SELECT is pressed by the
-schedule). A later stationary stop near x ~= 120 persists with input
-free; the runtime reproduces the same class of stall as enemy
-hit-stun — in `--simulate` room 0/3 Soma takes a 7-damage hit and stands
-still for ~26 frames at x ~= 186 before resuming — so the native stop is
-consistent with enemy contact damage rather than a confirmed body block.
-The dominant remaining divergence is the ~130-frame post-commit input
-suppression the runtime does not reproduce.
+only the player words are masked.
+
+The ~130-frame post-commit suppression is now identified: it is not a
+`SetPlayerInput` lock at all. At `sub_080104EC`'s stage-2 settle end
+(BG1 velocities zero) the native code runs `sub_0800FCB8`; for a
+castle-map cell that yields a banner area in `[0, 0xC]` it sets
+`unk_60.unk_42C` bit `0x80`. On the first case-1 frame after the
+transition resumes, `sub_0800FFCC` (called every case-1 frame after
+`sub_08011CD0`) runs a four-stage timed sequence — stage 0
+(`unk_4CD` 0->1) sets `unk_A074` bit 0 through the entity-update gate
+and bit 1 through `sub_0800C5A8(0)`, loads the area-name strip in the
+WIN0 band (rows 70-94) via `sub_0800FE98` and marks `unk_37C`; stages
+1-3 (`unk_66` 0x3E -> 0 -> 0x3C -> 0x60) drive the fade; stage 4 clears
+the arm and restores both `unk_A074` bits. While bit 0 holds,
+`sub_08000B64`'s entity pass — which includes Soma — does not run, and
+case 1's exit check (`&& !unk_A074_0`) and the `unk_A074_1`-gated
+SELECT/START menu edges are suspended: 189 frozen frames total
+(31 + 61 + 96 + 1), matching the measured ~130-frame remainder when
+the observation started mid-sequence. `sub_0800FCB8` refuses
+transition/save/warp rooms and the `sUnk_080E0FA4` exclusion pairs and
+shows each area name once per session (`unk_37C`). The runtime
+reproduces the arm, the stage machine, the `unk_37C` bit and the
+`unk_A074` gates: `room_transition_tick` calls
+`aos_area_banner_area`/`aos_in_game_mode_arm_area_banner` at the
+stage-2->3 boundary and the frame loops run
+`aos_in_game_mode_area_banner_step` once per play frame, skipping the
+gameplay update while `unk_A074_0` holds (the room still renders —
+the WIN0 banner strip itself is not composited). Verified in
+`--simulate` room 0/0 -> 0/3: the position holds for exactly frames
+248-436 (189 frames) after the stage-3 restore. The earlier `unk_64 ==
+4` reading was a misattribution — the measured window runs under
+`unk_64 == 1`; case 4 (`sub_080110E4`) is only reachable through the
+SELECT edge, which `unk_A074_1 = 0` blocks for the whole banner.
+Cases 5, 7, 8 and 9-14 still have no runtime counterpart:
+`sub_08010978` (case 5, the `sub_080106DC` fade transition) and
+`sub_080115D4`/`sub_080116A8`/`sub_08011AD0`/`sub_08011B2C` (cases 7/8,
+the warp-pad map picker `unk_3F4` cursor and the warp-room room swap,
+entered from the `code_08050A3C` event module) require the warp
+destination table `sUnk_08525FBC`, the BG0 castle-map display and the
+`unk_3F8`/`unk_3FC`/`unk_3FE` warp context none of which exist here;
+cases 9-14 are the `unk_66`-timed cutscene/`unk_4CC_6` event chain
+(`sub_0805AFC0`, `sub_0800CA98` credits, and the 11->12->13->14 chain
+polled by `sub_080D7F28`/`sub_080D7F48`) whose writers and completion
+subsystem are unported, and `unk_4CC_6` still has no writer. The
+entity-driven `AosForcedInput` slot still substitutes the global held
+mask rather than the player-only words (documented divergence). A
+later stationary stop near x ~= 120 persists with input free; the
+runtime reproduces the same class of stall as enemy hit-stun — in
+`--simulate` room 0/3 Soma takes a 7-damage hit and stands still for
+~26 frames at x ~= 186 before resuming — so the native stop is
+consistent with enemy contact damage rather than a confirmed body
+block.
 
 Animation palettes: every direct animation change compares the byte
 `0x080E126C[id]` with `+0x26` and, when it differs, loads that bank of

@@ -341,11 +341,94 @@ static AriaRoomTransition room_transition;
  * (sub_0800B700): the ported counterparts latch their case here —
  * room_transition -> 3, the SELECT quick map -> 4, the START soul
  * menu -> 6 — and aos_in_game_mode_locks_input reports the frames
- * the native code parks SetPlayerInput(1, 0). Cases 5 (sub_080106DC
+ * the native code parks SetPlayerInput(1, 0). Case 5 (sub_080106DC
  * transition fades), 7/8 (sub_080116A8/sub_08011AD0/sub_08011B2C
  * map warp) and 9-14 (cutscene modes) have no runtime counterpart
- * yet and stay documented in aos_in_game_mode.h. */
-static AosInGameMode in_game_mode = { .unk_64 = AOS_INGAME_PLAY };
+ * yet and stay documented in aos_in_game_mode.h. The case-1
+ * sub_0800FFCC area-name banner IS modelled: room_transition_tick
+ * arms it at the stage-2 settle end and the frame loop runs
+ * aos_in_game_mode_area_banner_step once per play frame. */
+static AosInGameMode in_game_mode = { .unk_64 = AOS_INGAME_PLAY,
+                                      .banner_area = -1,
+                                      .unk_A074_1 = true };
+
+/* sub_0800FCB8 through the runtime's map data: the banner pick for
+ * the room the transition just committed. The native routine reads
+ * bgInfo[1].xPos.part8.integer1 (scroll px >> 8) and shifts it >> 8
+ * again inside GetAreaFromMapPosition, which is always 0 for
+ * in-game scroll distances — so the checked cell is always the
+ * room's map-anchor (descriptor.map_x/map_y) entry of the castle
+ * table, the same sUnk_08116650 quick_map.castle mirrors. Returns
+ * the banner area 0-12 or -1 (no banner / already shown / map data
+ * unavailable — the no-ROM path simply never banners, matching a
+ * missing unk_88). */
+static int room_area_banner(const AriaRoom *room, const FusionRom *rom,
+                            AosQuickMap *quick_map,
+                            bool have_quick_map) {
+    if (getenv("AOS_BANNER_DEBUG"))
+        fprintf(stderr, "banner-check room %d/%d have_qm=%d rom=%p qm=%p\n",
+                room->area, room->number, have_quick_map,
+                (const void *)rom, (const void *)quick_map);
+    if (!have_quick_map || !quick_map || !rom || !rom->data) return -1;
+    /* aos_quick_map_init loads the castle table but not the area
+     * directory (aos_quick_map_visit does it lazily); the room
+     * descriptor needs it for map_x/map_y. */
+    if (!quick_map->directory.total_rooms) {
+        char dir_error[160];
+        if (!fusion_aos_read_area_directory(
+                rom, &quick_map->directory, dir_error,
+                sizeof dir_error))
+            return -1;
+    }
+    FusionAosRoomDescriptor descriptor;
+    char error[160];
+    if (!fusion_aos_read_room_descriptor(rom, &quick_map->directory,
+                                       (size_t)room->area,
+                                       (size_t)room->number, &descriptor,
+                                       error, sizeof error)) {
+        if (getenv("AOS_BANNER_DEBUG"))
+            fprintf(stderr, "banner-check descriptor fail: %s "
+                    "(game=%d total=%zu area_rooms=%zu romdata=%p)\n", error,
+                    rom->game, quick_map->directory.total_rooms,
+                    quick_map->directory.areas[room->area >= 0 &&
+                            room->area < (int)FUSION_AOS_AREA_COUNT
+                                                 ? (size_t)room->area : 0].room_count,
+                    rom->data);
+        return -1;
+    }
+    int cx = descriptor.map_x, cy = descriptor.map_y;
+    if (getenv("AOS_BANNER_DEBUG"))
+        fprintf(stderr, "banner-check descriptor map %d,%d\n", cx, cy);
+    if (cx < 0 || cx >= AOS_QUICK_MAP_WIDTH ||
+        cy < 0 || cy >= AOS_QUICK_MAP_HEIGHT)
+        return -1;
+    uint16_t cell = quick_map->castle[cy * AOS_QUICK_MAP_WIDTH + cx];
+    /* The cell's own bits 14/15 are the native save/warp flags;
+     * the transition-room list hit comes from the exported
+     * room_music.tsv row (built from the same pointers). The row
+     * is keyed by the room's own (area, number); the anchor cell
+     * decodes to that same room. */
+    bool transition = false, save = false, warp = false;
+    if (room->area >= 0 && room->area < MUSIC_AREAS &&
+        room->number >= 0 && room->number < MUSIC_ROOMS) {
+        const AosRoomMusicFlags *flags =
+            &room_music_flags[room->area][room->number];
+        transition = flags->transition;
+        save = flags->save || (cell & 0x8000) != 0;
+        warp = flags->warp || (cell & 0x4000) != 0;
+    } else {
+        save = (cell & 0x8000) != 0;
+        warp = (cell & 0x4000) != 0;
+    }
+    int banner_dbg = aos_area_banner_area(cell, transition, save, warp,
+                                          in_game_mode.unk_37C);
+    if (getenv("AOS_BANNER_DEBUG"))
+        fprintf(stderr, "banner-check room %d/%d map %d,%d cell %04x -> %d "
+                "(t%d s%d w%d shown %04x)\n",
+                room->area, room->number, cx, cy, cell, banner_dbg,
+                transition, save, warp, in_game_mode.unk_37C);
+    return banner_dbg;
+}
 
 static void room_transition_begin(AriaRoomTransition *t,
                                   const AosProjectDoor *door) {
@@ -353,6 +436,9 @@ static void room_transition_begin(AriaRoomTransition *t,
     t->active = true;
     t->stage = 1;           /* stage 0 (fade + cleanup) ran inline */
     t->settle_left = 1;
+    /* sub_08010244's prologue: an armed area banner is aborted
+     * through sub_08010144 before unk_64 = 3 latches. */
+    aos_in_game_mode_area_banner_cancel(&in_game_mode);
     /* sub_08010244 latches unk_64 = 3, unk_65 = 0. */
     aos_in_game_mode_enter(&in_game_mode, AOS_INGAME_ROOM_TRANSITION,
                            false);
@@ -370,7 +456,10 @@ static void room_transition_begin(AriaRoomTransition *t,
 static int room_transition_tick(AriaRoomTransition *t,
                                 SDL_Renderer *renderer, AriaRoom *room,
                                 SDL_Texture **background, AosSoma *soma,
-                                int *cam_x, int *cam_y) {
+                                int *cam_x, int *cam_y,
+                                const FusionRom *rom,
+                                AosQuickMap *quick_map,
+                                bool have_quick_map) {
     /* unk_65 mirrors the native stage this frame's branch runs:
      * the runtime's stage 1 commit is native stage 1 (the
      * sub_08010350/sub_0800F9EC load), stage 2 the sub_0800ED24
@@ -401,6 +490,13 @@ static int room_transition_tick(AriaRoomTransition *t,
         /* unk_65 == 2: sub_0800ED24 scroll settle; the display stays
          * blanked until BG1's velocities reach zero. */
         if (--t->settle_left > 0) return 0;
+        /* The velocity-zero tail: sub_0800FCB8 picks the area-name
+         * banner and, for a result in [0, 0xC], sets unk_42C bit
+         * 0x80 — sub_0800FFCC then owns the ~190-frame entity
+         * freeze on the case-1 frames that follow. */
+        aos_in_game_mode_arm_area_banner(
+            &in_game_mode, room_area_banner(room, rom, quick_map,
+                                            have_quick_map));
         t->stage = 3;
         return 0;
     }
@@ -1259,6 +1355,21 @@ int aria_runtime_main(int argc, char **argv) {
          * headless, so only the room data swap and arrival placement run. */
         SDL_Texture *sim_background = NULL;
         long sim_room_changes = 0;
+        /* sub_0800FCB8's castle map table for the area-banner arm at
+         * the transition settle end: the headless path binds the
+         * same ROM the room-dialogue resolver opened eagerly above
+         * (and the room_music.tsv flags sub_08013960's save/warp/
+         * transition bits come from). Without --rom the banner
+         * simply never arms — the native unk_88 map data would be
+         * absent too. */
+        AosQuickMap sim_quick_map = {0};
+        bool sim_have_quick_map = false;
+        char sim_error[160];
+        if (room_dialogue_rom.data)
+            sim_have_quick_map =
+                aos_quick_map_init(&sim_quick_map, &room_dialogue_rom,
+                                   sim_error, sizeof sim_error);
+        (void)load_room_music(DEFAULT_ROOM_MUSIC);
         for (long frame = 0; frame < simulate_frames; ++frame) {
             /* sub_080104EC: while the transition stage machine runs the
              * room update is suspended; the stage-1 tick performs the
@@ -1266,7 +1377,12 @@ int aria_runtime_main(int argc, char **argv) {
             if (room_transition.active) {
                 int tr = room_transition_tick(&room_transition, NULL, &room,
                                               &sim_background, &soma,
-                                              &cam_x, &cam_y);
+                                              &cam_x, &cam_y,
+                                              &room_dialogue_rom,
+                                              sim_have_quick_map
+                                                  ? &sim_quick_map
+                                                  : NULL,
+                                              sim_have_quick_map);
                 if (tr == 1) {
                     printf("Aria simulate: transition commit frame %ld -> %d/%d\n",
                            frame, room.area, room.number);
@@ -1279,6 +1395,14 @@ int aria_runtime_main(int argc, char **argv) {
                     printf("Aria simulate: transition restore frame %ld\n", frame);
                 if (room_transition.active) continue;
             }
+            /* sub_0800FFCC runs at the tail of case 1's dispatch,
+             * after sub_08011CD0: the unk_A074_0 bit the previous
+             * call left gates this frame's sub_08000B64 entity
+             * pass, then the stage machine advances once. */
+            bool sim_banner_freeze = in_game_mode.unk_A074_0;
+            aos_in_game_mode_area_banner_step(
+                &in_game_mode, (aria_pickup_state.global_flags & 0x101) == 1);
+            if (sim_banner_freeze) continue;
             if (!moves_override) soma.moves = progress.abilities[0] & 0x1Fu;
             soma.abilities = progress.flags;
             soma.guardian_alive = false;
@@ -2100,7 +2224,10 @@ int aria_runtime_main(int argc, char **argv) {
             if (room_transition.active) {
                 int tr = room_transition_tick(&room_transition, renderer,
                                               &room, &background, &soma,
-                                              &cam_x, &cam_y);
+                                              &cam_x, &cam_y, &opening_rom,
+                                              have_quick_map ? &quick_map
+                                                             : NULL,
+                                              have_quick_map);
                 if (tr == 1) {
                     /* The commit landed: the same bookkeeping the
                      * inline take_exit result used to run. */
@@ -2185,6 +2312,28 @@ int aria_runtime_main(int argc, char **argv) {
                 aria_wav_write(&wav, pcm, sizeof pcm);
             }
             if (!lifecycle.in_game_frame_requested) continue;
+            /* sub_0800FFCC runs at the tail of case 1's dispatch,
+             * after sub_08011CD0: the unk_A074_0 bit the previous
+             * call left gates this frame's sub_08000B64 entity
+             * pass, then the stage machine advances once. Read the
+             * bit BEFORE stepping — native runs the entity pass
+             * before sub_0800FFCC inside the same frame. */
+            bool banner_freeze = in_game_mode.unk_A074_0;
+            aos_in_game_mode_area_banner_step(
+                &in_game_mode, (aria_pickup_state.global_flags & 0x101) == 1);
+            if (banner_freeze) {
+                /* unk_A074_0 suspends sub_08000B64's entity pass,
+                 * sub_0800CA40's HUD/timer tail, sub_08011CD0 and
+                 * case 1's exit check (`&& !unk_A074_0`); the
+                 * unk_A074_1 = 0 from stage 0's sub_0800C5A8(0)
+                 * keeps the SELECT/START menu edges closed below.
+                 * The room keeps rendering — native draws the
+                 * area-name strip in the WIN0 band (rows 70-94),
+                 * which the runtime does not composite. */
+                ++step;
+                if (has_active_save) active_save.play_frames++;
+                goto aria_render_frame;
+            }
             /* +0xb==8 keeps Object20 alive for the mode-4 return pan after
              * the script's end command; the branch stays open until the
              * camera finishes recentring on Soma. */
@@ -2313,7 +2462,10 @@ int aria_runtime_main(int argc, char **argv) {
                 if (has_active_save) active_save.play_frames++;
                 continue;
             }
-            if (!soul_menu.open && have_quick_map &&
+            /* Case 1's menu edges run only while unk_A074_1 holds;
+             * sub_0800FFCC's stage 0 clears it through
+             * sub_0800C5A8(0) for the whole banner. */
+            if (!soul_menu.open && have_quick_map && in_game_mode.unk_A074_1 &&
                 (aria_input.new_input & AOS_KEY_SELECT)) {
                 char error[160];
                 if (aos_quick_map_visit(&quick_map, &opening_rom,
@@ -2336,7 +2488,12 @@ int aria_runtime_main(int argc, char **argv) {
                 if (has_active_save) active_save.play_frames++;
                 continue;
             }
-            soul_menu_event = progress.character == 0
+            /* The START edge that opens the hub is case 1's
+             * `unk_A074_1`-gated branch (sub_0801093C +
+             * sub_080473F4); while it is clear the poll sees no
+             * open request. An already-open hub (case 6) keeps
+             * unk_A074_1 set, so navigation is unaffected. */
+            soul_menu_event = progress.character == 0 && in_game_mode.unk_A074_1
                     ? aos_pause_menu_update(&soul_menu, &progress,
                                             have_equipment ? &equipment : NULL,
                                             have_item_use ? item_use : NULL, &item_vitals,
@@ -2900,8 +3057,13 @@ int aria_runtime_main(int argc, char **argv) {
                                             soma.x >> 16, soma.y >> 16);
             /* sub_08010244 latches unk_64 = 3; the sub_080104EC stage
              * machine then commits the swap on a later blanked frame
-             * (room_transition_tick at the top of the frame loop). */
-            if (!room_transition.active && (leaving || project_door)) {
+             * (room_transition_tick at the top of the frame loop).
+             * Case 1's check is `(sub_08011A44(...) == 0) &&
+             * !unk_A074_0`: on the banner's stage-0 frame the entity
+             * pass already ran but sub_0800FFCC has since set
+             * unk_A074_0, so the exit stays blocked that frame too. */
+            if (!room_transition.active && !in_game_mode.unk_A074_0 &&
+                (leaving || project_door)) {
                 room_transition_begin(&room_transition,
                                       leaving ? NULL : project_door);
                 /* unk_65 == 0 cleanup: the room's effects die with the
@@ -3112,6 +3274,7 @@ int aria_runtime_main(int argc, char **argv) {
          * (bldY = BLDY_MAX_VALUE): this frame's update ran, the
          * screen is black. Later blanked frames never reach here —
          * the stage tick continues the frame loop at its top. */
+aria_render_frame:
         if (room_transition.active) {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);

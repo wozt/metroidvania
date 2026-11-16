@@ -297,11 +297,92 @@ static void initialise_cursors(AosSoulMenu *menu, const AosStats *stats) {
         move_cursor(menu, stats, 1);
 }
 
+/* sub_08047764's state-4 entry tail: the page init each hub entry runs
+ * once the fade-out has reached black (or immediately for Sleep, whose
+ * state-3 branch enters state 6 without a fade). */
+static unsigned enter_hub_entry(AosSoulMenu *menu, const AosStats *stats,
+                                uint8_t entry) {
+    if (entry == AOS_PAUSE_ITEM_USE) {
+        menu->page = AOS_SOUL_MENU_PAGE_ITEM_USE;
+        menu->item_cursor = aos_item_choice_at(stats, 0);
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
+    if (entry == AOS_PAUSE_EQUIP) {
+        menu->page = AOS_SOUL_MENU_PAGE_EQUIP;
+        menu->equip_slot = AOS_EQUIP_WEAPON;
+        menu->equip_selecting = false;
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
+    if (entry == AOS_PAUSE_SOUL_SET) {
+        menu->page = AOS_SOUL_MENU_PAGE_SOUL_SET;
+        menu->category = AOS_SOUL_MENU_RED;
+        initialise_cursors(menu, stats);
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
+    if (entry == AOS_PAUSE_ABILITY) {
+        menu->page = AOS_SOUL_MENU_PAGE_ABILITY;
+        menu->category = AOS_SOUL_MENU_ABILITY;
+        initialise_cursors(menu, stats);
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
+    if (entry == AOS_PAUSE_SLEEP) {
+        menu->page = AOS_SOUL_MENU_PAGE_SLEEP;
+        menu->sleep_choice = 1;
+        menu->sleep_stage = AOS_SLEEP_CONFIRM;
+        menu->sleep_timer = 0;
+        /* sub_0804BD38's enter path prints no result into the bottom
+         * window, so a stale outcome from a previous visit is dropped. */
+        menu->sleep_result = AOS_SLEEP_RESULT_NONE;
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
+    if (entry == AOS_PAUSE_CONFIG) {
+        AosButtonConfig buttons = stats->buttons;
+        if (!aos_button_config_valid(&buttons)) aos_button_config_default(&buttons);
+        menu->page = AOS_SOUL_MENU_PAGE_CONFIG;
+        menu->config_cursor = 0;
+        for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
+            menu->config_buttons[action] =
+                aos_button_config_index(buttons.action[action]);
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
+    if (entry == AOS_PAUSE_ENEMY) {
+        menu->page = AOS_SOUL_MENU_PAGE_ENEMY;
+        aos_bestiary_init(&menu->enemy);
+        return AOS_SOUL_MENU_ACCEPTED;
+    }
+    menu->page = AOS_SOUL_MENU_PAGE_UNAVAILABLE;
+    return AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_UNAVAILABLE;
+}
+
+/* sub_08047764's transition arming: state 4/1 run the +0x4C fade counter
+ * at 3 steps per frame, then apply pending_page. */
+static void fade_begin_out(AosSoulMenu *menu) {
+    menu->fade = 0;
+    menu->fade_phase = AOS_MENU_FADE_OUT;
+}
+static void fade_begin_entry(AosSoulMenu *menu, uint8_t entry) {
+    menu->pending_page = entry;
+    menu->pending_close = false;
+    menu->fade_open = false;
+    fade_begin_out(menu);
+}
+static void fade_begin_hub(AosSoulMenu *menu) {
+    fade_begin_entry(menu, 0xFE);
+}
+static void fade_begin_close(AosSoulMenu *menu) {
+    menu->pending_page = 0xFF;
+    menu->pending_close = true;
+    menu->fade_open = false;
+    fade_begin_out(menu);
+}
+
 static unsigned update_hub(AosSoulMenu *menu, const AosStats *stats,
                            uint16_t new_input, uint16_t repeated_input) {
-    if (new_input & (AOS_KEY_START | AOS_KEY_B)) {
-        menu->open = false;
-        return AOS_SOUL_MENU_CLOSED;
+    /* sub_08047764 state 3: only B leaves the hub; START is ignored by
+     * every state of the pause machine. */
+    if (new_input & AOS_KEY_B) {
+        fade_begin_close(menu);
+        return AOS_SOUL_MENU_BACK;
     }
     if (repeated_input & AOS_KEY_UP) {
         menu->hub_cursor = (uint8_t)((menu->hub_cursor + AOS_PAUSE_ENTRIES - 1) %
@@ -313,56 +394,11 @@ static unsigned update_hub(AosSoulMenu *menu, const AosStats *stats,
         return AOS_SOUL_MENU_MOVED;
     }
     if (!(new_input & AOS_KEY_A)) return 0;
-    if (menu->hub_cursor == AOS_PAUSE_ITEM_USE) {
-        menu->page = AOS_SOUL_MENU_PAGE_ITEM_USE;
-        menu->item_cursor = aos_item_choice_at(stats, 0);
-        return AOS_SOUL_MENU_ACCEPTED;
-    }
-    if (menu->hub_cursor == AOS_PAUSE_EQUIP) {
-        menu->page = AOS_SOUL_MENU_PAGE_EQUIP;
-        menu->equip_slot = AOS_EQUIP_WEAPON;
-        menu->equip_selecting = false;
-        return AOS_SOUL_MENU_ACCEPTED;
-    }
-    if (menu->hub_cursor == AOS_PAUSE_SOUL_SET) {
-        menu->page = AOS_SOUL_MENU_PAGE_SOUL_SET;
-        menu->category = AOS_SOUL_MENU_RED;
-        initialise_cursors(menu, stats);
-        return AOS_SOUL_MENU_ACCEPTED;
-    }
-    if (menu->hub_cursor == AOS_PAUSE_ABILITY) {
-        menu->page = AOS_SOUL_MENU_PAGE_ABILITY;
-        menu->category = AOS_SOUL_MENU_ABILITY;
-        initialise_cursors(menu, stats);
-        return AOS_SOUL_MENU_ACCEPTED;
-    }
-    if (menu->hub_cursor == AOS_PAUSE_SLEEP) {
-        menu->page = AOS_SOUL_MENU_PAGE_SLEEP;
-        menu->sleep_choice = 1;
-        menu->sleep_stage = AOS_SLEEP_CONFIRM;
-        menu->sleep_timer = 0;
-        /* sub_0804BD38's enter path prints no result into the bottom
-         * window, so a stale outcome from a previous visit is dropped. */
-        menu->sleep_result = AOS_SLEEP_RESULT_NONE;
-        return AOS_SOUL_MENU_ACCEPTED;
-    }
-    if (menu->hub_cursor == AOS_PAUSE_CONFIG) {
-        AosButtonConfig buttons = stats->buttons;
-        if (!aos_button_config_valid(&buttons)) aos_button_config_default(&buttons);
-        menu->page = AOS_SOUL_MENU_PAGE_CONFIG;
-        menu->config_cursor = 0;
-        for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
-            menu->config_buttons[action] =
-                aos_button_config_index(buttons.action[action]);
-        return AOS_SOUL_MENU_ACCEPTED;
-    }
-    if (menu->hub_cursor == AOS_PAUSE_ENEMY) {
-        menu->page = AOS_SOUL_MENU_PAGE_ENEMY;
-        aos_bestiary_init(&menu->enemy);
-        return AOS_SOUL_MENU_ACCEPTED;
-    }
-    menu->page = AOS_SOUL_MENU_PAGE_UNAVAILABLE;
-    return AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_UNAVAILABLE;
+    if (menu->hub_cursor == AOS_PAUSE_SLEEP)
+        /* The native machine jumps state 3 -> state 6 for Sleep: no fade. */
+        return enter_hub_entry(menu, stats, menu->hub_cursor);
+    fade_begin_entry(menu, menu->hub_cursor);
+    return AOS_SOUL_MENU_ACCEPTED;
 }
 
 static int equipment_ordinal(const AosStats *stats, const AosPickupRecent *recent,
@@ -386,13 +422,10 @@ static void move_equipment_choice(AosSoulMenu *menu, const AosStats *stats, int 
 static unsigned update_equipment(AosSoulMenu *menu, AosStats *stats,
                                  const AosEquipmentTables *equipment,
                                  uint16_t new_input, uint16_t repeated_input) {
-    if (new_input & AOS_KEY_START) {
-        menu->open = false;
-        return AOS_SOUL_MENU_CLOSED;
-    }
+    /* START is ignored inside the pause machine; B fades back to the hub. */
     if (new_input & AOS_KEY_B) {
         if (menu->equip_selecting) menu->equip_selecting = false;
-        else menu->page = AOS_SOUL_MENU_PAGE_HUB;
+        else fade_begin_hub(menu);
         return AOS_SOUL_MENU_BACK;
     }
     if (!menu->equip_selecting) {
@@ -452,12 +485,9 @@ static unsigned update_item_use(AosSoulMenu *menu, AosStats *stats,
                                 const AosItemUseRecord items[AOS_ITEM_RECORDS],
                                 AosItemVitals *vitals,
                                 uint16_t new_input, uint16_t repeated_input) {
-    if (new_input & AOS_KEY_START) {
-        menu->open = false;
-        return AOS_SOUL_MENU_CLOSED;
-    }
+    /* START is ignored inside the pause machine; B fades back to the hub. */
     if (new_input & AOS_KEY_B) {
-        menu->page = AOS_SOUL_MENU_PAGE_HUB;
+        fade_begin_hub(menu);
         return AOS_SOUL_MENU_BACK;
     }
     if (repeated_input & AOS_KEY_UP) {
@@ -531,16 +561,15 @@ static unsigned update_sleep(AosSoulMenu *menu, uint16_t new_input,
 
 static unsigned update_config(AosSoulMenu *menu, AosStats *stats,
                               uint16_t new_input, uint16_t repeated_input) {
-    if (new_input & (AOS_KEY_START | AOS_KEY_B)) {
+    /* START is ignored inside the pause machine (verified against the
+     * ROM: the config page does not react to it). B applies and fades
+     * back to the hub through sub_08047764's state-1 path. */
+    if (new_input & AOS_KEY_B) {
         if (!aos_pause_config_unique(menu)) return AOS_SOUL_MENU_REFUSED;
         for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
             stats->buttons.action[action] =
                 aos_button_config_button(menu->config_buttons[action]);
-        if (new_input & AOS_KEY_START) {
-            menu->open = false;
-            return AOS_SOUL_MENU_CLOSED | AOS_SOUL_MENU_CONFIG_APPLIED;
-        }
-        menu->page = AOS_SOUL_MENU_PAGE_HUB;
+        fade_begin_hub(menu);
         return AOS_SOUL_MENU_BACK | AOS_SOUL_MENU_CONFIG_APPLIED;
     }
     if (repeated_input & AOS_KEY_UP) {
@@ -572,10 +601,8 @@ static unsigned update_config(AosSoulMenu *menu, AosStats *stats,
 
 static unsigned update_enemy(AosSoulMenu *menu, const AosStats *stats,
                              uint16_t new_input, uint16_t repeated_input) {
-    if (new_input & AOS_KEY_START) {
-        menu->open = false;
-        return AOS_SOUL_MENU_CLOSED;
-    }
+    /* START is ignored inside the pause machine; the list's B fades
+     * back to the hub through sub_08047764's state-1 path. */
     /* sub_0804D2C8: +0xC advances one intro phase per frame on the
      * list view until the steady-state footer phase. */
     if (!menu->enemy.detail && menu->enemy.intro < 2)
@@ -586,7 +613,7 @@ static unsigned update_enemy(AosSoulMenu *menu, const AosStats *stats,
     if (event == AOS_BESTIARY_ACCEPTED) return AOS_SOUL_MENU_ACCEPTED;
     if (event == AOS_BESTIARY_REFUSED) return AOS_SOUL_MENU_REFUSED;
     if (event == AOS_BESTIARY_BACK) {
-        if (!was_detail) menu->page = AOS_SOUL_MENU_PAGE_HUB;
+        if (!was_detail) fade_begin_hub(menu);
         return AOS_SOUL_MENU_BACK;
     }
     return 0;
@@ -597,11 +624,58 @@ unsigned aos_pause_menu_update(AosSoulMenu *menu, AosStats *stats,
                                const AosItemUseRecord items[AOS_ITEM_RECORDS],
                                AosItemVitals *vitals,
                                uint16_t new_input, uint16_t repeated_input) {
+    /* sub_08047764's +0x4C counter: 3 brightness steps per frame, input
+     * ignored while a transition runs. The pending page/close applies
+     * at the bottom of the fade-out, then the fade-in ramps back. */
+    if (menu->fade_phase == AOS_MENU_FADE_OUT) {
+        menu->fade = (uint8_t)(menu->fade + 3);
+        if (menu->fade > 15) {
+            menu->fade = 16;
+            if (menu->pending_close) {
+                menu->open = false;
+                menu->pending_close = false;
+                menu->pending_page = 0xFF;
+                menu->fade_open = false;
+                menu->fade_phase = AOS_MENU_FADE_NONE;
+                menu->fade = 0;
+                /* The native machine holds black a few frames (state 7)
+                 * before restoring the room. */
+                menu->room_black = 4;
+                return AOS_SOUL_MENU_CLOSED;
+            }
+            if (menu->pending_page == 0xFE)
+                menu->page = AOS_SOUL_MENU_PAGE_HUB;
+            else if (menu->pending_page != 0xFF)
+                enter_hub_entry(menu, stats, menu->pending_page);
+            menu->pending_page = 0xFF;
+            menu->fade_phase = AOS_MENU_FADE_IN;
+        }
+        return 0;
+    }
+    if (menu->fade_phase == AOS_MENU_FADE_IN) {
+        if (menu->fade <= 3) {
+            menu->fade = 0;
+            menu->fade_phase = AOS_MENU_FADE_NONE;
+            menu->fade_open = false;
+        } else
+            menu->fade = (uint8_t)(menu->fade - 3);
+        return 0;
+    }
     if (!menu->open) {
+        /* The post-close black hold: no input, no page, just the veil. */
+        if (menu->room_black) {
+            menu->room_black--;
+            return 0;
+        }
         if (!(new_input & AOS_KEY_START)) return 0;
         menu->open = true;
         menu->page = AOS_SOUL_MENU_PAGE_HUB;
         if (menu->hub_cursor >= AOS_PAUSE_ENTRIES) menu->hub_cursor = AOS_PAUSE_SOUL_SET;
+        menu->pending_page = 0xFF;
+        menu->pending_close = false;
+        /* The open fade-out covers the room, not a menu page. */
+        menu->fade_open = true;
+        fade_begin_out(menu);
         return AOS_SOUL_MENU_OPENED;
     }
     if (menu->page == AOS_SOUL_MENU_PAGE_HUB)
@@ -616,12 +690,10 @@ unsigned aos_pause_menu_update(AosSoulMenu *menu, AosStats *stats,
         return update_config(menu, stats, new_input, repeated_input);
     if (menu->page == AOS_SOUL_MENU_PAGE_ENEMY)
         return update_enemy(menu, stats, new_input, repeated_input);
-    if (new_input & AOS_KEY_START) {
-        menu->open = false;
-        return AOS_SOUL_MENU_CLOSED;
-    }
+    /* Soul Set and Ability share the bottom-page handler: START is
+     * ignored and B fades back to the hub. */
     if (new_input & AOS_KEY_B) {
-        menu->page = AOS_SOUL_MENU_PAGE_HUB;
+        fade_begin_hub(menu);
         return AOS_SOUL_MENU_BACK;
     }
     if (menu->page == AOS_SOUL_MENU_PAGE_UNAVAILABLE) return 0;

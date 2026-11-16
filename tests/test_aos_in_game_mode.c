@@ -71,6 +71,85 @@ int main(void) {
     aos_in_game_mode_resume(&mode);
     assert(mode.unk_64 == AOS_INGAME_PLAY && mode.unk_65 == 3);
 
+    /* sub_0800FFCC area banner: armed at sub_080104EC's stage-2
+     * settle end, it suspends the entity pass through unk_A074_0
+     * for 189 frames (stages 1-4: 31 + 61 + 96 + 1) after one
+     * stage-0 frame that still updates. */
+    aos_in_game_mode_init(&mode);
+    assert(mode.unk_A074_1 && !mode.unk_A074_0 && !mode.unk_42C_80);
+    /* Unarmed: the step is the native early-out. */
+    aos_in_game_mode_area_banner_step(&mode, false);
+    assert(!mode.unk_A074_0 && mode.unk_4CD == 0);
+    /* Arm for area 3 (castle cell (3<<6)|room). */
+    aos_in_game_mode_arm_area_banner(&mode, 3);
+    assert(mode.unk_42C_80 && mode.banner_area == 3);
+    /* Out-of-range results never arm (sub_080104EC's <= 0xC check). */
+    aos_in_game_mode_arm_area_banner(&mode, 13);
+    assert(mode.banner_area == 3);   /* unchanged: still armed for 3 */
+    aos_in_game_mode_init(&mode);
+    aos_in_game_mode_arm_area_banner(&mode, 13);
+    assert(!mode.unk_42C_80);
+    /* Stage 0: A074_0/A074_1 flip, unk_66 = 0x3E, unk_37C bit set,
+     * but this frame's entity pass already ran (the caller reads
+     * unk_A074_0 before stepping). */
+    aos_in_game_mode_arm_area_banner(&mode, 3);
+    assert(!mode.unk_A074_0);
+    aos_in_game_mode_area_banner_step(&mode, false);
+    assert(mode.unk_A074_0 && !mode.unk_A074_1 && mode.unk_4CD == 1);
+    assert(mode.unk_66 == 0x3E && (mode.unk_37C & (1u << 3)));
+    /* Stage 1: 31 calls of unk_66 -= 2 ending in the 0x3C reload.
+     * The stage-0 step already ran above; count every step whose
+     * PRE-call unk_A074_0 froze a frame. */
+    int frozen = 0, total = 1;   /* stage 0 already ran, unfrozen */
+    while (mode.unk_4CD != 0) {
+        bool was_frozen = mode.unk_A074_0;
+        aos_in_game_mode_area_banner_step(&mode, false);
+        ++total;
+        if (was_frozen) ++frozen;
+        assert(total < 1000);
+    }
+    /* unk_A074_0 was set by stage 0, so every step after the first
+     * froze a frame: stages 1(31) + 2(61) + 3(96) + 4(1) = 189. */
+    assert(total == 190 && frozen == 189);
+    assert(!mode.unk_42C_80 && !mode.unk_A074_0 && mode.unk_A074_1);
+    assert(mode.unk_4CD == 0 && mode.unk_66 == 0x60);
+    /* The shown bit survives: a second banner for area 3 is refused
+     * by sub_0800FCB8, so the runtime never re-arms it. */
+    assert(aos_area_banner_area((3u << 6) | 5, false, false, false,
+                                mode.unk_37C) == -1);
+    /* The door-bit abort ((unk_42C & 0x101) == 1) cancels mid-run. */
+    aos_in_game_mode_init(&mode);
+    aos_in_game_mode_arm_area_banner(&mode, 1);
+    aos_in_game_mode_area_banner_step(&mode, false);
+    aos_in_game_mode_area_banner_step(&mode, true);
+    assert(!mode.unk_42C_80 && mode.unk_4CD == 0 && !mode.unk_A074_0 &&
+           mode.unk_A074_1);
+    /* sub_08010244's prologue cancels an armed banner the same way. */
+    aos_in_game_mode_arm_area_banner(&mode, 2);
+    aos_in_game_mode_area_banner_cancel(&mode);
+    assert(!mode.unk_42C_80 && !mode.unk_A074_0 && mode.unk_A074_1);
+    /* The step only advances in case 1 like the case-1 dispatch. */
+    aos_in_game_mode_enter(&mode, AOS_INGAME_QUICK_MAP, false);
+    aos_in_game_mode_arm_area_banner(&mode, 4);
+    aos_in_game_mode_area_banner_step(&mode, false);
+    assert(mode.unk_4CD == 0 && !mode.unk_A074_0);
+
+    /* sub_0800FCB8 picks: plain cell banners, exclusions and the
+     * room-pair remaps. */
+    assert(aos_area_banner_area((5u << 6) | 10, false, false, false, 0) == 5);
+    assert(aos_area_banner_area(0xFFFF, false, false, false, 0) == -1);
+    assert(aos_area_banner_area((2u << 6) | 4, false, false, false, 0) == -1);
+    assert(aos_area_banner_area((0u << 6) | 26, false, false, false, 0) == -1);
+    assert(aos_area_banner_area((5u << 6) | 10, true, false, false, 0) == -1);
+    assert(aos_area_banner_area((5u << 6) | 10, false, true, false, 0) == -1);
+    assert(aos_area_banner_area((5u << 6) | 10, false, false, true, 0) == -1);
+    /* (13,7) remaps area 7 -> banner 12; (9,8) -> 13 fails the arm
+     * range but FCB8 still returns it. */
+    assert(aos_area_banner_area((7u << 6) | 13, false, false, false, 0) == 12);
+    assert(aos_area_banner_area((8u << 6) | 9, false, false, false, 0) == 13);
+    assert(aos_area_banner_area((8u << 6) | 10, false, false, false, 0) == 14);
+    assert(aos_area_banner_area((8u << 6) | 11, false, false, false, 0) == 15);
+
     /* Case labels cover the documented range. */
     assert(strcmp(aos_in_game_mode_case_name(3), "room_transition") == 0);
     assert(strcmp(aos_in_game_mode_case_name(4), "quick_map") == 0);

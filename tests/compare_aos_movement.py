@@ -22,10 +22,10 @@ never committed):
    walking Soma through the room 0/0 exit into room 0/3 -> "entered.state".
    A fifth "entry settle" run tapping A|B every 30 frames for
    --entry-settle-frames lets the native room-entry sequence finish
-   (the fade holds input via gEwramData +0x42C for ~130 frames; the
-   earlier reading of a following sub_080110E4 stage-2 KEY_B|
-   KEY_SELECT wait needs re-verification — case 4 is the SELECT
-   quick map, which this schedule never opens) -> "moved.state".
+   (the post-commit freeze is the sub_0800FFCC area-name banner —
+   unk_A074 bit 0 suspends the entity pass for 189 frames after the
+   sub_080104EC stage-3 restore, identified in Patch 1163; the
+   runtime reproduces it) -> "moved.state".
    Measuring before that settle compares settled runtime movement
    against a native side that is still input-locked.
 2. Native measurement: from moved.state, RIGHT held from frame 0 with
@@ -187,11 +187,11 @@ def ensure_native_states(rom, workdir, lab, story_frames, pulse,
     if not os.path.exists(entered_state):
         sys.exit("entered state-out failed")
     # The walk ends the frame the room-0/3 transition commits, so the
-    # saved state still sits inside the native entry sequence: the fade
-    # (gEwramData +0x42C bit 15) suppresses all input for ~130 frames,
-    # then a further input-locked sequence (reported as unk_64 == 4,
-    # which is the quick-map case and needs re-verification) holds
-    # SetPlayerInput(1, 0). Pure A taps never satisfy a B|Select
+    # saved state still sits inside the native entry sequence: the
+    # sub_0800FFCC area-name banner (unk_A074 bit 0, 189 frozen
+    # frames) plus the door pass's unk_42C 0x101 bits suppress input
+    # for ~200 frames after the stage-3 restore. Pure A taps never
+    # satisfy a B|Select
     # wait, so the settle
     # taps A|B together: A keeps dialogue advancing and B both satisfies
     # the stage and swings the whip (clearing the room's zombies, which
@@ -220,11 +220,12 @@ def native_measure(rom, state, workdir, lab, frames, direction):
     posX/posY peeks. Returns list of (frame, x16.16, y16.16).
 
     B is tapped together with A: the earlier measurement reported a
-    stage-2 KEY_B | KEY_SELECT wait (sub_080110E4 stage unk_65 == 2)
-    while game-mode case 4 held SetPlayerInput(1, 0); the case-4
-    identity needs re-verification, but the B taps keep whichever
-    native wait exists satisfied so the native side is not stuck
-    input-locked. The runtime script taps the same mask, so both
+    stage-2 KEY_B | KEY_SELECT wait while game-mode case 4 held
+    SetPlayerInput(1, 0); that reading was resolved in Patch 1163 —
+    the post-commit freeze is the sub_0800FFCC banner (unk_A074 bit
+    0), not case 4 — but the B taps keep whichever native wait
+    exists satisfied so the native side is not stuck input-locked.
+    The runtime script taps the same mask, so both
     sides whip-swing symmetrically."""
     base = RIGHT if direction == "right" else LEFT
     keys = tap_keys(frames, base, A_EVERY, A | 2)

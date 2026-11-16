@@ -113,13 +113,51 @@ static const char *drop_item_name(uint16_t id) {
     return "Unknown";
 }
 
+/* sub_08047764's +0x4C brightness counter rendered into the pause
+ * texture: the native BLDY brightness write dims the whole screen
+ * toward black at 3/16 per frame. The open fade-out covers the room,
+ * so it is a black veil at fade/16 alpha over whatever is beneath;
+ * every other phase keeps the page pixels and bakes (16-fade)/16 into
+ * them, which dims the old page on the way out and brightens the new
+ * one on the way in. */
+static void pause_transition_pixels(SDL_Texture *texture,
+                                    const AosSoulMenu *menu,
+                                    uint8_t *pixels) {
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    if (menu->fade_phase == AOS_MENU_FADE_OUT && menu->fade_open) {
+        memset(pixels, 0, (size_t)VIEW_W * VIEW_H * 4);
+        SDL_SetTextureAlphaMod(texture, (int)(menu->fade * 255 / 16));
+        return;
+    }
+    SDL_SetTextureAlphaMod(texture, 255);
+    if (menu->fade_phase == AOS_MENU_FADE_NONE) return;
+    unsigned keep = 16 - menu->fade;
+    for (size_t i = 0; i < (size_t)VIEW_W * VIEW_H; ++i) {
+        pixels[i * 4 + 0] = (uint8_t)(pixels[i * 4 + 0] * keep / 16);
+        pixels[i * 4 + 1] = (uint8_t)(pixels[i * 4 + 1] * keep / 16);
+        pixels[i * 4 + 2] = (uint8_t)(pixels[i * 4 + 2] * keep / 16);
+    }
+}
+
 bool draw_native_pause_hub(SDL_Renderer *renderer, SDL_Texture *texture,
                                   AosPauseGraphics *graphics,
                                   const AosSoulMenu *menu, const AosStats *stats,
                                   const AosSoma *soma, uint32_t play_frames) {
-    if (!renderer || !texture || !graphics || !menu || !stats || !soma ||
-        !menu->open || menu->page != AOS_SOUL_MENU_PAGE_HUB)
+    if (!renderer || !texture || !graphics || !menu || !stats || !soma)
         return false;
+    /* After a close the native machine holds black a few frames
+     * (state 7) before the room is shown again. */
+    if (!menu->open) {
+        if (!menu->room_black) return false;
+        static uint8_t veil[VIEW_W * VIEW_H * 4];
+        memset(veil, 0, sizeof veil);
+        SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+        SDL_SetTextureAlphaMod(texture, 255);
+        if (!SDL_UpdateTexture(texture, NULL, veil, VIEW_W * 4)) return false;
+        SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
+        return SDL_RenderTexture(renderer, texture, NULL, &destination);
+    }
+    if (menu->page != AOS_SOUL_MENU_PAGE_HUB) return false;
     AosPauseHubValues values = {
         .hp = soma->hp,
         .mp = stats->mp,
@@ -137,9 +175,10 @@ bool draw_native_pause_hub(SDL_Renderer *renderer, SDL_Texture *texture,
     memcpy(values.stats, stats->current, sizeof values.stats);
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_hub(graphics, &values, menu->hub_cursor,
-                                       pixels, sizeof pixels) ||
-        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+                                       pixels, sizeof pixels))
         return false;
+    pause_transition_pixels(texture, menu, pixels);
+    if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
@@ -169,9 +208,10 @@ bool draw_native_soul_set(SDL_Renderer *renderer, SDL_Texture *texture,
 
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_soul_set(graphics, &values,
-                                            pixels, sizeof pixels) ||
-        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+                                            pixels, sizeof pixels))
         return false;
+    pause_transition_pixels(texture, menu, pixels);
+    if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
@@ -234,9 +274,10 @@ bool draw_native_equip(SDL_Renderer *renderer, SDL_Texture *texture,
 
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_equip(graphics, &values,
-                                         pixels, sizeof pixels) ||
-        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+                                         pixels, sizeof pixels))
         return false;
+    pause_transition_pixels(texture, menu, pixels);
+    if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
@@ -250,9 +291,10 @@ bool draw_native_config(SDL_Renderer *renderer, SDL_Texture *texture,
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_config(graphics, menu->config_buttons,
                                           menu->config_cursor,
-                                          pixels, sizeof pixels) ||
-        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+                                          pixels, sizeof pixels))
         return false;
+    pause_transition_pixels(texture, menu, pixels);
+    if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
@@ -266,9 +308,10 @@ bool draw_native_sleep(SDL_Renderer *renderer, SDL_Texture *texture,
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_sleep(graphics, menu->sleep_available,
                                          menu->sleep_result,
-                                         pixels, sizeof pixels) ||
-        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+                                         pixels, sizeof pixels))
         return false;
+    pause_transition_pixels(texture, menu, pixels);
+    if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
@@ -290,9 +333,10 @@ bool draw_native_ability(SDL_Renderer *renderer, SDL_Texture *texture,
     }
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_ability(graphics, &values,
-                                           pixels, sizeof pixels) ||
-        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+                                           pixels, sizeof pixels))
         return false;
+    pause_transition_pixels(texture, menu, pixels);
+    if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
@@ -324,9 +368,10 @@ bool draw_native_item_use(SDL_Renderer *renderer, SDL_Texture *texture,
         values.selected = menu->item_cursor;
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_item_use(graphics, &values,
-                                            pixels, sizeof pixels) ||
-        !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+                                            pixels, sizeof pixels))
         return false;
+    pause_transition_pixels(texture, menu, pixels);
+    if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
@@ -459,8 +504,11 @@ bool draw_native_enemy(SDL_Renderer *renderer, SDL_Texture *texture,
                                                     pixels, sizeof pixels);
     if (ok && menu->enemy.detail && objects)
         enemy_portrait_blit(objects, menu->enemy.cursor, pixels);
-    if (!ok || !SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
-        return false;
+    if (!ok) return false;
+    /* The enemy detail portrait is part of the page pixels, so the
+     * transition dim applies after it is blitted. */
+    pause_transition_pixels(texture, menu, pixels);
+    if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4)) return false;
     SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
@@ -480,8 +528,9 @@ bool draw_native_quick_map(SDL_Renderer *renderer, SDL_Texture *texture,
     return SDL_RenderTexture(renderer, texture, NULL, &destination);
 }
 
-/* Source-adapted slices of sub_080473F4 / sub_08047764. Native tile, icon,
- * description and transition rendering remain separate future work. */
+/* Source-adapted slices of sub_080473F4 / sub_08047764. Native tile, icon
+ * and description rendering remain separate future work; the +0x4C
+ * fade counter is composited by pause_transition_pixels above. */
 void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
                            const AosStats *stats, const AosEquipmentTables *equipment,
                            const AosItemUseRecord items[AOS_ITEM_RECORDS],
@@ -512,7 +561,7 @@ void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
                          : "[pending]");
             debug_text(renderer, 4 + entry, line);
         }
-        debug_text(renderer, 13, "A select  B/Start close");
+        debug_text(renderer, 13, "A select  B close");
         return;
     }
     if (menu->page == AOS_SOUL_MENU_PAGE_ENEMY) {
@@ -543,7 +592,7 @@ void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
                 debug_text(renderer, 2 + row * 2, line);
             }
             debug_text(renderer, 14, "D-pad move  L/R page  A details");
-            debug_text(renderer, 15, "B back  Start close");
+            debug_text(renderer, 15, "B back");
             return;
         }
         const AosEnemyStats *record = &objects->enemies[enemy].stats;
@@ -594,7 +643,7 @@ void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
         }
         debug_text(renderer, 12, "A/Right next  Left previous");
         debug_text(renderer, 13, "Select defaults");
-        debug_text(renderer, 14, "B apply/back  Start apply/close");
+        debug_text(renderer, 14, "B apply/back");
         if (!aos_pause_config_unique(menu))
             debug_text(renderer, 16, "Duplicate assignment - change before exit");
         return;
@@ -647,7 +696,7 @@ void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
                              : NULL);
         debug_text(renderer, 15, line);
         debug_text(renderer, 17, "A use  Up/Down select");
-        debug_text(renderer, 18, "B back  Start close");
+        debug_text(renderer, 18, "B back");
         return;
     }
     if (menu->page == AOS_SOUL_MENU_PAGE_EQUIP) {
@@ -668,7 +717,7 @@ void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
                      stats->current[AOS_STAT_INT], stats->current[AOS_STAT_LCK]);
             debug_text(renderer, 8, line);
             debug_text(renderer, 11, "Up/Down slot  A choose");
-            debug_text(renderer, 12, "B back  Start close");
+            debug_text(renderer, 12, "B back");
             return;
         }
         snprintf(line, sizeof line, "%s", aos_equipment_slot_name(menu->equip_slot));
@@ -703,14 +752,14 @@ void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
                      stats->def, preview.def);
             debug_text(renderer, 14, line);
         }
-        debug_text(renderer, 16, "A equip  B cancel  Start close");
+        debug_text(renderer, 16, "A equip  B cancel");
         return;
     }
     if (menu->page == AOS_SOUL_MENU_PAGE_UNAVAILABLE) {
         snprintf(line, sizeof line, "%s", aos_pause_entry_name(menu->hub_cursor));
         debug_text(renderer, 0, line);
         debug_text(renderer, 2, "This native page is not reconstructed yet.");
-        debug_text(renderer, 4, "B return  Start close");
+        debug_text(renderer, 4, "B return");
         return;
     }
     snprintf(line, sizeof line, "SOUL EQUIPMENT  <%s>",
@@ -719,7 +768,7 @@ void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
     debug_text(renderer, 1, menu->page == AOS_SOUL_MENU_PAGE_SOUL_SET
                                 ? "L/R family  Up/Down select"
                                 : "ABILITY  Up/Down select");
-    debug_text(renderer, 2, "A equip/toggle  B back  Start close");
+    debug_text(renderer, 2, "A equip/toggle  B back");
 
     int choices = aos_soul_menu_count(menu->category) +
                   (menu->category == AOS_SOUL_MENU_ABILITY ? 0 : 1);

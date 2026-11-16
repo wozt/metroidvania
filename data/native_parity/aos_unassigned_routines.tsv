@@ -1051,11 +1051,8 @@ aos:c:src/code_0800F1FC.c:sub_0800F678	sub_0800F678	unclassified		technical	excl
 aos:c:src/code_0800F1FC.c:sub_0800F750	sub_0800F750	unclassified		technical	exclusive_callees	c_function	0x0800F750	src/code_0800F1FC.c	433	4	1
 aos:c:src/code_0800F1FC.c:sub_0800F92C	sub_0800F92C	unclassified		technical	exclusive_callees	c_function	0x0800F92C	src/code_0800F1FC.c	549	1	4
 aos:c:src/code_0800F1FC.c:sub_0800FBD8	sub_0800FBD8	unclassified		technical	exclusive_callees	c_function	0x0800FBD8	src/code_0800F1FC.c	667	3	3
-aos:c:src/code_0800F1FC.c:sub_0800FCB8	sub_0800FCB8	unclassified				c_function	0x0800FCB8	src/code_0800F1FC.c	794	2	6
 aos:c:src/code_0800F1FC.c:sub_0800FCB8_inline_0	sub_0800FCB8_inline_0	unclassified				c_function		src/code_0800F1FC.c	774	1	0
 aos:c:src/code_0800F1FC.c:sub_0800FDC8	sub_0800FDC8	unclassified				c_function	0x0800FDC8	src/code_0800F1FC.c	870	2	1
-aos:c:src/code_0800F1FC.c:sub_0800FE98	sub_0800FE98	unclassified				c_function	0x0800FE98	src/code_0800F1FC.c	963	1	5
-aos:c:src/code_0800F1FC.c:sub_0800FFCC	sub_0800FFCC	unclassified				c_function	0x0800FFCC	src/code_0800F1FC.c	1020	1	7
 aos:c:src/code_0800F1FC.c:sub_08010144	sub_08010144	unclassified				c_function	0x08010144	src/code_0800F1FC.c	1102	3	2
 aos:c:src/code_0800F1FC.c:sub_08010244_inline_0	sub_08010244_inline_0	unclassified				c_function		src/code_0800F1FC.c	1126	1	0
 aos:c:src/code_0800F1FC.c:sub_08010244_inline_1	sub_08010244_inline_1	unclassified				c_function		src/code_0800F1FC.c	1131	1	0

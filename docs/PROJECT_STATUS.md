@@ -1,3 +1,108 @@
+## Patch 1164 - sub_08047764 pause fade state machine and START-inside-pages correction
+
+- **Finding.** `sub_08047764` (the case-6 soul/pause menu update) owns a
+  `+0x4C` brightness counter that runs the whole pause machine through
+  fades: open, page changes and close all pass through a fade-out to
+  black, apply the pending page (or close) at the bottom, then fade
+  back in — except the Sleep entry, which the native state machine
+  jumps state 3 -> state 6 without a fade. The runtime previously
+  switched pages and opened/closed instantly and, divergently, let
+  START close the menu from inside every page.
+- **Port.** `AosSoulMenu` gained the native fade fields (`fade`,
+  `fade_phase`, `pending_page`, `pending_close`, `fade_open`,
+  `room_black`) and `aos_pause_menu_update` now reproduces the
+  counter: 3 brightness steps per frame, 0 -> 16 -> 0, input ignored
+  while a transition runs, the pending hub entry applied at the
+  bottom of the fade-out through `enter_hub_entry` (the source's
+  state-4 entry tail), Sleep entering instantly, hub B arming the
+  close fade, and a 4-frame post-close black hold (the native state-7
+  tail) before the room is shown again. START is now ignored inside
+  every page, matching the native machine (verified against the ROM:
+  the config page does not react to it either). The open fade-out is
+  flagged `fade_open` because it covers the room, not a menu page.
+  `aria_menus_debug.c` composites the counter host-side:
+  `pause_transition_pixels` dims page pixels by `(16 - fade) / 16`
+  and renders the open fade-out as a black veil at `fade / 16`
+  alpha; the post-close hold draws a full black veil while
+  `room_black` counts down. The debug fallbacks' hints now say
+  "B close"/"B apply/back" instead of advertising START.
+- **Evidence.** `tests/test_aos_soul_menu.c` pumps the fade to
+  settlement after every page transition (`settle_fade`) and the
+  suite passes; the state machine, event masks and page application
+  are unit-tested. The 3/16-step brightness ramp and the close's
+  black hold were verified live against the real ROM through
+  `aos_mgba_lab` (hub fade-out dims the old page, fade-in brightens
+  the new one, close holds black a few frames before the room, and
+  START is ignored inside the whole menu on the hub, Equip, Config
+  and Soul Set pages). The brightness composite remains a host
+  approximation of the native BLDY write.
+- **Still missing.** The native fade drives the BLDY register over
+  BG/OBJ layers and the menu's OBJ cursor/icon layers still do not
+  fade with the pages; the exact native stage boundaries (which
+  `unk_65`-style substate each fade phase maps to) are not
+  frame-verified against a capture.
+- Validation: warning-clean build, `ctest`/`fusion_dashboard
+  --run-tests` (228 passed, 0 failed) and `fusion_check_generated`
+  in this cycle.
+
+## Patch 1163 - sub_0800FFCC area-name banner owns the post-transition input freeze
+
+- **Finding.** The ~130-frame input suppression measured after the
+  room-0/3 transition commit is not a `SetPlayerInput` lock and not
+  case 4 (`sub_080110E4`, the SELECT quick map — unreachable without
+  SELECT, which `unk_A074_1 = 0` blocks for the whole sequence). At
+  `sub_080104EC`'s stage-2 settle end (`code_0800F1FC.c:1332-1337`)
+  `sub_0800FCB8` picks an area-name banner from the castle map cell
+  under the room's map anchor and, for a result in `[0, 0xC]`, sets
+  `unk_60.unk_42C` bit `0x80`. Every case-1 frame then runs
+  `sub_0800FFCC` (`code_0800F1FC.c:1020`): stage 0 (`unk_4CD`)
+  suspends the entity pass through `unk_A074` bit 0
+  (`sub_08000B64`'s gate), closes the menu gate through bit 1
+  (`sub_0800C5A8(0)`), loads the WIN0-band area strip via
+  `sub_0800FE98` and marks `unk_37C`; stages 1-3 tick `unk_66`
+  (0x3E -> 0 -> 0x3C -> 0x60) through the fade; stage 4 restores
+  both bits. The door/Object00 `0x101` bits and `sub_0800C5A8` are a
+  separate, shorter door-pass freeze, not this lock.
+- **Port.** `aos_in_game_mode` gained the banner fields (`unk_4CD`,
+  `unk_42C_80`, `banner_area`, `unk_37C`, `unk_A074_0/1`, `unk_66`
+  widened to u16) plus `aos_in_game_mode_arm_area_banner`,
+  `aos_in_game_mode_area_banner_step` (one `sub_0800FFCC` call),
+  `aos_in_game_mode_area_banner_cancel` (`sub_08010244`'s prologue /
+  `sub_0801093C` abort) and the pure `aos_area_banner_area` predicate
+  reproducing `sub_0800FCB8` (transition/save/warp room refusal, the
+  `sUnk_080E0FA4` exclusion pairs, the (7,13)/(8,9)/(8,10)/(8,11)
+  remaps, the `unk_37C` once-per-area bit). `aria_runtime.c` arms at
+  the `room_transition_tick` stage-2->3 boundary via the quick-map
+  castle table + room descriptor + `room_music.tsv` flags (headless
+  `--simulate` binds the same ROM lazily), steps once per play frame
+  in both loops, skips the gameplay update while `unk_A074_0` holds
+  (the room still renders; the WIN0 strip is not composited), gates
+  the SELECT/START menu edges and the exit check on the `unk_A074`
+  bits, and cancels an armed banner when a new transition begins.
+- **Evidence.** `tests/test_aos_in_game_mode.c` covers the arm
+  range check, the 190-call/189-frozen-frame stage sequence, the
+  `unk_37C` shown bit, the door-bit and transition aborts, the
+  case-1-only advance and the `sub_0800FCB8` predicate table.
+  `--simulate` room 0/0 -> 0/3 with RIGHT held: banner area 0 arms
+  (castle cell `0x0003`), and the position holds for exactly frames
+  248-436 — 189 frozen frames — after the stage-3 restore, matching
+  the native stage counts (31 + 61 + 96 + 1).
+- **Still missing.** Cases 5 (`sub_080106DC` via `sub_08010978`),
+  7/8 (`sub_080116A8` warp-pad picker + `sub_08011AD0`/`sub_08011B2C`
+  warp room swap — need the `sUnk_08525FBC` destination table, the
+  BG0 castle-map display and the `unk_3F8`/`unk_3FC`/`unk_3FE` warp
+  context) and 9-14 (`sub_0805AFC0`, `sub_0800CA98` credits, the
+  `unk_66`-timed `unk_4CC_6` chain polled by `sub_080D7F28`/
+  `sub_080D7F48`) have no runtime counterpart; `unk_4CC_6` has no
+  writer; the banner's WIN0 strip/hBlank fade and the
+  `sub_0800FDC8`/`sub_08010144` display work are not composited; the
+  `room_music.tsv` flag row is OR-ed over a room's cells where the
+  native checks the single anchor cell; without `--rom` the banner
+  never arms (no castle table).
+- Validation: warning-clean build, `fusion_dashboard --run-tests`
+  228 passed / 0 failed and `fusion_check_generated` fresh in this
+  cycle.
+
 ## Patch 1162 - opening choreography corrections from a second native pass
 
 - **Re-decode.** A frame-level re-read of the Object20 opening

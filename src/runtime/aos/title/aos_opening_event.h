@@ -51,6 +51,10 @@ enum {
     AOS_OPENING_EMITTED_CAPACITY = 10,
     AOS_OPENING_DEBRIS_CAPACITY = AOS_OPENING_EMITTED_CAPACITY * 7,
     AOS_OPENING_PROJECTILE_CAPACITY = 7,
+    /* sub_08045B44 type-8 sparkles live at most the type-8 sequence's
+     * 12 frames ({2,4,4,2}); the soul orb emits one every fourth frame
+     * and each projectile one every second, so a handful stays live. */
+    AOS_OPENING_SPARK_CAPACITY = 16,
 };
 
 typedef bool (*AosOpeningTextResolver)(void *context, uint8_t id,
@@ -62,6 +66,11 @@ typedef bool (*AosOpeningTextResolver)(void *context, uint8_t id,
 typedef enum {
     AOS_OPENING_CUE_NONE,
     AOS_OPENING_CUE_ENTRY_PAN,
+    /* sub_0805CED0's case-0 -> case-1 boundary: once the spawn/reveal
+     * pan (sub_0805CCE4 through entity+0x38) reports done the native
+     * controller runs sub_08013CF0(0x1C) — MUS_28 — before the
+     * sub_0805CB74 MOSAIC transition opens the text window. */
+    AOS_OPENING_CUE_REVEAL_PAN,
     AOS_OPENING_CUE_CONFRONTATION,
     AOS_OPENING_CUE_ENEMY_APPEARS,
     AOS_OPENING_CUE_ENEMY_ATTACKS,
@@ -164,6 +173,26 @@ typedef struct {
     uint8_t events;
     bool active;
 } AosOpeningProjectile;
+
+/* A sub_08045B44 type-8 sparkle updated by sub_080450C8, emitted by
+ * sub_0805EC20's soul orb (every fourth +0xD) and sub_0805EE88's
+ * projectile (every second +0xD). Table 0x085251A8 entry 8 selects
+ * the direct-sequence update with animation 0x08525194 — frames
+ * {0x49,0x36,0x35,0x34} over ticks {2,4,4,2} — so entry/entry_tick
+ * walk that sequence and the entity deletes when it ends. */
+typedef struct {
+    int32_t x;
+    int32_t y;
+    int32_t vx;
+    int32_t vy;
+    int32_t ax;
+    int32_t ay;
+    uint8_t entry;
+    uint8_t entry_tick;
+    uint8_t kind;
+    bool started;
+    bool active;
+} AosOpeningSpark;
 
 /* sub_0806D578's death flame and generic_death's four-frame respawns around
  * the scripted Winged Skeleton. */
@@ -304,9 +333,11 @@ typedef struct {
     AosOpeningDebris debris[AOS_OPENING_DEBRIS_CAPACITY];
     AosOpeningProjectile projectiles[AOS_OPENING_PROJECTILE_CAPACITY];
     AosOpeningFlame flames[AOS_OPENING_FLAME_CAPACITY];
+    AosOpeningSpark sparks[AOS_OPENING_SPARK_CAPACITY];
     uint8_t debris_count;
     uint8_t projectile_count;
     uint8_t flame_count;
+    uint8_t spark_count;
     /* sub_0805D410 +0xB==5 at +0xD==0xD0 on entity[0x1c]: entity +0x58
      * bit 0x20 enters the Winged Skeleton's generic death, a 0x28-frame
      * blink (table
@@ -335,6 +366,13 @@ typedef struct {
     int32_t soul_turn;
     uint32_t soul_heading;
     uint16_t soul_age;
+    /* sub_0805EC20's +0xA/+0xD lifetime: state 0 counts the creation
+     * 0xC8 down and reloads 0x40 for state 1, whose expiry deletes the
+     * orb (+0x59 bit 8) — the same 0x108-frame total soul_age models,
+     * now split the native way so the +0xD&3 sparkle gate sees the
+     * real countdown. */
+    uint8_t soul_state;
+    uint8_t soul_timer;
     bool soul_active;
     bool soul_absorbed;
     /* sub_0800E708's obtained-soul window: 0 closed, 1 opening, 2 waiting

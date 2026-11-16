@@ -2146,11 +2146,10 @@ int aria_runtime_main(int argc, char **argv) {
         opening.dirty = false;
         aos_audio_play_song(0x1000);
         if (start_song < 0) {
+            /* sub_0805CED0 owns the song through the reveal: nothing
+             * plays during the spawn pan, and AOS_OPENING_CUE_REVEAL_PAN
+             * fires sub_08013CF0(0x1C) when it completes. */
             room_music.current_song = 0;
-            /* sub_0805CED0 starts MUS_28 after Object20's room reveal. The
-             * compact host has no reveal stage yet, so it starts with the
-             * dialogue instead of letting the room loop overwrite it. */
-            aos_room_music_change(&room_music, 0x1C);
         }
         printf("Aria opening story started from Object20 parameter 3\n");
     }

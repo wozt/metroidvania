@@ -1124,6 +1124,26 @@ void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
             SDL_RenderTexture(renderer, art->texture, NULL, &rect);
         }
     }
+    /* sub_08045B44 type-8 sparkles: the entry index is the +0x6E
+     * analogue of the 0x08525194 sequence {0x49,0x36,0x35,0x34}, which
+     * the exported soul_container_spark arts already store in order;
+     * their {3,7,7,3} tick table plays the type-4 timing instead of
+     * the native type-8 {2,4,4,2}, the same documented divergence the
+     * soul-pickup trail carries. kind selects the palette bank. */
+    for (unsigned index = 0; index < actors->spark_count; ++index) {
+        const AosOpeningSpark *spark = &actors->sparks[index];
+        if (!spark->active || spark->kind >= AOS_EFFECT_KINDS) continue;
+        const __typeof__(objects->effects[0]) *art =
+            &objects->effects[spark->kind];
+        if (spark->entry >= art->def.count) continue;
+        const AriaFrame *frame = &art->frames[spark->entry];
+        if (!frame->texture) continue;
+        SDL_FRect rect = {
+            (float)((spark->x >> 16) + frame->offset_x - cam_x),
+            (float)((spark->y >> 16) + frame->offset_y - cam_y),
+            frame->w, frame->h};
+        SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+    }
 }
 
 void opening_actor_durations(

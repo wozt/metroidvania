@@ -3,6 +3,7 @@
 
 #include <string.h>
 
+#include "../core/aos_effect.h"
 #include "../core/aos_input.h"
 
 static void clear_page(AosOpeningEvent *event) {
@@ -309,10 +310,13 @@ static const AosOpeningAnimSeq *emitted_anim_seq(
 /* sub_0803F17C-style tick for one emitted child, mirroring
  * actor_anim_step: +0x6F counts frames against the current entry's
  * ticks and +0x6E advances at entry boundaries. The native +0x6C
- * bit-3 loop argument of the private sub_0805E2D8/sub_0805E5D4
- * callbacks is not yet traced, so the sequence wraps like the
- * pre-tick age model did instead of latching an end bit; children
- * without a bound sequence keep only their age counter. */
+ * bit-3 loop argument is now traced: every sub_0803F2C8 call in the
+ * emission path — the type-8 creator sub_0805E260, the type-10
+ * creator sub_0805E528 and the sub_0805E5D4 animation switches —
+ * passes r3=1 (sub_0805E2D8 never re-selects an animation), so the
+ * sequences loop and never latch an end bit — the wrap below is the
+ * faithful behavior, not a fallback. Children without a bound
+ * sequence keep only their age counter. */
 static void emitted_anim_step(AosOpeningActors *actors,
                               AosOpeningEntity *entity) {
     const AosOpeningAnimSeq *seq = emitted_anim_seq(actors, entity);
@@ -383,6 +387,10 @@ static void begin_opening_soul(AosOpeningActors *actors) {
     actors->soul_speed = 0x30000;
     actors->soul_turn = 0;
     actors->soul_age = 0;
+    /* sub_0805EC20's +0xA/+0xD: 0xC8 frames of homing flight, then a
+     * 0x40-frame second state whose expiry deletes the orb. */
+    actors->soul_state = 0;
+    actors->soul_timer = 0xC8;
     actors->soul_active = true;
     actors->soul_absorbed = false;
     actors->soul_arrived = false;
@@ -400,24 +408,91 @@ static void begin_opening_soul(AosOpeningActors *actors) {
     }
 }
 
+/* sub_0802D5EC(0x200000): (RandomNumberGenerator() & 0x1FFFFF) -
+ * 0x100000, the signed pixel offset both opening emitters add to a
+ * sparkle's spawn position (two draws, one per axis). */
+static int32_t opening_spark_offset(AosOpeningActors *actors) {
+    uint32_t random = actors->random
+                          ? actors->random(actors->motion_context) : 0;
+    return (int32_t)(random & 0x1FFFFFu) - 0x100000;
+}
+
+/* The tail of sub_0805EC20/sub_0805EE88's sparkle block: each live
+ * sub_08045B44 handle gets +0x48/+0x4C = -entity velocity / 4 and
+ * keeps the factory's +0x50/+0x54 = entity velocity / 64 arguments
+ * (both C-truncated divisions, matching the +0x3F rounding idiom).
+ * `kind` selects the palette-bank container spark art: the soul orb's
+ * +0x5A nibble is the red soul's bank (kind 0) and the projectile's
+ * sub_0803B924 palette argument 6 lands on bank 6 (kind 3). */
+static void append_opening_spark(AosOpeningActors *actors, int32_t x,
+                                 int32_t y, int32_t vx, int32_t vy,
+                                 uint8_t kind) {
+    /* The native entities are freed on sequence end; the portable
+     * pool recycles an inactive slot before growing. */
+    unsigned slot = actors->spark_count;
+    for (unsigned i = 0; i < actors->spark_count; ++i)
+        if (!actors->sparks[i].active) {
+            slot = i;
+            break;
+        }
+    if (slot >= AOS_OPENING_SPARK_CAPACITY) return;
+    if (slot == actors->spark_count) ++actors->spark_count;
+    actors->sparks[slot] = (AosOpeningSpark){
+        .x = x + opening_spark_offset(actors),
+        .y = y + opening_spark_offset(actors),
+        .vx = -vx / 4,
+        .vy = -vy / 4,
+        .ax = vx / 64,
+        .ay = vy / 64,
+        .kind = kind,
+        .active = true,
+    };
+}
+
+/* sub_080450C8: +0xA==0's first update only binds the sprite,
+ * animation and draw callback (the shared tail still steps the
+ * sequence once); +0xA==1 integrates +0x40/+0x44 by +0x48/+0x4C and
+ * grows the velocities by +0x50/+0x54, then sub_0803F17C's return 3
+ * deletes the entity when the {2,4,4,2} sequence ends. */
+static const uint8_t opening_spark_ticks[4] = {2, 4, 4, 2};
+static void update_sparks(AosOpeningActors *actors) {
+    for (unsigned i = 0; i < actors->spark_count; ++i) {
+        AosOpeningSpark *spark = &actors->sparks[i];
+        if (!spark->active) continue;
+        if (spark->started) {
+            spark->x += spark->vx;
+            spark->y += spark->vy;
+            spark->vx += spark->ax;
+            spark->vy += spark->ay;
+        } else {
+            spark->started = true;
+        }
+        if (++spark->entry_tick >= opening_spark_ticks[spark->entry]) {
+            spark->entry_tick = 0;
+            if (++spark->entry >= 4) {
+                spark->active = false;
+                continue;
+            }
+        }
+    }
+}
+
 /* sub_0805EC20's homing, identical in structure to sub_0805EE88 and
  * the red-soul path: sub_0802D408 turns the stored heading toward the
  * player by at most +0x1C (growing 0x2A/frame to 0x4000) while +0x20
  * accelerates 0x1800/frame to 0x80000. sub_0805EC20 then adds its own
  * lifetime the projectile does not share: +0xD=0xC8 in +0xA==0 and
  * +0xD=0x40 in +0xA==1, after which +0x59 bit 8 removes the orb —
- * 0x108 frames of flight maximum. sub_0805F0B0 is the early-out: the
- * player-touch callback plays SE 0xBC and removes the orb, which the
- * port approximates with a 0x10-pixel box on the absorption target
- * (the native check is the entity collision callback, not decoded
- * further here). */
+ * 0x108 frames of flight maximum. Every fourth +0xD value (+0xD&3
+ * clear, read before the tail decrement) emits a type-8 sparkle at
+ * the orb's position plus two sub_0802D5EC(0x200000) offsets.
+ * sub_0805F0B0 is the early-out: the player-touch callback plays
+ * SE 0xBC and removes the orb, which the port approximates with a
+ * 0x10-pixel box on the absorption target (the native check is the
+ * entity collision callback, not decoded further here). */
 static void update_opening_soul(AosOpeningActors *actors) {
     if (!actors->soul_active) return;
     ++actors->soul_age;
-    if (actors->soul_age >= 0xC8 + 0x40) {
-        actors->soul_active = false;
-        return;
-    }
     int32_t target_x = AOS_OPENING_SOMA_X << 16;
     int32_t target_y = (AOS_OPENING_SOMA_Y - 16) << 16;
     if (!actors->angle || !actors->sine) {
@@ -449,6 +524,23 @@ static void update_opening_soul(AosOpeningActors *actors) {
             (actors->soul_speed >> 8);
         actors->soul_x += actors->soul_vx;
         actors->soul_y += actors->soul_vy;
+    }
+    /* The sparkle block reads +0xD before the +0xA tail decrements
+     * it: every fourth value emits one type-8 sparkle. */
+    if ((actors->soul_timer & 3) == 0)
+        append_opening_spark(actors, actors->soul_x, actors->soul_y,
+                             actors->soul_vx, actors->soul_vy,
+                             AOS_EFFECT_CONTAINER_SPARK0);
+    /* sub_0805EC20's +0xA tail: state 0's expiry reloads +0xD=0x40 and
+     * advances to state 1; state 1's expiry sets +0x59 bit 8. */
+    if (actors->soul_state == 0) {
+        if (actors->soul_timer && --actors->soul_timer == 0) {
+            actors->soul_state = 1;
+            actors->soul_timer = 0x40;
+        }
+    } else if (actors->soul_timer && --actors->soul_timer == 0) {
+        actors->soul_active = false;
+        return;
     }
     /* sub_0805F0B0's touch check, approximated by the same 0x10-pixel
      * box the bolt's sub_0805EE88 margin uses on its target. */
@@ -703,6 +795,14 @@ static void update_projectiles(AosOpeningActors *actors) {
             projectile->active = false;
             continue;
         }
+        /* sub_0805EE88's sparkle block reads +0xD before the +0xA tail
+         * decrements it: every second value emits one type-8 sparkle.
+         * The bolt's sub_0803B924 palette argument 6 puts its +0x5A
+         * nibble on container-spark bank 6 (kind 3). */
+        if ((projectile->timer & 1) == 0)
+            append_opening_spark(actors, projectile->x, projectile->y,
+                                 projectile->vx, projectile->vy,
+                                 AOS_EFFECT_CONTAINER_SPARK3);
         if (projectile->timer) --projectile->timer;
         if (!projectile->timer) {
             if (projectile->state == 0) {
@@ -1040,7 +1140,8 @@ bool aos_opening_actors_blocks_script(const AosOpeningActors *actors) {
     }
 }
 
-static bool camera_update(AosOpeningActors *actors, int32_t *camera_x) {
+static bool camera_update(AosOpeningActors *actors, int32_t *camera_x,
+                          AosOpeningCue *cue) {
     /* sub_0805CCE4's per-mode sub_0800ED24 velocity args: case 0
      * 0x80<<12, case 1 0x80<<9 (1 px/frame — not 4), case 2
      * 0xE0<<10, case 3 0xFFFC0000, case 4 0xFFFF0000, case 5
@@ -1079,8 +1180,13 @@ static bool camera_update(AosOpeningActors *actors, int32_t *camera_x) {
      * whichever spawn pan is active (mode 5 reveal, or mode 0/1 on a
      * fresh spawn). Cue-driven pans only start after the script
      * advances, which itself waits on reveal_done, so the first done
-     * while scene_state is still 0 is the spawn pan's completion. */
-    if (done && actors->scene_state == 0) actors->reveal_done = true;
+     * while scene_state is still 0 is the spawn pan's completion.
+     * The native case-0 -> case-1 handoff then runs sub_08013CF0(0x1C)
+     * before sub_0805CB74's MOSAIC transition. */
+    if (done && actors->scene_state == 0) {
+        actors->reveal_done = true;
+        if (cue) *cue = AOS_OPENING_CUE_REVEAL_PAN;
+    }
     return done;
 }
 
@@ -1204,6 +1310,10 @@ AosOpeningCue aos_opening_actors_update(
          * the three opening actors get the same tick-chain step. */
         actor_anim_step(actors, actor);
     }
+    /* Sparkles are independent entities: one appended by the soul or
+     * projectile update below gets its first sub_080450C8 pass on the
+     * next frame, like every other spawned child. */
+    update_sparks(actors);
     update_debris(actors);
     update_projectiles(actors);
     update_emitted(actors);
@@ -1212,7 +1322,12 @@ AosOpeningCue aos_opening_actors_update(
     update_skeleton_death(actors);
     /* Every active pan advances each frame; scene states consume the
      * completion flag. State 3 keeps ownership of its step transition. */
-    bool camera_done = camera_update(actors, camera_x);
+    AosOpeningCue camera_cue = AOS_OPENING_CUE_NONE;
+    bool camera_done = camera_update(actors, camera_x, &camera_cue);
+    if (camera_cue != AOS_OPENING_CUE_NONE) {
+        if (output == AOS_OPENING_CUE_NONE) output = camera_cue;
+        else actors->pending_cue = camera_cue;
+    }
     if (camera_done && actors->scene_state != 3)
         actors->camera_active = false;
     /* +0xA==1's MOSAIC transition sits between the reveal pan and the
@@ -1237,16 +1352,24 @@ AosOpeningCue aos_opening_actors_update(
      * through sub_0805B5E8, which assigns every one of them the same
      * update callback sub_0805B748 — a bare sub_0803F17C animation
      * dispatch with no position or velocity work — and sub_0805D198
-     * only overrides child+0x1c's callback with sub_0805DAA0. The
-     * generic integrators exist (sub_0806D430/sub_0806D460 inside
-     * sub_080698A8, driven by sub_0806E140) and every call site in
-     * this object file belongs to other state machines — including
-     * sub_0805C628, an unrelated object's walk-on sequence whose
-     * player teleports target screen y 0xBF, not this scene. No
-     * dumped routine reads child18's +0x48, so the routine that walks
-     * Arikado left and stops him is absent from this dump; applying
-     * the stored velocity once per frame until a source-position
-     * guard keeps this partial controller bounded and honest. */
+     * only overrides child+0x1c's callback with sub_0805DAA0.
+     * Object20Update itself only dispatches the +0x30 param0 handler
+     * table; it has no per-child follower or velocity pass.
+     * sub_0805D410's child18 writes touch only +0x58 (the mirror bit),
+     * +0x59/+0x6C/+0x6D/+0x6E/+0x6F through sub_0803F2C8/sub_0803F17C
+     * and never +0x40/+0x42/+0x44/+0x46/+0x48 — so no scripted
+     * per-frame position write exists either. The generic integrators
+     * (sub_0806D430/sub_0806D460 inside sub_080698A8, driven by
+     * sub_0806E140) have call sites only in other state machines —
+     * sub_0805C628's unrelated walk-on, the scripted skeleton's
+     * approach and the emitted children's flight — and sub_0806E0D0's
+     * +0x48-family writes land on draw-slot fields, not this entity.
+     * Animation cannot move an entity: sub_0803F17C only advances
+     * +0x6D..+0x72 sequence state. No dumped routine reads child18's
+     * +0x48, so the routine that walks Arikado left and stops him is
+     * absent from this dump; applying the stored velocity once per
+     * frame until a source-position guard keeps this partial
+     * controller bounded and honest. */
     if (actors->state == 1) {
         const int32_t stop_x = 0xD0 << 16;
         if (actors->x[1] > stop_x) {

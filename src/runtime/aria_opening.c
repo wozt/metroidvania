@@ -203,6 +203,12 @@ void draw_opening_text(SDL_Renderer *renderer,
 
 void play_opening_cue(AosOpeningCue cue, AosRoomMusic *music) {
     switch (cue) {
+    case AOS_OPENING_CUE_REVEAL_PAN:
+        /* sub_0805CED0's case-0 -> case-1 handoff: sub_08013CF0(0x1C)
+         * once the spawn/reveal pan reports done, before the MOSAIC
+         * transition opens the text window. */
+        aos_room_music_change(music, 0x1C);
+        break;
     case AOS_OPENING_CUE_CONFRONTATION:
         /* sub_0805D410 state 2: MUS_16, Confrontation. */
         aos_room_music_change(music, 0x10);

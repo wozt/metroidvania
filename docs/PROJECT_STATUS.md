@@ -127,7 +127,7 @@
   extended for the new case labels, `fusion_dashboard
   --run-tests` and `fusion_check_generated` in this cycle.
 
-## Patch 1171 - opening type-8 sparkle trails and the reveal music cue
+## Patch 1173 - opening type-8 sparkle trails and the reveal music cue
 
 - **Gap.** Patch 1162's residual list still held the opening scene's
   `sub_08045B44` type-8 sparkles and the reveal-stage music handoff.

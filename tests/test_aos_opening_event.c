@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos/title/aos_opening_event.h"
+#include "aos/core/aos_effect.h"
 #include "aos/intro/aos_intro_resources.h"
 #include "aos/core/aos_soma.h"
 
@@ -538,13 +539,19 @@ static void test_intro_transition(void) {
     aos_opening_actors_init(&actors);
     int32_t camera_x = 0;
     unsigned frame = 0;
+    AosOpeningCue reveal_cue = AOS_OPENING_CUE_NONE;
     while (!actors.reveal_done && frame < 64) {
-        aos_opening_actors_update(&actors, NULL, &camera_x, 0);
+        AosOpeningCue cue =
+            aos_opening_actors_update(&actors, NULL, &camera_x, 0);
+        if (cue != AOS_OPENING_CUE_NONE) reveal_cue = cue;
         ++frame;
     }
     /* Fresh spawn: camera word 0 remaps mode 5 to mode 0, which pans
-     * right 8 pixels per frame until it passes 0x1F. */
+     * right 8 pixels per frame until it passes 0x1F. The done frame
+     * carries sub_0805CED0's case-0 -> case-1 sub_08013CF0(0x1C)
+     * handoff as AOS_OPENING_CUE_REVEAL_PAN. */
     assert(actors.reveal_done && !actors.window_open && camera_x == 32);
+    assert(reveal_cue == AOS_OPENING_CUE_REVEAL_PAN);
     for (unsigned i = 0; i < 110; ++i) {
         aos_opening_actors_update(&actors, NULL, &camera_x, 0);
         assert(!actors.window_open);
@@ -770,6 +777,97 @@ static void test_emitted_anim_ticks(void) {
     assert(knight->anim_tick == 1 && knight->anim_subframe == 0);
 }
 
+static void test_opening_sparks(void) {
+    /* sub_0805EC20/sub_0805EE88's type-8 sub_08045B44 sparkles: the
+     * soul orb emits one every fourth +0xD (read before the tail
+     * decrement), the projectile one every second; each sparkle
+     * spawns at the emitter's position plus two
+     * sub_0802D5EC(0x200000) offsets with velocity -v/4 and
+     * acceleration v/64, then lives the 0x08525194 {2,4,4,2} sequence. */
+    AosOpeningActors actors;
+    aos_opening_actors_init(&actors);
+    /* sine/angle stay NULL so the orb takes the fallback lerp and the
+     * manually stored velocity survives to the sparkle terms. */
+    aos_opening_actors_set_motion(&actors, zero_random, NULL,
+                                  NULL, NULL, NULL, NULL);
+    /* Drive the soul orb directly: the portable fields mirror the
+     * native +0xA/+0xD/+0x40/+0x44/+0x48/+0x4C the routines write. */
+    actors.soul_active = true;
+    actors.soul_state = 0;
+    actors.soul_timer = 0xC8;
+    actors.soul_x = 0x100 << 16;
+    actors.soul_y = 0x200 << 16;
+    actors.soul_vx = 0x40000;
+    actors.soul_vy = -0x20000;
+    /* First update: +0xD=0xC8 is a multiple of four, so one sparkle
+     * appends at the post-lerp position; it gets its first
+     * sub_080450C8 pass on the next frame. */
+    int32_t spawn_x = actors.soul_x +
+        ((AOS_OPENING_SOMA_X << 16) - actors.soul_x) / 8;
+    int32_t spawn_y = actors.soul_y +
+        (((AOS_OPENING_SOMA_Y - 16) << 16) - actors.soul_y) / 8;
+    aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(actors.spark_count == 1);
+    const AosOpeningSpark *spark = &actors.sparks[0];
+    /* zero_random's sub_0802D5EC(0x200000) draw yields -0x100000. */
+    assert(spark->x == spawn_x - 0x100000 &&
+           spark->y == spawn_y - 0x100000);
+    assert(spark->vx == -0x40000 / 4 && spark->vy == -(-0x20000) / 4 &&
+           spark->ax == 0x40000 / 64 && spark->ay == -0x20000 / 64);
+    assert(spark->kind == AOS_EFFECT_CONTAINER_SPARK0);
+    assert(!spark->started);
+    /* The next three +0xD values do not fire; +0xD=196 does — every
+     * fourth countdown frame. */
+    for (unsigned frame = 0; frame < 3; ++frame)
+        aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(actors.spark_count == 1);
+    aos_opening_actors_update(&actors, NULL, NULL, 0);
+    assert(actors.spark_count == 2);
+    /* The {2,4,4,2} sequence is 12 spark updates long; the first
+     * sparkle has had 15 by now and is gone (its slot may already
+     * have been recycled by a later emission). */
+    for (unsigned frame = 0; frame < 11; ++frame)
+        aos_opening_actors_update(&actors, NULL, NULL, 0);
+    unsigned live = 0;
+    for (unsigned i = 0; i < actors.spark_count; ++i)
+        live += actors.sparks[i].active != 0;
+    /* Four orb emissions so far (gates at +0xD 200/196/192/188); the
+     * first one's 12-update sequence ended on update 13, leaving
+     * exactly three live sparkles. */
+    assert(live == 3);
+    /* The orb's own +0xA/+0xD two-phase lifetime still totals 0x108
+     * frames; 16 updates in it sits in state 0's countdown. */
+    assert(actors.soul_active && actors.soul_state == 0 &&
+           actors.soul_timer == 0xC8 - 16);
+    actors.soul_active = false;
+
+    /* The projectile's gate is +0xD&1: even countdown values only,
+     * bank-6 spark kind, same velocity terms. */
+    actors.projectile_count = 1;
+    actors.projectiles[0] = (AosOpeningProjectile){
+        .x = 0x80 << 16, .y = 0x90 << 16, .vx = 0x8000, .vy = 0,
+        .timer = 0xC8, .state = 1, .active = true};
+    unsigned bank6_before = 0;
+    for (unsigned i = 0; i < actors.spark_count; ++i)
+        bank6_before += actors.sparks[i].active &&
+                        actors.sparks[i].kind == AOS_EFFECT_CONTAINER_SPARK3;
+    for (unsigned frame = 0; frame < 4; ++frame)
+        aos_opening_actors_update(&actors, NULL, NULL, 0);
+    /* Gate values read: 0xC8, 0xC7, 0xC6, 0xC5 -> two even hits
+     * (0xC8, 0xC6). */
+    unsigned bank6 = 0;
+    bool saw_terms = false;
+    for (unsigned i = 0; i < actors.spark_count; ++i) {
+        const AosOpeningSpark *spark = &actors.sparks[i];
+        if (!spark->active || spark->kind != AOS_EFFECT_CONTAINER_SPARK3)
+            continue;
+        ++bank6;
+        if (spark->vx == -0x8000 / 4 && spark->ax == 0x8000 / 64)
+            saw_terms = true;
+    }
+    assert(bank6 == bank6_before + 2 && saw_terms);
+}
+
 static bool resolve_rom_text(void *context, uint8_t id,
                              const uint8_t **script, size_t *script_size) {
     return aos_intro_resources_entry(context, 1, id, script, script_size);
@@ -791,6 +889,7 @@ int main(int argc, char **argv) {
     test_emitted_attack_tails();
     test_actor_anim_ticks();
     test_emitted_anim_ticks();
+    test_opening_sparks();
     test_trigger();
     test_intro_transition();
     test_script_and_commit();

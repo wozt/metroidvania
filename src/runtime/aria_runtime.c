@@ -2327,6 +2327,29 @@ int aria_runtime_main(int argc, char **argv) {
         SDL_SetTextureBlendMode(hud_texture, SDL_BLENDMODE_BLEND);
         SDL_SetTextureScaleMode(hud_texture, SDL_SCALEMODE_NEAREST);
     }
+    /* sub_0800FE98's banner strips (area_banners.bin), one 256x16 RGBA
+     * image per banner area; drawn over the HUD band while unk_4CD
+     * runs. */
+    static uint8_t banner_bytes[AREA_BANNER_BYTES];
+    bool have_banners = false;
+    {
+        FILE *f = fopen(DEFAULT_AREA_BANNERS, "rb");
+        if (f) {
+            have_banners = fread(banner_bytes, 1, sizeof banner_bytes, f) ==
+                           sizeof banner_bytes;
+            fclose(f);
+        }
+    }
+    SDL_Texture *banner_texture = have_banners
+        ? SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                            SDL_TEXTUREACCESS_STATIC, 256 * AREA_BANNER_COUNT, 16)
+        : NULL;
+    if (banner_texture) {
+        SDL_UpdateTexture(banner_texture, NULL, banner_bytes,
+                          256 * AREA_BANNER_COUNT * 4);
+        SDL_SetTextureBlendMode(banner_texture, SDL_BLENDMODE_BLEND);
+        SDL_SetTextureScaleMode(banner_texture, SDL_SCALEMODE_NEAREST);
+    }
     static uint16_t hud_drawn[AOS_HUD_MAP_SIZE * AOS_HUD_MAP_SIZE];
     uint32_t hud_drawn_revision = 0;
     bool hud_dirty = true;
@@ -4531,6 +4554,32 @@ aria_render_frame:
             }
             SDL_FRect whole = {0, 0, 240, 160};
             SDL_RenderTexture(renderer, hud_texture, NULL, &whole);
+        }
+        /* sub_0800FE98/sub_0800FFCC's area-name banner: the 256x16 strip
+         * sits on BG0 palette row 12 at tilemap rows 10-11 (y 80-95),
+         * centred on the 240-wide screen, while the WIN0 band darkens
+         * the rest. The native fade is a brightness (bldY) ramp; the
+         * port approximates it with strip alpha — stage 1 ramps in over
+         * the 0x3E countdown, stage 2 holds, stage 3 ramps out. The
+         * shown-bit suppression (unk_37C) already ran in
+         * aos_in_game_mode_area_banner_step. */
+        if (banner_texture && !opening.active &&
+            in_game_mode.banner_area >= 0 && in_game_mode.banner_area < AREA_BANNER_COUNT &&
+            in_game_mode.unk_4CD != 0) {
+            unsigned alpha;
+            if (in_game_mode.unk_4CD == 1)
+                alpha = (unsigned)((0x3E - in_game_mode.unk_66) * 255 / 0x3E);
+            else if (in_game_mode.unk_4CD == 3)
+                alpha = in_game_mode.unk_66 >= 0x60 ? 0
+                        : (unsigned)((0x60 - in_game_mode.unk_66) * 255 / 0x60);
+            else
+                alpha = 255;
+            SDL_SetTextureAlphaMod(banner_texture, (uint8_t)(alpha > 255 ? 255 : alpha));
+            SDL_FRect src = {(float)(in_game_mode.banner_area * 256), 0.0f,
+                             256.0f, 16.0f};
+            SDL_FRect dst = {-8.0f, 80.0f, 256.0f, 16.0f};
+            SDL_RenderTexture(renderer, banner_texture, &src, &dst);
+            SDL_SetTextureAlphaMod(banner_texture, 255);
         }
         /* sub_0800E708's banner rides the HUD BG0 like the opening notice. */
         if (!opening.active && gameplay_soul_notice_timer > 0 &&

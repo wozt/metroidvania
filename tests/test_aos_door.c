@@ -100,6 +100,23 @@ int main(void) {
     assert(!door.hidden);
     aos_door_update(&door, &layer, &soma, &input, 0, 161);
     assert(door.hidden);
+    /* sub_0804D794's affine swing: identity at the endpoints, cosine
+     * scale and 32*sin - 1 pixel shift in between. */
+    AosDoor swing = {.swing = 0, .facing_left = false};
+    assert(aos_door_swing_scale(&swing) == 1.0f &&
+           aos_door_swing_shift(&swing) == 0.0f);
+    swing.swing = 0x4000;
+    assert(aos_door_swing_scale(&swing) == 1.0f &&
+           aos_door_swing_shift(&swing) == 0.0f);
+    swing.swing = 0x2000;   /* half of the quarter turn: cos ~ 0.707 */
+    assert(aos_door_swing_scale(&swing) > 0.6f &&
+           aos_door_swing_scale(&swing) < 0.8f);
+    /* sin(45 deg) * 32 - 1 ~ 21.6 px, negated for the left-facing door. */
+    assert(aos_door_swing_shift(&swing) > 20.0f &&
+           aos_door_swing_shift(&swing) < 23.0f);
+    swing.facing_left = true;
+    assert(aos_door_swing_shift(&swing) < -20.0f &&
+           aos_door_swing_shift(&swing) > -23.0f);
     puts("aos_door: ok");
     return 0;
 }

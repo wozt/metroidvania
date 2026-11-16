@@ -45,4 +45,14 @@ void aos_door_create(AosDoor *door, AosCollision *layer, int32_t x, int32_t y,
 int aos_door_update(AosDoor *door, AosCollision *layer, const AosSoma *soma,
                     AosForcedInput *input, int32_t camera_x, int32_t camera_y);
 
+/* sub_0804D794's drawFunc affine swing, for 0 < swing < 0x4000:
+ * swing is +0x14 in 16.16-turn units where 0x4000 is the open position
+ * (a quarter turn). The leaf is drawn with horizontal scale cos(swing)
+ * and its screen x shifted by 32*sin(swing) - 1 pixels (the +0x40
+ * adjust; the sign follows the door's facing bit). At the endpoints the
+ * native takes the plain non-affine draw path, so the helpers return
+ * the identity values there. */
+float aos_door_swing_scale(const AosDoor *door);
+float aos_door_swing_shift(const AosDoor *door);
+
 #endif /* AOS_DOOR_H */

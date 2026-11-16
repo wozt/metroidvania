@@ -187,7 +187,6 @@ aos:asm:asm/code/code_08040A38.s:sub_0804CC14	sub_0804CC14	unclassified		technic
 aos:asm:asm/code/code_08040A38.s:sub_0804CCC8	sub_0804CCC8	unclassified		technical	exclusive_callees	asm_function	0x0804CCC8	asm/code/code_08040A38.s	23505	3	6
 aos:asm:asm/code/code_08040A38.s:sub_0804CD80	sub_0804CD80	unclassified				asm_function	0x0804CD80	asm/code/code_08040A38.s	23592	1	2
 aos:asm:asm/code/code_08040A38.s:sub_0804D768	sub_0804D768	unclassified				asm_function	0x0804D768	asm/code/code_08040A38.s	24831	1	1
-aos:asm:asm/code/code_08040A38.s:sub_0804D794	sub_0804D794	unclassified				asm_function	0x0804D794	asm/code/code_08040A38.s	24854	0	4
 aos:asm:asm/code/code_08040A38.s:sub_0804DD84	sub_0804DD84	unclassified				asm_function	0x0804DD84	asm/code/code_08040A38.s	25600	0	3
 aos:asm:asm/code/code_08040A38.s:sub_0804DE60	sub_0804DE60	unclassified		technical	exclusive_callees	asm_function	0x0804DE60	asm/code/code_08040A38.s	25708	0	1
 aos:asm:asm/code/code_08040A38.s:sub_0804DEA0	sub_0804DEA0	environment	referrers			asm_function	0x0804DEA0	asm/code/code_08040A38.s	25742	0	1

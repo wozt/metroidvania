@@ -110,6 +110,10 @@
 #define DEFAULT_AUDIO_BANK "assets/extracted/aria/sound/runtime/sound_bank.bin"
 #define DEFAULT_ROOM_MUSIC "assets/extracted/aria/sound/runtime/room_music.tsv"
 #define DEFAULT_HUD "assets/extracted/aria/metadata/hud.bin"
+/* sub_0800FE98's area-name strips: 13 x 256x16 RGBA8888, index = area. */
+#define DEFAULT_AREA_BANNERS "assets/extracted/aria/metadata/area_banners.bin"
+#define AREA_BANNER_COUNT 13
+#define AREA_BANNER_BYTES (AREA_BANNER_COUNT * 256 * 16 * 4)
 #define DEFAULT_ITEM_ICONS "assets/extracted/aria/metadata/item_icons.tsv"
 #define ITEM_ICONS 193     /* icon numbers 1-192 of sub_0801232C */
 #define MAX_PICKUPS 16      /* dropped pickups alive at once (of entities 0x49-0xCF) */

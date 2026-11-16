@@ -2,6 +2,10 @@
 /* Aria of Sorrow wooden door; comments name the cvaos routine. */
 #include "aos_door.h"
 
+#include "../math/aos_math.h"
+
+#include <math.h>
+
 /* sub_08068AD4: (u16)(entity - point) within the extent on both axes. */
 static bool near_point(const AosDoor *door, int32_t x, int32_t y, int w, int h) {
     return (uint16_t)(door->x - x) <= w && (uint16_t)(door->y - y) <= h;
@@ -87,4 +91,19 @@ int aos_door_update(AosDoor *door, AosCollision *layer, const AosSoma *soma,
     default:
         return 0;
     }
+}
+
+/* sub_0804D794: the swing angle feeds sub_0803E058's affine matrix —
+ * horizontal scale is the cosine (sine of swing + 0x4000) and the +0x40
+ * screen-x adjust is sine(swing) * 32 - 1 pixels, negated on one facing
+ * (the +0x58 bit 6 the drawFunc toggles). */
+float aos_door_swing_scale(const AosDoor *door) {
+    if (door->swing <= 0 || door->swing >= 0x4000) return 1.0f;
+    return (float)aos_sine((uint32_t)door->swing + 0x4000) / 65536.0f;
+}
+
+float aos_door_swing_shift(const AosDoor *door) {
+    if (door->swing <= 0 || door->swing >= 0x4000) return 0.0f;
+    float shift = (float)aos_sine((uint32_t)door->swing) * 32.0f / 65536.0f - 1.0f;
+    return door->facing_left ? -shift : shift;
 }

@@ -2215,6 +2215,89 @@ static bool write_hud(const FusionRom *rom, const char *metadata_output, char *e
     return ok;
 }
 
+/* sub_0800FE98's area-name banner strips. The table at 0x08260328 holds
+ * 13 records {0x04100401, data pointer}; each data blob is an LZ77
+ * stream decompressing to a 4-byte resource header plus 0x800 bytes =
+ * 64 4bpp tiles (a 256x16 strip) that the native draws on BG0 palette
+ * row 12 at tilemap rows 10-11 inside the WIN0 band. The port bakes
+ * each strip to RGBA with palette row 3 of 0x0820C428 (the gold UI
+ * ramp the strip's indices resolve to); the provenance of native BG
+ * palette row 12 is not yet traced, so the colors are a documented
+ * approximation. Output: area_banners.bin, 13 x 256x16 RGBA8888,
+ * record index = banner area. */
+static bool write_area_banners(const FusionRom *rom,
+                               const char *metadata_output, char *error,
+                               size_t error_size) {
+    enum { RECORDS = 13, STRIP_TILE_BYTES = 0x800, STRIP_PIXELS = 256 * 16 };
+    const uint8_t *palette = slice(rom, HUD_PALETTE, 4 + 6 * 32,
+                                   "banner palette", error, error_size);
+    if (!palette || palette[0] != 0 || palette[2] < 4) {
+        if (palette) set_error(error, error_size, "unsupported banner palette resource");
+        return false;
+    }
+    const uint8_t *colors = palette + 4 + 3 * 32;
+    size_t total = (size_t)RECORDS * STRIP_PIXELS * 4;
+    uint8_t *bytes = malloc(total);
+    if (!bytes) {
+        set_error(error, error_size, "cannot allocate the area banners");
+        return false;
+    }
+    bool ok = true;
+    for (size_t area = 0; ok && area < RECORDS; ++area) {
+        const uint8_t *record = slice(rom, 0x08260328 + area * 8, 8,
+                                      "banner record", error, error_size);
+        uint32_t data = record ? read_u32(record + 4) : 0;
+        uint32_t offset = 0;
+        uint32_t expanded = 0;
+        if (record && data &&
+            pointer_offset(rom, data, 4, &offset, "banner strip", error,
+                           error_size))
+            expanded = fusion_gba_uncompressed_size(
+                rom->data + offset, rom->size - offset);
+        uint8_t *tiles = NULL;
+        size_t written = 0;
+        ok = record && data && expanded >= 4 + STRIP_TILE_BYTES &&
+             (tiles = malloc(expanded)) &&
+             fusion_gba_lz77_uncompress(rom->data + offset, rom->size - offset,
+                                        tiles, expanded, &written) &&
+             written >= 4 + STRIP_TILE_BYTES;
+        if (!ok) {
+            free(tiles);
+            if (!error || error[0] == '\0')
+                set_error(error, error_size, "invalid area banner strip");
+            break;
+        }
+        /* tiles[4..] is 64 tiles of 32 bytes row-major: tile (tx,ty)
+         * covers pixels (tx*8..tx*8+7, ty*8..ty*8+7) of the 256x16
+         * strip; each byte holds two 4bpp pixels. */
+        uint8_t *out = bytes + area * STRIP_PIXELS * 4;
+        for (size_t ty = 0; ty < 2; ++ty)
+            for (size_t tx = 0; tx < 16; ++tx) {
+                const uint8_t *tile = tiles + 4 + (ty * 16 + tx) * 32;
+                for (size_t py = 0; py < 8; ++py)
+                    for (size_t px = 0; px < 8; ++px) {
+                        uint8_t byte = tile[py * 8 + px / 2];
+                        unsigned index = px % 2 ? byte & 15 : byte >> 4;
+                        uint16_t color = read_u16(colors + index * 2);
+                        uint8_t *px_out = out +
+                            ((ty * 8 + py) * 256 + tx * 8 + px) * 4;
+                        px_out[0] = (uint8_t)((color & 31) * 255 / 31);
+                        px_out[1] = (uint8_t)(((color >> 5) & 31) * 255 / 31);
+                        px_out[2] = (uint8_t)(((color >> 10) & 31) * 255 / 31);
+                        px_out[3] = 255;
+                    }
+            }
+        free(tiles);
+    }
+    if (ok) {
+        char path[FUSION_EXPORT_PATH_CAPACITY];
+        ok = fusion_export_join(path, metadata_output, "area_banners.bin") &&
+             fusion_export_write_file(path, bytes, total, error, error_size);
+    }
+    free(bytes);
+    return ok;
+}
+
 static bool append_global_metadata(const FusionRom *rom, Text *rows,
                                    char *error, size_t error_size) {
     const uint8_t *blink = slice(rom, DEATH_BLINK, 40, "death blink pattern",
@@ -2372,6 +2455,8 @@ bool fusion_aos_export_objects(const FusionRom *rom,
                            write_text_file(metadata_output, "bursts.tsv",
                                            &bursts, error, error_size) &&
                            write_hud(rom, metadata_output, error, error_size) &&
+                           write_area_banners(rom, metadata_output, error,
+                                              error_size) &&
                            append_item_icons(rom, &item_icons, error, error_size) &&
                            write_text_file(metadata_output, "item_icons.tsv",
                                            &item_icons, error, error_size);

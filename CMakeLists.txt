@@ -1540,8 +1540,10 @@ if(BUILD_TESTING)
     add_test(NAME aos_room COMMAND fusion_aos_room_tests)
 
     add_executable(fusion_aos_door_tests tests/test_aos_door.c src/runtime/aos/game/aos_door.c
+                   src/runtime/aos/math/aos_math.c
                    src/runtime/aos/core/aos_soma.c src/runtime/aos/souls/aos_soul.c src/runtime/aos/core/aos_stats.c src/runtime/aos/core/aos_collision.c src/runtime/aos/core/aos_combat.c src/runtime/aos/core/aos_anim.c
                    src/runtime/aos/core/aos_audio.c)
+    target_link_libraries(fusion_aos_door_tests PRIVATE m)
     target_include_directories(fusion_aos_door_tests PRIVATE src/runtime)
     fusion_enable_warnings(fusion_aos_door_tests)
     add_test(NAME aos_door COMMAND fusion_aos_door_tests)

@@ -1,3 +1,40 @@
+## Patch 1192 - wooden-door affine swing rendering and the area-name banner strip
+
+- **Door swing.** `sub_0804D794` (Object00's drawFunc) was decoded:
+  for `0 < +0x14 < 0x4000` the leaf is drawn through
+  `sub_0803E058`'s affine matrix — horizontal scale `cos(swing)`
+  (a `sub_080009E4` lookup at `swing + 0x4000`) and a `+0x40` screen-x
+  adjust of `32*sin(swing) - 1` pixels, sign-flipped by the door's
+  facing bit; at `0x4000` and `0` the native takes the plain draw
+  path. The port's `draw_doors` ignored `e->door.swing` entirely and
+  blitted a still frame, which is why doors looked static. It now
+  calls the new `aos_door_swing_scale`/`aos_door_swing_shift`
+  helpers (unit-tested in `test_aos_door`) and squashes the sprite
+  about its hinge edge; at `0x4000` the cosine reaches zero and the
+  edge-on leaf disappears into the doorway. Limitation: the
+  fully-open non-affine draw selects a door-frame variant through
+  the `+0x58` bit-6 toggle whose tile source is not separately
+  exported, so the open doorway shows the room background.
+- **Area-name banner.** `sub_0800FE98`'s strip is now exported and
+  drawn: the 13 records at `0x08260328` (`{0x04100401, data}`) each
+  point to an LZ77 stream decompressing to a 4-byte header plus
+  `0x800` bytes = 64 4bpp tiles (256x16) that the native places on
+  BG0 palette row 12 at tilemap rows 10-11 inside the WIN0 band.
+  `write_area_banners` bakes them to `area_banners.bin` (13 x
+  256x16 RGBA8888, index = banner area) using palette row 3 of
+  `0x0820C428` — the gold UI ramp the strip indices resolve to;
+  the provenance of native BG palette row 12 is not yet traced, so
+  the colors are a documented approximation. The runtime loads the
+  bin next to `hud.bin` and draws the strip at y 80 with an alpha
+  ramp standing in for the `bldY` fade while `unk_4CD` runs stages
+  1-3. The WIN0 darkening band and the `sub_0800FDC8` hBlank work
+  remain unmodelled. The trigger is unchanged: `sub_0800FCB8`'s
+  first-visit-per-area `unk_37C` bitmask still suppresses repeats —
+  the banner is NOT a per-room-entry display.
+- **Tests.** `aos_door` covers the swing endpoints and the
+  45-degree scale/shift values; `aos_in_game_mode` already covered
+  the banner arm/stage/shown-bit machine. Build clean; both pass.
+
 ## Patch 1190 - opening scene: actor z-bands, Mina offset, Soma pose step, end-of-dialogue ambient
 
 - **Fix.** Four opening-scene divergences resolved against the native

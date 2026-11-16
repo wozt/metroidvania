@@ -42,6 +42,16 @@ int main(void) {
     assert(group.entities[AOS_INTRO_ENTITY_PANEL_RIGHT].x == -0x7F000);
     assert(group.alpha_override_valid && group.alpha_override == 0x0A06);
 
+    /* sub_08009054 writes gDisplayRegisters.bldAlpha once on the
+     * state 0 -> 1 transition; the register persists through the whole
+     * state 1 slide, so the left panel's EVA=6/EVB=10 blend (and every
+     * semi-transparent sprite it affects, including the orbit bat) must
+     * stay asserted on every frame, not only on transition frames. */
+    for (unsigned frame = 0; frame < 8; ++frame)
+        aos_intro_entities_update(&group, 3, 0x1600000, 0, 0x0C90000);
+    assert(group.entities[AOS_INTRO_ENTITY_PANEL_LEFT].state == 1);
+    assert(group.alpha_override_valid && group.alpha_override == 0x0A06);
+
     /* The supporting descriptor supplies the native four-step stair walk.
      * Its action index changes the follower's vertical velocity before the
      * animation advances at the end of the frame. */

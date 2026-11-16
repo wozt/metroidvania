@@ -96,9 +96,16 @@ tile writes across horizontal and vertical tile boundaries, and the SDL host
 scrolls that tile canvas with BG0. `aos_intro_graphics.c` also loads the two
 native character banks, complete background palette and three block maps,
 then renders BG3 through BG1 at their independently scrolling positions. Text
-uses color 8 from native palette row 15. The frontend does not yet render the
-six actors' OAM and animation frames or reproduce their affine and alpha
-composition, so it does not claim the original presentation.
+uses color 8 from native palette row 15. The six actors composite in the
+native BG/OBJ priority bands (`sub_0803DC18`/`sub_0803FD60` plus the +0x5C
+layer ranking) and the left castle panel's `sub_08009054` bldAlpha
+(EVA=6/EVB=10) persists through its whole state-1 slide exactly like the
+native `gDisplayRegisters.bldAlpha` register, so the panels and every
+semi-transparent sprite — including the orbit bat — keep the native 6/16
+blend during the climb instead of rendering fully opaque. Remaining
+gaps are the small frame offset, palette rounding and BLDALPHA ramp
+rounding noted in `docs/PROJECT_STATUS.md`, so pixel-exact status is
+still not claimed.
 
 ```sh
 build/fusion_aria_title_preview \

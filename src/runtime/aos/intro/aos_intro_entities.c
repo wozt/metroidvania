@@ -314,6 +314,17 @@ static void update_panel(AosIntroEntities *group, AosIntroEntity *entity,
     }
     if (entity->state == 1) {
         entity->x += entity->vx;
+        if (entity->variant == 0) {
+            /* sub_08009054 writes gDisplayRegisters.bldAlpha once on the
+             * state 0 -> 1 transition and the register persists through
+             * state 1 until the state 2 fade rewrites it every frame.
+             * Re-assert it here so the whole intro keeps the native
+             * EVA=6/EVB=10 blend for every semi-transparent sprite,
+             * including the orbit bat, instead of falling back to the
+             * stage alpha (EVA=16, fully opaque). */
+            group->alpha_override_valid = true;
+            group->alpha_override = alpha_pack(6, 10);
+        }
         if ((uint32_t)bg1_y < 0x200000) {
             entity->timer = 0x120;
             entity->state = 2;

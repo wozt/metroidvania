@@ -1,3 +1,28 @@
+## Patch 1193 - intro entities: keep the panel's native bldAlpha through the state-1 slide
+
+- **Bug.** `sub_08009054` writes `gDisplayRegisters.bldAlpha` once on
+  the state 0 -> 1 transition (`C_16_2_8(10, 6)`, EVA=6/EVB=10) and
+  the hardware register then persists through the whole state-1
+  inward slide until the state-2 fade rewrites it every frame. The
+  port cleared `alpha_override_valid` at the top of every
+  `aos_intro_entities_update` and only re-asserted it on the
+  transition frame and during the fade, so for the entire climb the
+  panels (and every other semi-transparent intro sprite, including
+  the `sub_080092A0` orbit bat) fell back to the stage alpha
+  `alpha_pack(16, 0)` — EVA=16 renders semi pixels fully opaque
+  instead of the native 6/16 blend. That made the castle panels and
+  the bat far more prominent than on hardware, matching the report
+  that they appear too early.
+- **Fix.** `update_panel` now re-asserts `alpha_pack(6, 10)` on
+  every state-1 frame for the left panel (`variant == 0`, the only
+  native `unk_4EF == 0` writer), mirroring the persistent register.
+  State-2 fade math is unchanged and verified against
+  `C_16_2_8(0x10 - timer/48, timer/48)`; after the panels are
+  deleted the stage alpha owns the blend again, as natively.
+- **Test.** `test_aos_intro_entities` now runs eight state-1
+  frames and asserts the override stays `0x0A06`; the existing
+  state-2 countdown assertions still pass.
+
 ## Patch 1192 - wooden-door affine swing rendering and the area-name banner strip
 
 - **Door swing.** `sub_0804D794` (Object00's drawFunc) was decoded:
@@ -34,6 +59,49 @@
 - **Tests.** `aos_door` covers the swing endpoints and the
   45-degree scale/shift values; `aos_in_game_mode` already covered
   the banner arm/stage/shown-bit machine. Build clean; both pass.
+
+## Patch 1191 - pause START gate: Object00 create reports c5a8 only when near; all eight pages capture-verified vs native
+
+- **Fix.** START opened the pause hub only in the first rooms because
+  the port reported `sub_0800C5A8(0)` on *every* Object00 door
+  creation. Native `Object00Create` (asm `code_08040A38`) writes it
+  only inside the Soma-near branch — the same branch that ORs
+  `+0x42C` `0x101`, presets swing `0x4000` and state `0xA`, which is
+  the port's `door->holding`. A far spawn therefore left
+  `gEwramData->unk_A074_1` clear, and the `GameModeInGameUpdate`
+  case-1 START edge (`sub_0800B700`, gated on `unk_A074_1`) stayed
+  dead until Soma engaged the door. Creation now reports through the
+  c5a8 channel only while `door->holding`; the update-side engage
+  (`0` while holding) and release (`1` on the clearing frame) writes
+  are unchanged, matching the native update's call sites.
+- **Diagnostics.** `ARIA_DEBUG_C5A8` dumps each simulate frame's
+  `unk_A074_1` channel result plus the reporter's entity pointer and
+  source line (`aria_entities_c5a8_debug`); `ARIA_DEBUG_MENU_DRAW`
+  logs which `aos_pause_graphics_render_*` call fails per page;
+  `--capture-script FILE` reuses the `--simulate-script` per-frame
+  held-input parser for `--capture` runs so menus can be driven
+  deterministically under SDL (including `SDL_VIDEODRIVER=dummy`,
+  no X server needed).
+- **Verification.** Room 0/19 spawns a passive Object00 door
+  (SPECIAL id 0) during the run; a scripted START tap there prints
+  `Pause hub opened` and captures the hub. All eight pause pages —
+  hub, Soul Set, Equip, Item Use, Ability, Sleep, Config, Enemy —
+  were captured through `--capture-script` and pixel-compared against
+  the Patch 1143 native PPM references at 240x160: Config 121,
+  Item Use 336, Sleep 599, Equip 583, Ability 845, Enemy 1036 and
+  Soul Set 1234 differing pixels of 38400. The residuals are the
+  documented gaps — the shared hand-cursor OBJ decode is still a
+  no-op, the two capture sessions ran different WRAM state
+  (soul/item/bestiary ownership), and the OBJ icon layers remain
+  approximate — not missing page geometry; B-navigation returns
+  pixel-identical to the hub. New ctest `aria_pause_late_room`
+  locks the room-0/19 START contract.
+- **Scope.** `src/runtime/aria_entities.c` c5a8 collection (the
+  Object00 create site plus reporter-identity metadata),
+  `src/runtime/aria_entities.h`, the `--capture-script`/debug-probe
+  regions of `src/runtime/aria_runtime.c`, env-gated draw-failure
+  probes in `src/runtime/aria_menus_debug.c`,
+  `tests/test_aria_pause_late_room.sh` and its CMake registration.
 
 ## Patch 1190 - opening scene: actor z-bands, Mina offset, Soma pose step, end-of-dialogue ambient
 

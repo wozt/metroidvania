@@ -723,11 +723,35 @@ sprite is approximated by corner brackets over the quick map's castle
 render, and the other `sub_08011AD0` callers (Object15/Object16 door
 branches, the link-sync path) stay unported. Without `--rom` the
 table never loads and Object1F's picker frame simply never latches —
-the same absent-`unk_88`-data situation as native. Cases 9-14 remain
-unported: they are the `unk_66`-timed cutscene/`unk_4CC_6` event chain
-(`sub_0805AFC0`, `sub_0800CA98` credits, and the 11->12->13->14 chain
-polled by `sub_080D7F28`/`sub_080D7F48`) whose writers and completion
-subsystem are unported, and `unk_4CC_6` still has no writer. The
+the same absent-`unk_88`-data situation as native. Cases 9-14 remain unported but are now decoded (see the
+`AosInGameModeCase` docs): case 9 is `sub_0805AFC0`, the shared
+window-manager coroutine (`unk_65` stages 0-13, the
+`0x0815F120`/`0x0815F480`/`0x0815F2D0` language portrait tables,
+`sub_08067310`/`sub_08067488` text paging), armed only by
+`sub_0805AF68` — which `func_08065DB8` (`asm/code/code_08060B98.s`,
+the runtime's `aos_npc_talk_65db8`) calls on its text-done tail
+after `sub_08067898`; that arm writes `unk_64 = 9`, `unk_65 = 0`,
+`unk_A074 |= 0x3D` (0x3C, then bit 0) and `gDisplayRegisters + 0x48 = 0xFF`, and
+the routine's return-1 tail restores `unk_64 = 1`. Case 10 is
+`sub_0800CA98`, a one-frame routine returning `GAME_MODE_CREDITS`;
+its writers are the Object20 story endings — `sub_0805C08C`
+(param0 29), `sub_0805C628` (param0 31) and `sub_08062664`
+(param0 23) each store `gEwramData + 0x64 = 0x0A` on the
+post-window-close tail (the runtime's `write_64_0a` reports cover
+all four param0 sites), but no `AOS_MODE_CREDITS` handler exists.
+Cases 11-14 are not cutscenes: they are the `unk_4CC_6`-gated
+multi-SIO link-sync chain — the case-0 stage-4 and case-3 return
+tails arm case 11 (`unk_66 = 0x10`) only while `unk_4CC_6` holds,
+then `sub_080D7F28`/`sub_080D7F48` poll link readiness
+(`sub_080D80CC && sub_080D80EC`, partner `0xA2C`) while
+`sub_0803407C`/`sub_0803427C`/`sub_080341D0`/`sub_08034498`
+exchange the `unk_4D4`/`unk_4DC` player records, with every exit
+landing on case 2. An exhaustive C and assembly scan found no
+`unk_4CC_6` set-to-1 writer — only clears
+(`src/code_08002454.c`, the `unk_60` `DMA_FILL_32`) and bit-0/1/2
+accesses — so the flag is either written by link code outside the
+decomp corpus or is dead in retail, and the runtime keeps it
+clear. The
 entity-driven `AosForcedInput` slot still substitutes the global held
 mask rather than the player-only words (documented divergence). A
 later stationary stop near x ~= 120 persists with input free; the

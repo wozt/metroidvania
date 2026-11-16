@@ -344,8 +344,10 @@ static AriaRoomTransition room_transition;
  * menu -> 6 — and aos_in_game_mode_locks_input reports the frames
  * the native code parks SetPlayerInput(1, 0). Case 5 (sub_080106DC
  * transition fades), 7/8 (sub_080116A8/sub_08011AD0/sub_08011B2C
- * map warp) and 9-14 (cutscene modes) have no runtime counterpart
- * yet and stay documented in aos_in_game_mode.h. The case-1
+ * map warp) have no runtime counterpart yet; cases 9-14 are decoded
+ * in aos_in_game_mode.h (the sub_0805AFC0 window coroutine, the
+ * sub_0800CA98 credits entry and the unk_4CC_6-gated SIO link-sync
+ * chain — not cutscenes) and stay documented there. The case-1
  * sub_0800FFCC area-name banner IS modelled: room_transition_tick
  * arms it at the stage-2 settle end and the frame loop runs
  * aos_in_game_mode_area_banner_step once per play frame. */

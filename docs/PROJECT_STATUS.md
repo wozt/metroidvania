@@ -1,3 +1,87 @@
+## Patch 1171 - GameModeInGameUpdate cases 9-14 decoded: window coroutine, credits entry, SIO link-sync chain
+
+- **Scope.** Decode-only pass over the remaining `sub_0800B700`
+  dispatch cases 9-14 (previously lumped as "unk_66-timed
+  cutscene modes"): exact writers, stage machines, callees and
+  the `unk_4CC_6`/`unk_66` roles, plus the `sub_080D7F28`/
+  `sub_080D7F48` poll chain. No new gameplay behavior is claimed;
+  the cases stay documented-missing with precise dependencies.
+- **Case 9 — `sub_0805AFC0`, the shared window-manager coroutine.**
+  `unk_65` stages 0-13 drive the dialogue window frame (open
+  animation, language portrait pick from `0x0815F120`/
+  `0x0815F480`/`0x0815F2D0`, `sub_08067310`/`sub_08067488` text
+  paging, input poll, close); stages 0 and 4 are the only ones
+  calling `sub_08000B64`, and the return-1 tail writes
+  `unk_64 = 1`. Its only armer is `sub_0805AF68`
+  (`asm/code/code_08050A3C.s:20924`), called solely from
+  `func_08065DB8`'s text-done tail
+  (`asm/code/code_08060B98.s:10633`, after `sub_08067898`) — the
+  Object20 proximity trigger the runtime ports as
+  `aos_npc_talk_65db8`. The arm writes `unk_64 = 9`, `unk_65 = 0`,
+  `unk_A074 |= 0x3D`, `gDisplayRegisters + 0x48 = 0xFF`; that arm
+  channel does not exist in the runtime yet, and the routine's
+  control block (`gEwramData + 0xE2C`), portrait tables, text
+  paging and display-register writes have no host counterpart.
+- **Case 10 — `sub_0800CA98`, the credits entry.** One frame:
+  saves/restores `unk_42C` around `sub_0800C7A4`'s state wipe,
+  runs `sub_0803D270`/`sub_0803CED4`, maxes brightness and
+  returns `GAME_MODE_CREDITS` (`GameModeCreditsUpdate`,
+  `src/code_08013960.c`: `MUS_26`, tilesets
+  `0x080E5BC8`/`5BD0`/`5BD8`, scroll tables
+  `0x080E8F04`/`0x080E7B54`/`0x080E81E4`/`0x080E8874`, A|START
+  skip, then `GAME_MODE_KONAMI_LOGO`). Writers are the Object20
+  story endings — `sub_0805C08C` (param0 29), `sub_0805C628`
+  (param0 31, `asm/code/code_08050A3C.s`) and `sub_08062664`
+  (param0 23, `asm/code/code_08060B98.s`) store
+  `gEwramData + 0x64 = 0x0A` on the post-window-close tail; the
+  runtime's `write_64_0a` reports already cover all four param0
+  sites, but `aos_game_lifecycle.c` has no `AOS_MODE_CREDITS`
+  handler, so the write is recorded and dropped.
+- **Cases 11-14 — the `unk_4CC_6`-gated SIO link-sync chain, not
+  cutscenes.** Armed only from the case-0 stage-4 and case-3
+  return tails while `unk_4CC_6` holds (`unk_66 = 0x10`,
+  `sub_080D7F78`/`sub_080D7FB8` multi-SIO init). Case 11 counts
+  `unk_66` down and latches 12; case 12 polls
+  `sub_080D7F28` (`sub_080D80CC && sub_080D80EC` link-ready) and
+  `sub_080D7F48` (partner id `0xA2C`) while
+  `sub_0803407C`/`sub_0803427C` exchange the `unk_4D4`/`unk_4DC`
+  player records over `sub_080D8020`/`sub_080D8088`, latching 13
+  (or case 2 on chain end / `unk_13224` bounds); case 13 repeats
+  the poll and latches 14; case 14 adds `sub_080341D0` +
+  `sub_08034498(NULL)` and re-runs the case-1 room/exit machinery.
+  Every exit lands on `unk_64 = 2`. `sub_080D7F28`/`sub_080D7F48`
+  themselves are pure multi-SIO predicates (`agb_multi_sio_sync.c`)
+  also used by the connection/sync menus in `sub_08037E9C.c` — the
+  earlier "cutscene poll chain" reading was wrong.
+- **`unk_4CC_6` writer search.** Exhaustive scan of every C
+  reference and every assembly site loading the `0x4CC` offset:
+  only clears exist (`src/code_08002454.c:399`, the `unk_60`
+  `DMA_FILL_32` in `code_0800B700.c`) plus bit-0/1/2 reads and
+  the soul-trade menu's bit-2 clear — no set-to-1 anywhere in the
+  decomp corpus, including pointer-derived and whole-byte stores.
+  The flag is either written by link code outside the corpus or
+  dead in retail; the runtime keeps it clear.
+- **Runtime changes.** `aos_in_game_mode.h` now documents each
+  case 9-14 with its native routine, writer and dependencies, and
+  the enum carries `AOS_INGAME_WINDOW_COROUTINE`,
+  `AOS_INGAME_CREDITS` and the four `AOS_INGAME_LINK_SYNC_*`
+  labels; `aos_in_game_mode_case_name` returns distinct names
+  (`window_coroutine`, `credits`, `link_sync_wait/poll/poll2/
+  tail`) instead of the generic `cutscene`/`cutscene_a`. No
+  behavior change: the cases issue no `SetPlayerInput`, so the
+  lock predicate correctly stays false (gameplay is suspended by
+  the dispatch itself). `unk_4cc_6` remains clear.
+- **Still missing.** The `sub_0805AF68` arm channel for case 9,
+  the `sub_0805AFC0` coroutine itself (control block, portrait
+  tables, `sub_08067310`/`sub_08067488` paging, display writes),
+  an `AOS_MODE_CREDITS` handler for case 10's
+  `GameModeCreditsUpdate`, and the whole link-sync stack for
+  cases 11-14 (multi-SIO sync routines, player-record exchange,
+  and an `unk_4CC_6` writer that does not exist in the corpus).
+- Validation: warning-clean build, `test_aos_in_game_mode`
+  extended for the new case labels, `fusion_dashboard
+  --run-tests` and `fusion_check_generated` in this cycle.
+
 ## Patch 1169 - movement comparison corrected to world coordinates; residual divergence is enemy hit timing
 
 - **Gap.** `tests/compare_aos_movement.py` reported native Soma

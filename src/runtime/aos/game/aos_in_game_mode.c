@@ -38,8 +38,9 @@ bool aos_in_game_mode_locks_input(const AosInGameMode *mode) {
         return mode->unk_65 == 1 || mode->unk_65 == 3;
     case AOS_INGAME_ROOM_TRANSITION:
         /* Case 3 calls SetPlayerInput(1, 0) only while unk_4CC_6
-         * holds (the cutscene/entity-update gate); the runtime has
-         * no unk_4CC_6 writer, so this stays clear. */
+         * holds — the link-session flag; no writer exists in the
+         * decompiled corpus (see the struct comment), so this
+         * stays clear. */
         return mode->unk_4cc_6;
     case AOS_INGAME_QUICK_MAP:
     case AOS_INGAME_TRANSITION_FADE:
@@ -246,9 +247,12 @@ const char *aos_in_game_mode_case_name(uint8_t unk_64) {
     case 6: return "soul_menu";
     case 7: return "map_second";
     case 8: return "room_warp";
-    case 9: return "cutscene_a";
+    case 9: return "window_coroutine";
     case 10: return "credits";
-    case 11: case 12: case 13: case 14: return "cutscene";
+    case 11: return "link_sync_wait";
+    case 12: return "link_sync_poll";
+    case 13: return "link_sync_poll2";
+    case 14: return "link_sync_tail";
     default: return "unknown";
     }
 }

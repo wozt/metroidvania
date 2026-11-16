@@ -174,7 +174,15 @@ int main(void) {
     assert(strcmp(aos_in_game_mode_case_name(3), "room_transition") == 0);
     assert(strcmp(aos_in_game_mode_case_name(4), "quick_map") == 0);
     assert(strcmp(aos_in_game_mode_case_name(6), "soul_menu") == 0);
-    assert(strcmp(aos_in_game_mode_case_name(14), "cutscene") == 0);
+    /* Cases 9-14 are the sub_0805AFC0 window coroutine, the
+     * sub_0800CA98 credits entry and the unk_4CC_6-gated SIO
+     * link-sync chain — not cutscenes (see the enum docs). */
+    assert(strcmp(aos_in_game_mode_case_name(9), "window_coroutine") == 0);
+    assert(strcmp(aos_in_game_mode_case_name(10), "credits") == 0);
+    assert(strcmp(aos_in_game_mode_case_name(11), "link_sync_wait") == 0);
+    assert(strcmp(aos_in_game_mode_case_name(12), "link_sync_poll") == 0);
+    assert(strcmp(aos_in_game_mode_case_name(13), "link_sync_poll2") == 0);
+    assert(strcmp(aos_in_game_mode_case_name(14), "link_sync_tail") == 0);
     assert(strcmp(aos_in_game_mode_case_name(200), "unknown") == 0);
 
     puts("aos_in_game_mode: ok");

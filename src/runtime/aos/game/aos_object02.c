@@ -32,7 +32,8 @@ static void reset_outputs(AosObject02 *o) {
 bool aos_object02_create(AosObject02 *o, int param0, int param1,
                          uint16_t special_37e, bool near,
                          int32_t screen_x, int32_t soma_screen_x,
-                         int32_t soma_vx) {
+                         int32_t soma_vx,
+                         AosCollision *layer, int32_t ex, int32_t ey) {
     reset_outputs(o);
     *o = (AosObject02){
         .state = 0, .timer = 0, .counter = 0,
@@ -68,8 +69,10 @@ bool aos_object02_create(AosObject02 *o, int param0, int param1,
         o->zero_soma_vx = (soma_screen_x <= 0x77) ? (soma_vx < 0)
                                                 : (soma_vx > 0);
     } else {
-        /* Outside: seal the column of three blocks and pick the entry
+        /* Outside: sub_08002200 seals the column of three blocks at
+         * the entity anchor (y - 8/-0x18/-0x28) before the entry
          * state — param0 1 -> 0x14, param0 3 -> 0x63, else state 0. */
+        if (layer) blocks(o, layer, ex, ey, true);
         o->timer = 0;
         o->state = param0 == 1 ? 0x14 : param0 == 3 ? 0x63 : 0;
     }

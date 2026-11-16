@@ -1,3 +1,65 @@
+## Patch 1176 - Boss-kill + 0x37E writers and the Object02 create-time seal
+
+- **Scope.** Closes the Patch 1174 open item: Object02 arena seals
+  release on `aria_pickup_state.special` (+ 0x37E) bits, but no
+  boss-kill writer existed. `src/runtime/aria_entities.c` gains
+  `boss_clear_bit`, run on `hit.killed && role == AOS_ROLE_ENEMY`
+  after the boss-soul spawns, and `aos_object02_create` gained the
+  `layer`/`ex`/`ey` arguments its outside branch needs.
+- **Native verification.** Every + 0x37E writer in the cvaos asm
+  corpus was audited: the nine `sub_080D6EF8` call sites
+  (Creaking Skull/Giant Skeleton `sub_08097FFC` bit 0xB, Manticore
+  `sub_08072F40` bit 0xA, Man Eater `EnemyManEaterUpdate` bit 0xD,
+  Big Golem `sub_080AC5B0` bit 0xC, Headhunter `sub_08083860` bit 4,
+  Death `sub_080BDFC4` bit 1, Legion `sub_0809D51C` bit 5, Balore
+  `sub_080B594C` bit 6), the Great Armor family `sub_0808E0A8` which
+  gates on + 0x30 != 0 and passes + 0x30 itself as the bit index,
+  the direct ORs (Belmont `sub_080D1854` bit 2, Graham
+  `sub_080D2BDC` bit 0), Chaos2's state-3 countdown
+  `sub_080A49E0` bit 7, and the param0-gated Dryad `sub_080AE3FC`
+  bit 0 / Minotaur-family `sub_080AFF98` bit 8 (inert on current
+  room data). `sub_080D6EF8` itself ORs `1 << bit` into + 0x37E and
+  spawns the event-soul entity; pickup-side writes stay in
+  `aos_pickup.c`.
+- **Corrections over the found WIP.** The first pass returned the
+  Creaking Skull/Giant Skeleton, Manticore, Man Eater and Big Golem
+  bits unconditionally; their native death routines all skip the
+  `sub_080D6EF8` call when entity + 0x30 is zero, and the extracted
+  room records confirm param0 == 0 non-boss placements exist for
+  each (e.g. Manticore 1:6 param0 1 vs 5:9 param0 0). The mapping now
+  reads the live `e->enemy.param0` (+ 0x30) and returns -1 for the
+  param0 == 0 variants. Chaos (0x70) was missing entirely: only the
+  param1-selected phase-2 form writes bit 7, matching the 11:20
+  (param1 0) / 11:22 (param1 1) records and ChaosCreate's own
+  bit-7 respawn check.
+- **Object02 seal.** `Object02Create` (0x0804DFAC) seals the
+  three-block column through `sub_08002200` at the room-pixel
+  anchor y - 8/-0x18/-0x28 only in the outside branch, before the
+  param0 1 -> 0x14 / 3 -> 0x63 / else state-0 pick; the near branch
+  and the one-shot + 0x37E delete place nothing. The port passes
+  the entity anchor and the collision layer into
+  `aos_object02_create`; `blocks()` already implemented the same
+  offsets for the update-time seal/release.
+- **Ordering and edge cases.** The bit write runs after
+  `spawn_special_boss_soul` so the guaranteed boss soul is not
+  suppressed by its own bit (the soul-drop `special_index` guard
+  was removed from `spawn_special_boss_soul` — the native soul
+  spawn and the + 0x37E write are independent writes in the same
+  lethal callback). Only the room record's main body counts: the
+  bosses' destructible parts share the enemy id under other roles.
+  Bit-already-set is a harmless OR, matching native.
+- **Limits.** Headhunter/Balore/Death/Legion write the bit inside
+  their death-sequence state machines a few frames after the
+  killing blow; the port sets it on `hit.killed` in the same pass.
+  Chaos phase-1 (param1 0) kills write nothing natively and none in
+  the port. No unit harness drives `update_entities`, so the
+  kill -> bit path is source-verified, not unit-tested; the
+  Object02 seal is covered by `tests/test_aos_object02.c`.
+- **Registries.** `annotations.tsv` (`aos.objects.cutscene_director`)
+  notes and sources updated. Statuses unchanged.
+- **Evidence and tests.** Warning-clean build; `aos_object02`,
+  `aos_enemy` and `aos_pickup` CTest entries pass.
+
 ## Patch 1175 - Object20 channel audit: sub_0800C5A8 wired to unk_A074_1; +0x427/+0x410 family re-audited
 
 - **Scope.** Audit and closure pass over the remaining Object20

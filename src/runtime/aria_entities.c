@@ -473,12 +473,76 @@ static const char *pickup_notice_name(uint8_t type, uint16_t variant) {
     return NULL;
 }
 
+/* The + 0x37E bit a ported boss's native lethal-hit callback sets:
+ * sub_080D6EF8(x, y, bit, 0x60, flag) writes 1 << bit into
+ * gEwramData + 0x37E (and spawns the event-soul pickup) from the
+ * boss's death routine; the Belmont machine ORs 4 (bit 2) and the
+ * Graham victory case ORs 1 (bit 0) directly. Object02Update's
+ * state-20/21 arena seals and the param0-gated boss spawns wait on
+ * these bits. Returns the bit index, or -1 for enemies whose native
+ * death writes none. `e->enemy.param0` is the live entity + 0x30 the
+ * native routines test: the Creaking Skull/Giant Skeleton, Manticore,
+ * Man Eater and Big Golem deaths all skip the sub_080D6EF8 call when
+ * it is zero (their param0 == 0 field records are the non-boss
+ * variants — room data carries both), while sub_0808E0A8 uses the
+ * non-zero + 0x30 itself as the bit index. */
+static int boss_clear_bit(const AriaEntity *e) {
+    int16_t param0 = e->enemy.param0;
+    switch (e->id) {
+    case AOS_ENEMY_CREAKING_SKULL: /* 0x21 — sub_08098EA4 -> sub_08097FFC */
+    case AOS_ENEMY_GIANT_SKELETON: /* 0x5C — same shared callbacks */
+        return param0 != 0 ? 0xB : -1;
+    case AOS_ENEMY_MANTICORE:      /* 0x36 — sub_08072F40 */
+        return param0 != 0 ? 0xA : -1;
+    case AOS_ENEMY_GREAT_ARMOR:    /* 0x3C — sub_0808E0A8 */
+    case AOS_ENEMY_FINAL_GUARD:    /* 0x67 — same create/callbacks */
+    case AOS_ENEMY_SHADOW_KNIGHT:  /* 0x69 — same create/callbacks */
+        /* sub_0808E0A8 gates on + 0x30 != 0 and passes it as the bit
+         * index; the param0 == 0 field records skip the write. */
+        return param0 > 0 && param0 < 32 ? param0 : -1;
+    case AOS_ENEMY_MAN_EATER:      /* 0x40 — EnemyManEaterUpdate */
+        return param0 != 0 ? 0xD : -1;
+    case AOS_ENEMY_BIG_GOLEM:      /* 0x45 — sub_080AC5B0 */
+        return param0 != 0 ? 0xC : -1;
+    case AOS_ENEMY_HEADHUNTER:     /* 0x6A — sub_08083860 */
+        return 4;
+    case AOS_ENEMY_DEATH:          /* 0x6B — sub_080BDFC4 */
+        return 1;
+    case AOS_ENEMY_LEGION:         /* 0x6C — sub_0809D51C */
+        return 5;
+    case AOS_ENEMY_BALORE:         /* 0x6D — sub_080B594C */
+        return 6;
+    case AOS_ENEMY_BELMONT:        /* 0x6E — sub_080D1854 |= 4 */
+        return 2;
+    case AOS_ENEMY_GRAHAM:         /* 0x6F — sub_080D2BDC |= 1 */
+        return 0;
+    case AOS_ENEMY_CHAOS:          /* 0x70 — Chaos2 sub_080A49E0 |= 0x80 */
+        /* Only the phase-2 form's state-3 death countdown writes
+         * bit 7; the + 0x32 record parameter selects it (the
+         * 11/20-11/22 records spawn param1 = 1). ChaosCreate also
+         * reads bit 7 to skip an already-cleared spawn. */
+        return e->enemy.param1 != 0 ? 7 : -1;
+    case AOS_ENEMY_DRYAD:          /* 0x46 — sub_080AE3FC |= 1 */
+        /* Dryad's lethal callback ORs bit 0 when + 0x30 is non-zero;
+         * every extracted record has param0 == 0, so the write is
+         * inert today — kept for completeness. */
+        return param0 != 0 ? 0 : -1;
+    case AOS_ENEMY_MINOTAUR:       /* 0x15 — part callback sub_080AFF98 */
+    case AOS_ENEMY_RED_MINOTAUR:   /* 0x58 — same callback via sub_080B0AD4 */
+        /* The Minotaur family's spawned-part death callback ORs
+         * bit 8 when the part's + 0x30 is non-zero; all extracted
+         * records have param0 == 0, so this is inert today. */
+        return param0 != 0 ? 8 : -1;
+    default:
+        return -1;
+    }
+}
+
 static bool spawn_special_boss_soul(AriaRoom *room, const AriaEntity *entity,
                                     const AosSoma *soma, const AriaCombat *combat) {
     uint16_t special_index;
     if (!room || !entity || !soma || !combat || !combat->drops[entity->id] ||
         !aos_pickup_special_boss_index((uint8_t)entity->id, &special_index) ||
-        (aria_pickup_state.special & (uint16_t)(1u << special_index)) ||
         room->pickup_count >= MAX_PICKUPS)
         return false;
     const AosEnemyDrops *drops = combat->drops[entity->id];
@@ -2690,6 +2754,21 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             if (hit.special_soul)
                 (void)spawn_special_boss_soul(room, e, soma, combat);
+            /* The boss-clear + 0x37E bit: the native lethal-hit
+             * callbacks write it in the same pass that reports the
+             * kill (sub_080D6EF8 for most bosses, a direct orr for
+             * Julius and Graham), so the arena seals release on the
+             * killing blow — not on the dropped soul's pickup.
+             * Ordered after the soul spawns above so the guaranteed
+             * boss soul is not suppressed by its own bit. Only the
+             * room record's main body (role ENEMY) counts: the
+             * bosses' destructible parts share the enemy id. */
+            if (hit.killed && e->enemy.role == AOS_ROLE_ENEMY) {
+                int clear_bit = boss_clear_bit(e);
+                if (clear_bit >= 0)
+                    aria_pickup_state.special |=
+                        (uint16_t)(1u << clear_bit);
+            }
             if (hit.force_input && !input->active) {
                 input->active = true;
                 input->held = hit.forced_held;
@@ -4619,7 +4698,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                             (uint16_t)(sy - ssy) <= 0x22;
                 aos_object02_create(&e->object02, e->param0, e->param1,
                                     aria_pickup_state.special, near, sx, ssx,
-                                    soma->vx);
+                                    soma->vx, layer, e->x, e->y);
                 continue;
             }
             if (e->object02.deleted) continue;

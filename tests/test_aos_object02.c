@@ -34,44 +34,58 @@ int main(void) {
     /* One-shot delete: param0 <= 1 with the + 0x37E bit already set. */
     AosObject02 o;
     reset_layer();
-    assert(!aos_object02_create(&o, 0, 3, 1u << 3, false, 0, 0, 0));
+    assert(!aos_object02_create(&o, 0, 3, 1u << 3, false, 0, 0, 0, NULL, 0, 0));
     assert(o.deleted && !o.scene_active);
 
     /* Outside spawn, param0 == 0: state 0, no blocks until the timer
      * edge; scene_active holds gUnk_03002CB0 bit 15. */
     reset_layer();
-    assert(aos_object02_create(&o, 0, 0, 0, false, 0, 0, 0));
+    assert(aos_object02_create(&o, 0, 0, 0, false, 0, 0, 0, NULL, 0, 0));
     assert(o.state == 0 && o.timer == 0 && o.scene_active);
     assert(o.anim == 6);
 
     /* param1 == 7 picks anim 9. */
     reset_layer();
-    assert(aos_object02_create(&o, 0, 7, 0, false, 0, 0, 0));
+    assert(aos_object02_create(&o, 0, 7, 0, false, 0, 0, 0, NULL, 0, 0));
     assert(o.anim == 9);
 
     /* param0 == 1 outside -> state 0x14; param0 == 3 -> 0x63. */
     reset_layer();
-    assert(aos_object02_create(&o, 1, 0, 0, false, 0, 0, 0));
+    assert(aos_object02_create(&o, 1, 0, 0, false, 0, 0, 0, NULL, 0, 0));
     assert(o.state == 0x14);
     reset_layer();
-    assert(aos_object02_create(&o, 3, 0, 0, false, 0, 0, 0));
+    assert(aos_object02_create(&o, 3, 0, 0, false, 0, 0, 0, NULL, 0, 0));
     assert(o.state == 0x63);
+
+    /* Object02Create's outside branch seals the three-block column
+     * through sub_08002200 before picking the state; the near branch
+     * and the one-shot delete place nothing. */
+    reset_layer();
+    assert(aos_object02_create(&o, 1, 0, 0, false, 0, 0, 0, &layer, 100, 100));
+    assert(o.state == 0x14 && block_count() == 3);
+    reset_layer();
+    assert(aos_object02_create(&o, 0, 0, 0, true, 0x40, 0x40, 0, &layer, 100, 100));
+    assert(block_count() == 0);
+    reset_layer();
+    assert(!aos_object02_create(&o, 0, 3, 1u << 3, false, 0, 0, 0,
+                                &layer, 100, 100));
+    assert(block_count() == 0);
 
     /* Near spawn: state 0xA, timer 0x30, forced zero; a leftward Soma
      * on the left half (x <= 0x77) gets his velocity cleared. */
     reset_layer();
-    assert(aos_object02_create(&o, 0, 0, 0, true, 0x40, 0x40, -0x1000));
+    assert(aos_object02_create(&o, 0, 0, 0, true, 0x40, 0x40, -0x1000, NULL, 0, 0));
     assert(o.state == 0xA && o.timer == 0x30 && o.force_zero &&
            o.zero_soma_vx);
     reset_layer();
-    assert(aos_object02_create(&o, 0, 0, 0, true, 0x40, 0x40, 0x1000));
+    assert(aos_object02_create(&o, 0, 0, 0, true, 0x40, 0x40, 0x1000, NULL, 0, 0));
     assert(!o.zero_soma_vx); /* moving toward centre: kept */
 
     /* State 0 near/far block cycle: entity at room (100,100), camera
      * (0,0) -> screen (100,100); soma screen x 90 -> diff+0x28 = 0x32
      * <= 0x4F -> near branch clears blocks and ramps the timer. */
     reset_layer();
-    aos_object02_create(&o, 0, 0, 0, false, 100, 90, 0);
+    aos_object02_create(&o, 0, 0, 0, false, 100, 90, 0, &layer, 100, 100);
     aos_object02_update(&o, &layer, 0, 0, 100, 100, 90, 100, 0, test_rng);
     assert(o.timer == 2);
     /* Timer ramps +2/frame to the 0x30 cap over 24 near updates. */
@@ -89,7 +103,7 @@ int main(void) {
     /* State 2 forces LEFT (0x20) while the object sits right of
      * centre, RIGHT (0x10) on the left. */
     reset_layer();
-    aos_object02_create(&o, 0, 0, 0, false, 0, 0, 0);
+    aos_object02_create(&o, 0, 0, 0, false, 0, 0, 0, NULL, 0, 0);
     o.state = 2;
     o.facing_right = true;
     aos_object02_update(&o, &layer, 0, 0, 200, 100, 0, 0, 0, test_rng);
@@ -102,7 +116,7 @@ int main(void) {
      * plays 0x113 and advances to 11. */
     int before = block_count();
     reset_layer();
-    aos_object02_create(&o, 0, 0, 0, false, 0, 0, 0);
+    aos_object02_create(&o, 0, 0, 0, false, 0, 0, 0, NULL, 0, 0);
     o.state = 10;
     /* entity screen (100,100); soma screen x 120 -> anchor x-0x1C=104,
      * diff 4 <= 0x38, y equal -> inside: stays. */
@@ -122,7 +136,7 @@ int main(void) {
 
     /* State 20 waits on the + 0x37E bit, then songs and advances. */
     reset_layer();
-    aos_object02_create(&o, 2, 5, 0, false, 0, 0, 0);
+    aos_object02_create(&o, 2, 5, 0, false, 0, 0, 0, &layer, 100, 100);
     o.state = 20; o.param1 = 5;
     aos_object02_update(&o, &layer, 0, 0, 100, 100, 0, 0, 0, test_rng);
     assert(o.state == 20);
@@ -137,7 +151,7 @@ int main(void) {
 
     /* Off-screen flag: entity far outside the window sets + 0x58 bit5. */
     reset_layer();
-    aos_object02_create(&o, 0, 0, 0, false, 0, 0, 0);
+    aos_object02_create(&o, 0, 0, 0, false, 0, 0, 0, NULL, 0, 0);
     o.state = 3; /* an idle state: only the flag update runs */
     aos_object02_update(&o, &layer, 0, 0, 500, 500, 0, 0, 0, test_rng);
     assert(o.flags58 & 0x20);

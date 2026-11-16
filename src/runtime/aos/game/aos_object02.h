@@ -50,11 +50,14 @@ typedef struct {
  * entity screen position against (soma screen x - 0x1C, soma screen y)
  * within 0x38 x 0x22; `near` is that result computed by the caller.
  * Returns false when the + 0x37E event bit already fired (param0 <= 1)
- * and the entity must not spawn. */
+ * and the entity must not spawn. `layer`/`ex`/`ey` feed the outside
+ * branch's create-time sub_08002200 seal (room-pixel anchor, as in
+ * Object02Update); pass NULL to skip it. */
 bool aos_object02_create(AosObject02 *o, int param0, int param1,
                          uint16_t special_37e, bool near,
                          int32_t screen_x, int32_t soma_screen_x,
-                         int32_t soma_vx);
+                         int32_t soma_vx,
+                         AosCollision *layer, int32_t ex, int32_t ey);
 
 /* Object02Update; `layer` receives the block writes, `cam_x`/`cam_y`
  * are the BG1 whole-pixel origin (gEwramData + 0xA094 + 6/+ 0xA),

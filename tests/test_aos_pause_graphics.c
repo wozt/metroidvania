@@ -207,6 +207,68 @@ int main(int argc, char **argv) {
     assert((graphics.bg0_map[12 * 32] & 0x3FF) < 0x200);
     assert((graphics.bg0_map[15 * 32 + 7] & 0x3FF) < 0x200);
 
+    /* Patch 1171: entering Soul Set armed sub_08048B0C's press flourish
+     * (entity +0x24 state machine) and the first render already consumed
+     * the invisible scale-0 frame. The next 15 renders walk the native
+     * +0x0D timer 1..15 — sub_0803E058(0, timer<<12, timer<<12, 0, 0,
+     * slot) — growing the hand anchored at pixel (0x35,9) before the
+     * affine pass ends and fx_timer returns to 0. */
+    assert(graphics.fx_timer == 2);
+    {
+        unsigned white[15];
+        for (unsigned k = 0; k < 15; ++k) {
+            assert(aos_pause_graphics_render_soul_set(
+                &graphics, &soul, rgba, 240 * 160 * 4));
+            unsigned count = 0;
+            for (unsigned y = 0; y <= 24; ++y)
+                for (unsigned x = 40; x <= 70; ++x) {
+                    const uint8_t *p = rgba + ((size_t)y * 240 + x) * 4;
+                    if (p[0] == 255 && p[1] == 255 && p[2] == 255 &&
+                        p[3] == 255)
+                        ++count;
+                }
+            white[k] = count;
+        }
+        assert(graphics.fx_timer == 0);
+        /* The scale ramp grows the sprite: the last frame must paint
+         * far more hand pixels than an early near-zero-scale frame. */
+        assert(white[14] > white[2]);
+        assert(white[14] > 100);
+    }
+    /* The Soul Set L/R swipe stand-in: a category delta re-arms the
+     * flourish with the direction the native 0x40/0x80 input bits pass
+     * to sub_080486E0, anchored toward the new category label. */
+    soul.category = 1;
+    assert(aos_pause_graphics_render_soul_set(&graphics, &soul,
+                                              rgba, 240 * 160 * 4));
+    assert(graphics.fx_timer == 2);
+    assert(graphics.fx_dir == 1);
+    for (unsigned k = 0; k < 15; ++k)
+        assert(aos_pause_graphics_render_soul_set(
+            &graphics, &soul, rgba, 240 * 160 * 4));
+    assert(graphics.fx_timer == 0);
+    {
+        /* Category 1's label strip sits at tile row 5 -> pixel y 40;
+         * the swipe anchor ends at (44, 44) on the final frame. */
+        unsigned count = 0;
+        for (unsigned y = 34; y <= 56; ++y)
+            for (unsigned x = 34; x <= 56; ++x) {
+                const uint8_t *p = rgba + ((size_t)y * 240 + x) * 4;
+                if (p[0] == 255 && p[1] == 255 && p[2] == 255 &&
+                    p[3] == 255)
+                    ++count;
+            }
+        assert(count > 100);
+    }
+    soul.category = 0;
+    assert(aos_pause_graphics_render_soul_set(&graphics, &soul,
+                                              rgba, 240 * 160 * 4));
+    assert(graphics.fx_dir == -1);
+    for (unsigned k = 0; k < 15; ++k)
+        assert(aos_pause_graphics_render_soul_set(
+            &graphics, &soul, rgba, 240 * 160 * 4));
+    assert(graphics.fx_timer == 0);
+
     AosPauseEquipValues equip = {
         .current = {15, 16, 11, 12, 13, 14},
         .preview = {18, 17, 12, 12, 13, 14},

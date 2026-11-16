@@ -347,6 +347,48 @@
   the reveal-cue assertion in `test_intro_transition`;
   `annotations.tsv`/`features.tsv` notes updated.
 
+## Patch 1171 - pause-menu affine hand flourishes (sub_0803E058 decode + scoped RGBA blit)
+
+- **Matrix decode.** `sub_0803E058(angle, scale_x, scale_y, flip_h,
+  flip_v, slot)` stores the Q16.16 angle (fraction of a turn;
+  `0x4000` = 90°) and Q16.16 scales (`0x10000` = 1.0) per affine slot,
+  then `sub_0803E968` builds the forward rotation+scale matrix and the
+  routine stores the four s16 8.8 OAM parameters the hardware consumes
+  as `pa = cos/sx`, `pb = sin/sx`, `pc = -sin/sy`, `pd = cos/sy`
+  (native computes them through `sub_0803E8FC` Q16.16 reciprocals —
+  `0x7FFFFF` sentinel for scale <= `0x400` — and `sub_0803E86C`
+  multiplies, truncating toward zero; flip flags negate the matching
+  row pair). The host mapping is the same inverse
+  `fx = (pa*dx + pb*dy) >> 8`, `fy = (pc*dx + pd*dy) >> 8` that
+  `aos_obj_layer_draw` already uses.
+- **Port.** New `src/runtime/aos/menus/aos_affine_sprite.{c,h}` is the
+  smallest scoped affine path: `aos_affine_matrix` reproduces the
+  decoded routine (libm sine standing in for `sub_080009E4`'s
+  quarter-wave table) and `aos_affine_sprite_draw` inverse-maps each
+  output pixel into the frame's piece records — a rotated/scaled
+  16x16-class RGBA blit, not a general OAM engine. In
+  `aos_pause_graphics.c`, `flourish_page` arms the press flourish on
+  the page transitions that natively call `sub_08048B0C` (Soul Set
+  0x1F, Equip 0x20, Item Use 0x21, Ability 0x22, Config 0x24 — hub,
+  Sleep and Enemy never do), reproducing `sub_0804875C`: anchor pixel
+  `(0x35,9)`, `+0x0D` timer 0..15 driving
+  `sub_0803E058(0, timer<<12, timer<<12, 0, 0, slot)` and the `+0x59`
+  affine bit cleared after 16 rendered frames. The Soul Set L/R
+  category change (native input bits `0x40`/`0x80` -> `sub_080486E0`
+  direction ±1 -> `sub_08048108`) is detected from the category delta
+  in `render_soul_set` and fires a stand-in hand: one sprite on the
+  same scale ramp drifting toward the new category label.
+- **Honest gaps.** `sub_08048108`'s three-sprite slide machine and
+  `sub_0804933C`'s per-category palette/animation swap are
+  approximated, not reproduced; the flourish reuses the live cursor
+  animation frame instead of the native `+0x65` pose records; nothing
+  here is emulator-compared.
+- **Tests/docs.** `tests/test_aos_pause_graphics.c` asserts the 16-frame
+  lifecycle (`fx_timer` 1->0), the growing scale ramp's painted pixel
+  counts, and the swipe direction (`fx_dir` ±1) on category changes;
+  `annotations.tsv` (`aos.souls.equipment_menu`) updated; derived docs
+  regenerated.
+
 ## Patch 1170 - affine BG2 tilemap decode (sub_0803F7C8) and the load-time identity draw
 
 - **Gap.** Since Patch 1155 every affine BG tile array was rejected

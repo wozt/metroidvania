@@ -4,6 +4,7 @@
 #include "../../aos/game/aos_obj_rom.h"
 #include "../../aos/game/aos_recent_items.h"
 #include "../core/aos_rom_graphics.h"
+#include "aos_affine_sprite.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,6 +66,8 @@ bool aos_pause_graphics_init(AosPauseGraphics *graphics, const FusionRom *rom,
         return false;
     }
     *graphics = (AosPauseGraphics){0};
+    graphics->fx_page = 0xFF;
+    graphics->fx_category = 0xFF;
     FusionAosVideoMemory *memory = calloc(1, sizeof *memory);
     if (!memory) {
         set_error(error, error_size, "cannot allocate Aria pause video memory");
@@ -270,7 +273,9 @@ static bool valid_output(const AosPauseGraphics *graphics, const uint8_t *rgba,
            graphics->background.height_pixels >= AOS_PAUSE_HEIGHT;
 }
 
-static void composite(const AosPauseGraphics *graphics, uint8_t *rgba) {
+static void draw_flourish(AosPauseGraphics *graphics, uint8_t *rgba);
+
+static void composite(AosPauseGraphics *graphics, uint8_t *rgba) {
     for (unsigned y = 0; y < AOS_PAUSE_HEIGHT; ++y)
         for (unsigned x = 0; x < AOS_PAUSE_WIDTH; ++x) {
             size_t out = ((size_t)y * AOS_PAUSE_WIDTH + x) * 4;
@@ -279,9 +284,10 @@ static void composite(const AosPauseGraphics *graphics, uint8_t *rgba) {
             memcpy(rgba + out, graphics->background.rgba + background, 4);
             bg0_pixel(graphics, x, y, rgba + out);
         }
+    draw_flourish(graphics, rgba);
 }
 
-static void composite_on_backdrop(const AosPauseGraphics *graphics,
+static void composite_on_backdrop(AosPauseGraphics *graphics,
                                   uint8_t *rgba) {
     for (unsigned y = 0; y < AOS_PAUSE_HEIGHT; ++y)
         for (unsigned x = 0; x < AOS_PAUSE_WIDTH; ++x) {
@@ -290,6 +296,7 @@ static void composite_on_backdrop(const AosPauseGraphics *graphics,
             rgba[out + 3] = 255;
             bg0_pixel(graphics, x, y, rgba + out);
         }
+    draw_flourish(graphics, rgba);
 }
 
 /* sub_08048AD8 positions the hand entity at cell_x*8+6, cell_y*8+3 and its
@@ -298,22 +305,14 @@ static void composite_on_backdrop(const AosPauseGraphics *graphics,
  * 0 of the cursor descriptor — a fixed sequence of pointing poses whose
  * steps carry their own durations — and sub_08048018 adds its +-4px
  * horizontal wiggle to the anchor's X from the shared frame counter. */
+static unsigned cursor_frame_index(const AosPauseGraphics *graphics);
+
 static void draw_cursor(const AosPauseGraphics *graphics, uint8_t *rgba,
                         int cell_x, int cell_y) {
     if (!graphics->cursor_ready || graphics->cursor_sheet.anim_count == 0)
         return;
     const AosObjSheet *sheet = &graphics->cursor_sheet;
-    unsigned total = 0;
-    for (unsigned k = 0; k < sheet->anim_length[0]; ++k)
-        total += sheet->anim_duration[0][k];
-    if (!total) return;
-    unsigned t = (unsigned)(graphics->cursor_tick % total), anim_step = 0;
-    while (anim_step + 1 < sheet->anim_length[0] &&
-           t >= sheet->anim_duration[0][anim_step]) {
-        t -= sheet->anim_duration[0][anim_step];
-        ++anim_step;
-    }
-    unsigned frame_index = sheet->anim_frame[0][anim_step];
+    unsigned frame_index = cursor_frame_index(graphics);
     if (frame_index >= sheet->frame_count) return;
     const AosObjFrame *frame = &sheet->frames[frame_index];
     int step = (int)((graphics->cursor_tick >> 1) & 7);
@@ -345,6 +344,109 @@ static void draw_cursor(const AosPauseGraphics *graphics, uint8_t *rgba,
     }
 }
 
+/* ---- transient affine hand flourishes (Patch 1171) ----
+ * sub_08048B0C arms entity +0xF34's +0x24 sub-state on every pause page
+ * init that uses the press hand — Soul Set (anim arg 0x1F), Equip
+ * (0x20), Item Use (0x21), Ability (0x22) and Config (0x24); hub, Sleep
+ * and Enemy never call it — and sub_0804875C then runs the 16-update
+ * sequence decoded in aos_affine_sprite.h: anchor pixel (0x35,9),
+ * +0x0D timer 0..15, sub_0803E058(0, timer<<12, timer<<12, 0, 0, slot)
+ * and the +0x59 affine bit cleared afterwards. The Soul Set L/R
+ * category switch (input bits 0x40/0x80 -> sub_080486E0 direction -1/+1
+ * on entity +0xFB8) runs sub_08048108's larger three-sprite slide
+ * machine; this port keeps only its visible essence — a single hand
+ * popping through the same scale ramp while drifting toward the newly
+ * selected category label — documented as an approximation. */
+enum {
+    AOS_FX_PRESS,
+    AOS_FX_SWIPE,
+};
+
+enum {
+    AOS_FX_HUB,
+    AOS_FX_SOUL_SET,
+    AOS_FX_EQUIP,
+    AOS_FX_ITEM_USE,
+    AOS_FX_ABILITY,
+    AOS_FX_SLEEP,
+    AOS_FX_CONFIG,
+    AOS_FX_ENEMY,
+};
+
+static void flourish_page(AosPauseGraphics *graphics, unsigned page) {
+    if (graphics->fx_page == page) return;
+    graphics->fx_page = (uint8_t)page;
+    if (page == AOS_FX_SOUL_SET)
+        /* Page re-entry arms the press flourish below; re-baseline the
+         * swipe detector so the entry is not read as an L/R swipe. */
+        graphics->fx_category_valid = false;
+    switch (page) {
+    case AOS_FX_SOUL_SET:
+    case AOS_FX_EQUIP:
+    case AOS_FX_ITEM_USE:
+    case AOS_FX_ABILITY:
+    case AOS_FX_CONFIG:
+        graphics->fx_kind = AOS_FX_PRESS;
+        graphics->fx_timer = 1;
+        break;
+    default:
+        break;
+    }
+}
+
+/* The cursor sheet's current animation frame, shared by draw_cursor
+ * and the flourishes (the native press entity reuses the same sheet;
+ * its +0x65 pose selector stays approximated by the live cursor pose). */
+static unsigned cursor_frame_index(const AosPauseGraphics *graphics) {
+    const AosObjSheet *sheet = &graphics->cursor_sheet;
+    unsigned total = 0;
+    for (unsigned k = 0; k < sheet->anim_length[0]; ++k)
+        total += sheet->anim_duration[0][k];
+    if (!total) return sheet->frame_count;
+    unsigned t = (unsigned)(graphics->cursor_tick % total), step = 0;
+    while (step + 1 < sheet->anim_length[0] &&
+           t >= sheet->anim_duration[0][step]) {
+        t -= sheet->anim_duration[0][step];
+        ++step;
+    }
+    return sheet->anim_frame[0][step];
+}
+
+static void draw_flourish(AosPauseGraphics *graphics, uint8_t *rgba) {
+    if (!graphics->fx_timer || !graphics->cursor_ready ||
+        graphics->cursor_sheet.anim_count == 0)
+        return;
+    const AosObjSheet *sheet = &graphics->cursor_sheet;
+    unsigned frame_index = cursor_frame_index(graphics);
+    if (frame_index >= sheet->frame_count) {
+        if (++graphics->fx_timer > 16) graphics->fx_timer = 0;
+        return;
+    }
+    /* Native +0x0D runs 0..15; the scale is timer<<12 in Q16.16, so the
+     * hand grows from invisible to ~0.94 over the 16 updates. */
+    unsigned t = (unsigned)graphics->fx_timer - 1;
+    int32_t scale = (int32_t)t << 12;
+    int anchor_x, anchor_y;
+    if (graphics->fx_kind == AOS_FX_SWIPE) {
+        /* Approximation of sub_08048108's slide: the hand drifts from
+         * fx_dir * 15 px toward the selected category label's left
+         * edge (tile column 6 -> pixel 48, rows 3+2*category -> y
+         * 24+16*category) while running the same scale ramp. */
+        anchor_x = 44 + graphics->fx_dir * (int)(15 - t);
+        anchor_y = 28 + 16 * (int)graphics->fx_category;
+    } else {
+        /* sub_0804875C state 1's fixed anchor: pixel (0x35,9). */
+        anchor_x = 0x35;
+        anchor_y = 9;
+    }
+    int16_t params[4];
+    aos_affine_matrix(0, scale, scale, false, false, params);
+    aos_affine_sprite_draw(sheet, &sheet->frames[frame_index],
+                           graphics->cursor_palette, anchor_x, anchor_y,
+                           params, rgba, AOS_PAUSE_WIDTH, AOS_PAUSE_HEIGHT);
+    if (++graphics->fx_timer > 16) graphics->fx_timer = 0;
+}
+
 /* Pause-menu OBJ-layer audit (Patch 1165). Every sub_08048804/
  * sub_080488FC spawn call in the page state machines was traced:
  *  - Item Use: sub_0804B6C4/sub_0804B808 each rebuild exactly ONE icon
@@ -369,18 +471,23 @@ static void draw_cursor(const AosPauseGraphics *graphics, uint8_t *rgba,
  *    (e.g. 0x080AD645) and the port retains the created probe and
  *    re-runs aos_enemy_step_anim once per pause frame in
  *    aria_menus_debug.c, so animated enemies cycle frames instead of
- *    keeping the create frame. Remaining native-only OBJ behaviour
- *    is transient: sub_0804875C's 16-step affine press animation
- *    (entity+0x24: init sets the draw anchor to pixel (0x35,9), resets
- *    the +0x0D timer and steps sub_0803E058 with angle timer<<12 and
- *    scale from +0x2C for timer <= 0xF, then clears the +0x59 affine
- *    bit) and the Soul Set L/R category-transition hand
- *    (sub_08048108 state machine + sub_080486E0 trigger +
- *    sub_0804933C palette/anim swap; sub_08048AD8 anchors at
- *    cell*8+6/+3 and sub_08048B0C allocates affine slot 2 through
- *    sub_0803E654). Neither is a steady-state element; their affine
- *    matrices still need the sub_0803E058/sub_0803E968 decode before
- *    a faithful port. */
+ *    keeping the create frame. Patch 1171 ports the two transient
+ *    affine flourishes through aos_affine_sprite.c (the decoded
+ *    sub_0803E058/sub_0803E968 Q8.8 matrix): sub_0804875C's 16-step
+ *    press sequence — armed by sub_08048B0C on page entry (Soul Set
+ *    0x1F, Equip 0x20, Item Use 0x21, Ability 0x22, Config 0x24; hub,
+ *    Sleep and Enemy never call it), anchored at pixel (0x35,9),
+ *    timer 0..15 driving sub_0803E058(0, timer<<12, timer<<12, 0, 0,
+ *    slot) then the +0x59 affine bit cleared — and a scoped stand-in
+ *    for the Soul Set L/R transition hand: sub_08048108's three-sprite
+ *    slide machine collapses to one hand running the same scale ramp
+ *    while drifting toward the newly selected category label, fired
+ *    when render_soul_set observes the category delta that native
+ *    input bits 0x40/0x80 feed into sub_080486E0. Remaining
+ *    approximations: the flourish reuses the live cursor animation
+ *    frame instead of the native +0x65 pose selector, and the swipe
+ *    omits sub_08048108's two extra sprites and sub_0804933C's
+ *    palette/animation swap. */
 
 /* sub_08048804/sub_080488FC's icon entity: icon n is the 16x16 block
  * (n-1)%64 of sheet (n-1)/64 (eight icons per row of 16 px), sampled
@@ -457,6 +564,7 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
     if (!values || selected >= 7 ||
         !valid_output(graphics, rgba, rgba_size))
         return false;
+    flourish_page(graphics, AOS_FX_HUB);
     reset_bg0(graphics);
 
     /* sub_08047C4C: seven six-tile labels, palette 3 selected and palette 7
@@ -765,6 +873,20 @@ bool aos_pause_graphics_render_soul_set(
         !graphics || !graphics->text_ready ||
         !valid_output(graphics, rgba, rgba_size))
         return false;
+    flourish_page(graphics, AOS_FX_SOUL_SET);
+    /* sub_080486E0 category watch: the native L/R input bits 0x40/0x80
+     * pass direction -1/+1 into the Soul Set transition machine
+     * (sub_08048108, entity +0xFB8). The port observes the resulting
+     * category delta on this page's values instead of raw input, so the
+     * swipe flourish fires exactly when the selection changes. */
+    if (graphics->fx_category_valid &&
+        values->category != graphics->fx_category) {
+        graphics->fx_kind = AOS_FX_SWIPE;
+        graphics->fx_dir = values->category > graphics->fx_category ? 1 : -1;
+        graphics->fx_timer = 1;
+    }
+    graphics->fx_category = values->category;
+    graphics->fx_category_valid = true;
     reset_bg0(graphics);
     /* sub_08041204 clears the language-bank placeholders before the small
      * font renderer rewrites their character data. */
@@ -946,6 +1068,7 @@ bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
         !graphics || !graphics->text_ready ||
         !valid_output(graphics, rgba, rgba_size))
         return false;
+    flourish_page(graphics, AOS_FX_EQUIP);
     reset_bg0(graphics);
     clear_bg0_tiles(graphics, 0x340, 0x80);
 
@@ -1058,6 +1181,7 @@ bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
                                       uint8_t *rgba, size_t rgba_size) {
     if (!config || cursor >= AOS_BUTTON_ACTIONS ||
         !valid_output(graphics, rgba, rgba_size)) return false;
+    flourish_page(graphics, AOS_FX_CONFIG);
     reset_bg0(graphics);
     /* sub_0804BF8C init: three 24-tile description strips at column 5,
      * rows 15-17 (0x3200+i*0x20), the context-A window (0,0,0x20,2)
@@ -1140,6 +1264,7 @@ bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
         !graphics || !graphics->text_ready ||
         !valid_output(graphics, rgba, rgba_size))
         return false;
+    flourish_page(graphics, AOS_FX_ABILITY);
     reset_bg0(graphics);
     /* sub_08041204-style placeholder clear shared with the soul pages. */
     clear_bg0_tiles(graphics, 0x380, 0x80);
@@ -1210,6 +1335,7 @@ bool aos_pause_graphics_render_item_use(
         !graphics || !graphics->text_ready ||
         !valid_output(graphics, rgba, rgba_size))
         return false;
+    flourish_page(graphics, AOS_FX_ITEM_USE);
     reset_bg0(graphics);
     clear_bg0_tiles(graphics, 0x380, 0x80);
     /* sub_0804B6C4: four slot rows of strips at columns 2 and 0x11, tile
@@ -1338,6 +1464,7 @@ bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
         !graphics || !graphics->text_ready ||
         !valid_output(graphics, rgba, rgba_size))
         return false;
+    flourish_page(graphics, AOS_FX_ENEMY);
     reset_bg0(graphics);
     clear_bg0_tiles(graphics, 0x380, 0x80);
     unsigned next_tile = 0;
@@ -1477,6 +1604,7 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
         !valid_output(graphics, rgba, rgba_size))
         return false;
     unsigned enemy = values->cursor;
+    flourish_page(graphics, AOS_FX_ENEMY);
     reset_bg0(graphics);
     clear_bg0_tiles(graphics, 0x380, 0x80);
     /* sub_0804C968 header strips: 0x1320 x10 at (0x12,8) and
@@ -1599,6 +1727,7 @@ bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
                                      bool can_sleep, unsigned sleep_result,
                                      uint8_t *rgba, size_t rgba_size) {
     if (!valid_output(graphics, rgba, rgba_size)) return false;
+    flourish_page(graphics, AOS_FX_SLEEP);
     reset_bg0(graphics);
     unsigned next_tile = 0;
     /* sub_0804BD38/sub_0804BE0C draw three separate bands, not one shared

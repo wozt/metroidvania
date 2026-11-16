@@ -50,6 +50,22 @@ typedef struct {
     uint8_t icon_tiles[3][0x2000];
     uint16_t icon_palette[16];
     bool icons_ready;
+    /* sub_08048B0C/sub_0804875C and sub_08048108/sub_080486E0: the two
+     * transient affine hand animations. `fx_page` tracks the last page
+     * rendered so a page entry can arm the press flourish (native arms
+     * entity +0xF34's +0x24 on every sub_08048B0C page init: Soul Set
+     * 0x1F, Equip 0x20, Item Use 0x21, Ability 0x22, Config 0x24 —
+     * hub, Sleep and Enemy never call it). `fx_timer` is the native
+     * +0x0D counter (0..15 scaled frames, then the affine pass ends);
+     * `fx_kind` selects press vs the Soul Set L/R swipe stand-in and
+     * `fx_dir` its direction. `fx_category` detects category changes
+     * between render_soul_set calls for the swipe trigger. */
+    uint8_t fx_page;
+    uint8_t fx_timer;
+    uint8_t fx_kind;
+    int8_t fx_dir;
+    uint8_t fx_category;
+    bool fx_category_valid;
 } AosPauseGraphics;
 
 typedef struct {

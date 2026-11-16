@@ -2152,7 +2152,10 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
          * states under the global freeze flag. */
         play(enemy, anims, id == AOS_ENEMY_TINY_DEVIL ? 1 : 0);
         step_anim(enemy, anims);
-        enemy->phase = (uint16_t)(aos_random() & 0xFFFF);
+        /* Tiny Devil's +0x16 hover flags start cleared (its create never
+         * writes them); the old shared approximation randomized phase. */
+        enemy->phase = id == AOS_ENEMY_TINY_DEVIL ? 0
+                                                 : (uint16_t)(aos_random() & 0xFFFF);
         enemy->home = (int16_t)(enemy->y >> 16);
         enemy->state = flag_8e_40 ? (id == AOS_ENEMY_TINY_DEVIL ? 3 : 4) : 1;
         enemy->step = 0;

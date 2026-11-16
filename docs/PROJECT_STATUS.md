@@ -1,3 +1,48 @@
+## Patch 1172 - Tiny Devil native state machines: hover, attack dash and death
+
+- **Scope.** Enemy-coverage audit follow-up: Tiny Devil (enemy 0x10,
+  area-0 castle rooms) kept a shared approximation in
+  `src/runtime/aos/enemies/tiny_devil.c` while its native routines were
+  already traced. The state-1 hover (`sub_080C542C`), state-2 attack
+  (`sub_080C56F0`) and state-0xFF death (`sub_080C580C`) are now ported
+  faithfully; Imp (0x31) keeps its documented approximations on the
+  same module.
+- **Hover (sub_080C542C).** The native record fields map onto shared
+  struct members: `+0x14` rest countdown -> `leg`, `+0x16` axis flags
+  -> `phase` (bits 2/3 arm X/Y, bits 0/1 latch arrival), `+0x1C`/`+0x20`
+  rolled pixel hover offsets -> `walk_timer`/`speed`. Step 0 rolls the
+  100 + rand % 500 rest and both offsets against the player's integer
+  deltas (`sub_0806BD64`/`sub_0806BDEC`); step 1 clamps velocities
+  (+/-0x18000 X, +/-0x8000 Y), latches and flips the acceleration
+  (tripled past 1.0 px/frame) when the delta crosses the offset, and
+  re-rolls on overshoot. Rest expiry plus the `sub_0806D128(e, 4)`
+  margin probe enters state 2. The `+0x0C` no-target substep needs the
+  native aim-entity probe and stays 0 on real gameplay paths.
+- **Attack (sub_080C56F0).** Step 0 dashes toward the player
+  (vx +/-0x10000, ax -/+0x800, vy -0x10000, ay 0x800). Step 1 faces the
+  player, aborts to the hover through the `sub_080C5BA4(e, 8)`
+  8-pixel screen box, and every 31st frame plays animation 2 and fires
+  the aimed orb (`sub_080C5898`). Step 2 hangs 80 frames (animation 1
+  at frame 40) before returning to the hover.
+- **Death (sub_080C580C).** Song 0x72, `+0x0D` = 0x32, `vy` = 0x8000,
+  the corpse drops and is removed (`+0x59` bit 3) once its integer y
+  passes 0xAA, with `sub_0806BE74(e, 7, 0x100000, 0xC0000)` period-7
+  flames through the shared `aos_enemy_death_flames`. The `+0x5A`/`+0x65`
+  draw bytes are documented as not modeled.
+- **Create.** `aos_enemy.c` no longer randomizes `phase` for Tiny
+  Devil: native `+0x16` starts cleared (the old shared approximation
+  used it as a visual phase).
+- **Evidence and limits.** Ported line-by-line from
+  `third_party/cvaos/asm/code/code_080C0A1C.s`; unit-tested in
+  `tests/test_aos_enemy.c` (the batch-move assertion now accepts a
+  velocity change because the faithful hover's first frame only loads
+  accelerations). The orb launch keeps the shared `move_toward`
+  approximation without the native affine angle/scale, randomized
+  rounding is not modeled, and there is no emulator comparison — the
+  enemy stays `functional`/partial-faithful, not validated.
+- **Registries.** `annotations.tsv` (`aos.enemies.tiny_devil`) and
+  `aos_monster_aspects.tsv` notes updated; statuses unchanged.
+
 ## Patch 1171 - GameModeInGameUpdate cases 9-14 decoded: window coroutine, credits entry, SIO link-sync chain
 
 - **Scope.** Decode-only pass over the remaining `sub_0800B700`
@@ -81,6 +126,123 @@
 - Validation: warning-clean build, `test_aos_in_game_mode`
   extended for the new case labels, `fusion_dashboard
   --run-tests` and `fusion_check_generated` in this cycle.
+
+## Patch 1171 - opening type-8 sparkle trails and the reveal music cue
+
+- **Gap.** Patch 1162's residual list still held the opening scene's
+  `sub_08045B44` type-8 sparkles and the reveal-stage music handoff.
+  A fresh native pass over `code_08050A3C.s`/`code_08040A38.s` decoded
+  both emitters' sparkle blocks completely.
+- **Sparkles ported.** `sub_0805EC20` (the soul orb) emits a type-8
+  `sub_08045B44` sparkle whenever `+0xD & 3` is clear, read before
+  the `+0xA` tail decrements it; `sub_0805EE88` (the projectile)
+  uses `+0xD & 1`. Each sparkle spawns at the emitter's `+0x40/+0x44`
+  plus two `sub_0802D5EC(0x200000)` offsets, gets `+0x48/+0x4C =
+  -v/4` and keeps the factory's `+0x50/+0x54 = v/64` arguments —
+  the same terms the soul-pickup trail port (Patch 0825) already
+  uses. Table `0x085251A8` entry 8 selects `sub_080450C8`'s
+  direct-sequence update over animation `0x08525194` (frames
+  `{0x49,0x36,0x35,0x34}`, ticks `{2,4,4,2}`): state 0 only binds
+  sprite/animation/draw callback, state 1 integrates and deletes on
+  sequence end. The orb's `+0xA`/`+0xD` lifetime is now modeled as
+  the native two-phase 0xC8 -> 0x40 countdown (same 0x108-frame
+  total) so the sparkle gate reads the real timer. `AosOpeningSpark`
+  pool (16 slots, recycled) lives in `aos_opening_event`; the draw
+  selects `AOS_EFFECT_CONTAINER_SPARK0` for the orb (red-soul bank)
+  and `AOS_EFFECT_CONTAINER_SPARK3` for the bolt (its `sub_0803B924`
+  palette argument 6 lands on bank 6), reusing the exported
+  `soul_container_spark` arts — the same `{3,7,7,3}`-ticks-for-
+  `{2,4,4,2}` divergence the pickup trail documents.
+- **Reveal music cue.** `sub_0805CED0`'s case-0 -> case-1 handoff
+  runs `sub_08013CF0(0x1C)` once the spawn/reveal pan reports done,
+  before `sub_0805CB74`'s MOSAIC transition. `camera_update` now
+  raises `AOS_OPENING_CUE_REVEAL_PAN` on that frame, `play_opening_cue`
+  maps it to `aos_room_music_change(music, 0x1C)`, and the runtime
+  no longer starts MUS_28 at init — nothing plays during the reveal
+  pan, matching the native `PlaySong(0x1000)`/STOP lead-in.
+- **Trace closures.** Every `sub_0803F2C8` call in the emission path
+  (`sub_0805E260`, `sub_0805E528`, `sub_0805E5D4`) passes `r3=1`, so
+  the emitted children's `+0x6C` bit-3 loop argument is confirmed
+  looping — the wrap in `emitted_anim_step` is faithful, not a
+  fallback. The Arikado `+0x48` consumer search gained its final
+  negatives: `Object20Update` only dispatches the param0 table (no
+  follower pass), `sub_0805D410` writes child18 only through
+  `+0x58/+0x59/+0x6D` animation fields, `sub_0806E0D0`'s `+0x48`
+  writes land on draw-slot fields, and `sub_0803F17C` cannot move an
+  entity — the `0xD0` screen-x guard stays the documented
+  approximation.
+- **Residual.** No separate projectile *combat* callback exists in
+  the dump beyond the in-update `sub_08068AD4` margin check already
+  modeled (`sub_0805DC80` is dead code); the sparkles' own
+  `sub_080450C8` state-0 palette/flip RNG rolls and the type-8
+  record's OBJ row beyond the bank match remain approximations.
+- **Tests/docs.** `tests/test_aos_opening_event.c` gains
+  `test_opening_sparks` (cadence, spawn offsets, `-v/4`/`v/64`
+  terms, bank kinds, 12-update expiry, two-phase orb lifetime) and
+  the reveal-cue assertion in `test_intro_transition`;
+  `annotations.tsv`/`features.tsv` notes updated.
+
+## Patch 1170 - affine BG2 tilemap decode (sub_0803F7C8) and the load-time identity draw
+
+- **Gap.** Since Patch 1155 every affine BG tile array was rejected
+  (`FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE`): 24 rooms (mostly
+  Chaotic Realm, all BG2) drew no BG2 layer at all.
+- **Native format decoded.** `sub_0803F7C8`
+  (`third_party/cvaos/src/code/code_08039340.c:5406`, asm
+  `code_08039340.s:13141`) is a BG2-only routine (`param_0 == 2`,
+  other BGs no-op). The affine tilemap is a square map of **8-bit
+  tile indices** — no flips, no palette banks, always 256-colour
+  tiles — not 16-bit entries: an 8x8 u16 block map at
+  `pBgMetadata->unk_C` (64 entries regardless of the metadata
+  screen counts) whose 1-based ids select 16-byte blocks in the
+  `unk_4` tile payload (raw or LZ77 per flags bit 1); each block
+  is four u32 words = four rows of four tile bytes covering a
+  4x4-tile cell, so a size-1 BG2CNT (32x32 tiles) fills the whole
+  0x400-byte VRAM tilemap at `0x0600F000`. Verified against real
+  room data (area 4/0, 6/4, 5/14, 7/37, 11/*).
+- **Change.** `fusion_aos_read_background_tiles`
+  (`src/assets/aos/runtime_room.c`) decodes that layout for
+  `background->layer == 2` into a 32x32 `cells` array of u16 tile
+  numbers; non-BG2 affine metadata keeps
+  `FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE` exactly like the native
+  no-op. `fusion_aos_render_background` forces 8bpp tiles for
+  `tilemap->flags & 1` (affine ignores BGCNT bit 7). The static
+  composite and importer renders pick the layers up automatically:
+  golden digests now read 925 decoded / 0 unsupported tilemaps
+  (was 901/24), 925 renders and the 24 affine rooms' exported
+  `background.bmp` composites include the texture tiled at its
+  static origin (documented approximation — the composite has no
+  transform concept).
+- **Draw.** `aria_draw.c` marks decoded affine layers and draws
+  them under the load-time `BgAffineSet` that `sub_0803F7C8`
+  itself issues (texX=texY=0x8000, scr=(0x78,0x50), unit scale,
+  alpha 0): screen pixel (x,y) samples texel (x+8, y+48) of the
+  256x256 texture — bgOfs is ignored by the hardware for affine
+  BGs, so the scroll shadows no longer drive these layers.
+- **Still unported (honest).** The per-frame transform FX stay
+  reported through `AosScrollOut::fx`: mode 18 `sub_0800D000`'s
+  per-scanline `BgAffineSet` hblank buffer, mode 21/27's
+  `BgAffineSet` on BG2 (scr 0x70/0x38 sx=sy=0x80 and the
+  sine-driven scr/sx/alpha variants), and the scanline/window
+  writers `sub_0800CB8C`/`sub_0800CED4`/`sub_0800D0F8` behind
+  modes 15/16/23/24/25/28/29/30/31/32/36 plus the hblank wave
+  buffers of modes 20/30/31/36. Rooms using them draw the static
+  frame-0 transform — an approximation, never invented transform
+  data. Affine collision maps
+  (`FUSION_AOS_COLLISION_UNSUPPORTED_AFFINE`) are unchanged.
+- **Verify.** `tests/test_aos_tilemap.c` fixture gains an affine
+  BG2 layer (flags 3: affine + LZ77) asserting the 32x32 decode,
+  cell order and empty/out-of-map zeros; `ctest -R
+  aos_tilemap|fusion_assets_aos|aos_scroll` passes;
+  `AOS_GOLDEN_UPDATE=1` regenerated `aos_native_golden.tsv` (only
+  the intended tilemap/render/composite/export digests moved);
+  `fusion_aria_runtime --capture` on room 6/4 with `--rom` shows
+  the BG2 affine layer drawn (139792 px differ vs the no-ROM
+  fallback, `ARIA_BG_DEBUG` reports `layers=1,1,0`).
+- **Registries.** `aos.core.scroll` and `aos.core.tilemap` in
+  `annotations.tsv`, `assets.aria_rooms` in `features.tsv`;
+  statuses stay `partial` — no emulator comparison of the affine
+  transform yet.
 
 ## Patch 1169 - movement comparison corrected to world coordinates; residual divergence is enemy hit timing
 
@@ -320,6 +482,39 @@
   5 and 6 and rejects id 7. Full `fusion_dashboard --run-tests` is
   blocked this cycle by unrelated in-progress edits in
   `aria_runtime.c`/`aos_map_warp` from another work stream.
+
+## Patch 1166 - enemy portrait per-enemy animation; transient decode notes
+
+- **Port.** The Enemy detail portrait is no longer a frozen create
+  frame. `enemy_portrait_init` in `src/runtime/aria_menus_debug.c`
+  now retains the created `AosEnemy` probe per enemy id and
+  `enemy_portrait_advance` re-runs `aos_enemy_step_anim` once per
+  rendered pause frame — the externally visible part of
+  `sub_0804CA18`'s record `+0x04` update dispatch while
+  `unk_A074_0` skips the entity loop. When the stepped animation
+  resolves a different exported frame, the cached BMP is re-decoded
+  through the same `art->paths[anim.id][anim.frame]` /
+  `art->frames[anim.id][anim.frame]` records the create used.
+  Static-frame enemies are unchanged; the per-family AI inside the
+  `+0x04` routines is not emulated (partial, not emulator-compared).
+- **Still transient-only (decoded, awaiting the affine matrix port).**
+  `sub_0804875C`'s press entity: `+0x24` state 1 anchors the draw
+  position at pixel `(0x35,9)`, resets the `+0x0D` timer, then for
+  `timer <= 0xF` calls `sub_0803E058` with angle `timer << 12` and
+  scale from `+0x2C` before clearing the `+0x59` affine bit — a
+  one-shot 16-update affine sequence. The Soul Set transition hand:
+  `sub_080486E0` compares the requested category against the hand's
+  current one and sets `+0x38` plus palette/anim state that
+  `sub_0804933C` applies; `sub_08048108` is the movement/affine state
+  machine (anchors via `sub_08048AD8` at `cell*8+6`/`cell*8+3`,
+  affine slot via `sub_0803E654(2)` in `sub_08048B0C`). Both need
+  the `sub_0803E058`/`sub_0803E968` sine/scale matrix decode before
+  a faithful host port; the pause renderer has no affine blit path
+  wired to its RGBA output yet (`aos_obj_layer_draw`'s Q8.8 inverse
+  mapping exists but is not used by the pause pages).
+- **Docs/registries.** `annotations.tsv` (`aos.menus.enemy`,
+  `aos.souls.equipment_menu`), `features.tsv` and the OBJ audit
+  comment in `aos_pause_graphics.c` updated; derived docs regenerated.
 
 ## Patch 1165 - pause-menu OBJ-layer audit closes the remaining element gaps
 
@@ -22971,36 +23166,3 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-12: the warning-clean build succeeded, CTest passed
   28/28, the Python suite passed 418/418, `check_generated` reported fresh
   documents and the proprietary-file guard passed.
-## Patch 1166 - enemy portrait per-enemy animation; transient decode notes
-
-- **Port.** The Enemy detail portrait is no longer a frozen create
-  frame. `enemy_portrait_init` in `src/runtime/aria_menus_debug.c`
-  now retains the created `AosEnemy` probe per enemy id and
-  `enemy_portrait_advance` re-runs `aos_enemy_step_anim` once per
-  rendered pause frame — the externally visible part of
-  `sub_0804CA18`'s record `+0x04` update dispatch while
-  `unk_A074_0` skips the entity loop. When the stepped animation
-  resolves a different exported frame, the cached BMP is re-decoded
-  through the same `art->paths[anim.id][anim.frame]` /
-  `art->frames[anim.id][anim.frame]` records the create used.
-  Static-frame enemies are unchanged; the per-family AI inside the
-  `+0x04` routines is not emulated (partial, not emulator-compared).
-- **Still transient-only (decoded, awaiting the affine matrix port).**
-  `sub_0804875C`'s press entity: `+0x24` state 1 anchors the draw
-  position at pixel `(0x35,9)`, resets the `+0x0D` timer, then for
-  `timer <= 0xF` calls `sub_0803E058` with angle `timer << 12` and
-  scale from `+0x2C` before clearing the `+0x59` affine bit — a
-  one-shot 16-update affine sequence. The Soul Set transition hand:
-  `sub_080486E0` compares the requested category against the hand's
-  current one and sets `+0x38` plus palette/anim state that
-  `sub_0804933C` applies; `sub_08048108` is the movement/affine state
-  machine (anchors via `sub_08048AD8` at `cell*8+6`/`cell*8+3`,
-  affine slot via `sub_0803E654(2)` in `sub_08048B0C`). Both need
-  the `sub_0803E058`/`sub_0803E968` sine/scale matrix decode before
-  a faithful host port; the pause renderer has no affine blit path
-  wired to its RGBA output yet (`aos_obj_layer_draw`'s Q8.8 inverse
-  mapping exists but is not used by the pause pages).
-- **Docs/registries.** `annotations.tsv` (`aos.menus.enemy`,
-  `aos.souls.equipment_menu`), `features.tsv` and the OBJ audit
-  comment in `aos_pause_graphics.c` updated; derived docs regenerated.
-

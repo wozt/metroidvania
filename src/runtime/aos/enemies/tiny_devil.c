@@ -8,6 +8,7 @@
 #include "../../aos/core/aos_audio.h"
 
 #define collide aos_enemy_collide
+#define death_flames aos_enemy_death_flames
 #define face_player aos_enemy_face_player
 #define generic_death aos_enemy_generic_death
 #define integrate aos_enemy_integrate
@@ -17,6 +18,8 @@
 #define outside_margins aos_enemy_outside_margins
 #define play aos_enemy_play
 #define play_loop aos_enemy_play_loop
+#define player_dx aos_enemy_player_dx
+#define player_dy aos_enemy_player_dy
 #define step_anim aos_enemy_step_anim
 #define stop aos_enemy_stop
 #define target_x aos_enemy_target_x
@@ -134,6 +137,11 @@ void aos_enemy_imp_death_child_update(AosEnemy *child, const AosEnemyKind *kind,
     if (--child->timer == 0 || (child->y >> 16) - cam_y > 0xAA) child->removed = true;
 }
 
+/* Imp's state-1 approximation (its native routines sub_080C47F8 and
+ * friends are a different machine; documented in the parity row). The
+ * shared struct fields keep the old meanings here: `rest` the idle
+ * countdown, `walk_timer`/`speed` the hover target, `timer` the
+ * arrive timeout. */
 static void devil_idle(AosEnemy *e, const AosSoma *soma, const AosEnemyKind *kind,
                        int cam_x, int cam_y, uint32_t (*random)(void)) {
     bool imp = e->id == AOS_ENEMY_IMP;
@@ -159,38 +167,170 @@ static void devil_idle(AosEnemy *e, const AosSoma *soma, const AosEnemyKind *kin
     }
 }
 
-static void tiny_devil_attack(AosEnemy *e, const AosSoma *soma,
-                              const AosEnemyKind *kind, int cam_x, int cam_y,
-                              AosHitReport *report, uint32_t (*random)(void)) {
+/* sub_080C542C state 1, Tiny Devil only: the hover. The native record
+ * fields map onto shared struct members:
+ *   +0x14 `leg`      signed rest countdown (100 + rand % 500 per roll)
+ *   +0x16 `phase`    axis flags: bits 2/3 arm X/Y, bits 0/1 latch arrival
+ *   +0x1C `walk_timer` signed hover X offset in pixels
+ *   +0x20 `speed`    signed hover Y offset in pixels
+ * The +0x0C idle substep of the native routine only runs when the aim
+ * probe (sub_0806CD38/CD78) returns the body's own position — no target
+ * at all — so it stays 0 on every real gameplay path and is not ported.
+ * +0x6D is never written by EnemyTinyDevilCreate, so the animation
+ * guards against variants 1 and 2 never trigger. */
+static void tiny_devil_hover(AosEnemy *e, const AosSoma *soma,
+                             const AosEnemyKind *kind, int cam_x, int cam_y,
+                             uint32_t (*random)(void)) {
+    int16_t dx = player_dx(e, soma);   /* sub_0806BD64 */
+    int16_t dy = player_dy(e, soma);   /* sub_0806BDEC */
+    if (e->leg) --e->leg;              /* +0x14 countdown */
+    face_player(e, soma);              /* sub_0806BC40 */
     if (e->step == 0) {
-        bool player_right = target_x(soma) > e->x;
-        e->vx = player_right ? 0x20000 : -0x20000;
-        e->ax = player_right ? -0x800 : 0x800;
+        /* _080C54C0: roll the rest and both hover offsets. */
+        if (!e->leg) e->leg = (int16_t)(0x64 + random() % 0x1F4);
+        e->phase = 0;                  /* +0x16 = step (0) */
+        play(e, kind->anims, 1);
+        e->ax = 0x200;
+        e->ay = 0x400;
+        if (dx > 0) {
+            e->walk_timer = (int32_t)(int16_t)(random() % 0x19) - 0x19;
+            e->ax = -e->ax;
+            e->phase = (uint16_t)(e->phase & ~5);
+        } else {
+            e->walk_timer = 0x19 - (int32_t)(random() % 0x19);
+            e->phase = (uint16_t)(e->phase | 4);
+        }
+        if (dy > 0x19) {
+            e->speed = (int32_t)(int16_t)(random() % 0x19) - 0x14;
+            e->ay = -e->ay;
+            e->phase = (uint16_t)(e->phase & ~9);
+        } else {
+            e->speed = -0x46 - (int32_t)(random() % 0x19);
+            e->phase = (uint16_t)(e->phase | 8);
+        }
+        ++e->step;
+    } else {
+        /* _080C557A: drift on both axes. When the position delta crosses
+         * the rolled offset the axis latches (bit 0 X / bit 1 Y) and the
+         * acceleration flips — tripled when the speed already exceeds
+         * 1.0 — to hold the hover point; velocity carrying past the
+         * latch clears it and returns to step 0 for a re-roll. */
+        uint16_t fl = e->phase;
+        if (fl & 4) {
+            if (fl & 1) {
+                if (e->vx <= 0) { e->phase = (uint16_t)(fl & ~1); e->step = 0; }
+            } else {
+                if (e->vx > 0x18000) e->vx = 0x18000;
+                if (dx >= e->walk_timer) {
+                    e->phase = (uint16_t)(fl | 1);
+                    e->ax = e->vx > 0x10000 ? -(e->ax * 3) : -e->ax;
+                }
+            }
+        } else {
+            if (fl & 1) {
+                if (e->vx >= 0) { e->phase = (uint16_t)(fl & ~1); e->step = 0; }
+            } else {
+                if (e->vx < -0x18000) e->vx = -0x18000;
+                if (dx <= e->walk_timer) {
+                    e->phase = (uint16_t)(fl | 1);
+                    e->ax = e->vx < -0x10000 ? -(e->ax * 3) : -e->ax;
+                }
+            }
+        }
+        fl = e->phase;                  /* _080C560E reloads +0x16 */
+        if (fl & 8) {
+            if (fl & 2) {
+                if (e->vy <= 0) { e->phase = (uint16_t)(fl & ~2); e->step = 0; }
+            } else {
+                if (e->vy > 0x8000) e->vy = 0x8000;
+                if (dy >= e->speed) {
+                    e->phase = (uint16_t)(fl | 2);
+                    e->ay = e->vy > 0x10000 ? -(e->ay * 3) : -e->ay;
+                }
+            }
+        } else {
+            if (fl & 2) {
+                if (e->vy >= 0) { e->phase = (uint16_t)(fl & ~2); e->step = 0; }
+            } else {
+                if (e->vy < -0x8000) e->vy = -0x8000;
+                if (dy <= e->speed) {
+                    e->phase = (uint16_t)(fl | 2);
+                    e->ay = e->vy < -0x10000 ? -(e->ay * 3) : -e->ay;
+                }
+            }
+        }
+    }
+    /* _080C56A6: rest expired and inside the margin-4 view -> the
+     * attack; velocities are zeroed and both substeps reset. */
+    int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
+    if (e->leg == 0 && !outside_margins(kind, 4, sx, sy)) {
+        stop(e);
+        e->state = 2;
+        e->substep = 0;
+        e->step = 0;
+    }
+    integrate(e);                      /* _080C56CC tail */
+}
+
+/* sub_080C56F0 state 2: the attack. Step 0 dashes toward the player
+ * (vx +/-1.0 px/frame, ax +/-0x800 turning it back, vy -1.0 with
+ * ay 0x800 arcing the leap — the native Y probes feed nothing here).
+ * Step 1
+ * faces the player and aborts to the hover when the body's integer
+ * position leaves the 8-pixel screen box of sub_080C5BA4; every 31st
+ * frame it plays animation 2 and fires the aimed orb (sub_080C5898),
+ * then hangs motionless for 80 frames (animation 1 at frame 40) before
+ * returning to the hover. */
+static void tiny_devil_attack(AosEnemy *e, const AosSoma *soma,
+                              const AosEnemyKind *kind,
+                              AosHitReport *report, uint32_t (*random)(void)) {
+    int16_t dx = player_dx(e, soma);
+    if (e->step == 0) {
+        /* _080C5724 */
+        e->vy = 0;
+        e->ay = 0;
+        e->vx = 0x10000;
+        e->ax = 0x800;
+        if (dx <= 0) {
+            e->vx = -0x10000;        /* ax stays +0x800 */
+        } else {
+            e->ax = -0x800;
+        }
         e->vy = -0x10000;
         e->ay = 0x800;
         e->timer = 0;
         e->step = 1;
     } else if (e->step == 1) {
-        integrate(e);
-        int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
-        if (sx < 8 || sx > 0xE8 || sy < 8 || sy > 0x98) {
+        /* _080C5754 */
+        face_player(e, soma);
+        int xi = (int16_t)(e->x >> 16), yi = (int16_t)(e->y >> 16);
+        if (xi < 8 || xi > 0xE8 || yi < 8 || yi > 0x98) {
             e->state = 1;
+            e->substep = 0;
             e->step = 0;
-            e->rest = 0;
-        } else if (++e->timer > 30) {
-            play(e, kind->anims, 2);
-            tiny_devil_orb(e, soma, kind, report, random);
-            stop(e);
-            e->timer = 0;
-            e->step = 2;
+        } else {
+            ++e->timer;              /* +0x0D, a u8 like the native byte */
+            if (e->timer > 0x1E) {
+                play(e, kind->anims, 2);
+                tiny_devil_orb(e, soma, kind, report, random);
+                stop(e);
+                e->timer = 0;
+                e->step = 2;
+            }
         }
-    } else if (++e->timer > 80) {
-        e->state = 1;
-        e->step = 0;
-        e->rest = 0;
-    } else if (e->timer == 40) {
-        play(e, kind->anims, 1);
+    } else {
+        /* _080C57B2 */
+        ++e->timer;
+        if (e->timer > 0x50) {
+            e->timer = 0;
+            e->state = 1;
+            e->substep = 0;
+            e->step = 0;
+        } else if (e->timer == 0x28) {
+            play(e, kind->anims, 1);
+        }
     }
+    integrate(e);                      /* _080C57E8: every step */
 }
 
 static void imp_approach(AosEnemy *e, const AosSoma *soma) {
@@ -282,24 +422,45 @@ AosHitReport aos_enemy_devil_update(AosEnemy *e, AosSoma *soma, const AosEnemyKi
         return report;
     }
     if (e->state == 0xFF) {
-        if (e->step == 0) {
-            /* sub_080C580C / sub_080C4ED4 step 0: sound 0x72. */
-            aos_audio_play_song(0x72);
-            if (imp) imp_death_child(e, &report);
-            e->step = 1;
+        if (imp) {
+            /* sub_080C4ED4 step 0: sound 0x72 and the direct-frame
+             * death child; the shared generic death follows. */
+            if (e->step == 0) {
+                aos_audio_play_song(0x72);
+                imp_death_child(e, &report);
+                e->step = 1;
+            }
+            e->y += e->vy;
+            generic_death(e, kind, random, &report);
+        } else {
+            /* sub_080C580C: step 0 plays song 0x72, runs the native
+             * defeat bookkeeping (sub_080683BC, done by the shared hurt
+             * pass) and sets +0x0D = 0x32, +0x65 = 0x14, vy = 0x8000 and
+             * the +0x5A palette byte — the two draw-side bytes are not
+             * modeled. Every step then does y += vy, removes the body
+             * (+0x59 bit 3) once its integer y passes 0xAA and runs
+             * sub_0806BE74(e, 7, 0x100000, 0xC0000). */
+            if (e->step == 0) {
+                aos_audio_play_song(0x72);
+                e->timer = 0x32;
+                e->vy = 0x8000;
+                e->step = 1;
+            }
+            e->y += e->vy;
+            if ((int16_t)(e->y >> 16) > 0xAA) e->removed = true;
+            death_flames(e, kind, 7, 0x100000, 0xC0000, random, &report);
         }
-        e->y += e->vy;
-        generic_death(e, kind, random, &report);
         aos_combat_tick(&e->combat);
         return report;
     }
     int sx = (e->x >> 16) - cam_x, sy = (e->y >> 16) - cam_y;
     if ((uint16_t)(sx + 0x10) > 0x110 || (uint16_t)sy > 0xB0) return report;
-    if (e->state == 1)
-        devil_idle(e, soma, kind, cam_x, cam_y, random);
-    else if (!imp && e->state == 2)
-        tiny_devil_attack(e, soma, kind, cam_x, cam_y, &report, random);
-    else if (imp && e->state == 2)
+    if (e->state == 1) {
+        if (imp) devil_idle(e, soma, kind, cam_x, cam_y, random);
+        else tiny_devil_hover(e, soma, kind, cam_x, cam_y, random);
+    } else if (!imp && e->state == 2) {
+        tiny_devil_attack(e, soma, kind, &report, random);
+    } else if (imp && e->state == 2)
         imp_approach(e, soma);
     else if (imp && e->state == 3)
         imp_control(e, soma, &report);

@@ -2013,9 +2013,12 @@ static void batch_enemy_tests(void) {
                     : 100;
         assert(aos_enemy_create(&e, ids[i], 100, y, 0, 0, &soma, &layer, &kind, &stats));
         assert(e.id == ids[i] && e.hp == stats.hp);
-        int32_t x0 = e.x, y0 = e.y;
+        int32_t x0 = e.x, y0 = e.y, vx0 = e.vx, vy0 = e.vy;
         aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, always_zero);
-        assert(e.x != x0 || e.y != y0);
+        /* Tiny Devil's faithful hover (sub_080C542C) starts from rest:
+         * its first frame only loads the accelerations, so accept a
+         * velocity change as the machine having run. */
+        assert(e.x != x0 || e.y != y0 || e.vx != vx0 || e.vy != vy0);
     }
 
     /* Ripper uses the native six-way jump table: draw 0 is the steep

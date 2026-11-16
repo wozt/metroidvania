@@ -1,3 +1,54 @@
+## Patch 1182 - Big Golem part brain decoded: sub_080AC6E8's fourteen children, record bake, aim and death launch
+
+- **Decode.** `sub_080AC6E8` (~890 asm lines,
+  `third_party/cvaos/asm/code/code_080A0A8C.s:23446`) is the
+  update callback of the fourteen `sub_0806DFF8` children
+  `EnemyBigGolemCreate` spawns in its 0..0xD loop — one per part
+  index of the identity table 0x0811930C, not four as previously
+  documented. Each child rides a 0x38-byte record of the boss's
+  + 0x1C container (allocated as 0xC4 words by sub_0806C2CC):
+  state 0 (+ 0x0A == 0) sets position to parent + record offset,
+  aims records {2,4,8,0xD} at their + 0x21 target record through
+  ArcTan2 (record 4 adds 0x2700 mirrored / 0x5900, the others
+  -0x4000) writing the held angle to the record's + 8, and records
+  {5,0xC} hold it; a state-2 parent (+ 0x0A == 2, the death
+  machine) launches the part into the flight machine — random
+  spread angle (+ 0x48), spin (+ 0x10), gravity (+ 0x54 = 0x1800),
+  the 0x08119352 timer byte, blink through sub_0806D518, the
+  last-0x3C-frames accel_move and + 0x18 drift, the step-1 release
+  into step 2 (zeroed motion, song 0x71 unless parts 1/2/3/7),
+  step-2 sub_0806D5C0 flame volleys while the parent's + 0x30 param
+  is 0, the timer delete with the record-5 song 0x6E stinger and
+  the + 0x58 bit-5 latch outside y pixels [-0x18, 0xF0].
+- **Port.** `src/runtime/aos/enemies/big_golem.c` now emits the
+  fourteen parts as `AOS_ROLE_BG_PART` children over the first
+  updates under the 8-child cap (like the Creaking Skull bones and
+  Great Armor parts), bakes `bg_rec[14]` on the first call from the
+  0x08528414 home pairs and the 0x0852858C variant angle dwords
+  picked by the boss + 0x20 variant byte (`bg_var`), and runs the
+  decoded attached/launch machines per child. New `AosBgRec` and
+  `bg_rec`/`bg_dist`/`bg_tgt`/`bg_var` fields live in
+  `aos_enemy.h`; `bg_tgt` is the 0x081192FE aim-target table and
+  the launch threshold folds the parent y pixel, the bgInfo[1]
+  scroll y (cam_y, the documented approximation) and the
+  0x08119360 offsets. `big_golem_tests` covers the 8+6 emission,
+  the record bake, the record-offset tracking, the state-2 launch
+  and the timer delete.
+- **Still approximated.** The sub_080AC468 record arming and its
+  stepper inside the undecoded state-0/state-1 choreographies (the
+  records stay at their baked offsets), the sub_080AC468 hitbox
+  table and the sub_080ACEC4/sub_080ACF00/sub_080ACF30/sub_080ACFA0
+  helpers, the + 0x22 per-part attack bitfield palette beats, the
+  + 0x5A/+ 0x5C/+ 0x72 merges, the sub_08042848/428B4/429D0 palette
+  flashes, the sub_080009E4 trig lookups, the sub_0803E058/
+  sub_0803E6BC affine rotation setup (no BG rotation draw entry),
+  the 0x081192F0 limb-art byte (the 0x0825EB0C/0x08266E78 sheet is
+  not exported) and part damageability (the sub_0804277C hurt
+  callbacks). No emulator comparison.
+- **Registries.** `annotations.tsv` (`aos.enemies.big_golem`) and
+  `aos_monster_aspects.tsv` (big_golem) notes/divergences/next
+  action updated; statuses unchanged.
+
 ## Patch 1181 - Scroll scanline/window FX audit: writers confirmed ported, coverage completed, stale gap notes corrected
 
 - **Audit.** The task brief listed the `sub_0800CB8C` /

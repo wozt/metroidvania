@@ -6,6 +6,9 @@
 
 #include "../../aos/core/aos_enemy_internal.h"
 #include "../../aos/core/aos_audio.h"
+#include "../../aos/math/aos_math.h"
+
+#include <string.h>
 
 #define accelerate_toward aos_enemy_accelerate_toward
 #define accel_move aos_enemy_accel_move
@@ -19,6 +22,223 @@
 #define spawn_drift aos_enemy_spawn_drift
 #define spawn_flame_at aos_enemy_spawn_flame_at
 #define step_anim aos_enemy_step_anim
+
+#define BG_PARTS 14
+
+/* The sub_080AC6E8 decode: the four... fourteen sub_0806DFF8
+ * children of EnemyBigGolemCreate (one per part index of the
+ * identity table 0x0811930C, loop bound 0xD) each run the child
+ * brain on the boss's + 0x1C container of fourteen 0x38-byte
+ * records.  Ported here: the record bake (the 0x08528414 home
+ * pairs and the 0x0852858C angle dwords picked by the boss + 0x20
+ * variant byte), the attached-state position/aim machine, the
+ * state-2 launch into the flight machine and its delete.  The
+ * create tables 0x081192F0 (the + 0x44 limb-art byte — the
+ * 0x0825EB0C/0x08266E78 sheet is not exported), the + 0x5A/+ 0x5C
+ * palette and priority merges, the parent + 0x22 per-part attack
+ * bitfield and the + 0x72 flag writes, the sub_08042848/428B4/
+ * 429D0 palette flashes, the sub_080009E4 trig lookups, the
+ * sub_0803E058/sub_0803E6BC affine rotation setup (the renderer
+ * has no BG rotation entry) and the sub_080AC468 record arming
+ * with its undecoded stepper are not modeled; the sub_0806D518
+ * blink folds into kind->blink and the sub_0806D5C0 shot spawn
+ * into spawn_flame_at. */
+
+/* 0x081192FE: the child + 0x21 aim-target record index. */
+static const uint8_t bg_tgt_tab[BG_PARTS] = {
+    0, 1, 0, 3, 5, 5, 6, 7, 6, 9, 10, 11, 12, 12,
+};
+/* 0x08119352: the launch timer byte (read as int8, stored as a
+ * byte — the high values are long flights). */
+static const int8_t bg_timer_tab[BG_PARTS] = {
+    -52, -78, -66, -84, -106, 68, -56, -76,
+    -64, -122, -116, -108, 80, 90,
+};
+/* 0x08119360: the int16 launch-release distance offsets added to
+ * the parent y pixel plus the bgInfo[1] scroll y. */
+static const int16_t bg_dist_tab[BG_PARTS] = {
+    -12, -32, -48, -24, -4, -4, -12, -32, -48, -44, -8, -8, -16, -16,
+};
+/* 0x08528414: the fourteen home (x, y) pixel pairs stored << 16;
+ * the 0x0852844C pointer table selects this one table for every
+ * variant. */
+static const int16_t bg_home[BG_PARTS][2] = {
+    {10, -5}, {6, -74}, {8, -53}, {6, -74},
+    {2, -80}, {-26, -124}, {10, -5}, {6, -74},
+    {8, -53}, {-9, -111}, {-9, -78}, {-9, -94},
+    {-9, -71}, {-9, -27},
+};
+/* 0x0852858C: thirty 8-byte rows picked by the boss + 0x20 variant
+ * byte; the create stores the first dword into record 5's + 8 and
+ * the second into record 12's + 8. */
+static const int32_t bg_ang_tab[30][2] = {
+    {0x10000, 0x11000}, {0x10000, 0x11000}, {0x10800, 0x13800},
+    {0x10000, 0x15000}, {0x10800, 0x0F800}, {0x11000, 0x0E000},
+    {0x10800, 0x13800}, {0x11800, 0x13800}, {0x10800, 0x13400},
+    {0x10800, 0x13800}, {0x10800, 0x13800}, {0x11800, 0x13800},
+    {0x10800, 0x13400}, {0x10800, 0x13800}, {0x10800, 0x15200},
+    {0x11800, 0x15200}, {0x10800, 0x15200}, {0x10800, 0x15000},
+    {0x10800, 0x15200}, {0x11800, 0x15200}, {0x10800, 0x15200},
+    {0x10800, 0x15000}, {0x11000, 0x17C00}, {0x11800, 0x17C00},
+    {0x12000, 0x15000}, {0x12000, 0x15000}, {0x11000, 0x17C00},
+    {0x11800, 0x17C00}, {0x12000, 0x15000}, {0x12000, 0x15000},
+};
+
+/* The ROM's sign-fix >> 16 on the record deltas: truncation toward
+ * zero, like C division (the cs_px convention). */
+static int32_t bg_px(int32_t v) { return v / 0x10000; }
+
+/* Emit the fourteen part children over the first updates under the
+ * room child cap, like the Creaking Skull bones and the Great Armor
+ * parts.  The first call also bakes the + 0x1C records: the 0x08528414
+ * home pairs for every record, record 5's + 8 from the variant row's
+ * first dword and record 12's + 8 from the second. */
+static void bg_emit_parts(AosEnemy *e, AosHitReport *hit) {
+    if (e->spawned_count == 0) {
+        unsigned var = e->variant < 30 ? e->variant : 0;
+        e->bg_var = (uint8_t)var;
+        for (unsigned i = 0; i < BG_PARTS; ++i) {
+            e->bg_rec[i].x = (int32_t)bg_home[i][0] << 16;
+            e->bg_rec[i].y = (int32_t)bg_home[i][1] << 16;
+            e->bg_rec[i].ang = 0x10000;
+        }
+        e->bg_rec[5].ang = bg_ang_tab[var][0];
+        e->bg_rec[12].ang = bg_ang_tab[var][1];
+    }
+    while (e->spawned_count < BG_PARTS &&
+           hit->child_count < AOS_ENEMY_MAX_CHILDREN) {
+        unsigned i = e->spawned_count++;
+        AosEnemy c;
+        memset(&c, 0, sizeof c);
+        c.id = e->id;
+        c.x = e->x;
+        c.y = e->y;
+        c.role = AOS_ROLE_BG_PART;
+        c.variant = (uint8_t)i;
+        c.bg_tgt = bg_tgt_tab[i];
+        c.parent = e;
+        c.static_frame = -1;
+        c.hp = 1;
+        c.combat = (AosCombat){.type = AOS_TYPE_ENEMY, .attack_off = true,
+                               .hurt_off = true};
+        hit->children[hit->child_count++] = c;
+    }
+}
+
+/* sub_080AC6E8 state 0 (the + 0x0A == 0 attached part): the position
+ * is the parent's plus the record offset; records {2,4,8,0xD} aim at
+ * their + 0x21 target record through ArcTan2 and write the held
+ * angle back to the record's + 8 (record 4 adds 0x2700 mirrored /
+ * 0x5900 unmirrored, the others -0x4000), records {5,0xC} hold it.
+ * A state-2 parent launches the part into the flight machine below;
+ * the parent + 0x22 bitfield palette beats, the + 0x5A/+ 0x58 merges
+ * beyond the mirror bit and the sub_0803E058 affine setup are not
+ * modeled. */
+static void bg_attached(AosEnemy *child, AosEnemy *body,
+                        uint32_t (*random)(void), int cam_y) {
+    unsigned idx = child->variant < BG_PARTS ? child->variant : 0;
+    if (!body || body->removed || body->id != 0x45) {
+        child->removed = true;
+        return;
+    }
+    /* The + 0x36 compare is the entity id byte on both sides (0x45). */
+    child->mirrored = body->mirrored;
+    child->timer++; /* + 0xD frame counter */
+    AosBgRec *r = &body->bg_rec[idx];
+    child->x = body->x + r->x;
+    child->y = body->y + r->y;
+    if (idx == 2 || idx == 4 || idx == 8 || idx == 0x0D) {
+        unsigned t = child->bg_tgt < BG_PARTS ? child->bg_tgt : 0;
+        int32_t dx = body->bg_rec[t].x - r->x;
+        int32_t dy = body->bg_rec[t].y - r->y;
+        int32_t ang = (int32_t)(aos_arctan2((int16_t)bg_px(dx),
+                                            (int16_t)bg_px(dy)) & 0xFFFF);
+        if (idx == 4)
+            ang += child->mirrored ? 0x2700 : 0x5900;
+        else
+            ang -= 0x4000;
+        child->vx = ang;      /* + 0x48 held angle */
+        r->ang = ang;
+    } else if (idx == 5 || idx == 0x0C) {
+        child->vx = r->ang;
+    }
+    if (body->state == 2) {
+        /* The launch: + 0x18 takes the held + 0x48, + 0x10 a random
+         * spin, + 0x24 the release threshold (parent y pixel plus the
+         * bgInfo[1] scroll y plus the 0x08119360 offset — cam_y is the
+         * documented scroll approximation), + 0x54 gravity 0x1800,
+         * + 0x48 a random spread angle and + 0xD the 0x08119352 timer. */
+        child->state = 1;
+        child->step = 0;
+        child->angle = (uint32_t)child->vx;
+        child->spin = (int32_t)((random ? random() : 0) & 0xFF) - 0x80;
+        child->bg_dist = (int32_t)(int16_t)(body->y >> 16) +
+                         (int32_t)(int16_t)cam_y +
+                         bg_dist_tab[idx];
+        child->ax = 0;
+        child->ay = 0x1800;
+        child->vx = (int32_t)((random ? random() : 0) & 0x3FFF) - 0x2000;
+        child->vy = 0;
+        child->timer = (uint8_t)bg_timer_tab[idx];
+    }
+}
+
+/* sub_080AC6E8 state 1 (the launched part): the + 0x0B substeps
+ * (0 -> 1, record 0xD to 0xA), the sub_0806D518 blink into + 0x58
+ * bit 5, the last-0x3C-frames accel_move and + 0x18 spin drift, the
+ * step-1 release into step 2 (zeroed motion, song 0x71 unless the
+ * part is 1/2/3/7), the step-2 sub_0806D5C0 flame spawn while the
+ * parent's + 0x30 param is 0, the timer delete with the record-5
+ * song 0x6E stinger and the + 0x58 bit-5 latch when the parent's y
+ * pixel leaves [-0x18, 0xF0].  A launched part outlives its parent
+ * like the native entity; only a foreign occupant of the parent
+ * slot ends it early. */
+static void bg_launched(AosEnemy *child, AosEnemy *body,
+                        const AosEnemyKind *kind,
+                        uint32_t (*random)(void), AosHitReport *report,
+                        int cam_y) {
+    unsigned idx = child->variant < BG_PARTS ? child->variant : 0;
+    bool body_ok = body && body->id == 0x45;
+    if (child->step == 0) {
+        child->step = 1;
+        if (idx == 0x0D)
+            child->step = 0x0A;
+    }
+    child->hidden = child->timer <= 0x27 &&
+                    (kind->blink[child->timer] & 1) != 0;
+    if (child->timer <= 0x3C) {
+        accel_move(child, 0x60000);
+        child->angle = (uint32_t)((int32_t)child->angle + child->spin);
+        if (child->step == 1 && body_ok) {
+            int32_t sum = (int32_t)(int16_t)(body->y >> 16) +
+                          (int32_t)(int16_t)cam_y;
+            if (sum >= child->bg_dist) {
+                child->vx = child->ax = child->vy = child->ay = 0;
+                child->spin = 0;
+                child->step = 2;
+                if (!(idx == 1 || idx == 2 || idx == 3 || idx == 7))
+                    aos_audio_play_song(0x71);
+            }
+        }
+    }
+    if (child->step == 2 && body_ok && body->param0 == 0 &&
+        (child->timer & 7) == 0)
+        spawn_flame_at(child->x, child->y - 0x40000, 0x400000, 0x400000,
+                       random, report);
+    uint8_t t = (uint8_t)(child->timer - 1);
+    child->timer = t;
+    if (t <= 1) {
+        if (idx == 5)
+            aos_audio_play_song(0x6E);
+        child->removed = true;
+        return;
+    }
+    if (!child->hidden && body_ok) {
+        int32_t py = (int32_t)(int16_t)(body->y >> 16);
+        if (py < -0x18 || py > 0xF0)
+            child->hidden = true;
+    }
+}
 
 /* EnemyBigGolemUpdate 0x080A8224 state 2: the native death machine.
  * While the + 0xD timer sits in [0x79, 0xD6) every fourth frame fires
@@ -164,35 +384,16 @@ static void bg_state1(AosEnemy *enemy, AosSoma *soma,
     }
 }
 
-/* The four sub_0806DFF8 children of EnemyBigGolemCreate (callback
- * sub_080AC6E8, ~1000 lines undecoded): approximated as slow tracking
- * parts that mirror the body pose at fixed offsets. */
-static void bg_child_update(AosEnemy *child, AosEnemy *body) {
-    if (!body || body->removed || body->id != 0x45) {
-        child->removed = true;
-        return;
-    }
-    static const int32_t ox[4] = {-0x500000, 0x500000, -0x300000,
-                                  0x300000};
-    static const int32_t oy[4] = {-0x600000, -0x600000, -0x200000,
-                                  -0x200000};
-    unsigned v = child->variant < 4 ? child->variant : 0;
-    child->x = body->x + ox[v];
-    child->y = body->y + oy[v];
-    child->mirrored = body->mirrored;
-}
-
-static AosEnemy bg_child(AosEnemy *body, unsigned index) {
-    AosEnemy c = {.id = body->id,
-                  .x = body->x,
-                  .y = body->y,
-                  .role = (uint8_t)(AOS_ROLE_BG_CHILD0 + index),
-                  .variant = (uint8_t)index,
-                  .parent = body,
-                  .static_frame = -1,
-                  .combat = {.type = AOS_TYPE_ENEMY, .attack_off = true,
-                             .hurt_off = true}};
-    return c;
+/* sub_080AC6E8 entry: state 0 rides the record, any other state is
+ * the launched flight machine. */
+static void bg_child_update(AosEnemy *child, AosEnemy *body,
+                            const AosEnemyKind *kind,
+                            uint32_t (*random)(void),
+                            AosHitReport *report, int cam_y) {
+    if (child->state == 0)
+        bg_attached(child, body, random, cam_y);
+    else
+        bg_launched(child, body, kind, random, report, cam_y);
 }
 
 AosHitReport aos_enemy_big_golem_update(
@@ -204,19 +405,17 @@ AosHitReport aos_enemy_big_golem_update(
     AosHitReport report = {0};
     (void)layer;
     (void)cam_x;
-    (void)cam_y;
-    if (enemy->role >= AOS_ROLE_BG_CHILD0 &&
-        enemy->role <= AOS_ROLE_BG_CHILD3) {
-        bg_child_update(enemy, enemy->parent);
+    if (enemy->role == AOS_ROLE_BG_PART ||
+        (enemy->role >= AOS_ROLE_BG_CHILD0 &&
+         enemy->role <= AOS_ROLE_BG_CHILD3)) {
+        bg_child_update(enemy, enemy->parent, kind, random, &report,
+                        cam_y);
         return report;
     }
     if (!enemy->boss_parts_spawned) {
-        for (unsigned i = 0; i < 4 &&
-                        report.child_count < AOS_ENEMY_MAX_CHILDREN;
-             ++i)
-            report.children[report.child_count++] = bg_child(enemy, i);
-        enemy->spawned_count = 4;
-        enemy->boss_parts_spawned = true;
+        bg_emit_parts(enemy, &report);
+        if (enemy->spawned_count >= BG_PARTS)
+            enemy->boss_parts_spawned = true;
     }
     if (enemy->state == 2) {
         AosHitReport hit = bg_death(enemy, random);

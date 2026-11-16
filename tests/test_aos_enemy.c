@@ -12718,8 +12718,9 @@ static void big_golem_tests(void) {
     soma.max_hp = soma.hp = 800;
 
     /* Create: state 3 parks dormant under the global flag, state 0
-     * awake otherwise; the four sub_0806DFF8 children emit on the
-     * first update. */
+     * awake otherwise; the fourteen sub_0806DFF8 children of
+     * sub_080AC6E8 emit over the first updates under the 8-child
+     * cap and bake the + 0x1C records on the first call. */
     AosEnemy e;
     assert(aos_enemy_create(&e, 0x45, 300, 150, 0, 0,
                             &soma, &layer, &kind, &bg));
@@ -12729,11 +12730,21 @@ static void big_golem_tests(void) {
                                         always_zero);
     int kids = 0;
     for (int i = 0; i < hit.child_count; ++i)
-        if (hit.children[i].role >= AOS_ROLE_BG_CHILD0 &&
-            hit.children[i].role <= AOS_ROLE_BG_CHILD3)
+        if (hit.children[i].role == AOS_ROLE_BG_PART)
             kids++;
-    assert(kids == 4);
-    assert(e.boss_parts_spawned);
+    assert(kids == AOS_ENEMY_MAX_CHILDREN);
+    assert(e.spawned_count == AOS_ENEMY_MAX_CHILDREN &&
+           !e.boss_parts_spawned);
+    /* The record bake: home pairs and the variant-0 angle dwords. */
+    assert(e.bg_rec[0].x == 10 * 0x10000 && e.bg_rec[0].y == -5 * 0x10000);
+    assert(e.bg_rec[5].ang == 0x10000 && e.bg_rec[12].ang == 0x11000);
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    kids = 0;
+    for (int i = 0; i < hit.child_count; ++i)
+        if (hit.children[i].role == AOS_ROLE_BG_PART)
+            kids++;
+    assert(kids == 6 && e.spawned_count == 14 && e.boss_parts_spawned);
 
     /* State 0 case 12 exits into the state-1 attack machine. */
     e.step = 12;
@@ -12756,12 +12767,13 @@ static void big_golem_tests(void) {
                            10, 4, 0, 0, always_zero);
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x71) >= 1);
 
-    /* A BG_CHILD part tracks its body and dies with it. */
+    /* A BG_PART child rides its record offset and dies with it. */
     AosEnemy ch;
     memset(&ch, 0, sizeof ch);
     ch.id = 0x45;
-    ch.role = AOS_ROLE_BG_CHILD1;
+    ch.role = AOS_ROLE_BG_PART;
     ch.variant = 1;
+    ch.bg_tgt = 1; /* 0x081192FE[1] */
     ch.parent = &e;
     ch.x = AOS_FIXED(100);
     ch.y = AOS_FIXED(100);
@@ -12769,13 +12781,35 @@ static void big_golem_tests(void) {
     e.y = AOS_FIXED(200);
     aos_enemy_update(&ch, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 0, 0, always_zero);
-    assert(!ch.removed && ch.x == AOS_FIXED(150) + 0x500000 &&
-           ch.y == AOS_FIXED(200) - 0x600000);
+    assert(!ch.removed && ch.x == AOS_FIXED(150) + 6 * 0x10000 &&
+           ch.y == AOS_FIXED(200) - 74 * 0x10000);
     e.removed = true;
     aos_enemy_update(&ch, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 0, 0, always_zero);
     assert(ch.removed);
     e.removed = false;
+
+    /* The state-2 parent launches the part: state 1, the record-1
+     * timer byte and the random spin/angle; it flies out its timer
+     * and deletes itself. */
+    memset(&ch, 0, sizeof ch);
+    ch.id = 0x45;
+    ch.role = AOS_ROLE_BG_PART;
+    ch.variant = 1;
+    ch.bg_tgt = 2;
+    ch.parent = &e;
+    e.state = 2;
+    aos_enemy_update(&ch, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(ch.state == 1 && ch.step == 0 && ch.timer == (uint8_t)-78);
+    int flew = 0;
+    while (!ch.removed && flew < 0x100) {
+        aos_enemy_update(&ch, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+        ++flew;
+    }
+    assert(ch.removed && flew > 100);
+    e.state = 1;
 
     /* Lethal: hp 0 -> defeated -> state 2 death machine with the
      * decoded timer; the cycle-gated flag deletes it. */

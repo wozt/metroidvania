@@ -294,7 +294,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_BG_CHILD0 = 167, AOS_ROLE_BG_CHILD1 = 168,
        AOS_ROLE_BG_CHILD2 = 169, AOS_ROLE_BG_CHILD3 = 170,
        AOS_ROLE_GA_PART = 171, AOS_ROLE_GRAHAM_CLONE = 172,
-       AOS_ROLE_GRAHAM_CORE = 173, AOS_ROLE_CHAOS_PART = 174 };
+       AOS_ROLE_GRAHAM_CORE = 173, AOS_ROLE_CHAOS_PART = 174,
+       AOS_ROLE_BG_PART = 175 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -329,6 +330,20 @@ typedef struct {
     uint32_t flag;
     int32_t sub, sx, sy;
 } AosCsRec;
+
+/* One of Big Golem's fourteen 0x38-byte part records (the + 0x1C
+ * container's slots at container + i * 0x38, allocated as 0xC4
+ * words): x/y the 16.16 offset from the body the sub_080AC6E8
+ * child brain adds to the parent's + 0x40/+ 0x44, ang the + 8 held
+ * aim angle it writes for records {2,4,8,0xD} and reads back for
+ * {5,0xC}.  The remaining native fields (+ 0xC/+ 0x10 angle pair,
+ * + 0x14 flag, + 0x18 parameter, + 0x24 orbit radius, + 0x28/+ 0x2C
+ * and + 0x34) belong to the sub_080AC468 arming and its record
+ * stepper inside the undecoded state-0/state-1 choreographies and
+ * are not modeled. */
+typedef struct {
+    int32_t x, y, ang;
+} AosBgRec;
 
 typedef struct AosEnemy {
     uint8_t id;             /* + 0x36 */
@@ -879,6 +894,17 @@ typedef struct AosEnemy {
      * tail clears on a (rng & 0x7F) <= 3 roll; the fourteen body
      * parts are AOS_ROLE_GA_PART children indexed by `variant`. */
     uint8_t ga_f1a;
+    /* Big Golem (EnemyBigGolemCreate 0x080A8328, the sub_080AC6E8
+     * child brain): `bg_rec[14]` folds the + 0x1C container's
+     * fourteen 0x38-byte part records seeded with the 0x08528414
+     * home pairs and the 0x0852858C angle dwords picked by the boss
+     * + 0x20 variant byte (`bg_var`); on an AOS_ROLE_BG_PART child
+     * `variant` is its + 0x20 record index, `bg_tgt` the + 0x21
+     * aim-target record and `bg_dist` the + 0x24 launch-release
+     * threshold. */
+    AosBgRec bg_rec[14];
+    int32_t bg_dist;
+    uint8_t bg_tgt, bg_var;
     /* Balore (id 0x6D): the + 0x12 animation index the state machines
      * feed to the 0x085287C4 table, the + 0x1C/+ 0x1D frame bytes of
      * the limb children, the + 0x18 hover flag and the orbit angle

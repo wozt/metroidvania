@@ -67,10 +67,15 @@ bool aos_quick_map_init(AosQuickMap *map, const FusionRom *rom,
     return true;
 }
 
-bool aos_quick_map_visit(AosQuickMap *map, const FusionRom *rom,
-                         unsigned area, unsigned room,
-                         int player_x, int player_y,
-                         char *error, size_t error_size) {
+/* Shared sub_08011430 front half: validate the room against the area
+ * directory, read its map origin and turn the player's room pixel
+ * position into a castle cell (map_x/map_y + px >> 8, one cell per
+ * 256 px like native's xOffset >> 8). */
+static bool quick_map_resolve_cell(AosQuickMap *map, const FusionRom *rom,
+                                   unsigned area, unsigned room,
+                                   int player_x, int player_y,
+                                   int *cell_x, int *cell_y,
+                                   char *error, size_t error_size) {
     if (!map || !rom || area >= FUSION_AOS_AREA_COUNT ||
         (map->directory.total_rooms &&
          room >= map->directory.areas[area].room_count)) {
@@ -96,11 +101,54 @@ bool aos_quick_map_visit(AosQuickMap *map, const FusionRom *rom,
         set_error(error, error_size, "Aria quick-map position is outside the castle");
         return false;
     }
+    *cell_x = x;
+    *cell_y = y;
+    return true;
+}
+
+static void quick_map_mark(AosQuickMap *map, int x, int y) {
     map->explored[y * AOS_QUICK_MAP_WIDTH + x] = 1;
     map->current_x = (uint8_t)x;
     map->current_y = (uint8_t)y;
     map->has_current = true;
+}
+
+bool aos_quick_map_visit(AosQuickMap *map, const FusionRom *rom,
+                         unsigned area, unsigned room,
+                         int player_x, int player_y,
+                         char *error, size_t error_size) {
+    int x, y;
+    if (!quick_map_resolve_cell(map, rom, area, room, player_x, player_y,
+                                &x, &y, error, error_size))
+        return false;
+    quick_map_mark(map, x, y);
     if (error && error_size) error[0] = '\0';
+    return true;
+}
+
+/* sub_08011430 in full: GameModeInGameUpdate's case-1 tail calls this
+ * every PLAY frame, so entering a room marks its castle cell without
+ * opening the map. Guards, in native order: the player entity's
+ * BG1-relative x (unk_524.unk_524_16.unk_526 — screen x as s16) must
+ * read < SCREEN_SIZE_X; the cell's own sUnk_08116650 area bits
+ * (GetAreaFromMapPosition on the same coordinates) must not be 11 —
+ * sub_08010D60 refuses to draw that area too; and unk_60.unk_4CC_0
+ * (boss_mode) suppresses the mark entirely. On a guarded-out frame
+ * the routine is a no-op and reports success. */
+bool aos_quick_map_player_visit(AosQuickMap *map, const FusionRom *rom,
+                                unsigned area, unsigned room,
+                                int player_x, int player_y,
+                                int screen_x, bool boss_mode,
+                                char *error, size_t error_size) {
+    int x, y;
+    if (!quick_map_resolve_cell(map, rom, area, room, player_x, player_y,
+                                &x, &y, error, error_size))
+        return false;
+    if (error && error_size) error[0] = '\0';
+    if (screen_x >= 240 || boss_mode) return true;
+    uint16_t cell = map->castle[y * AOS_QUICK_MAP_WIDTH + x];
+    if (((cell >> 6) & 0xF) == 11) return true;
+    quick_map_mark(map, x, y);
     return true;
 }
 

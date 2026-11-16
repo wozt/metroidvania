@@ -38,6 +38,17 @@ bool aos_quick_map_visit(AosQuickMap *map, const FusionRom *rom,
                          unsigned area, unsigned room,
                          int player_x, int player_y,
                          char *error, size_t error_size);
+/* sub_08011430 as GameModeInGameUpdate's case-1 tail runs it: every
+ * PLAY frame marks the castle cell under the player, so rooms join
+ * the explored set on entry rather than on map open. `screen_x` is
+ * the entity's BG1-relative x (unk_524.unk_526); `boss_mode` is
+ * unk_60.unk_4CC_0. A guarded-out frame is a no-op success; false
+ * means the room/cell could not be resolved. */
+bool aos_quick_map_player_visit(AosQuickMap *map, const FusionRom *rom,
+                                unsigned area, unsigned room,
+                                int player_x, int player_y,
+                                int screen_x, bool boss_mode,
+                                char *error, size_t error_size);
 /* sub_08010D60 and its four edge writers. Castle Map 1-3 correspond to the
  * three item-inventory records at 0x1D-0x1F. */
 bool aos_quick_map_render(AosQuickMap *map, bool castle_map_1,

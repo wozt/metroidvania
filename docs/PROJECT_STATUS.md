@@ -1,3 +1,35 @@
+## Patch 1194 - quick map: mark explored cells on room entry via sub_08011430
+
+- **Bug.** The SELECT quick map only discovered a room when the map
+  was opened inside it: `aos_quick_map_visit` ran solely on the
+  SELECT path (native `sub_08010FF4` cursor positioning) and no
+  per-frame visit mark existed, so `explored[]` stayed empty until
+  each cell's own map open.
+- **Port.** `aos_quick_map_player_visit` ports `sub_08011430` — the
+  `GameModeInGameUpdate` case-1 tail that runs every PLAY frame:
+  the shared `sub_08011430` front half (area-directory room
+  validation, map origin + `px >> 8` castle-cell resolve, factored
+  into `quick_map_resolve_cell`) then the native guards in order —
+  BG1-relative screen x (`unk_524.unk_526`) must read < 240,
+  `unk_60.unk_4CC_0` (boss_mode) suppresses the mark, and the cell's
+  `sUnk_08116650` area bits 11 (the `sub_08010D60` refused area)
+  skip it. A guarded-out frame is a no-op success like native.
+  Both loops call it right after `warp_room_discovery`: the SDL
+  loop and the headless `--simulate` path, gated on
+  `unk_64 == AOS_INGAME_PLAY` with `room_music.boss_mode` as the
+  `unk_4CC_0` source. `ARIA_DEBUG_MAP_EXPLORED=1` prints the
+  explored-cell count on change (diagnostic only).
+- **Test.** `test_aos_quick_map.c` gains `sub_08011430` cases on a
+  purpose-built ROM (thirteen one-room area tables + one shared
+  descriptor): cell resolution, the screen-x/boss-mode/area-11
+  guards and the mark.
+- **Verification.** `ctest -R aos_quick_map` passes; the SDL and
+  simulate wirings share the same call order as the native case-1
+  tail. Full cycle run: `fusion_checklist`,
+  `fusion_dashboard --run-tests` (230 passed), `fusion_check_generated`
+  all clean. Status stays `partial` — in-game exploration vs a
+  native save-state comparison is not yet captured.
+
 ## Patch 1193 - intro entities: keep the panel's native bldAlpha through the state-1 slide
 
 - **Bug.** `sub_08009054` writes `gDisplayRegisters.bldAlpha` once on

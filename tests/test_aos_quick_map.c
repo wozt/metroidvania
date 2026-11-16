@@ -19,6 +19,13 @@ static void write_u16(uint8_t *bytes, size_t offset, uint16_t value) {
     bytes[offset + 1] = (uint8_t)(value >> 8);
 }
 
+static void write_u32(uint8_t *bytes, size_t offset, uint32_t value) {
+    bytes[offset] = (uint8_t)value;
+    bytes[offset + 1] = (uint8_t)(value >> 8);
+    bytes[offset + 2] = (uint8_t)(value >> 16);
+    bytes[offset + 3] = (uint8_t)(value >> 24);
+}
+
 static void write_ppm(const char *path, const uint8_t *rgba) {
     FILE *out = fopen(path, "wb");
     assert(out);
@@ -102,6 +109,75 @@ int main(int argc, char **argv) {
     aos_quick_map_secret_mark(&marked, 0, 0, 0, 0, 4);
     assert(marked.secret_rooms ==
            (uint16_t)((1u << 1) | (1u << 0) | (1u << 8)));
+
+    /* sub_08011430's per-frame discovery needs the area directory and
+     * a room descriptor, so it gets a purpose-built ROM: thirteen
+     * one-room area tables at 0x40000 and one shared descriptor at
+     * 0x50000 whose coordinates word puts the room's map origin at
+     * cell (10, 10). */
+    enum {
+        DIR_ROM_SIZE = 0x520000,
+        DIR_TABLE_OFFSET = 0x40000,
+        DIR_DESCRIPTOR_OFFSET = 0x50000,
+        GBA_BASE = 0x08000000,
+    };
+    uint8_t *dir_bytes = calloc(1, DIR_ROM_SIZE);
+    assert(dir_bytes);
+    dir_bytes[PALETTE_OFFSET + 2] = 1; /* palette resource: one row */
+    for (int area = 0; area < FUSION_AOS_AREA_COUNT; ++area)
+        write_u32(dir_bytes, 0x50EF08 + (size_t)area * 4,
+                  GBA_BASE + DIR_TABLE_OFFSET + (uint32_t)area * 4);
+    for (int area = 0; area < FUSION_AOS_AREA_COUNT; ++area)
+        write_u32(dir_bytes, DIR_TABLE_OFFSET + (size_t)area * 4,
+                  GBA_BASE + DIR_DESCRIPTOR_OFFSET);
+    /* Descriptor: selector 0xFFFF terminates the variant chain,
+     * transitions_pointer == self gives an empty transition table,
+     * coordinates word = map_x 10 | map_y 10 << 7. */
+    write_u16(dir_bytes, DIR_DESCRIPTOR_OFFSET + 2, 0xFFFF);
+    write_u32(dir_bytes, DIR_DESCRIPTOR_OFFSET + 24,
+              GBA_BASE + DIR_DESCRIPTOR_OFFSET);
+    write_u16(dir_bytes, DIR_DESCRIPTOR_OFFSET + 34, 10 | (10 << 7));
+    FusionRom dir_rom = {dir_bytes, DIR_ROM_SIZE, FUSION_ASSET_GAME_ARIA};
+    AosQuickMap discovered = {0};
+    assert(aos_quick_map_init(&discovered, &dir_rom, error, sizeof error));
+    /* A normal PLAY frame marks the cell under Soma and recenters
+     * the cursor like sub_08010FF4. */
+    assert(aos_quick_map_player_visit(&discovered, &dir_rom, 0, 0,
+                                      0, 0, 100, false,
+                                      error, sizeof error));
+    assert(discovered.explored[10 * AOS_QUICK_MAP_WIDTH + 10]);
+    assert(discovered.current_x == 10 && discovered.current_y == 10 &&
+           discovered.has_current);
+    /* Player 300 px into the room crosses into cell x 11. */
+    memset(discovered.explored, 0, sizeof discovered.explored);
+    discovered.has_current = false;
+    assert(aos_quick_map_player_visit(&discovered, &dir_rom, 0, 0,
+                                      300, 0, 100, false,
+                                      error, sizeof error));
+    assert(discovered.explored[10 * AOS_QUICK_MAP_WIDTH + 11]);
+    /* The native guards: screen x >= 240, unk_4CC_0 boss mode and an
+     * area-11 cell all skip the mark while reporting success. */
+    memset(discovered.explored, 0, sizeof discovered.explored);
+    discovered.has_current = false;
+    discovered.castle[10 * AOS_QUICK_MAP_WIDTH + 10] = (uint16_t)(11 << 6);
+    assert(aos_quick_map_player_visit(&discovered, &dir_rom, 0, 0,
+                                      0, 0, 100, false,
+                                      error, sizeof error));
+    assert(!discovered.explored[10 * AOS_QUICK_MAP_WIDTH + 10]);
+    discovered.castle[10 * AOS_QUICK_MAP_WIDTH + 10] = 0;
+    assert(aos_quick_map_player_visit(&discovered, &dir_rom, 0, 0,
+                                      0, 0, 240, false,
+                                      error, sizeof error));
+    assert(!discovered.explored[10 * AOS_QUICK_MAP_WIDTH + 10]);
+    assert(aos_quick_map_player_visit(&discovered, &dir_rom, 0, 0,
+                                      0, 0, 100, true,
+                                      error, sizeof error));
+    assert(!discovered.explored[10 * AOS_QUICK_MAP_WIDTH + 10]);
+    /* An unresolvable room still reports failure. */
+    assert(!aos_quick_map_player_visit(&discovered, &dir_rom, 0, 1,
+                                       0, 0, 100, false,
+                                       error, sizeof error));
+    free(dir_bytes);
 
     if (argc >= 2) {
         FusionRom local = {0};

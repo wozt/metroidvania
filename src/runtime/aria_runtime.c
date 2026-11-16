@@ -1624,6 +1624,10 @@ int aria_runtime_main(int argc, char **argv) {
          * headless, so only the room data swap and arrival placement run. */
         SDL_Texture *sim_background = NULL;
         long sim_room_changes = 0;
+        /* ARIA_DEBUG_MAP_EXPLORED: report the explored-cell count when
+         * sub_08011430's per-frame mark changes it (diagnostic only). */
+        const bool sim_map_debug = getenv("ARIA_DEBUG_MAP_EXPLORED") != NULL;
+        int sim_map_debug_last = -1;
         /* sub_0800FCB8's castle map table for the area-banner arm at
          * the transition settle end: the headless path binds the
          * same ROM the room-dialogue resolver opened eagerly above
@@ -1808,6 +1812,29 @@ int aria_runtime_main(int argc, char **argv) {
             /* sub_0804F7A4 discovery + the sub_08010978/sub_080115D4
              * Object1F writers, same ordering as the SDL loop. */
             warp_room_discovery(&room);
+            /* sub_08011430: case 1's tail marks the castle cell under
+             * Soma every PLAY frame — rooms join the explored set on
+             * entry, not on map open. */
+            if (sim_have_quick_map &&
+                in_game_mode.unk_64 == AOS_INGAME_PLAY) {
+                char map_error[160];
+                (void)aos_quick_map_player_visit(
+                    &sim_quick_map, &room_dialogue_rom,
+                    (unsigned)room.area, (unsigned)room.number,
+                    (int)(soma.x >> 16), (int)(soma.y >> 16),
+                    (int)(soma.x >> 16) - cam_x, room_music.boss_mode,
+                    map_error, sizeof map_error);
+                if (sim_map_debug) {
+                    int explored = 0;
+                    for (size_t cell = 0; cell < AOS_QUICK_MAP_CELLS; ++cell)
+                        explored += sim_quick_map.explored[cell];
+                    if (explored != sim_map_debug_last) {
+                        sim_map_debug_last = explored;
+                        printf("MapExplored frame=%ld room=%d/%d cells=%d\n",
+                               frame, room.area, room.number, explored);
+                    }
+                }
+            }
             poll_object1f_mode_triggers(&room);
             /* ARIA_DEBUG_C5A8: dump the frame's sub_0800C5A8 report
              * and the reporter identity (diagnostic only). */
@@ -3615,6 +3642,20 @@ int aria_runtime_main(int argc, char **argv) {
              * seq_end and think picker-open frame) run inside the
              * entity pass like the native sub_08000B64 ordering. */
             warp_room_discovery(&room);
+            /* sub_08011430: GameModeInGameUpdate's case-1 tail marks
+             * the castle cell under Soma every PLAY frame, so rooms
+             * join unk_60.unk_B4's visited bits on entry — the
+             * SELECT path's aos_quick_map_visit only positions the
+             * cursor (sub_08010FF4) like native. */
+            if (have_quick_map && in_game_mode.unk_64 == AOS_INGAME_PLAY) {
+                char map_error[160];
+                (void)aos_quick_map_player_visit(
+                    &quick_map, &opening_rom,
+                    (unsigned)room.area, (unsigned)room.number,
+                    (int)(soma.x >> 16), (int)(soma.y >> 16),
+                    (int)(soma.x >> 16) - cam_x, room_music.boss_mode,
+                    map_error, sizeof map_error);
+            }
             poll_object1f_mode_triggers(&room);
             /* --dialogue-trace: log the shared room dialogue's window
              * open/close frames so scripted-input runs can measure the

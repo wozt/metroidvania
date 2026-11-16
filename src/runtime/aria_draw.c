@@ -1674,10 +1674,10 @@ bool aria_bg_room_begin(SDL_Renderer *renderer, const AriaRoom *room,
                       aria_bg_room.frame_counter,
                       &aria_bg_room.hblank);
     if (aria_bg_room.hblank.target_bg && getenv("ARIA_BG_DEBUG"))
-        fprintf(stderr, "aria_bg: hblank program bg=%d %s%s frame=%u\n",
+        fprintf(stderr, "aria_bg: hblank program bg=%d %s frame=%u\n",
                 aria_bg_room.hblank.target_bg,
-                aria_bg_room.hblank.vertical ? "vOfs" : "hOfs",
-                aria_bg_room.hblank.affine ? " affine" : "",
+                aria_bg_room.hblank.affine ? "affine"
+                : aria_bg_room.hblank.vertical ? "vOfs" : "hOfs",
                 aria_bg_room.frame_counter);
     aria_bg_room.ofs_bx = bx;
     aria_bg_room.ofs_by = by;

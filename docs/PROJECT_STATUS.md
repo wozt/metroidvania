@@ -1,3 +1,91 @@
+## Patch 1187 - Diagnosis: intro stairs scene artifacts (green marker, actor/BG planes, spawn timing) - no fix yet
+
+- **Scene identified.** The reported "stairs intro scene" is the
+  `GameModeIntroCutsceneUpdate` scrolling introduction rendered by
+  `fusion_aria_title_preview` (`render_intro_backgrounds` /
+  `render_intro_actors` in `src/runtime/aos/title/aos_title_preview.c`),
+  not the in-game room-0/0 opening event. Evidence: the scene shows
+  Soma on the shrine stairs, three parallax bitmaps (stairs shaft,
+  brick wall, moon+castle sky revealed at the end of the ~3,220-frame
+  scroll = "Soma arrives at the top of the stairs"), the six
+  `sub_080094AC` actors and the scrolling story text. Native mGBA
+  captures (`aos_mgba_lab`, fresh boot, title idle-timeout path)
+  show the same sequence; the castle/moon is the top of the BG3
+  bitmap and only scrolls into view at the end, exactly as the user
+  describes.
+- **Artifact 1 - green square: FOUND, trivial.** A diagnostic "ready"
+  light drawn by the preview host itself: `aos_title_preview.c`
+  fills a 5x5 rect `(227,147,5,5)` with RGB `(120,200,145)` whenever
+  `interactive && !native_frame`. `native_frame` covers main menu,
+  title and the two logos but NOT `AOS_MODE_INTRO_CUTSCENE`, so the
+  marker is composited over the introduction's bottom-right corner.
+  Verified in captures: the exact `(120,200,145)` pixels are present
+  at GBA (227..232, 147..152) in intro frames and absent on the title
+  screen. It is not native imagery; the fix is to include the intro
+  mode in `native_frame` (or drop the marker).
+- **Artifact 2 - castle/bat plane: REAL divergence, owner identified.**
+  The host flattens all depth: `render_intro_backgrounds` paints
+  BG3, BG2, BG1 as opaque-over-transparent full-screen textures and
+  `render_intro_actors` then draws every actor on top of all three.
+  Native does not work that way. `sub_0803DC18(0, 0x18, 0x14, 0x1F)`
+  assigns BG layers BG0=0, BG1=0x18, BG2=0x14, BG3=0x1F, and each
+  actor carries `unk_540`: scroll follower and orbit = 0x16,
+  panels = 0x19, main (Soma) and affine rise = 0x1A
+  (`third_party/cvaos/src/code_08008750.c` lines 429-790). With the
+  established smaller-layer-is-more-front ordering (same mapping as
+  `aos_title_screen.c`'s `layer_priority`), the native front-to-back
+  stack is: BG0 text, BG2 bricks, orbit+follower OBJ, BG1 stairs,
+  panels OBJ, Soma+affine OBJ, BG3 moon/castle sky. Consequences:
+  (a) BG2 (0x14) is IN FRONT OF BG1 (0x18) - the port draws BG1 in
+  front of BG2, a swapped pair; (b) the orbit actor (the "bat",
+  `sub_080092A0`, layer 0x16) sits BETWEEN BG2 and BG1, so the brick
+  and stair layers occlude it for most of the scroll - it only
+  becomes visible when the scroll reveals open sky near the top of
+  the stairs. The port draws it over everything from frame 1, which
+  is exactly the user's "should appear when Soma arrives at the top
+  (timed spawn)" observation - the spawn time is native-correct;
+  the missing piece is occlusion, not timing; (c) Soma/panels/affine
+  (0x19/0x1A) belong between BG1 and BG3 - behind the stair structure
+  but in front of the sky - while the port puts them over BG1 too.
+- **Artifact 3 - timed spawn: mostly an occlusion artifact, one real
+  gate already ported.** `sub_08009178` (affine rise) natively waits
+  for `bgInfo[1].yPos <= 0x1E0000` before `PlaySong(SE_318)` and
+  `drawFunc` activation; `aos_intro_entities.c` `update_affine_rise`
+  reproduces that gate. `sub_08008F40` (scroll follower) deletes at
+  `yPos < 0x200000`, `sub_08009054` panels switch to their fade state
+  at the same threshold, and `sub_080092A0` (orbit) self-deletes past
+  screen y 0x12C - all ported. What is NOT ported is the per-layer
+  compositing above, so actors that native hides behind BG pixels are
+  visible early in the port.
+- **Fix direction for the sibling agents (not applied here).**
+  `render_intro_backgrounds`/`render_intro_actors` need a real
+  front-to-back composite honouring the native layer values: paint
+  BG3, then the 0x1A actors (Soma, affine rise), then 0x19 panels,
+  then BG1, then the 0x16 actors (orbit, scroll follower), then BG2,
+  then BG0 text - or equivalently split the actor pass by
+  `native_layer` and interleave it with the BG draws in that order.
+  The decoded `FusionAosRenderedBackground.rgba` already carries
+  per-pixel alpha (color index 0 stays transparent,
+  `src/assets/aos/runtime_room.c` `fusion_aos_render_background`),
+  so alpha blending alone is sufficient once the order is right.
+  The green marker fix is a one-line `native_frame` change in the
+  same file.
+- **Verification done.** Native: fresh ROM boot through
+  `aos_mgba_lab` (title idle -> intro cutscene, mode 0x07 peeks at
+  `0x02000010`), PPM captures every 60-200 frames across the whole
+  ~5,600-frame sequence plus OAM/WRAM peeks; the three intro
+  bitmaps were dumped and inspected (BG1 = stairs shaft 256x512,
+  BG2 = brick wall 256x768, BG3 = moon+castle sky 256x512 with the
+  castle silhouette on the moon at the bitmap top). Port:
+  `fusion_aria_title_preview --screenshot` under xvfb at frames
+  2000-7000 with `AOS_STAGE_DEBUG=1` confirming mode/stage timing
+  matches native within ~100 frames; pixel-diff and ASCII
+  comparisons localize the remaining divergence to the actor/BG
+  composite order and the diagnostic marker.
+- **Status.** Diagnosis only; no runtime code changed. The intro
+  remains `partial` (no emulator pixel comparison claimed); this
+  entry records the concrete divergence list for the fix cycle.
+
 ## Patch 1186 - pause-menu poll restored under GameModeInGameUpdate case 6 (START regression fix)
 
 - **Regression.** Patch-case work in `4be0ef36` (GameModeInGameUpdate

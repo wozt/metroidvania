@@ -21,12 +21,12 @@ enum {
     /* sub_08048C74: the hand's sheet per language (the *(gEwramData+0x4D0)
      * value selects 2 -> 0x0827798C, 3 -> 0x0826C840, else 0x082052D8)
      * and sub_08048B0C's frame descriptor (3 -> 0x0827B1F0). The hand's
-     * OBJ palette row gets block 1's first eight colours of 0x0820C2C0
-     * through sub_0803C7B4; indices 8-15 keep the row's upper half, taken
-     * here from the following block. */
+     * OBJ palette row gets block 1's sixteen colours of 0x0820C2C0 through
+     * sub_0803C7B4; the row's upper half is zero in ROM and stays zero in
+     * the loaded OBJ palette (verified against an mGBA OBJ palette dump),
+     * so indices 8-15 render black rather than borrowing the next block. */
     AOS_CURSOR_SHEETS = 3,
     AOS_CURSOR_PALETTE = 0x0820C2C0 + 4 + 32,
-    AOS_CURSOR_PALETTE_UPPER = 0x0820C2C0 + 4 + 64,
     AOS_PAUSE_WIDTH = 240,
     AOS_PAUSE_HEIGHT = 160,
     AOS_WEAPON_TABLE = 0x08505D3C,
@@ -143,21 +143,14 @@ bool aos_pause_graphics_init(AosPauseGraphics *graphics, const FusionRom *rom,
         };
         const uint8_t *palette = rom->data +
             (size_t)(AOS_CURSOR_PALETTE - AOS_ROM_BASE);
-        const uint8_t *palette_upper = rom->data +
-            (size_t)(AOS_CURSOR_PALETTE_UPPER - AOS_ROM_BASE);
-        if (palette + 16 <= rom->data + rom->size &&
-            palette_upper + 16 <= rom->data + rom->size &&
+        if (palette + 32 <= rom->data + rom->size &&
             aos_obj_sheet_decode(&graphics->cursor_sheet, rom,
                                   cursor_graphics[language - 1],
                                   cursor_frames[language - 1],
                                   error, error_size)) {
-            for (unsigned k = 0; k < 8; ++k) {
+            for (unsigned k = 0; k < 16; ++k)
                 graphics->cursor_palette[k] =
                     (uint16_t)(palette[k * 2] | palette[k * 2 + 1] << 8);
-                graphics->cursor_palette[k + 8] =
-                    (uint16_t)(palette_upper[k * 2] |
-                               palette_upper[k * 2 + 1] << 8);
-            }
             graphics->cursor_ready = true;
         }
         /* sub_0801232C's icon sheets: three graphics resources of

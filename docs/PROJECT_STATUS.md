@@ -509,6 +509,37 @@
   `features.tsv` has no row covering the Aria runtime simulate path,
   so it is unchanged.
 
+## Patch 1154 - Pause hand cursor OBJ palette upper half corrected
+
+- **Root cause.** `aos_pause_graphics_init` loaded the hand cursor's
+  OBJ palette as eight colours from `0x0820C2C0+4+32` plus eight more
+  from the *following* ROM block (`+4+64`), assuming the row's upper
+  half continued there. A live mGBA OBJ palette dump of the pause hub
+  shows the cursor's palette row is exactly the ROM block's sixteen
+  colours — `0000 4a52 7fff 398c 5045 675a 1d29 0c63` then eight
+  `0000` — so indices 8-14 were rendering dark blue-grays and index
+  15 was rendering **white** (`0x7fff` borrowed from block 2) where
+  native renders black. That wrong-colour fringe is the visible
+  "broken cursor" on the real pause pages.
+- **Fix.** `src/runtime/aos/menus/aos_pause_graphics.c` now reads all
+  sixteen colours from `0x0820C2C0+4+32`; indices 8-15 are `0x0000`
+  (opaque black), matching the native OBJ row. `draw_cursor`, the
+  `sub_08048AD8` cell anchor, the decoded piece offsets and the
+  `sub_08048018` wiggle were already faithful — re-verified against
+  `func_08048018` (wiggle = `(counter>>1)&7` minus 3, direction from
+  bit 3 of `counter>>1`, identical to the host formula) and
+  `func_08048AD8` (`x*8+6`, `y*8+3`).
+- **Evidence.** Real-ROM hub render before/after: 31 cursor-zone
+  pixels change from the borrowed block-2 colours to black; the
+  rendered hand sits at the `sub_08048AD8(1,12)` anchor (sprite
+  x3-18/y91-106 at tick 1, matching Patch 1153's verified box).
+- **Test.** `tests/test_aos_pause_graphics.c`'s real-ROM block now
+  asserts `cursor_ready`, 38 decoded frames, one 29-step animation,
+  `cursor_palette[8..15] == 0`, and — by re-rendering the hub with
+  `cursor_ready` cleared — that the cursor actually paints pixels
+  inside the hand's bounding region. The synthetic fixture palette
+  now covers all sixteen colours.
+
 ## Patch 1153 - Pause hand cursor decode fixed (29-step animation cap)
 
 - **Root cause.** `aos_obj_sheet_decode`

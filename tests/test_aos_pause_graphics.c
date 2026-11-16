@@ -120,7 +120,8 @@ int main(int argc, char **argv) {
 
     /* sub_08048C74's hand cursor for language 1: the raw (uncompressed)
      * 16 x 16-tile sheet at 0x082052D8, frame descriptor 0x08256EF8 and
-     * the OBJ palette block at 0x0820C2C0 + 36/+ 68. The real cursor
+     * the OBJ palette block at 0x0820C2C0 + 36 (sixteen colours; the real
+     * row's upper half is zero). The real cursor
      * animation cycles 29 poses, so the fixture uses 10 steps — past the
      * old 8-step cap — to prove the decode accepts it. The sheet is all
      * colour index 15 and the palette all white, so every cursor pixel is
@@ -132,8 +133,7 @@ int main(int argc, char **argv) {
         bytes[cursor_graphics + 2] = 0x10;
         bytes[cursor_graphics + 3] = 0x10;
         memset(bytes + cursor_tiles, 0xFF, 0x2000);
-        memset(bytes + 0x20C2E4, 0xFF, 16);  /* palette rows 0-7 */
-        memset(bytes + 0x20C304, 0xFF, 16);  /* palette rows 8-15 */
+        memset(bytes + 0x20C2E4, 0xFF, 32);  /* all sixteen palette colours */
         const size_t descriptor = 0x256EF8;
         write_u16(bytes, descriptor, 1);      /* one frame record */
         write_u16(bytes, descriptor + 2, 1);  /* one animation */
@@ -262,6 +262,48 @@ int main(int argc, char **argv) {
         assert(aos_pause_graphics_render_hub(&graphics, &values, 0,
                                              rgba, 240 * 160 * 4));
         if (argc >= 3) write_ppm(argv[2], rgba);
+        /* Real-ROM cursor regression: the English descriptor at
+         * 0x0827B1F0 decodes to 38 frames and one 29-step animation, the
+         * OBJ palette row keeps its native zero upper half (indices 8-15
+         * render black, not the next ROM block's colours), and the hub
+         * render actually paints the hand next to the first entry. */
+        assert(graphics.cursor_ready);
+        assert(graphics.cursor_sheet.frame_count == 38);
+        assert(graphics.cursor_sheet.anim_count == 1);
+        assert(graphics.cursor_sheet.anim_length[0] == 29);
+        for (unsigned k = 8; k < 16; ++k)
+            assert(graphics.cursor_palette[k] == 0);
+        {
+            uint8_t *without_cursor = malloc(240 * 160 * 4);
+            assert(without_cursor);
+            memcpy(without_cursor, rgba, 240 * 160 * 4);
+            graphics.cursor_ready = false;
+            assert(aos_pause_graphics_render_hub(&graphics, &values, 0,
+                                                 rgba, 240 * 160 * 4));
+            graphics.cursor_ready = true;
+            unsigned cursor_diff = 0;
+            int min_x = 240, max_x = -1, min_y = 160, max_y = -1;
+            for (unsigned y = 0; y < 160; ++y)
+                for (unsigned x = 0; x < 240; ++x) {
+                    const uint8_t *a = rgba + ((size_t)y * 240 + x) * 4;
+                    const uint8_t *b =
+                        without_cursor + ((size_t)y * 240 + x) * 4;
+                    if (memcmp(a, b, 4)) {
+                        ++cursor_diff;
+                        if ((int)x < min_x) min_x = (int)x;
+                        if ((int)x > max_x) max_x = (int)x;
+                        if ((int)y < min_y) min_y = (int)y;
+                        if ((int)y > max_y) max_y = (int)y;
+                    }
+                }
+            /* The two renders only differ by the hand's pose/wiggle, so
+             * every changed pixel belongs to the cursor sprite near the
+             * first hub entry (sub_08048AD8(1, 12) anchor). */
+            assert(cursor_diff > 0);
+            assert(min_x >= 0 && min_x < 40);
+            assert(max_x < 64 && min_y > 80 && max_y < 140);
+            free(without_cursor);
+        }
         static const unsigned soul_records[] = {55, 24, 35};
         memset(soul.counts, 1, sizeof soul.counts);
         /* sub_080494F8's recent-first ordering: mix valid, duplicate,

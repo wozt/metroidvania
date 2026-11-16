@@ -1,3 +1,35 @@
+## Patch 1186 - pause-menu poll restored under GameModeInGameUpdate case 6 (START regression fix)
+
+- **Regression.** Patch-case work in `4be0ef36` (GameModeInGameUpdate
+  cases 5 and 7/8) added `in_game_mode.unk_64 == AOS_INGAME_PLAY` to
+  the `aos_pause_menu_update` gate in `aria_runtime.c`. That models
+  case 1's `unk_A074_1`-gated START/SELECT edges correctly, but the
+  same call is also the port of case 6's `sub_08047764` — the soul
+  menu's own per-frame update, which native runs unconditionally
+  behind the case's `SetPlayerInput(1, 0)` lock. With the extra
+  conjunct, the first START opened the hub (`unk_64 = 6`), after
+  which the poll was never invoked again: the open menu froze — no
+  cursor movement, no B close, no reopen — and every later START
+  edge was dead. Reported as "START does nothing" after the
+  opening.
+- **Fix.** The gate now also runs the poll while
+  `in_game_mode.unk_64 == AOS_INGAME_SOUL_MENU`, matching native
+  case 6 exactly; case-1 edges keep their `unk_A074_1` requirement
+  and every other mode still sees no open request.
+- **Verification.** Headless `--capture` runs under xvfb with a
+  fresh save and the verified ROM: before the fix a START|B mask
+  produced exactly one `Pause hub opened` and zero
+  `Pause hub closed` over 30,000 frames (the menu froze on its
+  first open); after the fix the same run cycles 77 opens and 77
+  closes. `cmake --build build -j8` clean;
+  `ctest -R "aos_in_game_mode|aos_game_mode|aos_soul_menu|aos_input"`
+  passes. No unit-test harness covers the monolithic frame loop;
+  the capture repro is the regression check.
+- **Registries.** `annotations.tsv` `aos.souls.equipment_menu` and
+  `features.tsv` `assets.aria_frontend_save_0478` already describe
+  the case-6 poll and B-close behaviour this restores; statuses
+  unchanged.
+
 ## Patch 1185 - opening Skeleton Knights floor-snap at spawn; Arikado's walk cycles anim_0
 
 - **Floating skeletons fixed at the root.** Every type-10 emitted

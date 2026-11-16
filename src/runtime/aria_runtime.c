@@ -2835,11 +2835,17 @@ int aria_runtime_main(int argc, char **argv) {
             /* The START edge that opens the hub is case 1's
              * `unk_A074_1`-gated branch (sub_0801093C +
              * sub_080473F4); while it is clear the poll sees no
-             * open request. An already-open hub (case 6) keeps
-             * unk_A074_1 set, so navigation is unaffected. */
+             * open request. An already-open hub is case 6:
+             * sub_08047764 — the same aos_pause_menu_update —
+             * runs every frame behind the case's SetPlayerInput
+             * (1, 0) lock, so the poll must keep running while
+             * unk_64 == AOS_INGAME_SOUL_MENU; gating it on case
+             * 1 alone froze the open menu (no navigation, no
+             * close, no reopen). */
             soul_menu_event = progress.character == 0 &&
-                    in_game_mode.unk_64 == AOS_INGAME_PLAY &&
-                    in_game_mode.unk_A074_1
+                    (in_game_mode.unk_64 == AOS_INGAME_SOUL_MENU ||
+                     (in_game_mode.unk_64 == AOS_INGAME_PLAY &&
+                      in_game_mode.unk_A074_1))
                     ? aos_pause_menu_update(&soul_menu, &progress,
                                             have_equipment ? &equipment : NULL,
                                             have_item_use ? item_use : NULL, &item_vitals,

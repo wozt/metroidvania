@@ -148,9 +148,9 @@ void aos_object1f_think(AosObject1F *o, bool flags_42c_40,
                 o->substate = 0;
                 o->state = 2;
             } else if ((uint8_t)(o->timer - 1) == 0xFF) {
-                /* +0xD wrapped to 0xFF: sub_0800C5A8(0),
+                /* +0xD wrapped to 0xFF: sub_0800C5A8(1),
                  * +0xB--. */
-                o->sound = 0;
+                o->sound = 1;
                 o->substate--;
             } else {
                 o->timer--;

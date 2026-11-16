@@ -232,8 +232,10 @@ void aos_in_game_mode_transition_fade_begin(AosInGameMode *mode);
  * the caller then runs aos_in_game_mode_resume like the case-5
  * tail's `unk_64 = 1`. Stage map: unk_65 0 ramps bldY 0->16 at one
  * step per four unk_66 counts, 1 is the sub_08010350/sub_0801083C
- * screen-scroll commit (no runtime counterpart — the camera already
- * follows the player; documented divergence), 2 waits out BG1's
+ * screen-scroll commit — unported because the room header's
+ * unk_88->unk_18 screen-transition table and sub_0800F9EC's room
+ * reload have no runtime channel (see aos_in_game_mode.c), so the
+ * stage is a documented one-frame no-op, 2 waits out BG1's
  * scroll velocities (zero without the commit, so one frame), 3
  * ramps bldY back to 0 at one step per two unk_66 counts. The
  * stage-0 cleanup (sub_0800FBD8 transient-entity sweep,

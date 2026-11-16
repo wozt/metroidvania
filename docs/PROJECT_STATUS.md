@@ -1,3 +1,88 @@
+## Patch 1178 - sub_0800C5A8 channel extended to ported non-Object20 objects; room music anchor-cell flags; case-5 gap pinned
+
+- **Item 1 — `sub_0800C5A8` audit and channel (`aria_entities.c`,
+  `aos_object15.*`, `aos_object16.*`, `aos_object1f.c`).** Every
+  `sub_0800C5A8` call in `third_party/cvaos` was re-audited and
+  mapped to its owning routine. The pending channel
+  (`object20_c5a8_pending` renamed `c5a8_pending`, same
+  `aria_entities_c5a8_result` hand-off to
+  `in_game_mode.unk_A074_1`, same one-frame-late store and
+  `unk_A074_0` skip) now also carries the ported non-Object20
+  reporters, in native entity order with last-writer-wins:
+  - **Object00 door**: `Object00Create`'s `sub_0800C5A8(0)` on
+    spawn; `Object00Update` reports 0 for the whole `holding`
+    span (native calls it on the engage and pass-through frames;
+    the opening/closing swing frames are native-silent but the
+    last write there is already 0 — documented approximation)
+    and 1 on the frame `holding` clears (the swing-expiry
+    release).
+  - **Object15** (story cutscene director): new `c5a8` output —
+    0 on the event-set create branch, 0 on the state-1 probe
+    transition, 0 every state-4 frame (the native state-4 body
+    opens with the call).
+  - **Object16** (boss-intro zoom director): new `c5a8` output —
+    0 on the state-0 `+0x42C` bit-0 trigger and 0 every state-1
+    frame.
+  - **Object1F** (opening gate): the shared `sound` output now
+    feeds the channel — `Object1FUpdate`'s gate edge and
+    `sub_08055748`'s think branches. Fixed a port bug: the
+    state-1 timer-wrap branch passes argument **1** natively
+    (`_080558F0: movs r0,#1`), not 0. The live ring/flank
+    children never call it; `sub_0805632C`'s `sub_0800C5A8(1)`
+    is dead code natively (no ROM path installs it).
+  - **Still unported, documented**: the Object10 `sub_08050F1C`
+    drawFunc callback's per-frame `sub_0800C5A8(0)` (callback not
+    instantiated), the `sub_0805B66C`/`sub_0805B6E4`/`sub_0805B718`
+    entity-release family's calls (all ported consumption points
+    sit inside `object20_apply_out`, out of scope), the
+    level-up display routines `sub_08045454`/`sub_08045654`
+    (draw-pass; the `unk_A074_0` freeze already covers their
+    span), `sub_08021654` (Mimic soul check) and every enemy
+    caller (enemy AI modules untouched).
+- **Item 2 — case-5 scroll-commit gap (`aos_in_game_mode.*`).**
+  Investigated and **skipped with precise cause**: native stage 1
+  (`sub_080106DC` unk_65==1) runs `sub_08010350` +
+  `sub_0801083C`. `sub_08010350` scans the room header's
+  `unk_88->unk_18` screen-transition table for the player cell,
+  seeds BG1 xVel/yVel toward the entry and calls `sub_0800F9EC`
+  to reload the adjacent room; `sub_0801083C` rewrites
+  currentArea/currentRoom and the unk_334/336 BG1 words. The port
+  exports neither the `unk_88` header block nor its `unk_18`
+  table (the room descriptor's `transitions_pointer` is the
+  door-exit table, a different structure), and `sub_0800F9EC`'s
+  BG-config/entity-respawn reload has no case-5 channel —
+  `aos_scroll_transaction` only versions scroll and
+  `aos_scroll_transition_request` belongs to the intro/credits
+  callers, not this path. Without the table the target room is
+  unknowable, so wiring it would fabricate the room choice; the
+  stage stays a documented one-frame no-op with the missing
+  state named in `aos_in_game_mode.c`/`.h` and
+  `annotations.tsv`.
+- **Item 3 — room music single-cell flags (`aria_runtime.c`).**
+  `sub_08013960` reads `bgInfo[1].xPos.part8.integer1` and the
+  `Get*FromMapPosition` helpers shift it `>> 8` again — always 0
+  for in-game scroll distances — so the checked castle cell is
+  always the room descriptor's `map_x`/`map_y` anchor, not "the
+  cell under the camera" and not a room-wide OR. The runtime now
+  resolves that anchor cell through the same
+  `room_map_anchor_cell` helper the area banner uses (extracted
+  from `room_area_banner`) and takes save (bit 15) / warp
+  (bit 14) from it; the transition bit stays the per-room pointer
+  match the tsv already carries exactly. The tsv row remains the
+  fallback without `--rom`. Both `aos_room_music_enter` call
+  sites (main loop and the opening-complete path) use it.
+- **Verification.** `ctest -R "aos_object15|aos_object16|
+  aos_object1f|aos_door|aos_room_music"` passes; the object15/16
+  tests gained `c5a8` assertions (create/transition/per-frame
+  states). Full build clean.
+- **Registries.** `annotations.tsv` updated: `aos.environment.
+  wooden_doors`, `aos.objects.story_cutscene_director`,
+  `aos.objects.intro_zoom_director`, `aos.objects.opening_gate`,
+  `aos.objects.save_statue`, `aos.events.opening_scene` (channel
+  scope), `aos.audio.play_song` (anchor-cell flags, tsv fallback)
+  and `aos.input.gamepad` (case-5 missing-table cause). Statuses
+  unchanged — no emulator comparison.
+
 ## Patch 1177 - Affine BG draw consumer: mode 18 per-scanline and modes 21/27/32 per-frame BgAffineSet warps
 
 - **Gap.** Patch 1170 decoded the affine BG2 tile arrays and drew

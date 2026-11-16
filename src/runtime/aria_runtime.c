@@ -374,14 +374,21 @@ static bool map_warp_available;
  * the banner area 0-12 or -1 (no banner / already shown / map data
  * unavailable — the no-ROM path simply never banners, matching a
  * missing unk_88). */
-static int room_area_banner(const AriaRoom *room, const FusionRom *rom,
-                            AosQuickMap *quick_map,
-                            bool have_quick_map) {
-    if (getenv("AOS_BANNER_DEBUG"))
-        fprintf(stderr, "banner-check room %d/%d have_qm=%d rom=%p qm=%p\n",
-                room->area, room->number, have_quick_map,
-                (const void *)rom, (const void *)quick_map);
-    if (!have_quick_map || !quick_map || !rom || !rom->data) return -1;
+/* The room's map-anchor entry of the castle table
+ * (sUnk_08116650, mirrored by quick_map.castle): the native
+ * sub_0800FCB8/sub_08013960 map-position reads take
+ * bgInfo[1].xPos.part8.integer1 — the scroll position's high
+ * byte — and shift it >> 8 again inside the Get*FromMapPosition
+ * helpers, which is always 0 for in-game scroll distances, so
+ * the checked cell is always the room descriptor's
+ * (map_x, map_y) anchor. Returns false when the ROM/quick-map
+ * data needed for the descriptor is unavailable. */
+static bool room_map_anchor_cell(const AriaRoom *room,
+                                 const FusionRom *rom,
+                                 AosQuickMap *quick_map,
+                                 bool have_quick_map,
+                                 uint16_t *cell) {
+    if (!have_quick_map || !quick_map || !rom || !rom->data) return false;
     /* aos_quick_map_init loads the castle table but not the area
      * directory (aos_quick_map_visit does it lazily); the room
      * descriptor needs it for map_x/map_y. */
@@ -390,31 +397,37 @@ static int room_area_banner(const AriaRoom *room, const FusionRom *rom,
         if (!fusion_aos_read_area_directory(
                 rom, &quick_map->directory, dir_error,
                 sizeof dir_error))
-            return -1;
+            return false;
     }
     FusionAosRoomDescriptor descriptor;
     char error[160];
     if (!fusion_aos_read_room_descriptor(rom, &quick_map->directory,
                                        (size_t)room->area,
                                        (size_t)room->number, &descriptor,
-                                       error, sizeof error)) {
-        if (getenv("AOS_BANNER_DEBUG"))
-            fprintf(stderr, "banner-check descriptor fail: %s "
-                    "(game=%d total=%zu area_rooms=%zu romdata=%p)\n", error,
-                    rom->game, quick_map->directory.total_rooms,
-                    quick_map->directory.areas[room->area >= 0 &&
-                            room->area < (int)FUSION_AOS_AREA_COUNT
-                                                 ? (size_t)room->area : 0].room_count,
-                    rom->data);
-        return -1;
-    }
+                                       error, sizeof error))
+        return false;
     int cx = descriptor.map_x, cy = descriptor.map_y;
-    if (getenv("AOS_BANNER_DEBUG"))
-        fprintf(stderr, "banner-check descriptor map %d,%d\n", cx, cy);
     if (cx < 0 || cx >= AOS_QUICK_MAP_WIDTH ||
         cy < 0 || cy >= AOS_QUICK_MAP_HEIGHT)
+        return false;
+    *cell = quick_map->castle[cy * AOS_QUICK_MAP_WIDTH + cx];
+    return true;
+}
+
+static int room_area_banner(const AriaRoom *room, const FusionRom *rom,
+                            AosQuickMap *quick_map,
+                            bool have_quick_map) {
+    if (getenv("AOS_BANNER_DEBUG"))
+        fprintf(stderr, "banner-check room %d/%d have_qm=%d rom=%p qm=%p\n",
+                room->area, room->number, have_quick_map,
+                (const void *)rom, (const void *)quick_map);
+    uint16_t cell;
+    if (!room_map_anchor_cell(room, rom, quick_map, have_quick_map,
+                              &cell)) {
+        if (getenv("AOS_BANNER_DEBUG"))
+            fprintf(stderr, "banner-check anchor cell unavailable\n");
         return -1;
-    uint16_t cell = quick_map->castle[cy * AOS_QUICK_MAP_WIDTH + cx];
+    }
     /* The cell's own bits 14/15 are the native save/warp flags;
      * the transition-room list hit comes from the exported
      * room_music.tsv row (built from the same pointers). The row
@@ -435,11 +448,59 @@ static int room_area_banner(const AriaRoom *room, const FusionRom *rom,
     int banner_dbg = aos_area_banner_area(cell, transition, save, warp,
                                           in_game_mode.unk_37C);
     if (getenv("AOS_BANNER_DEBUG"))
-        fprintf(stderr, "banner-check room %d/%d map %d,%d cell %04x -> %d "
+        fprintf(stderr, "banner-check room %d/%d cell %04x -> %d "
                 "(t%d s%d w%d shown %04x)\n",
-                room->area, room->number, cx, cy, cell, banner_dbg,
+                room->area, room->number, cell, banner_dbg,
                 transition, save, warp, in_game_mode.unk_37C);
     return banner_dbg;
+}
+
+/* sub_08013960's flag inputs for the room about to load. Native
+ * reads the castle cell at the room's map anchor (the
+ * part8.integer1 >> 8 chain always lands there — see
+ * room_map_anchor_cell): GetSaveRoomFlagFromMapPosition and
+ * GetWarpRoomFlagFromMapPosition test THAT cell's bits 15/14,
+ * and CheckRoomTransition resolves the cell's (area, room) to
+ * the room pointer the sUnk_0850E968 list holds — a per-room
+ * property the room_music.tsv transition column already carries
+ * exactly. Only save/warp were cell-granular in the tsv (OR'd
+ * over every map cell of the room), so those two bits are taken
+ * from the anchor cell itself; without ROM/quick-map data the
+ * tsv row stays the fallback. Returns false when no flag source
+ * exists (out-of-table room and no anchor cell). */
+static bool room_music_flags_for(const AriaRoom *room,
+                                 const FusionRom *rom,
+                                 AosQuickMap *quick_map,
+                                 bool have_quick_map,
+                                 AosRoomMusicFlags *out) {
+    bool have_row = room->area >= 0 && room->area < MUSIC_AREAS &&
+                    room->number >= 0 && room->number < MUSIC_ROOMS;
+    if (!have_row) {
+        uint16_t cell;
+        if (!room_map_anchor_cell(room, rom, quick_map, have_quick_map,
+                                  &cell))
+            return false;
+        /* No tsv row for the transition bit; the anchor cell's
+         * own (area, room) decodes to this room, whose row — when
+         * in range — is the have_row case above, so an
+         * out-of-range room can only be a transition room if its
+         * decoded (area, room) lands in range. */
+        int carea = (cell >> 6) & 0xF, croom = cell & 0x3F;
+        out->transition = carea >= 0 && carea < MUSIC_AREAS &&
+                          croom >= 0 && croom < MUSIC_ROOMS &&
+                          room_music_flags[carea][croom].transition;
+        out->save = (cell & 0x8000) != 0;
+        out->warp = (cell & 0x4000) != 0;
+        return true;
+    }
+    *out = room_music_flags[room->area][room->number];
+    uint16_t cell;
+    if (room_map_anchor_cell(room, rom, quick_map, have_quick_map,
+                             &cell)) {
+        out->save = (cell & 0x8000) != 0;
+        out->warp = (cell & 0x4000) != 0;
+    }
+    return true;
 }
 
 static void room_transition_begin(AriaRoomTransition *t,
@@ -2524,10 +2585,15 @@ int aria_runtime_main(int argc, char **argv) {
                 (room.area != music_area || room.number != music_room)) {
                 music_area = room.area;
                 music_room = room.number;
+                /* sub_08013960's save/warp bits come from the
+                 * room's map-anchor castle cell, not the tsv
+                 * row's room-wide OR (room_music_flags_for). */
+                AosRoomMusicFlags music_flags;
                 const AosRoomMusicFlags *flags =
-                    music_area >= 0 && music_area < MUSIC_AREAS && music_room >= 0 &&
-                            music_room < MUSIC_ROOMS
-                        ? &room_music_flags[music_area][music_room]
+                    room_music_flags_for(&room, &opening_rom,
+                                         &quick_map, have_quick_map,
+                                         &music_flags)
+                        ? &music_flags
                         : NULL;
                 aos_room_music_enter(&room_music, music_area, music_room, flags);
             }
@@ -2684,9 +2750,12 @@ int aria_runtime_main(int argc, char **argv) {
                 }
                 if (opening.complete && have_room_music && start_song < 0 &&
                     (room.area != music_area || room.number != music_room)) {
+                    AosRoomMusicFlags music_flags;
                     const AosRoomMusicFlags *flags =
-                        room.area < MUSIC_AREAS && room.number < MUSIC_ROOMS
-                            ? &room_music_flags[room.area][room.number]
+                        room_music_flags_for(&room, &opening_rom,
+                                             &quick_map, have_quick_map,
+                                             &music_flags)
+                            ? &music_flags
                             : NULL;
                     aos_room_music_enter(&room_music, room.area, room.number,
                                          flags);

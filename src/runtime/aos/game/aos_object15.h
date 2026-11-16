@@ -36,6 +36,11 @@ typedef struct {
     uint16_t dir_word;      /* the + 0x1339A direction input */
     bool fade;              /* the state-2 counter == 0x100000 pair */
     int dialogue;           /* 0/1 record shown in state 3, -1 none */
+    int c5a8;               /* sub_0800C5A8 argument, -1 none:
+                             * create's event-set branch reports 0,
+                             * the state-1 -> 2 probe transition
+                             * reports 0 once and the state-4 body
+                             * reports 0 every frame */
 } AosObject15;
 
 /* Object15Create; `event_set` is the + 0x348 bit-0x8000000 test. */

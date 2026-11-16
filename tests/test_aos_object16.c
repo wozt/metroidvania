@@ -16,15 +16,18 @@ int main(void) {
 
     /* State 0 waits for the + 0x42C bit-0 flag. */
     aos_object16_update(&o, false, false, false, sine0);
-    assert(o.state == 0);
+    assert(o.state == 0 && o.c5a8 == -1);
     aos_object16_update(&o, true, false, false, sine0);
     assert(o.state == 1 && o.forced == 0);
+    assert(o.c5a8 == 0);                /* trigger's sub_0800C5A8(0) */
 
-    /* State 1: x-compare direction, probe enters state 2. */
+    /* State 1: x-compare direction, probe enters state 2; the
+     * native case-1 body reports sub_0800C5A8(0) every frame. */
     aos_object16_update(&o, false, false, true, sine0);
     assert(o.forced == 1 && o.walk_dir == 0x20);
+    assert(o.c5a8 == 0);
     aos_object16_update(&o, false, false, false, sine0);
-    assert(o.walk_dir == 0x10);
+    assert(o.walk_dir == 0x10 && o.c5a8 == 0);
     aos_object16_update(&o, false, true, false, sine0);
     assert(o.state == 2);
 

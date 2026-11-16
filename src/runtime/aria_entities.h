@@ -114,8 +114,8 @@ void homing_register(int index);
 bool object10_item_owned(void *ctx, uint16_t item);
 void room_dialogue_bind(void);
 
-/* The last sub_0800C5A8 argument the Object20 entity pass
- * reported this frame (-1 = none): sub_0800C5A8 writes
+/* The last sub_0800C5A8 argument the entity pass reported this
+ * frame (-1 = none): sub_0800C5A8 writes
  * gEwramData->unk_A074_1, the byte case 1's SELECT/START menu
  * edges gate on. The room loop stores a non-negative result on
  * in_game_mode.unk_A074_1 after update_entities; the write lands

@@ -119,7 +119,7 @@ typedef struct {
     uint8_t flags58;        /* +0x58 of the parent entity */
     bool deleted;           /* sprite load failure */
     /* Per-frame outputs, reset by update. */
-    int sound;              /* sub_0800C5A8(0) / PlaySong, -1 */
+    int sound;              /* sub_0800C5A8 argument (0 or 1), -1 none */
     bool input_lock;        /* SetPlayerInput(1, 0) */
     bool global_42c_bit0;   /* gEwramData + 0x42C |= 1 */
     int display_4a;         /* gDisplayRegisters + 0x4A, -1 none */

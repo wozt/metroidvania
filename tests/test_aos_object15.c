@@ -11,6 +11,9 @@ int main(void) {
     assert(o.forced == -1 && o.dialogue == -1);
     aos_object15_create(&o, 1, true);
     assert(o.state == 4);
+    assert(o.c5a8 == 0);                /* create's sub_0800C5A8(0) */
+    aos_object15_create(&o, 0, false);
+    assert(o.c5a8 == -1);
 
     /* State 1 gates: probe + flag40 + gate_clear all required. */
     aos_object15_create(&o, 0, false);
@@ -22,6 +25,7 @@ int main(void) {
     assert(o.state == 1);                    /* gate busy */
     aos_object15_update(&o, true, false, true, true, 0x20, false);
     assert(o.state == 2 && o.forced == 0);
+    assert(o.c5a8 == 0);                /* probe transition report */
 
     /* State 2: lock while counter > 0x90000, direction below. */
     assert(o.counter == 0x200000);
@@ -35,11 +39,12 @@ int main(void) {
     assert(o.angle == (uint16_t)(0x6000 + 0x80));
     assert(o.counter == 0x7C000);
 
-    /* Fade fires exactly at counter == 0x100000. */
+    /* Fade fires exactly at counter == 0x100000; state 2's body
+     * reports no sub_0800C5A8. */
     aos_object15_create(&o, 0, false);
-    o.state = 2; o.counter = 0x100000;
+    o.state = 2; o.counter = 0x100000; o.c5a8 = 0;
     aos_object15_update(&o, false, false, false, false, 0, false);
-    assert(o.fade);
+    assert(o.fade && o.c5a8 == -1);
     aos_object15_update(&o, false, false, false, false, 0, false);
     assert(!o.fade);
 
@@ -51,10 +56,14 @@ int main(void) {
     aos_object15_update(&o, false, false, false, false, 0x10, false);
     assert(o.dialogue == 1);
 
-    /* State 4: x-compare direction and the return probe. */
+    /* State 4: x-compare direction and the return probe; the
+     * native state-4 body reports sub_0800C5A8(0) every frame. */
     aos_object15_create(&o, 0, true);
     aos_object15_update(&o, false, false, false, false, 0, true);
     assert(o.forced == 2 && o.walk_dir == 0x20 && o.state == 4);
+    assert(o.c5a8 == 0);
+    aos_object15_update(&o, false, false, false, false, 0, false);
+    assert(o.c5a8 == 0);                /* still state 4 */
     aos_object15_update(&o, false, true, false, false, 0, false);
     assert(o.state == 2);
 

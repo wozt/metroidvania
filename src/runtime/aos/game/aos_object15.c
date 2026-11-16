@@ -9,6 +9,9 @@ void aos_object15_create(AosObject15 *o, int param0, bool event_set) {
     o->dir_word = 0;
     o->fade = false;
     o->dialogue = -1;
+    /* sub_0800C5A8(0) runs only on the event-set create branch
+     * (state 4 preset); the state-1 preset reports nothing. */
+    o->c5a8 = event_set ? 0 : -1;
 }
 
 void aos_object15_update(AosObject15 *o, bool near, bool near2,
@@ -18,6 +21,7 @@ void aos_object15_update(AosObject15 *o, bool near, bool near2,
     o->walk_dir = 0;
     o->fade = false;
     o->dialogue = -1;
+    o->c5a8 = -1;
     o->dir_word = dir_word;
 
     switch (o->state) {
@@ -25,6 +29,7 @@ void aos_object15_update(AosObject15 *o, bool near, bool near2,
         if (near && flag40 && gate_clear) {
             o->state = 2;
             o->forced = 0;              /* + 0x42C bit 1 lock */
+            o->c5a8 = 0;                /* sub_0800C5A8(0) */
         }
         break;
     case 2: {
@@ -44,9 +49,11 @@ void aos_object15_update(AosObject15 *o, bool near, bool near2,
         /* + 0x42C bit 1 released; the state advance is external. */
         break;
     case 4:
-        /* entity fx <= soma fx -> 0x20, else 0x10. */
+        /* entity fx <= soma fx -> 0x20, else 0x10; the native
+         * state-4 body opens with sub_0800C5A8(0) every frame. */
         o->forced = 2;
         o->walk_dir = soma_left ? 0x20 : 0x10;
+        o->c5a8 = 0;
         if (near2)
             o->state = 2;
         break;

@@ -14,6 +14,7 @@ void aos_object16_create(AosObject16 *o, int param) {
     o->fade = false;
     o->dialogue = false;
     o->particles = 0;
+    o->c5a8 = -1;
 }
 
 void aos_object16_update(AosObject16 *o, bool input_flag0, bool near,
@@ -25,6 +26,7 @@ void aos_object16_update(AosObject16 *o, bool input_flag0, bool near,
     o->fade = false;
     o->dialogue = false;
     o->particles = 0;
+    o->c5a8 = -1;
 
     /* + 0x20 += + 0x24 every frame (the scroll accumulator the
      * probe block precomputes). */
@@ -36,13 +38,16 @@ void aos_object16_update(AosObject16 *o, bool input_flag0, bool near,
             /* + 0x42C bit 0 set, sub_0800C5A8(0), input locked. */
             o->state = 1;
             o->forced = 0;
+            o->c5a8 = 0;
         }
         break;
     case 1:
         /* Direction toward the + 0x13110 entity: entity fx <=
-         * soma fx -> 0x20 else 0x10. */
+         * soma fx -> 0x20 else 0x10; the native case-1 body runs
+         * sub_0800C5A8(0) every frame. */
         o->forced = 1;
         o->walk_dir = soma_left ? 0x20 : 0x10;
+        o->c5a8 = 0;
         if (near)
             o->state = 2;
         break;

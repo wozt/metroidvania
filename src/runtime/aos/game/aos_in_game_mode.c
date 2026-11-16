@@ -210,10 +210,23 @@ int aos_in_game_mode_transition_fade_step(AosInGameMode *mode) {
         return 0;
     case 1:
         /* sub_08010350 + sub_0801083C: the intra-room screen-scroll
-         * commit and map-position recompute. The runtime has no
-         * unk_88->unk_18 screen-transition table; the follow camera
-         * already holds the player centred, so the commit is a
-         * documented no-op and the stage lasts this one frame. */
+         * commit and map-position recompute. Not wired: native
+         * sub_08010350 scans param_0->unk_88->unk_18 — the room
+         * header's screen-transition table — for the (var_r1,
+         * var_r3) cell the player stands in, seeds BG1's xVel/yVel
+         * toward that entry's target and calls sub_0800F9EC to
+         * reload the adjacent room, while sub_0801083C rewrites
+         * currentArea/currentRoom and the unk_334/336 BG1 position
+         * words. The port exports neither the unk_88 header block
+         * nor its unk_18 table (the room descriptor's
+         * transitions_pointer is the door-exit table, a different
+         * structure), and sub_0800F9EC's BG-config/entity-respawn
+         * reload has no case-5 channel — aos_scroll_transaction
+         * only versions scroll, it cannot pick or load the target
+         * room, and aos_scroll_transition_request belongs to the
+         * intro/credits callers, not this path. Without the table
+         * the target room is unknowable, so the commit stays a
+         * documented one-frame no-op. */
         mode->unk_65 = 2;
         return 0;
     case 2:

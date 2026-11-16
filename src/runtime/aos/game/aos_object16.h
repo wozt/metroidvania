@@ -39,6 +39,10 @@ typedef struct {
     bool fade;              /* white fade pair at counter == 0x40 */
     bool dialogue;          /* state-4 0x08522ABC record shown */
     int particles;          /* type-0x49 spawns this frame */
+    int c5a8;               /* sub_0800C5A8 argument, -1 none:
+                             * the state-0 trigger reports 0 once
+                             * and the state-1 body reports 0
+                             * every frame */
 } AosObject16;
 
 void aos_object16_create(AosObject16 *o, int param);

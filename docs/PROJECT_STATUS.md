@@ -1,3 +1,65 @@
+## Patch 1184 - sub_0800CDAC BG1 mode-0x1A hblank program ported; WIN1H circular-window family audited out of scope
+
+- **Gap A closed.** Patch 1181's last scroll-FX limit,
+  `sub_0800CDAC`, is now decoded and consumed.
+  `third_party/cvaos/src/code_0800CB00.c:187` runs it from
+  `sub_0800D288`'s prologue whenever `bgInfo[1].unk_18 == 0x1A`,
+  called as `sub_0800CDAC(1, 0x450, 0x4A0)` — a BG1HOFS
+  per-scanline program emitted BEFORE the bgNum = 2,3 loop, so
+  any later loop emitter overwrites the single hBlankEffect
+  buffer and only the no-emitter case reaches the hblank ISR.
+  `aos_scroll_hblank` ports it as `hblank_cdac`: the same
+  `param_1 -= yPos.integer` band slide as `sub_0800CED4` but
+  var_sb measured pre-slide, an inclusive band end, and its own
+  wave — `ofs = bgOfs.hOfs + (v1 - ((v1 * (sine(arg) + sp8))
+  >> 0x13)) / var_sb` with `v1 = 8*(scanline - param_1)`,
+  `sp8 = sine(frameCtr << 0xC)` and
+  `arg = (-(param_1 << 0xC) + 0x1000*scanline +
+  (frameCtr << 0xD)) >> 2` (the u32 addend chain wraps like the
+  native s32 registers, `>> 2` the ARM arithmetic shift, SDIV 0
+  on a zero var_sb). It reports `target_bg = 1`, the first
+  non-2/3 target the draw path needed; `aria_bg_draw_hblank`
+  already covers it (untouched axis reads `disp_v[1]`, seeded
+  from the drawn camera offset in `aria_bg_room_begin`).
+- **Live verification.** `ARIA_BG_DEBUG=1 --capture` on room
+  7/33 (`--rom`, mode 26 on BG1, modes 1/13 on BG2/BG3 which
+  emit nothing) reports `hblank program bg=1 hOfs` every frame
+  — the CDAC iris — and the capture writes cleanly.
+- **Coverage.** `tests/test_aos_scroll.c` pins the decoded
+  values: yPos.int 0x400 slides param_1 to 0x50 (band
+  [0x50,0xA0), var_sb 0x50), flat 0x10 below the band and the
+  exact sheared register values inside it (ofs[96..159] =
+  0x11..0x16), the frame-1 phase shift, suppression by a later
+  BG3 mode-14 emitter, and survival under BG3 mode 27 (a
+  direct-BgAffineSet mode that never touches hBlankEffect).
+- **Gap B audited, documented out of scope.** A full census of
+  `HBlankEffectSetup` call sites shows exactly one
+  `REG_WIN1H` destination: `sub_08002400` (armed by
+  `sub_08002324`'s per-scanline circle — sqrt half-width per
+  row inside `[y-r, y+r]`, `win1V` set once — disarmed by
+  `sub_08002428`). Its only callers are the game-mode updates
+  `sub_080110E4` (unk_64 = 4, the SELECT quick map: circle
+  tracks the player room cell, radius `0x10 - (frameCounter >>
+  2 & 0xF)`, bldY brightness) and `sub_080116A8` (unk_64 = 7,
+  the Object1F castle-map warp picker: circle on the selected
+  `sUnk_08525FBC` point). Neither runs during normal room
+  gameplay (`unk_64 == 1`), and both modes already have ported
+  approximations that bypass the hblank path entirely:
+  `aos_quick_map_render` brightens the native circle's pixels
+  directly and `aos_map_warp_overlay` draws the picker cursor
+  as corner brackets (both documented divergences). A faithful
+  port would additionally need the WIN1 blend/window
+  compositor (`bldCnt` screen-first-target brightness) the
+  layered draw does not model, so the family stays unported by
+  design, not by oversight — recorded in the `aos.core.scroll`
+  annotation and `docs/AOS_SOMA.md`'s mode notes.
+- **Docs.** `aos_scroll.h` names the CDAC fallback in the
+  `AosScrollHBlank` contract and the mode-0x1A prologue call;
+  `aria_draw.c`'s honest-limits comment lists `sub_0800CDAC`;
+  the `aos.core.scroll` annotation and `assets.aria_rooms`
+  feature note the ported writer and the audited WIN1H family.
+  Statuses stay `partial` (no emulator comparison).
+
 ## Patch 1183 - Creaking Skull choreography re-arms: the decoded per-case record arms and + 0xD dividers
 
 - **Decode.** `sub_08095898` (state 0, 25 cases,

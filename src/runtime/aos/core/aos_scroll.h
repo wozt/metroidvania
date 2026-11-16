@@ -45,7 +45,9 @@
  *   each layer's unk_18 mode (parallax factors, unk_14/unk_16
  *   interpolation, direct bgOfs writes, and hblank/affine/scanline
  *   effects that are reported through AosScrollOut::fx instead of
- *   applied). A BG1 unk_18 of 0x1A first calls sub_0800CDAC.
+ *   applied). A BG1 unk_18 of 0x1A first calls sub_0800CDAC
+ *   (1, 0x450, 0x4A0) — its hblank program is evaluated by
+ *   aos_scroll_hblank when no BG2/BG3 emitter claims the buffer.
  *   Native callers: sub_0800ED24 (the gated transaction below),
  *   sub_0800ECA0's room-load tail (sub_0800EBE0 -> ECA0 -> F9EC ->
  *   D288, once per room entry while bgInfo[1]'s velocities are
@@ -150,7 +152,10 @@ typedef struct {
  * so the caller can log them; the scroll state they accompany is
  * still applied where the native writes it. */
 enum {
-    AOS_SCROLL_FX_CDAC = 1u << 0,      /* sub_0800CDAC(1,0x450,0x4A0) */
+    AOS_SCROLL_FX_CDAC = 1u << 0,      /* sub_0800CDAC(1,0x450,0x4A0)
+                                          armed (hblank program —
+                                          consumed by
+                                          aos_scroll_hblank) */
     AOS_SCROLL_FX_HBLANK = 1u << 1,    /* hBlankEffect wave buffers */
     AOS_SCROLL_FX_SCANLINE = 1u << 2,  /* sub_0800CB8C / sub_0800CED4 /
                                           sub_0800D0F8 scanline/window FX */
@@ -171,7 +176,9 @@ enum {
  * including each routine's base-offset fold; target_bg is the BG
  * number (2/3) whose register the program writes — modes 14/20
  * always target BG3 (REG_BG3HOFS) exactly like the native, the
- * scanline modes target their own BG's hOfs/vOfs. affine = true
+ * scanline modes target their own BG's hOfs/vOfs; target_bg 1 is
+ * the sub_0800CDAC fallback (BG1 unk_18 == 0x1A emits before the
+ * bgNum = 2,3 loop, so it wins only when no loop emitter exists). affine = true
  * marks mode 18's per-scanline BgAffineSet program (sub_0800D000,
  * writeSize 0x10 into REG_BG2PA): it is the active hblank program
  * but stays unported, so the caller keeps the static draw and no

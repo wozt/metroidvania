@@ -721,7 +721,18 @@ through the case-8 model because the think's commit outputs have no
 channel (documented divergence). The picker's `sub_08002324` cursor
 sprite is approximated by corner brackets over the quick map's castle
 render, and the other `sub_08011AD0` callers (Object15/Object16 door
-branches, the link-sync path) stay unported. Without `--rom` the
+branches, the link-sync path) stay unported. The `sub_08002324` /
+`sub_08002400` / `sub_08002428` circular-window family is the only
+`REG_WIN1H` hBlankEffect writer in the ROM (full `HBlankEffectSetup`
+census): it runs solely inside these two menu game modes — the
+quick map's `sub_08010FF4` player-tracking circle (radius
+`0x10 - (frameCounter >> 2 & 0xF)`) and the warp picker's selected-point
+circle — never during normal room play (`unk_64 == 1`), and both modes
+already approximate the effect without hblank (the quick map's
+brightness circle in `aos_quick_map_render`, the picker's corner
+brackets); a faithful port would additionally need the WIN1 blend
+compositor the layered BG draw does not model, so the family stays
+unported by design (Patch 1184 audit). Without `--rom` the
 table never loads and Object1F's picker frame simply never latches —
 the same absent-`unk_88`-data situation as native. Cases 9-14 remain unported but are now decoded (see the
 `AosInGameModeCase` docs): case 9 is `sub_0805AFC0`, the shared

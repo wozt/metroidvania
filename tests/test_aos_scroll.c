@@ -1000,6 +1000,44 @@ int main(void) {
                 if (hb.ofs[y] != hb.ofs[0x40]) same = 0;
             assert(!same);
         }
+
+        /* BG1 mode 0x1A: sub_0800CDAC(1, 0x450, 0x4A0) — the
+         * pre-loop emitter. yPos.int = 0x400 slides param_1 to
+         * 0x50 (band [0x50,0xA0), var_sb 0x50); frame 0 gives
+         * sp8 = sine(0) = 0 and arg = (0x1000*y - 0x50000) >> 2.
+         * Rows below the band keep bgOfs.hOfs = 0x10; inside it
+         * the var_1 ramp shears hOfs smoothly upward (the room
+         * 7/33 iris). target_bg = 1, hOfs axis. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 1, 2, 2, 0x1A, 0, 0, 0x10 << 16,
+                        0x400 << 16);
+        aos_scroll_bind(&s, 2, 1, 1, 0, 0, 0, 0, 0x30 << 16);
+        aos_scroll_bind(&s, 3, 1, 1, 0, 0, 0, 0, 0x30 << 16);
+        world.unk_4c8 = 0;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 1 && !hb.vertical && !hb.affine);
+        assert(hb.ofs[0] == 0x10 && hb.ofs[79] == 0x10 &&
+               hb.ofs[80] == 0x10 && hb.ofs[88] == 0x10);
+        assert(hb.ofs[96] == 0x11 && hb.ofs[104] == 0x12 &&
+               hb.ofs[112] == 0x13 && hb.ofs[120] == 0x14 &&
+               hb.ofs[128] == 0x15 && hb.ofs[159] == 0x16);
+        /* The frame phase feeds both sine terms: frame 1 shifts
+         * the band rows. */
+        assert(aos_scroll_hblank(&s, &world, 1, &hb));
+        assert(hb.target_bg == 1);
+        assert(hb.ofs[136] != 0x16);   /* frame 0 gave 0x16 */
+        /* A BG2/BG3 hblank emitter runs after CDAC natively and
+         * overwrites the single buffer: mode 14 on BG3 wins. */
+        aos_scroll_bind(&s, 3, 1, 1, 14, 0, 0, 0, 0x30 << 16);
+        world.unk_4c8 = 0x10;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 3 && !hb.vertical && hb.ofs[0] == 64);
+        /* ...but modes that never touch hBlankEffect (27's
+         * direct BgAffineSet) leave the CDAC program standing. */
+        aos_scroll_bind(&s, 3, 1, 1, 27, 0, 0, 0, 0x30 << 16);
+        world.unk_4c8 = 0;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 1 && hb.ofs[128] == 0x15);
     }
 
     /* ---- aos_scroll_affine: sub_0800D288's BgAffineSet programs

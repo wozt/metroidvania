@@ -678,6 +678,54 @@ static void hblank_ced4(const AosScroll *s, int bg, int32_t p1,
     }
 }
 
+/* sub_0800CDAC(bg, p1, p2): the BG1 mode-0x1A program sub_0800D288
+ * runs once per frame BEFORE the bgNum = 2,3 loop — called as
+ * sub_0800CDAC(1, 0x450, 0x4A0), so it writes REG_BG1HOFS and only
+ * survives when no later loop emitter claims the single
+ * hBlankEffect buffer. Same sliding-band skeleton as sub_0800CED4
+ * (param_1 -= yPos.integer, clamped to [0,160), var_sb = p2 - p1
+ * measured before the slide), but the band is INCLUSIVE of p2 and
+ * the wave is its own: per scanline
+ *   ofs = bgOfs.hOfs + (v1 - ((v1 * (sine(arg) + sp8)) >> 0x13))
+ *         / var_sb
+ * with v1 = 8*(scanline - param_1), sp8 = sine(frameCtr << 0xC)
+ * and arg = (-(param_1 << 0xC) + 0x1000*scanline
+ *            + (frameCtr << 0xD)) >> 2. Rows outside the band keep
+ * the flat bgOfs.hOfs. Room 7/33's BG1 unk_18 == 0x1A is the only
+ * known caller. */
+static void hblank_cdac(const AosScroll *s, uint32_t frame_ctr,
+                        uint16_t *buf) {
+    int32_t param_1 = 0x450;
+    int32_t param_2 = 0x4A0;
+    int32_t var_sb = param_2 - param_1;
+    param_1 -= bg_ypos_integer(s, 1);
+    if (param_1 < 0) param_1 = 0;
+    else if (param_1 > AOS_SCROLL_SCANLINES) param_1 = AOS_SCROLL_SCANLINES;
+    if (param_1 + var_sb > AOS_SCROLL_SCANLINES)
+        var_sb = AOS_SCROLL_SCANLINES - param_1;
+    param_2 = param_1 + var_sb;
+    int32_t sp8 = aos_sine(frame_ctr << 0xC);
+    uint16_t base = s->disp_h[1];
+    for (int32_t y = 0; y < AOS_SCROLL_SCANLINES; ++y) {
+        if (y < param_1 || y > param_2) {
+            buf[y] = base;
+            continue;
+        }
+        /* The u32 addend chain wraps like the native s32
+         * registers; the >> 2 is the ARM arithmetic shift. */
+        uint32_t arg_u = (uint32_t)(-(param_1 << 0xC)) +
+                         (uint32_t)(0x1000 * y) + (frame_ctr << 0xD);
+        int32_t arg = (int32_t)arg_u >> 2;
+        int32_t var_0 = aos_sine((uint32_t)arg);
+        int32_t var_1 = 8 * y + param_1 * -8;
+        int32_t num = var_1 - ((var_1 * (var_0 + sp8)) >> 0x13);
+        /* SDIV: a zero var_sb yields 0 (only reachable when the
+         * clamped band is empty). */
+        int32_t q = var_sb ? num / var_sb : 0;
+        buf[y] = (uint16_t)(base + q);
+    }
+}
+
 /* Mode 20's inline program: always REG_BG3HOFS, absolute values.
  * Scanlines 0..127 write 0 (BG3 hOfs pinned), then 8 entries of
  * unk_4C8, 8 of (unk_4C8*3)>>1 and the rest unk_4C8*2 — the
@@ -746,7 +794,20 @@ int aos_scroll_hblank(const AosScroll *s, const AosScrollWorld *world,
             break;
         }
     }
-    if (!win_bg) return 0;
+    if (!win_bg) {
+        /* sub_0800CDAC runs before the bgNum = 2,3 loop, so any
+         * loop emitter above overwrites its program outright; it
+         * only reaches the hblank ISR when BG1's unk_18 == 0x1A
+         * and no BG2/BG3 mode emitted. Modes 21/27/32 write
+         * BG2PA..PG directly and never touch the buffer, so they
+         * do not suppress it. */
+        if (s->bg[1].unk_18 == 0x1A) {
+            hblank_cdac(s, frame_counter, out->ofs);
+            out->target_bg = 1;
+            return 1;
+        }
+        return 0;
+    }
     uint32_t p4c8 = world ? world->unk_4c8 : 0;
     switch (win_mode) {
     case 14:

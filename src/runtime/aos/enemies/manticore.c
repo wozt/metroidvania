@@ -19,8 +19,10 @@
  * state-1 thirteen-case attack keeps its case order, the + 0x6E
  * == 0xE wing/shot/song marker and the + 0x25 variant pick, while
  * the container + 0x1F gates read the launched-child count; the
- * 797-line sub_08073568 child brain collapses to a sine flight
- * toward the player with contact and a lifetime; the wing part's
+ * child launch keeps the native slot velocity table, facing offset
+ * and sign while the 797-line sub_08073568 child brain collapses to
+ * a sine flight toward the player with contact and a lifetime; the
+ * wing part's
  * sub_08073C3C flap machine collapses to an orbiting hitbox;
  * sub_0806AEAC maps to the shared generic flame death. */
 
@@ -57,11 +59,14 @@ static int32_t mt_mul(int32_t a, int32_t b) {
     return (int32_t)(((int64_t)a * b) >> 16);
 }
 
-/* The six child launch velocities of sub_080733D4: slot 0 flies at
- * -0x60000, the others at -0xA0000 (negated = leftward in room
- * 16.16); facing bit 0x40 of the parent flips the spawn offset. */
-static int32_t mt_launch_v(int slot) {
-    return slot == 0 ? -0x60000 : -0xA0000;
+/* sub_080733D4 launch velocity magnitude: slot * 0x80000 plus a base
+ * of 0x60000 for slot 0 and 0xA00000 for slots 1-5 (the native
+ * `slot << 0x13` + base table).  The sign and the spawn offset follow
+ * the parent's + 0x58 bit 0x40 facing: set (the enemy sits left of
+ * the player, the port's `mirrored`) negates both, clear keeps them
+ * positive. */
+static int32_t mt_launch_mag(int slot) {
+    return slot * 0x80000 + (slot == 0 ? 0x60000 : 0xA00000);
 }
 
 /* Emit the six children of sub_08073308 over the first updates,
@@ -125,10 +130,11 @@ static void mt_fire_shot(AosEnemy *e, AosHitReport *hit) {
     hit->children[hit->child_count++] = c;
 }
 
-/* sub_080733D4 + sub_08073568: a launched child flies toward the
- * player on a sine path, activates only after every lower slot has
- * launched (the native + 0x20 sibling chain), deals contact and
- * dies on the parent's death, state 2 or a lifetime. */
+/* sub_080733D4 + sub_08073568: a launched child takes the native
+ * facing-dependent spawn offset and per-slot velocity, then flies
+ * toward the player on a sine path (the 797-line phase brain
+ * collapses to this approximation), deals contact and dies on the
+ * parent's death, state 2 or a lifetime. */
 static void mt_child_update(AosEnemy *e, const AosAnimSet *anims,
                             AosSoma *soma, const AosEnemyKind *kind) {
     AosEnemy *p = e->parent;
@@ -136,15 +142,20 @@ static void mt_child_update(AosEnemy *e, const AosAnimSet *anims,
         e->removed = true;
         return;
     }
-    /* Sequential launch: slot i waits until i siblings launched. */
+    /* sub_080733D4 launch: the + 0x1D gate keeps the launch
+     * one-shot per volley (the native slot-0 update clears the
+     * + 0x20 sibling chain's + 0x1D flags when the next volley arms,
+     * and the recursion launches all six children in one pass, slot
+     * 5 first).  The child copies the container's + 0x40/+ 0x44
+     * position plus the facing offset — x +/- 0xC0000 and y
+     * -0x150000 — and takes the signed slot velocity into + 0x48. */
     if (!e->mt_act) {
-        if (e->mt_slot > 0) {
-            int launched = 0;
-            /* Count launched siblings through the shared parent. */
-            (void)launched;
-        }
-        e->vx = mt_launch_v(e->mt_slot);
+        e->x = p->x + (p->mirrored ? -0xC0000 : 0xC0000);
+        e->y = p->y - 0x150000;
+        int32_t mag = mt_launch_mag(e->mt_slot);
+        e->vx = p->mirrored ? -mag : mag;
         e->vy = 0;
+        e->mirrored = p->mirrored;
         e->mt_act = 1;
         e->timer = 0;
     }

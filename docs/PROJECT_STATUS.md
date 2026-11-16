@@ -1,3 +1,51 @@
+## Patch 1174 - Boss-fight coverage audit; Manticore child launch made native
+
+- **Scope.** Audit of boss-fight coverage against
+  `docs/BOSS_AND_SAVEPOINT_MATRIX.md`'s eleven-boss campaign roster
+  plus the Skeleton Knight prologue and the Man-Eater Boss Rush
+  encounter, cross-checked with the kind-1 enemy placements in the
+  extracted `assets/extracted/aria/rooms/runtime/*/room.tsv` files.
+  Every boss id has a dedicated module under
+  `src/runtime/aos/enemies/` and a `ported` row in
+  `data/native_parity/aos_monster_aspects.tsv`; all eleven campaign
+  boss rooms (0:10, 1:6, 2:15, 3:19, 4:11, 5:6, 6:7, 7:37, 8:1,
+  9:4, 11:20/11:22) plus the Skeleton Knight and Man-Eater
+  placements are extracted with their entities.
+- **Fix.** Manticore's six-child volley launch
+  (`src/runtime/aos/enemies/manticore.c`,
+  `third_party/cvaos/asm/code/code_080709D8.s` sub_080733D4) now
+  keeps the native values: per-slot velocity magnitude
+  `slot * 0x80000 + 0x60000` (slot 0) / `0xA00000` (slots 1-5), the
+  + 0x58 bit-0x40 facing sign on both the velocity and the +/-
+  0xC0000 spawn offset, and the -0x150000 (21 px up) y offset from
+  the container position. Previously every non-zero slot shared a
+  flat -0xA0000 leftward velocity with no spawn offset. The dead
+  sequential-launch stub is replaced by a comment describing the
+  real native mechanism: the slot-0 update clears the + 0x20
+  sibling chain's + 0x1D flags and the recursion launches all six
+  children in one pass, slot 5 first.
+- **Boss-mechanic findings.** Arena seals in boss rooms are the
+  SPECIAL id-2 (Object02) entities flanking each arena (e.g.
+  area_02_room_015, area_03_room_019, area_06_room_007); their
+  param0 == 1 records enter state 0x14 and release through state
+  0x15/0x16 on `aria_pickup_state.special` (+ 0x37E) bit param1.
+  Whether boss defeats set those bits natively, and whether the
+  port's enemy-death path feeds them, remains an open verification
+  item — no boss-kill writer to `special` was found outside pickup
+  collection, so arena release after a boss kill is not proven.
+  Phase machines, bullet patterns and grab attacks are ported per
+  boss with the documented approximations each module header lists;
+  the largest remaining approximations are Creaking Skull's two
+  ~2000-line choreography machines, Big Golem's sub_080AC6E8
+  (~1000 lines undecoded), Headhunter's dash cases and the
+  sub_08073568 Manticore child brain.
+- **Evidence and limits.** Source-derived from sub_080733D4 /
+  sub_08073308 in code_080709D8.s; unit-tested in
+  `tests/test_aos_enemy.c` (manticore_tests). Not emulator-compared.
+- **Registries.** `aos_monster_aspects.tsv` (manticore) and
+  `annotations.tsv` (`aos.enemies.manticore`) notes updated.
+  Statuses unchanged.
+
 ## Patch 1173 - Item Use audit: status-cure timers, refusal sounds, native MP floor
 
 - **Scope.** Audit of whether pause Item Use entries actually do

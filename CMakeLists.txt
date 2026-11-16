@@ -904,8 +904,10 @@ if(BUILD_TESTING)
     add_test(NAME aos_room_music COMMAND fusion_aos_room_music_tests)
 
     add_executable(fusion_aos_scroll_tests tests/test_aos_scroll.c
-                   src/runtime/aos/core/aos_scroll.c)
+                   src/runtime/aos/core/aos_scroll.c
+                   src/runtime/aos/math/aos_math.c)
     target_include_directories(fusion_aos_scroll_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_aos_scroll_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_scroll_tests)
     add_test(NAME aos_scroll COMMAND fusion_aos_scroll_tests)
 
@@ -1372,6 +1374,7 @@ if(BUILD_TESTING)
                    tests/test_aos_intro_cutscene.c
                    src/runtime/aos/intro/aos_intro_cutscene.c
                    src/runtime/aos/core/aos_scroll.c
+                   src/runtime/aos/math/aos_math.c
                    src/runtime/aos/intro/aos_intro_entities.c)
     target_include_directories(fusion_aos_intro_cutscene_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_intro_cutscene_tests PRIVATE m)

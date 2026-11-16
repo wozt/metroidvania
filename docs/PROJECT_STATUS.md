@@ -1,3 +1,78 @@
+## Patch 1175 - Object20 channel audit: sub_0800C5A8 wired to unk_A074_1; +0x427/+0x410 family re-audited
+
+- **Scope.** Audit and closure pass over the remaining Object20
+  (`SPECIAL` id 32, `param0` 0-31) shared-state channels in
+  `src/runtime/aria_entities.c` and `src/runtime/aos/game/
+  aos_object20*.c`, decoding `third_party/cvaos/asm/code/
+  code_08050A3C.s` and `code_08060B98.s`.
+- **Wired.** `sub_0800C5A8(arg)` is a one-instruction writer of
+  `gEwramData->unk_A074_1` — the byte `GameModeInGameUpdate`
+  case 1's SELECT/START menu edges gate on. Every ported
+  Object20 update/create tail reports its argument (the shared
+  `update_tail` writes 0 with `SetPlayerInput(1, ret)` while
+  `+0x42C` bit 0 holds, else 1), but the reports were previously
+  dropped. `object20_apply_out` now collects the frame's last
+  report into `object20_c5a8_pending` (native entity order,
+  last writer wins) and the room loop stores it on
+  `in_game_mode.unk_A074_1` after `update_entities`
+  (`aria_entities_c5a8_result`). The store lands one frame later
+  than native because the port checks the menu edges before the
+  entity pass; it is skipped while `unk_A074_0` holds, which
+  reproduces the suspended `sub_08000B64` — including the
+  `sub_0800FFCC` banner stage-0 frame where the port's ordering
+  would otherwise let an Object20 write clobber the banner's
+  `unk_A074_1 = 0` for the whole ~189-frame freeze.
+- **+0x427 audit.** The only native reader in the decompilation
+  corpus is `sub_0800ED24`'s `unk_427 > param0` early-out; the
+  port's `aos_scroll_transaction` already models it and every
+  Object20 `write_427` report (shop menu value/release, dirs and
+  story variants) lands on `object20_ewram_427` before the
+  scroll transactions run in `object20_apply_out`. The stale
+  "shop-only writer" comment is corrected. Non-Object20 writers
+  (e.g. `asm/code/code_08090914.s`) remain outside the ported
+  corpus.
+- **+0x410/+0x418/+0x41A audit correction.** The earlier "no
+  reader" note missed `sub_08067A04`'s computed-offset accesses
+  in `code_08060B98.s` (`r7 = gEwramData + 0x60`): `+0x410` is
+  the `r7+0x3B0` text-source word NULL-checked in the case-0/5
+  arms, `+0x418` the `r7+0x3B8` halfword and `+0x41A` the
+  `r7+0x3BA` byte, both stored with the rendered glyph index per
+  poll. They are the text engine's own per-frame glyph position,
+  written and consumed inside `sub_08067A04` itself; the ported
+  `AosRoomDialogue` typewriter owns the equivalent state and no
+  Object20 variant writes non-zero values. The session channels
+  now mirror only `sub_08067934`'s window-open clears.
+- **Scroll hBlankEffect consumer (same wave).** The
+  `sub_0800D288` per-frame hblank program is now ported as
+  `aos_scroll_hblank` (`src/runtime/aos/core/aos_scroll.c`):
+  single buffer, last emitter in the BG2/BG3 order wins, per-
+  scanline absolute BGxHOFS/BGxVOFS register values including
+  each routine's base-offset fold and the `frameCounter` phase
+  terms. `aria_bg_room_begin` evaluates it after
+  `aos_scroll_apply` and `aria_bg_draw_hblank` draws the target
+  layer per scanline (1-px strips with the horizontal wrap); the
+  affine mode-18 program is reported through `hblank.affine` and
+  suppresses the flat-wave draw, and the BgAffineSet matrix modes
+  stay unported. Unit-tested in `tests/test_aos_scroll.c`.
+- **Variant audit.** All 32 `param0` slots dispatch in native
+  table order: slots (0-2, 11-18), dirs (4-8), story (9, 10,
+  21-24, 29-31), shop (19, 20; 19's update reuses story
+  `sub_08061ABC`), npc families (25-28), param0 3 owned by the
+  opening path. Native minimal stubs (`param0` 1/2/17 create or
+  update `bx lr`) are faithful, not gaps. Story-critical paths —
+  shops, NPC talk loops, save/statue variants and the param0-30
+  whiteout — run at state-machine level; display-register,
+  palette-upload, DMA-descriptor and fade Out reports remain
+  explicitly partial (no portable VRAM-DMA/OBJ-palette consumer;
+  the in-game-mode fade module is out of this wave's scope).
+- **Evidence and limits.** Source-derived from the cited asm;
+  `aos_object20*` unit tests pass. The `unk_A074_1` store is
+  integration-wired but not emulator-compared; the one-frame
+  latency and the `unk_A074_0` guard are documented divergences.
+- **Registries.** `annotations.tsv` (`aos.events.opening_scene`)
+  and `features.tsv` (`story.aria_opening_event`) notes updated;
+  statuses unchanged.
+
 ## Patch 1174 - Boss-fight coverage audit; Manticore child launch made native
 
 - **Scope.** Audit of boss-fight coverage against

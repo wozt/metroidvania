@@ -199,9 +199,22 @@ static uint32_t object20_ewram_word60;
 /* gEwramData +0x427 byte: sub_0800ED24's transaction gate — the
  * shop sell sequence writes it (the +0xB menu value, then 0 at
  * release) and every sub_0800ED24 call suppresses itself while
- * the byte exceeds the call's param0 (1). Session-scoped like
- * the word60 channel: no other ported writer feeds it. */
+ * the byte exceeds the call's param0 (1). The dirs and story
+ * families write the same byte through their own Out reports;
+ * object20_apply_out lands all of them here before the scroll
+ * transactions run, last write wins like the native stores.
+ * Session-scoped: no non-Object20 ported writer feeds it. */
 static uint8_t object20_ewram_427;
+/* sub_0800C5A8's argument -> gEwramData->unk_A074_1 (the same
+ * byte GameModeInGameUpdate_inline_0 writes): every ported
+ * Object20 update/create tail reports it (-1 = no report). The
+ * reports are collected here, last writer wins across the entity
+ * pass like the native per-entity calls, and
+ * aria_entities_c5a8_result hands the frame's value to the room
+ * loop, which stores it on in_game_mode.unk_A074_1 — the byte
+ * case 1's SELECT/START menu edges gate on. Other objects' own
+ * sub_0800C5A8 calls are not ported and do not report. */
+static int8_t object20_c5a8_pending = -1;
 /* gEwramData bgInfo[4] scroll state (+0xA078): the ported
  * sub_0803FBBC/sub_08000F60/sub_0800D288 behind every
  * sub_0800ED24 call (aos/core/aos_scroll). The Object20 shop sell
@@ -337,17 +350,23 @@ static uint8_t object20_ewram_417;
  * +0x410 = 0 (str r5), +0x418 word = 0 (strh r5, covering both
  * bytes) and +0x41A = 0 (strb r6), alongside the already
  * modelled +0x417 = 0 and +0x416 = 1 (asm/code_08060B98.s
- * _08067934). No ported consumer exists: the only writer of
- * these offsets in the dumped Object20 code is sub_08067934
- * itself and no reader appears in code_08050A3C.s /
- * code_08060B98.s — the consumers live in the undumped
- * window-manager/display code (the func_0800BEC0 family). The
- * channels preserve the write history like the +0x414/+0x417
- * pair; they feed no In field. The sibling +0x40C store (the
- * sub_08041434-resolved pointer into the 0x08506B38 language
- * text table) stays unchannelled — it is a ROM address the
- * host's dialogue bridge resolves itself, so no faithful host
- * value exists. Session-scoped. */
+ * _08067934). Audit update: the earlier "no reader" note missed
+ * sub_08067A04's computed-offset accesses in the same file —
+ * r7 = gEwramData + 0x60, so +0x410 is the word at r7+0x3B0
+ * (ldr + NULL check picking the text source in the case-0/case-5
+ * arms), +0x418 the halfword at r7+0x3B8 and +0x41A the byte at
+ * r7+0x3BA, both str'd with the rendered glyph index each poll
+ * (the +0x410-word-NULL arm stores the halfword, the armed arm
+ * the byte). They are the text engine's own per-frame glyph
+ * position, written and consumed inside sub_08067A04 itself;
+ * the ported AosRoomDialogue typewriter owns the equivalent
+ * position state, and no Object20 variant writes non-zero
+ * values. The channels mirror sub_08067934's clears like the
+ * +0x414/+0x417 pair; they feed no In field. The sibling +0x40C
+ * store (the sub_08041434-resolved pointer into the 0x08506B38
+ * language text table) stays unchannelled — it is a ROM address
+ * the host's dialogue bridge resolves itself, so no faithful
+ * host value exists. Session-scoped. */
 static uint32_t object20_ewram_410;
 static uint16_t object20_ewram_418;
 static uint8_t object20_ewram_41a;
@@ -1295,6 +1314,14 @@ void aria_scroll_bgofs(const AriaRoom *room, int bg, int32_t *h,
     *v = aria_scroll.disp_v[bg];
 }
 
+/* The frame's last sub_0800C5A8 argument reported by the Object20
+ * entity pass (-1 = no report): gEwramData->unk_A074_1's pending
+ * write for the room loop. Read once per update_entities call,
+ * after the pass; the value resets at the next call's top. */
+int aria_entities_c5a8_result(void) {
+    return object20_c5a8_pending;
+}
+
 /* Forward one update's Out effects. The window triple goes through
  * the shared room dialogue first (open -> poll -> close, the native
  * order inside a single update); the rest follow the sibling
@@ -1396,9 +1423,11 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
          * +0x42C |= 0x21 (talk-active/display bits) — all land
          * before the family's own reports below, matching the
          * native call order. +0x410/+0x418/+0x419/+0x41A are
-         * cleared above onto their session channels (no ported
-         * consumer yet); the +0x40C text-pointer store stays
-         * unchannelled — see the channel comment. */
+         * cleared above onto their session channels (their only
+         * native consumer is sub_08067A04's own glyph-position
+         * state, which the ported AosRoomDialogue typewriter
+         * owns — see the channel comment); the +0x40C
+         * text-pointer store stays unchannelled. */
         object20_ewram_414 &= (uint8_t)~0x10u;
         object20_disp_cnt &= 0xFEFFu;
         aria_pickup_state.global_flags |= 0x21u;
@@ -1572,6 +1601,18 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
     if (out->shop.write_427) object20_ewram_427 = out->shop.write_427_val;
     if (out->dirs.write_427) object20_ewram_427 = out->dirs.write_427_val;
     if (out->story.write_427) object20_ewram_427 = out->story.write_427_val;
+    /* sub_0800C5A8 reports: one family's update tail emits at most
+     * one value per entity; the shared shell's out->c5a8 covers
+     * the npc/shop families while dirs/story/slots carry their
+     * own. Last report across the pass wins (native entity
+     * order); the room loop stores it on unk_A074_1. */
+    {
+        int c5a8 = out->c5a8 >= 0 ? out->c5a8
+                   : out->dirs.c5a8 >= 0 ? out->dirs.c5a8
+                   : out->story.c5a8 >= 0 ? out->story.c5a8
+                   : out->slots.c5a8;
+        if (c5a8 >= 0) object20_c5a8_pending = (int8_t)c5a8;
+    }
     /* sub_0800ED24 consumers: the shop transaction
      * (transaction/transaction_arg1, arg0 always 1) and the
      * dirs/story ed24 pairs (arg0 = ed24_a, arg1 = ed24_b, arg2
@@ -2369,6 +2410,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
      * clearing it here keeps one frame of latency like the shared
      * forced-input slot. */
     aria_object1c_input_lock(false);
+    /* sub_0800C5A8's unk_A074_1 writes only exist for the frames
+     * the entity pass runs; reset so a frozen pass cannot leak
+     * last frame's report into the room loop's store. */
+    object20_c5a8_pending = -1;
     int sound = 0;
     /* unk_A074_0: while the level-up display's counter sits in
      * [2, 0x3C], the native entity update loop is suspended; the

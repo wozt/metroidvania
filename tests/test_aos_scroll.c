@@ -776,6 +776,143 @@ int main(void) {
             assert(aos_scroll_enemy_band5c((uint8_t)id) < 0x20);
     }
 
+    /* ---- aos_scroll_hblank: the sub_0800D288 hBlankEffect
+     * programs (single buffer, last emitter in the bg 2,3 order
+     * wins). Spot-checks pin the absolute register values the
+     * routines write per scanline. */
+    {
+        AosScrollHBlank hb;
+        AosScrollWorld world = { 0, false, 0, NULL, 0 };
+
+        /* No emitter: plain modes produce no program. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 1, 0, 0, 0, 0x30 << 16);
+        aos_scroll_bind(&s, 3, 1, 1, 2, 0, 0, 0, 0x30 << 16);
+        assert(!aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 0);
+
+        /* Mode 36 (BG3): own vOfs wave
+         * sine((y<<12) + (unk_4C8<<10)) >> 14 + bgOfs.vOfs.
+         * unk_4C8 = 0 -> arg = y<<12: y=4 hits 0x4000 (sine peak
+         * 0x10000 >> 14 = +4), y=8 hits 0x8000 (sine 0), y=12 hits
+         * 0xC000 (-0x10000 >> 14 = -4). */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 3, 1, 1, 36, 0, 0, 0, 0x30 << 16);
+        world.unk_4c8 = 0;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 3 && hb.vertical && !hb.affine);
+        assert(hb.ofs[0] == 0x30 && hb.ofs[4] == 0x34 &&
+               hb.ofs[8] == 0x30 && hb.ofs[12] == 0x2C);
+        /* unk_4C8 phase shifts the wave: <<10 of 0x400 gives
+         * arg offset 0x100000 == 0x10000-turn wrap -> same table
+         * as 0x400<<10 & 0xFFFF... verify a nonzero phase moves
+         * values instead of pinning them. */
+        world.unk_4c8 = 0x10;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.ofs[0] != 0x30);
+
+        /* Mode 30 (BG2): same vOfs family with the (y<<11) step
+         * and >>13 amplitude — y=8 hits 0x4000 (0x10000>>13 = +8),
+         * y=16 hits 0x8000 (0). */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 30, 0, 0, 0, 0x20 << 16);
+        world.unk_4c8 = 0;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 2 && hb.vertical);
+        assert(hb.ofs[0] == 0x20 && hb.ofs[8] == 0x28 &&
+               hb.ofs[16] == 0x20);
+
+        /* Mode 31 (BG2): uniform hOfs jitter
+         * sine(frameCtr << 8) >> 15 + bgOfs.hOfs on every row.
+         * frame 0x40 -> arg 0x4000 -> +2 px everywhere. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 31, 0, 0, 0x10 << 16,
+                        0x30 << 16);
+        assert(aos_scroll_hblank(&s, &world, 0x40, &hb));
+        assert(hb.target_bg == 2 && !hb.vertical);
+        for (int y = 0; y < AOS_SCROLL_SCANLINES; ++y)
+            assert(hb.ofs[y] == 0x12);
+
+        /* Mode 14: sub_0800CB00's absolute ramp on REG_BG3HOFS —
+         * unk_4C8 = 0x10: y=0 -> 16*64/16 = 64, y=64 -> 32,
+         * y=127 -> 1, y>=128 -> 0. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 3, 1, 1, 14, 0, 0, 0, 0x30 << 16);
+        world.unk_4c8 = 0x10;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 3 && !hb.vertical);
+        assert(hb.ofs[0] == 64 && hb.ofs[64] == 32 &&
+               hb.ofs[127] == 1 && hb.ofs[128] == 0 &&
+               hb.ofs[159] == 0);
+
+        /* Mode 20: BG3 hOfs step pattern — 0x80 zeros then
+         * unk_4C8 / 1.5x / 2x bands. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 3, 1, 1, 20, 0, 0, 0, 0x30 << 16);
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 3 && !hb.vertical);
+        assert(hb.ofs[0] == 0 && hb.ofs[127] == 0 &&
+               hb.ofs[128] == 0x10 && hb.ofs[135] == 0x10 &&
+               hb.ofs[136] == 0x18 && hb.ofs[143] == 0x18 &&
+               hb.ofs[144] == 0x20 && hb.ofs[159] == 0x20);
+
+        /* Mode 16 (BG3): sub_0800CC90 band wave on own hOfs.
+         * p1 = 0 - yPos.int clamps to 0, var_r2 = 160, so every
+         * row is in-band: ofs[y] = base + (2*sine((y+yint)<<12
+         * + frame<<9)) >> 16. yPos.int = 0x30 pushes p1 negative
+         * -> still 0; frame 0 -> arg = y<<12: y=4 sine peak ->
+         * (2*0x10000)>>16 = +2. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 3, 1, 1, 16, 0, 0, 0x10 << 16,
+                        0x30 << 16);
+        world.unk_4c8 = 0;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 3 && !hb.vertical);
+        assert(hb.ofs[0] == 0x10 && hb.ofs[4] == 0x12 &&
+               hb.ofs[8] == 0x10);
+
+        /* Mode 28 (BG2): sub_0800CED4's ramped band — rows
+         * outside [p1', p2'] keep base; inside they deviate.
+         * Just assert the program is active, hOfs-targeted and
+         * not constant. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 28, 0, 0, 0x08 << 16,
+                        0x30 << 16);
+        world.unk_4c8 = 0x20;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 2 && !hb.vertical);
+        {
+            int same = 1;
+            for (int y = 1; y < AOS_SCROLL_SCANLINES; ++y)
+                if (hb.ofs[y] != hb.ofs[0]) same = 0;
+            assert(!same);
+        }
+
+        /* Last emitter wins: BG2 mode 30 (vOfs wave) vs BG3 mode
+         * 14 — the bg3 pass runs second, so the CB00 hOfs program
+         * on BG3 is the active one and BG2's wave is lost, like
+         * the single native buffer. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 30, 0, 0, 0, 0x20 << 16);
+        aos_scroll_bind(&s, 3, 1, 1, 14, 0, 0, 0, 0x30 << 16);
+        world.unk_4c8 = 0x10;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 3 && !hb.vertical &&
+               hb.ofs[0] == 64);
+
+        /* Mode 18 alone reports the affine program: target BG2,
+         * affine flag, no ofs table — the flat waves stay off. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 18, 0, 0, 0, 0x30 << 16);
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 2 && hb.affine);
+        /* ...but a later BG3 wave emitter overwrites it. */
+        aos_scroll_bind(&s, 3, 1, 1, 36, 0, 0, 0, 0x30 << 16);
+        world.unk_4c8 = 0;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 3 && hb.vertical && !hb.affine);
+    }
+
     puts("aos_scroll: ok");
     return 0;
 }

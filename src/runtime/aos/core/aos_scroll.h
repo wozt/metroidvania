@@ -153,6 +153,41 @@ enum {
     AOS_SCROLL_FX_BG2_DISABLE = 1u << 7 /* dispCnt &= ~DCNT_BG2 (mode 19) */
 };
 
+/* The sub_0800D288 hBlankEffect program for one frame, evaluated
+ * for the draw path. The native runs every emitting case into ONE
+ * hBlankBuffer + ONE destReg per frame, so the LAST emitter in the
+ * bgNum = 2,3 loop order wins outright — earlier programs are
+ * overwritten before the hblank ISR ever sees them. `ofs[]` holds
+ * the absolute register values the ISR writes per scanline
+ * (BGxHOFS for vertical = false, BGxVOFS for true), already
+ * including each routine's base-offset fold; target_bg is the BG
+ * number (2/3) whose register the program writes — modes 14/20
+ * always target BG3 (REG_BG3HOFS) exactly like the native, the
+ * scanline modes target their own BG's hOfs/vOfs. affine = true
+ * marks mode 18's per-scanline BgAffineSet program (sub_0800D000,
+ * writeSize 0x10 into REG_BG2PA): it is the active hblank program
+ * but stays unported, so the caller keeps the static draw and no
+ * ofs[] table is filled. frame_counter is gEwramData->frameCounter
+ * — the global frame count the CB8C/CC90/31 phase terms read
+ * (unlike unk_60.unk_4C8, which the room transition clears and
+ * which arrives through `world`). target_bg 0 means no mode
+ * emitted a program this frame. */
+#define AOS_SCROLL_SCANLINES 160
+typedef struct {
+    int target_bg;      /* 0: no hblank program this frame */
+    bool vertical;      /* ofs[] is the vOfs table, else hOfs */
+    bool affine;        /* mode 18's per-scanline affine program */
+    uint16_t ofs[AOS_SCROLL_SCANLINES];
+} AosScrollHBlank;
+
+/* Evaluates the winning hblank program of sub_0800D288 for the
+ * draw path (see AosScrollHBlank). Returns nonzero when a program
+ * is active. Pure function of the scroll state — call after
+ * aos_scroll_apply so the bgOfs shadows the wave routines read as
+ * their base are final. */
+int aos_scroll_hblank(const AosScroll *s, const AosScrollWorld *world,
+                      uint32_t frame_counter, AosScrollHBlank *out);
+
 /* The tile-row rebuild DMA sub_0803FBBC queues through
  * BgCmdBuffer_WriteData when a scroll request crosses an 8-px
  * tile boundary: 20 (x scroll) or 30 (y scroll) halfword lookups

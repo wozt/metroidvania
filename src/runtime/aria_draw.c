@@ -1403,6 +1403,15 @@ typedef struct {
     bool scroll_bound;
     int32_t prev_bg1_x, prev_bg1_y; /* last drawn BG1 offset (px) */
     uint32_t phase;         /* unk_60.unk_4C8 stand-in, +1/frame */
+    /* gEwramData->frameCounter stand-in for the CB8C/CC90/31
+     * wave phase terms: global like the native, never reset on a
+     * room change (unk_4C8/phase is the one the transition
+     * clears). */
+    uint32_t frame_counter;
+    /* This frame's winning sub_0800D288 hBlankEffect program
+     * (aos_scroll_hblank): per-scanline absolute BGxHOFS/BGxVOFS
+     * register values for the target BG, or target_bg 0. */
+    AosScrollHBlank hblank;
     bool bg2_disabled;      /* mode 19/21 dispCnt &= ~DCNT_BG2 */
     /* This room's sub_0803DC18/3DD14 depth tables: BGxCNT
      * priorities for BG0..BG3 and the +0x5C band -> OBJ priority
@@ -1435,6 +1444,7 @@ static void aria_bg_room_clear(void) {
     aria_bg_room.scroll_bound = false;
     aria_bg_room.prev_bg1_x = aria_bg_room.prev_bg1_y = 0;
     aria_bg_room.phase = 0;
+    memset(&aria_bg_room.hblank, 0, sizeof aria_bg_room.hblank);
     aria_bg_room.bg2_disabled = false;
     memset(&aria_bg_room.depth, 0, sizeof aria_bg_room.depth);
     aria_bg_room.depth_ok = false;
@@ -1631,6 +1641,7 @@ bool aria_bg_room_begin(SDL_Renderer *renderer, const AriaRoom *room,
                         int32_t bg1_ox, int32_t bg1_oy) {
     if (!aria_bg_room_ensure(renderer, room, cam_x, cam_y))
         return false;
+    ++aria_bg_room.frame_counter;
     const int32_t bx = (int32_t)cam_x + bg1_ox;
     const int32_t by = (int32_t)cam_y + bg1_oy;
     const int32_t dx = bx - aria_bg_room.prev_bg1_x;
@@ -1654,9 +1665,67 @@ bool aria_bg_room_begin(SDL_Renderer *renderer, const AriaRoom *room,
     aos_scroll_apply(&aria_bg_room.scroll, &world, &out);
     if (out.fx & AOS_SCROLL_FX_BG2_DISABLE)
         aria_bg_room.bg2_disabled = true;
+    /* The hBlankEffect program sub_0800D288 armed this frame:
+     * evaluated after apply so the bgOfs shadows the wave
+     * routines fold in as their base are final. The affine
+     * winner (mode 18) is reported through hblank.affine and
+     * simply suppresses the flat-wave draw below. */
+    aos_scroll_hblank(&aria_bg_room.scroll, &world,
+                      aria_bg_room.frame_counter,
+                      &aria_bg_room.hblank);
+    if (aria_bg_room.hblank.target_bg && getenv("ARIA_BG_DEBUG"))
+        fprintf(stderr, "aria_bg: hblank program bg=%d %s%s frame=%u\n",
+                aria_bg_room.hblank.target_bg,
+                aria_bg_room.hblank.vertical ? "vOfs" : "hOfs",
+                aria_bg_room.hblank.affine ? " affine" : "",
+                aria_bg_room.frame_counter);
     aria_bg_room.ofs_bx = bx;
     aria_bg_room.ofs_by = by;
     return true;
+}
+
+/* Draw one layer under the frame's winning hBlankEffect program:
+ * the ISR rewrites the target BG's BGxHOFS (hblank.vertical =
+ * false) or BGxVOFS (true) every scanline, so screen row y
+ * samples map column (h_ofs[y] + x) and row (v_ofs[y] + y),
+ * wrapped at the layer bitmap size like the flat blit's
+ * bgOfs wrap. ofs[] already carries each routine's absolute
+ * register value; the untouched axis keeps the layer's bgOfs
+ * shadow. Emitted as 1-px-high strips (<= 2 SDL draws per row
+ * for the horizontal wrap) — the same modulo-and-continue
+ * segmentation aos_scroll_bgofs_blits uses, per scanline. */
+static void aria_bg_draw_hblank(SDL_Renderer *renderer,
+                                const AriaBgLayerDraw *layer, int bg,
+                                const AosScrollHBlank *hb) {
+    const AosScroll *sc = &aria_bg_room.scroll;
+    for (int y = 0; y < VIEW_H; ++y) {
+        int32_t h = hb->vertical ? (int32_t)sc->disp_h[bg]
+                                 : (int32_t)hb->ofs[y];
+        int32_t v = hb->vertical ? (int32_t)hb->ofs[y]
+                                 : (int32_t)sc->disp_v[bg];
+        int sx = (int)(((int64_t)h % layer->width + layer->width) %
+                       layer->width);
+        int sy = (int)(((int64_t)(v + y) % layer->height +
+                        layer->height) % layer->height);
+        if (sx + VIEW_W <= layer->width) {
+            SDL_FRect src = {(float)sx, (float)sy, (float)VIEW_W, 1.0f};
+            SDL_FRect dst = {0.0f, (float)y, (float)VIEW_W, 1.0f};
+            SDL_RenderTexture(renderer, layer->texture, &src, &dst);
+            continue;
+        }
+        /* Horizontal wrap: the row continues at source 0 like
+         * the tilemap wrap (map width >= 256 > VIEW_W, so at most
+         * one split is ever needed). */
+        int w0 = layer->width - sx;
+        SDL_FRect src0 = {(float)sx, (float)sy, (float)w0, 1.0f};
+        SDL_FRect dst0 = {0.0f, (float)y, (float)w0, 1.0f};
+        SDL_RenderTexture(renderer, layer->texture, &src0, &dst0);
+        SDL_FRect src1 = {0.0f, (float)sy,
+                          (float)(VIEW_W - w0), 1.0f};
+        SDL_FRect dst1 = {(float)w0, (float)y,
+                          (float)(VIEW_W - w0), 1.0f};
+        SDL_RenderTexture(renderer, layer->texture, &src1, &dst1);
+    }
 }
 
 /* Draw the decoded BG layers whose sub_0803FD60 priority equals
@@ -1689,15 +1758,28 @@ void aria_bg_draw_priority(SDL_Renderer *renderer, int priority,
              * transform is texX=texY=0x8000, scr=(0x78,0x50),
              * unit scale, alpha 0, i.e. screen pixel (x,y) samples
              * texel (x+8, y+48) of the 256x256 tilemap. The
-             * per-frame BgAffineSet/hblank modes (unk_18 18/21/27
-             * and the scanline writers) stay unported, so rooms
-             * using them draw this static frame-0 transform —
-             * documented approximation, never an invented offset. */
+             * per-frame BgAffineSet modes (unk_18 21/27/32) and
+             * mode 18's per-scanline affine hblank program stay
+             * unported, so rooms using them draw this static
+             * frame-0 transform — documented approximation, never
+             * an invented offset. */
             SDL_FRect src = {8.0f, 48.0f, (float)VIEW_W,
                              (float)VIEW_H};
             SDL_FRect dst = {0.0f, 0.0f, (float)VIEW_W,
                              (float)VIEW_H};
             SDL_RenderTexture(renderer, layer->texture, &src, &dst);
+            continue;
+        }
+        /* The frame's hBlankEffect program, when this layer is its
+         * target: per-scanline BGxHOFS/BGxVOFS strips. hblank.affine
+         * (mode 18's sub_0800D000 per-scanline BgAffineSet) and
+         * affine tilemaps (bgOfs ignored by the hardware) fall
+         * through to the flat draw — documented, never approximated
+         * with invented transform data. */
+        if (aria_bg_room.hblank.target_bg == bg && !layer->affine &&
+            !aria_bg_room.hblank.affine) {
+            aria_bg_draw_hblank(renderer, layer, bg,
+                                &aria_bg_room.hblank);
             continue;
         }
         int32_t h_ofs, v_ofs;

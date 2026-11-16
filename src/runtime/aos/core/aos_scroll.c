@@ -2,6 +2,7 @@
 /* Ports of the BG scroll routines; comments name the cvaos routine
  * and the native offsets they reproduce. See aos_scroll.h. */
 #include "aos_scroll.h"
+#include "../math/aos_math.h"
 #include <string.h>
 
 /* The native velocity cap: 0x80 << 0xC = 0x80000 (8.0 px per call). */
@@ -549,6 +550,258 @@ int aos_scroll_transaction(AosScroll *s, uint8_t gate_byte, int param0,
     else if (out)
         out->entities_shifted = 0;
     aos_scroll_apply(s, world, out);
+    return 1;
+}
+
+/* ---- sub_0800D288's hBlankEffect wave programs ----
+ * Ports of the scanline writers in third_party/cvaos
+ * src/code_0800CB00.c that fill gEwramData->hBlankEffect.
+ * hBlankBuffer entries are s16 and the ISR writes them raw to the
+ * target register, so every routine below folds its base offset
+ * in and the result is stored truncated to u16 — the same bits
+ * the register ends up with. */
+
+/* sub_080009E4 lookups go through aos_math's aos_sine (the same
+ * sSineTable port). All shifts are the native s32 arithmetic
+ * shifts; products that could wrap s32 are formed in u32 first. */
+
+/* sub_0800CB00: mode 14's program, always aimed at REG_BG3HOFS.
+ * Absolute values — no bgOfs base: scanlines 0..127 get
+ * unk_4C8 * (0x40 - y/2) / 0x10, the bottom 32 get 0. */
+static void hblank_cb00(uint32_t unk_4c8, uint16_t *buf) {
+    int32_t t = (int32_t)unk_4c8;
+    int y;
+    for (y = 0; y < (int)(160 * 0.8f); ++y) {
+        int32_t prod = (int32_t)((uint32_t)t * (uint32_t)(0x40 - y / 2));
+        buf[y] = (uint16_t)(prod / 0x10);
+    }
+    for (; y < AOS_SCROLL_SCANLINES; ++y) buf[y] = 0;
+}
+
+/* The yPos.part16.integer the wave routines read — the u16 high
+ * half of bgInfo[bg].yPos, identical to the disp_v shadow the
+ * scroll write-back maintains. */
+static int32_t bg_ypos_integer(const AosScroll *s, int bg) {
+    return (int32_t)(uint16_t)(s->bg[bg].y_pos >> 16);
+}
+
+/* sub_0800CB8C(bg, p1, p2, p3): modes 15 (0,160,1) and 23
+ * (112,48,3). hOfs = bgOfs.hOfs + sine wave over the band
+ * [p1, min(p1+p2,160)); temp_r0 ramps 0..p3 across the band and
+ * steeper terms shift the sine phase and halve the amplitude. */
+static void hblank_cb8c(const AosScroll *s, int bg, int32_t p1,
+                        int32_t p2, int32_t p3, uint32_t frame_ctr,
+                        uint16_t *buf) {
+    int32_t var_sb = p1 + p2;
+    if (var_sb > AOS_SCROLL_SCANLINES) var_sb = AOS_SCROLL_SCANLINES;
+    uint16_t base = s->disp_h[bg];
+    int32_t y_int = bg_ypos_integer(s, bg);
+    int32_t y = 0;
+    for (; y < p1; ++y) buf[y] = base;
+    for (; y < var_sb; ++y) {
+        int32_t t = (p3 * (y - p1)) / p2;
+        int32_t arg = (int32_t)(((uint32_t)(y_int + y) << 13) +
+                                (frame_ctr << (10 - t)));
+        int32_t wave = aos_sine((uint32_t)arg) >> ((t >> 1) + 15);
+        buf[y] = (uint16_t)(wave + base);
+    }
+    for (; y < AOS_SCROLL_SCANLINES; ++y) buf[y] = base;
+}
+
+/* sub_0800CC90(bg, p1, p2, p3): modes 16 (0,160,2), 24
+ * (0xB0,0x200,1) and 25 (0x70,0x100,1). The band start slides up
+ * by yPos.integer and clamps to [0,160]; inside it
+ * hOfs = bgOfs.hOfs + (p3 * sine((yPos+y)<<12 + frameCtr<<9)) >> 16. */
+static void hblank_cc90(const AosScroll *s, int bg, int32_t p1,
+                        int32_t p2, int32_t p3, uint32_t frame_ctr,
+                        uint16_t *buf) {
+    int32_t var_r2 = p2 - p1;
+    p1 -= bg_ypos_integer(s, bg);
+    if (p1 < 0) p1 = 0;
+    else if (p1 > AOS_SCROLL_SCANLINES) p1 = AOS_SCROLL_SCANLINES;
+    if (p1 + var_r2 > AOS_SCROLL_SCANLINES)
+        var_r2 = AOS_SCROLL_SCANLINES - p1;
+    int32_t p2c = p1 + var_r2;
+    if (p2c > AOS_SCROLL_SCANLINES) p2c = AOS_SCROLL_SCANLINES;
+    uint16_t base = s->disp_h[bg];
+    int32_t y_int = bg_ypos_integer(s, bg);
+    uint32_t fc = frame_ctr << 9;
+    int32_t y = 0;
+    for (; y < p1; ++y) buf[y] = base;
+    for (; y < p2c; ++y) {
+        int32_t v = aos_sine((uint32_t)(((uint32_t)(y_int + y) << 12) + fc));
+        buf[y] = (uint16_t)(((p3 * v) >> 16) + base);
+    }
+    for (; y < AOS_SCROLL_SCANLINES; ++y) buf[y] = base;
+}
+
+/* sub_0800CED4(bg, p1, p2): modes 28 (0x38,0x90) and 29
+ * (0x70,0xCC). Same sliding band as CC90 but the wave is a
+ * scanline-ramped sine product; the band is inclusive of p2c
+ * (native tests `scanline > param_2`, not >=). */
+static void hblank_ced4(const AosScroll *s, int bg, int32_t p1,
+                        int32_t p2, uint32_t unk_4c8, uint16_t *buf) {
+    int32_t t4 = (int32_t)((uint32_t)(int32_t)unk_4c8 << 9);
+    int32_t sp4 = aos_sine((uint32_t)t4);
+    int32_t var_sb = p2 - p1;
+    p1 -= bg_ypos_integer(s, bg);
+    if (p1 < 0) p1 = 0;
+    else if (p1 > AOS_SCROLL_SCANLINES) p1 = AOS_SCROLL_SCANLINES;
+    if (p1 + var_sb > AOS_SCROLL_SCANLINES)
+        var_sb = AOS_SCROLL_SCANLINES - p1;
+    int32_t p2c = p1 + var_sb;
+    uint16_t base = s->disp_h[bg];
+    for (int32_t y = 0; y < AOS_SCROLL_SCANLINES; ++y) {
+        if (y < p1 || y > p2c) {
+            buf[y] = base;
+            continue;
+        }
+        int32_t v1 = (y - p1) * 0xC;
+        int32_t v2 = (y - p1) << 0xC;
+        int32_t v3 = aos_sine((uint32_t)((int32_t)((uint32_t)t4 +
+                                                 (uint32_t)v2) >> 2));
+        int32_t v4 = (v1 * (v3 + sp4)) >> 0x13;
+        int32_t q = var_sb ? (v1 - v4) / var_sb : 0; /* SDIV: 0 on /0 */
+        buf[y] = (uint16_t)(base + q);
+    }
+}
+
+/* Mode 20's inline program: always REG_BG3HOFS, absolute values.
+ * Scanlines 0..127 write 0 (BG3 hOfs pinned), then 8 entries of
+ * unk_4C8, 8 of (unk_4C8*3)>>1 and the rest unk_4C8*2 — the
+ * native loop emits 0x14 tail entries but the buffer only feeds
+ * 160 scanlines. */
+static void hblank_mode20(uint32_t unk_4c8, uint16_t *buf) {
+    int32_t t = (int32_t)unk_4c8;
+    int32_t v15 = (int32_t)((uint32_t)t * 3u) >> 1;
+    int32_t v2 = (int32_t)((uint32_t)t * 2u);
+    int y;
+    for (y = 0; y < 0x80; ++y) buf[y] = 0;
+    for (; y < 0x88; ++y) buf[y] = (uint16_t)t;
+    for (; y < 0x90; ++y) buf[y] = (uint16_t)v15;
+    for (; y < AOS_SCROLL_SCANLINES; ++y) buf[y] = (uint16_t)v2;
+}
+
+/* Mode 30's inline program: own BGxVOFS, bgOfs.vOfs +
+ * sine((y << 0xB) + (unk_4C8 << 0xA)) >> 0xD per scanline. */
+static void hblank_mode30(const AosScroll *s, int bg, uint32_t unk_4c8,
+                          uint16_t *buf) {
+    uint32_t t = unk_4c8 << 10;
+    uint16_t base = s->disp_v[bg];
+    for (int y = 0; y < AOS_SCROLL_SCANLINES; ++y) {
+        int32_t w = aos_sine((uint32_t)((y << 11) + t)) >> 13;
+        buf[y] = (uint16_t)(w + base);
+    }
+}
+
+/* Mode 31's inline program: own BGxHOFS, bgOfs.hOfs +
+ * sine(frameCtr << 8) >> 0xF — a uniform per-frame jitter. */
+static void hblank_mode31(const AosScroll *s, int bg,
+                          uint32_t frame_ctr, uint16_t *buf) {
+    int32_t w = aos_sine(frame_ctr << 8) >> 15;
+    uint16_t base = s->disp_h[bg];
+    for (int y = 0; y < AOS_SCROLL_SCANLINES; ++y)
+        buf[y] = (uint16_t)(w + base);
+}
+
+/* Mode 36's inline program: own BGxVOFS, bgOfs.vOfs +
+ * sine((y << 0xC) + (unk_4C8 << 0xA)) >> 0xE per scanline. */
+static void hblank_mode36(const AosScroll *s, int bg, uint32_t unk_4c8,
+                          uint16_t *buf) {
+    uint32_t t = unk_4c8 << 10;
+    uint16_t base = s->disp_v[bg];
+    for (int y = 0; y < AOS_SCROLL_SCANLINES; ++y) {
+        int32_t w = aos_sine((uint32_t)((y << 12) + t)) >> 14;
+        buf[y] = (uint16_t)(w + base);
+    }
+}
+
+int aos_scroll_hblank(const AosScroll *s, const AosScrollWorld *world,
+                      uint32_t frame_counter, AosScrollHBlank *out) {
+    memset(out, 0, sizeof *out);
+    /* Last emitter in the native bgNum = 2,3 order wins: walk the
+     * modes and keep the highest-bg emitter. */
+    int win_bg = 0, win_mode = 0;
+    for (int bg = 2; bg < 4; ++bg) {
+        switch (s->bg[bg].unk_18) {
+        case 14: case 15: case 16: case 18: case 20: case 23:
+        case 24: case 25: case 28: case 29: case 30: case 31:
+        case 36:
+            win_bg = bg;
+            win_mode = s->bg[bg].unk_18;
+            break;
+        default:
+            break;
+        }
+    }
+    if (!win_bg) return 0;
+    uint32_t p4c8 = world ? world->unk_4c8 : 0;
+    switch (win_mode) {
+    case 14:
+        hblank_cb00(p4c8, out->ofs);
+        out->target_bg = 3;   /* REG_BG3HOFS, not bgNum's own */
+        break;
+    case 15:
+        hblank_cb8c(s, win_bg, 0, AOS_SCROLL_SCANLINES, 1,
+                    frame_counter, out->ofs);
+        out->target_bg = win_bg;
+        break;
+    case 16:
+        hblank_cc90(s, win_bg, 0, AOS_SCROLL_SCANLINES, 2,
+                    frame_counter, out->ofs);
+        out->target_bg = win_bg;
+        break;
+    case 18:
+        /* sub_0800D000: 0x10-byte BgAffineDstData per scanline into
+         * REG_BG2PA — the affine hblank program. Reported so the
+         * draw path knows the flat hOfs/vOfs waves are NOT the
+         * active program; the transform itself stays unported. */
+        out->target_bg = 2;
+        out->affine = true;
+        break;
+    case 20:
+        hblank_mode20(p4c8, out->ofs);
+        out->target_bg = 3;   /* REG_BG3HOFS */
+        break;
+    case 23:
+        hblank_cb8c(s, win_bg, (int32_t)(AOS_SCROLL_SCANLINES * 0.7f),
+                    (int32_t)(AOS_SCROLL_SCANLINES * 0.3f), 3,
+                    frame_counter, out->ofs);
+        out->target_bg = win_bg;
+        break;
+    case 24:
+        hblank_cc90(s, win_bg, 0xB0, 0x200, 1, frame_counter, out->ofs);
+        out->target_bg = win_bg;
+        break;
+    case 25:
+        hblank_cc90(s, win_bg, 0x70, 0x100, 1, frame_counter, out->ofs);
+        out->target_bg = win_bg;
+        break;
+    case 28:
+        hblank_ced4(s, win_bg, 0x38, 0x90, p4c8, out->ofs);
+        out->target_bg = win_bg;
+        break;
+    case 29:
+        hblank_ced4(s, win_bg, 0x70, 0xCC, p4c8, out->ofs);
+        out->target_bg = win_bg;
+        break;
+    case 30:
+        hblank_mode30(s, win_bg, p4c8, out->ofs);
+        out->vertical = true;
+        out->target_bg = win_bg;
+        break;
+    case 31:
+        hblank_mode31(s, win_bg, frame_counter, out->ofs);
+        out->target_bg = win_bg;
+        break;
+    case 36:
+        hblank_mode36(s, win_bg, p4c8, out->ofs);
+        out->vertical = true;
+        out->target_bg = win_bg;
+        break;
+    default:
+        return 0;
+    }
     return 1;
 }
 

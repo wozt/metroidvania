@@ -114,6 +114,16 @@ void homing_register(int index);
 bool object10_item_owned(void *ctx, uint16_t item);
 void room_dialogue_bind(void);
 
+/* The last sub_0800C5A8 argument the Object20 entity pass
+ * reported this frame (-1 = none): sub_0800C5A8 writes
+ * gEwramData->unk_A074_1, the byte case 1's SELECT/START menu
+ * edges gate on. The room loop stores a non-negative result on
+ * in_game_mode.unk_A074_1 after update_entities; the write lands
+ * one frame later than native (the port checks the menu edges
+ * before the entity pass) and is skipped while unk_A074_0 holds,
+ * matching the native suspension of sub_08000B64. */
+int aria_entities_c5a8_result(void);
+
 /* Object1C's SetPlayerInput(1, 0x40) host channel: freezes Soma's
  * player_* input words while the save sequence runs WITHOUT touching
  * the global held/new words the entity dispatch reads (the shared

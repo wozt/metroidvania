@@ -3419,6 +3419,17 @@ int aria_runtime_main(int argc, char **argv) {
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
                             aria_input.new_input, aria_input.held_input,
                             &room_music);
+            /* sub_0800C5A8's gEwramData->unk_A074_1 write lands inside
+             * the entity pass natively; the port's menu edges above
+             * already ran, so the store takes effect next frame.
+             * unk_A074_0 suspends the native pass — including the
+             * frame sub_0800FFCC's stage 0 just set it — so the
+             * store is skipped while the bit holds and the banner's
+             * own clear cannot be overwritten. */
+            if (!in_game_mode.unk_A074_0) {
+                int c5a8 = aria_entities_c5a8_result();
+                if (c5a8 >= 0) in_game_mode.unk_A074_1 = c5a8 != 0;
+            }
             /* sub_0804F7A4's room-load discovery and the
              * sub_08010978/sub_080115D4 writers (Object1F's update
              * seq_end and think picker-open frame) run inside the

@@ -315,35 +315,26 @@ static void render_wrapped_background(
     }
 }
 
-static void render_intro_backgrounds(
-    SDL_Renderer *renderer, const AosIntroGraphics *graphics,
-    SDL_Texture *textures[AOS_INTRO_BACKGROUND_COUNT],
-    const AosIntroCutscene *intro) {
-    SDL_SetRenderDrawColor(renderer, graphics->backdrop_rgb[0],
-                           graphics->backdrop_rgb[1],
-                           graphics->backdrop_rgb[2], 255);
-    SDL_FRect screen = {0, 0, GBA_W, GBA_H};
-    SDL_RenderFillRect(renderer, &screen);
-    /* The native scrolls stay inside each bitmap (start offsets equal
-     * height - 160 or less), so a single draw replaces the old infinite
-     * wrap that superimposed the castle during the stair scroll. */
-    for (int index = AOS_INTRO_BACKGROUND_COUNT - 1; index >= 0; --index) {
-        unsigned layer = (unsigned)index + 1;
-        int32_t scroll = intro->bg_y[layer] >> 16;
-        SDL_FRect destination = {
-            0, (float)-scroll,
-            (float)graphics->backgrounds[index].width_pixels,
-            (float)graphics->backgrounds[index].height_pixels};
-        SDL_RenderTexture(renderer, textures[index], NULL, &destination);
-    }
-}
+/* The opening does not keep the hardware-default BG priorities:
+ * sub_080094AC calls sub_0803DC18(0, 0x18, 0x14, 0x1F) and sub_0803FD60,
+ * which ranks the four BG keys and writes BG0 = 0, BG2 = 1, BG1 = 2 and
+ * BG3 = 3 into the BGCNT priority bits. Entity layer fields (the +0x5C
+ * band) go through the same ranking table: sub_0803E57C counts the BG
+ * keys under a layer key, so layer 0x16 lands on OBJ priority 2 and
+ * layers 0x19/0x1A on priority 3. An object wins pixels against the BG
+ * of its own priority, so the composite order back to front is BG3,
+ * OBJ3, BG1, OBJ2, BG2, OBJ1, BG0, OBJ0. BG0 is the text plane that
+ * render_intro_text draws last. */
+enum { AOS_INTRO_ACTOR_BANDS = 4 };
 
-static void render_intro_actors(SDL_Renderer *renderer,
-                                SDL_Texture *texture,
-                                const AosIntroGraphics *graphics,
-                                const AosIntroEntities *actors,
-                                uint16_t alpha_blend) {
-    if (!texture) return;
+/* Rasterize the intro actors into one RGBA texture per OBJ priority band
+ * (0-3). Band pixels keep the OBJ palette colour and the BLDALPHA EVA
+ * approximation the single-plane version used; other bands stay clear. */
+static void update_intro_actor_bands(
+    SDL_Texture *textures[AOS_INTRO_ACTOR_BANDS],
+    const AosIntroGraphics *graphics,
+    const AosIntroEntities *actors,
+    uint16_t alpha_blend) {
     static AosObjLayer layer;
     static uint8_t pixels[GBA_W * GBA_H * 4];
     aos_obj_layer_clear(&layer);
@@ -402,22 +393,76 @@ static void render_intro_actors(SDL_Renderer *renderer,
      * controller merges stage and entity writes into alpha_blend. */
     unsigned first_alpha = alpha_blend & 0x1Fu;
     if (first_alpha > 16) first_alpha = 16;
-    for (int index = 0; index < GBA_W * GBA_H; ++index) {
-        uint16_t color = graphics->object_palette[layer.index[index]];
-        pixels[index * 4] = (uint8_t)((color & 31) * 255 / 31);
-        pixels[index * 4 + 1] =
-            (uint8_t)(((color >> 5) & 31) * 255 / 31);
-        pixels[index * 4 + 2] =
-            (uint8_t)(((color >> 10) & 31) * 255 / 31);
-        pixels[index * 4 + 3] = layer.index[index]
-                                    ? (uint8_t)(layer.semi[index]
-                                                    ? first_alpha * 255 / 16
-                                                    : 255)
-                                    : 0;
+    for (int band = AOS_INTRO_ACTOR_BANDS - 1; band >= 0; --band) {
+        if (!textures[band]) continue;
+        for (int index = 0; index < GBA_W * GBA_H; ++index) {
+            bool drawn = layer.index[index] &&
+                         layer.priority[index] == band;
+            uint16_t color = graphics->object_palette[layer.index[index]];
+            pixels[index * 4] = drawn ? (uint8_t)((color & 31) * 255 / 31) : 0;
+            pixels[index * 4 + 1] =
+                drawn ? (uint8_t)(((color >> 5) & 31) * 255 / 31) : 0;
+            pixels[index * 4 + 2] =
+                drawn ? (uint8_t)(((color >> 10) & 31) * 255 / 31) : 0;
+            pixels[index * 4 + 3] = drawn
+                ? (uint8_t)(layer.semi[index]
+                                ? first_alpha * 255 / 16
+                                : 255)
+                : 0;
+        }
+        SDL_UpdateTexture(textures[band], NULL, pixels, GBA_W * 4);
     }
-    SDL_UpdateTexture(texture, NULL, pixels, GBA_W * 4);
+}
+
+static void draw_intro_background(
+    SDL_Renderer *renderer, SDL_Texture *texture,
+    const FusionAosRenderedBackground *background, int32_t scroll) {
+    if (!texture) return;
+    SDL_FRect destination = {
+        0, (float)-scroll,
+        (float)background->width_pixels,
+        (float)background->height_pixels};
+    SDL_RenderTexture(renderer, texture, NULL, &destination);
+}
+
+static void draw_intro_actor_band(SDL_Renderer *renderer,
+                                  SDL_Texture *texture) {
+    if (!texture) return;
     SDL_FRect screen = {0, 0, GBA_W, GBA_H};
     SDL_RenderTexture(renderer, texture, NULL, &screen);
+}
+
+/* Composite one intro frame in the native priority order documented
+ * above. backgrounds[] holds BG1, BG2, BG3 in that order; bg_y[] is
+ * indexed by the native BG number. */
+static void render_intro_scene(
+    SDL_Renderer *renderer, const AosIntroGraphics *graphics,
+    SDL_Texture *background_textures[AOS_INTRO_BACKGROUND_COUNT],
+    SDL_Texture *actor_textures[AOS_INTRO_ACTOR_BANDS],
+    const AosIntroCutscene *intro, uint16_t alpha_blend) {
+    SDL_SetRenderDrawColor(renderer, graphics->backdrop_rgb[0],
+                           graphics->backdrop_rgb[1],
+                           graphics->backdrop_rgb[2], 255);
+    SDL_FRect screen = {0, 0, GBA_W, GBA_H};
+    SDL_RenderFillRect(renderer, &screen);
+    update_intro_actor_bands(actor_textures, graphics, &intro->entities,
+                             alpha_blend);
+    /* The native scrolls stay inside each bitmap (start offsets equal
+     * height - 160 or less), so a single draw replaces the old infinite
+     * wrap that superimposed the castle during the stair scroll. */
+    draw_intro_background(renderer, background_textures[2],
+                          &graphics->backgrounds[2],
+                          intro->bg_y[3] >> 16);
+    draw_intro_actor_band(renderer, actor_textures[3]);
+    draw_intro_background(renderer, background_textures[0],
+                          &graphics->backgrounds[0],
+                          intro->bg_y[1] >> 16);
+    draw_intro_actor_band(renderer, actor_textures[2]);
+    draw_intro_background(renderer, background_textures[1],
+                          &graphics->backgrounds[1],
+                          intro->bg_y[2] >> 16);
+    draw_intro_actor_band(renderer, actor_textures[1]);
+    draw_intro_actor_band(renderer, actor_textures[0]);
 }
 
 static bool create_main_menu_textures(
@@ -681,12 +726,17 @@ int aria_title_preview_main(int argc, char **argv) {
         SDL_SetTextureBlendMode(menu_objects_texture, SDL_BLENDMODE_BLEND);
         SDL_SetTextureScaleMode(menu_objects_texture, SDL_SCALEMODE_NEAREST);
     }
-    SDL_Texture *intro_actor_texture = SDL_CreateTexture(
-        renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING,
-        GBA_W, GBA_H);
-    if (intro_actor_texture) {
-        SDL_SetTextureBlendMode(intro_actor_texture, SDL_BLENDMODE_BLEND);
-        SDL_SetTextureScaleMode(intro_actor_texture, SDL_SCALEMODE_NEAREST);
+    SDL_Texture *intro_actor_textures[AOS_INTRO_ACTOR_BANDS] = {0};
+    for (int band = 0; band < AOS_INTRO_ACTOR_BANDS; ++band) {
+        intro_actor_textures[band] = SDL_CreateTexture(
+            renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING,
+            GBA_W, GBA_H);
+        if (intro_actor_textures[band]) {
+            SDL_SetTextureBlendMode(intro_actor_textures[band],
+                                    SDL_BLENDMODE_BLEND);
+            SDL_SetTextureScaleMode(intro_actor_textures[band],
+                                    SDL_SCALEMODE_NEAREST);
+        }
     }
     SDL_Texture *menu_bg0_texture = SDL_CreateTexture(
         renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, GBA_W, GBA_H);
@@ -1014,13 +1064,11 @@ int aria_title_preview_main(int argc, char **argv) {
         bool in_main_menu = lifecycle.game_mode.mode == AOS_MODE_MAIN_MENU;
         bool in_intro = lifecycle.game_mode.mode == AOS_MODE_INTRO_CUTSCENE;
         if (in_intro && have_intro_resources) {
-            render_intro_backgrounds(renderer, &intro_graphics,
-                                     intro_background_textures,
-                                     &lifecycle.intro_cutscene);
-            render_intro_actors(
-                renderer, intro_actor_texture, &intro_graphics,
-                &lifecycle.intro_cutscene.entities,
-                lifecycle.intro_cutscene.alpha_blend);
+            render_intro_scene(renderer, &intro_graphics,
+                               intro_background_textures,
+                               intro_actor_textures,
+                               &lifecycle.intro_cutscene,
+                               lifecycle.intro_cutscene.alpha_blend);
         } else if (in_main_menu && have_main_menu_graphics) {
             render_main_menu_backgrounds(
                 renderer, &main_menu_graphics, main_menu_textures,
@@ -1308,7 +1356,9 @@ int aria_title_preview_main(int argc, char **argv) {
     if (menu_bg0_texture) SDL_DestroyTexture(menu_bg0_texture);
     if (title_texture) SDL_DestroyTexture(title_texture);
     if (menu_objects_texture) SDL_DestroyTexture(menu_objects_texture);
-    if (intro_actor_texture) SDL_DestroyTexture(intro_actor_texture);
+    for (int band = 0; band < AOS_INTRO_ACTOR_BANDS; ++band)
+        if (intro_actor_textures[band])
+            SDL_DestroyTexture(intro_actor_textures[band]);
     if (logo_texture) SDL_DestroyTexture(logo_texture);
     destroy_intro_textures(intro_background_textures);
     aos_intro_graphics_free(&intro_graphics);

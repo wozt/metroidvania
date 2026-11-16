@@ -1,3 +1,40 @@
+## Patch 1189 - intro cutscene: native BG/OBJ priority bands composite the stairs scene
+
+- **Fix.** Patch 1187's artifact 2 is resolved in the SDL preview
+  host. `sub_080094AC` calls `sub_0803DC18(0, 0x18, 0x14, 0x1F)` and
+  `sub_0803FD60`, which ranks the four BG keys and writes BG0 = 0,
+  BG2 = 1, BG1 = 2, BG3 = 3 into the BGCNT priority bits; entity
+  layer fields (+0x5C/unk_540) map through the same ranking table
+  (`sub_0803E57C` counts the BG keys under a layer key), giving the
+  orbit and scroll-follower actors (0x16) OBJ priority 2 and the
+  panels, Soma and affine rise (0x19/0x1A) priority 3. The host now
+  rasters the six actors into one RGBA texture per OBJ priority band
+  (`update_intro_actor_bands`) and composites back to front in
+  `render_intro_scene`: BG3, OBJ3, BG1, OBJ2, BG2, OBJ1, OBJ0, with
+  BG0 remaining the text plane `render_intro_text` draws last. This
+  replaces the previous BG3/BG2/BG1-then-all-actors flattening that
+  swapped BG1/BG2 and put every actor over every background. Spawn
+  timing, actor gates and entity state were already native-faithful
+  (Patch 1187 artifact 3); the visible defect was purely the missing
+  occlusion, so no entity code changed.
+- **Verification.** `fusion_aria_title_preview --rom ... --mute
+  --screenshot` under xvfb, old vs new binary at frames 1500/3000/
+  4500/6000, pixel-compared against the native mGBA captures in
+  /tmp/intro (dense_* every 30 frames, nat4/nat5 every 200). Frame
+  3000 aligns with native frame 2600: differing subsampled pixels
+  drop from 4465 (old) to 3604 (new) and the best-match margin
+  widens (next-best native frame scores 5065). Frame 4500 vs native
+  4200 improves 6124 -> 5861; the frame-6000 moon end-card matches
+  native 5200 at 3562. Old-vs-new port diff: 0% at frame 1500
+  (pre-intro), 24.4% at 3000, 7.2% at 4500 - the mid-scroll plane
+  correction. Remaining divergence is the known set: text raster
+  details, palette rounding, the BLDALPHA approximation and a small
+  native/port frame offset; still not an emulator pixel-exact claim.
+- **Scope.** Presentation host only
+  (`src/runtime/aos/title/aos_title_preview.c`); the intro stays
+  `partial` until a full emulator pixel comparison closes the
+  remaining differences.
+
 ## Patch 1188 - title preview: ready light no longer covers the native introduction and game-over screens
 
 - **Fix.** Patch 1187's diagnosis confirmed by capture: the preview

@@ -1,3 +1,69 @@
+## Patch 1177 - Affine BG draw consumer: mode 18 per-scanline and modes 21/27/32 per-frame BgAffineSet warps
+
+- **Gap.** Patch 1170 decoded the affine BG2 tile arrays and drew
+  them under the load-time identity `BgAffineSet`, but the
+  per-frame transform FX reported through `AosScrollOut::fx` —
+  mode 18 `sub_0800D000`'s per-scanline affine hblank program and
+  modes 21/27/32's `BgAffineSet` on BG2 — had no draw consumer,
+  and `aos_scroll_affine` was never called.
+- **Evaluation (`aos/core/aos_scroll.{c,h}`).** `aos_scroll_affine`
+  now reports both program kinds together instead of early-
+  returning on mode 18: `per_scanline`/`scan[160]` for the
+  hBlankEffect records and the new `has_frame`/`frame` for the
+  last per-frame emitter in the native bg 2,3 order (mode 21 still
+  gated on `unk_33C[3]` bit `0x02000000`, i.e. event flag 0x79).
+  Both are needed because the mode-18 records only mask the
+  per-frame registers when they win the single hBlankEffect
+  buffer — `aos_scroll_hblank`'s last-emitter rule decides that
+  (`hblank.affine`). New `aos_scroll_affine_texel` factors the
+  hardware fetch `texel = ((PH + PA*x + PB*y) >> 8,
+  (PG + PC*x + PD*y) >> 8)` so the draw path and the unit test
+  share one implementation. `AosScrollWorld.room_index` already
+  keyed mode 32's `sub_0800D0F8` room switch.
+- **Draw (`aria_draw.c`).** `aria_bg_room_begin` feeds the same
+  `AosScrollWorld` to `aos_scroll_hblank` and `aos_scroll_affine`
+  after `aos_scroll_apply`; the world now passes
+  `unk_33C[3] = aria_events[3]` (the entity-transaction world in
+  `aria_entities.c` still passes 0 — foreign WIP untouched).
+  `aria_bg_draw_affine_warp` CPU-warps the affine layer's decoded
+  `affine_pixels` (kept since Patch 1170) into a lazily created
+  `VIEW_W x VIEW_H` streaming `warp_tex`: per-scanline records
+  when mode 18 won the buffer, the frame transform when only a
+  per-frame write exists, and the static frame-0 draw when a
+  mode-18 program lost the buffer with no per-frame write (the
+  load-time registers then stand, like native). Wrap honours
+  BGxCNT bit 13 (`layer->wrap`, area overflow); out-of-map texels
+  sample transparent otherwise. `ARIA_BG_DEBUG=1` prints the
+  winning program per frame.
+- **Verification.** `tests/test_aos_scroll.c` gains
+  `aos_scroll_affine` cases: no-emitter, mode-18 record math
+  (scan[0] pa/pb/pc/pd/ph/pg pinned to the native
+  `Div`/`BgAffineSet` values), mode-21 flag gate and transform,
+  the mode-18 + mode-27 coexistence, mode-32's room-keyed arm
+  (room 33 dir -1 and the default arm), and `aos_scroll_affine_texel`
+  identity/gradient/negative-shift cases. `ctest -R aos_scroll`
+  passes. Real-ROM `--capture` runs with `ARIA_BG_DEBUG=1`:
+  room 4/10 reports `hblank program bg=2 affine` +
+  `affine program bg=2 per-scanline` every frame (the mode-18
+  warp path); rooms 7/37 and 11/0/16/33/34/35/39 report
+  `affine program bg=2 +frame` (modes 21/27/32 per-frame warps);
+  captures at frames 5 and 120 differ as the phase advances.
+  Rooms 5/14 and 11/32 report no affine program — their BG2
+  modes do not emit one under the current world flags (mode 21's
+  event-flag gate stays clear at spawn), matching the native
+  gate, not a consumer gap.
+- **Limits.** The warp is a 240x160 CPU fetch per frame — fine
+  for the affine rooms (24, mostly Chaotic Realm) but not
+  vsync-timed against the native hblank DMA. Mode 18's records
+  are layer-independent and always target BG2 like the native
+  `REG_BG2PA` writes; non-BG2 affine metadata still produces no
+  texture. The scanline/window FX writers
+  (`sub_0800CB8C`/`sub_0800CED4`/`sub_0800D0F8` bands behind
+  modes 15/16/23/24/25/28/29/30/31/36) remain unported.
+- **Registries.** `annotations.tsv` (`aos.core.scroll`) notes and
+  next action, `features.tsv` (`assets.aria_rooms`) notes updated;
+  statuses stay `partial` — no emulator comparison.
+
 ## Patch 1176 - Boss-kill + 0x37E writers and the Object02 create-time seal
 
 - **Scope.** Closes the Patch 1174 open item: Object02 arena seals

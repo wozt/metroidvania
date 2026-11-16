@@ -136,6 +136,14 @@ typedef struct {
     uint32_t unk_4c8;
     AosScrollEntityRef *entities;
     size_t entity_count;
+    /* GetRoomFromMapPosition(GetEntityRoomXPositionInteger(player),
+     * GetEntityRoomYPositionInteger(player)) — the 6-bit room index
+     * sub_0800D288's mode-32 switch keys on (the port's room->number
+     * for the room on screen). Pass -1 when unmodelled: it selects
+     * the native default arm like any unlisted room index. Only
+     * aos_scroll_affine reads it; callers that never evaluate the
+     * affine program may leave it 0. */
+    int room_index;
 } AosScrollWorld;
 
 /* Unported native side effects of sub_0800D288, reported as bits
@@ -187,6 +195,66 @@ typedef struct {
  * their base are final. */
 int aos_scroll_hblank(const AosScroll *s, const AosScrollWorld *world,
                       uint32_t frame_counter, AosScrollHBlank *out);
+
+/* One BgAffineDstData record — the 16 bytes svcBgAffineSet writes
+ * per calculation (BGxPA..PD then BGxPH/PG): the four s16 8.8
+ * matrix parameters and the two s32 reference coordinates (28-bit
+ * signed, 8 fraction bits — the hardware cuts the s32 store down
+ * to 28 bits, which the port reproduces). */
+typedef struct {
+    int16_t pa, pb, pc, pd; /* BGxPA/PB/PC/PD: per-pixel x and
+                               per-scanline gradients, 8.8 */
+    int32_t ph, pg;         /* BGxPH/PG: texture coordinate of the
+                               scanline's left edge, 8.8 */
+} AosScrollAffineSample;
+
+/* The sub_0800D288 affine programs for one frame, evaluated for
+ * the draw path. Modes 21/27/32 run BgAffineSet on bg2PA once per
+ * frame inside the bgNum = 2,3 loop (the last emitter wins, always
+ * targeting BG2); mode 18 instead fills the hBlankEffect buffer
+ * with one 16-byte BgAffineDstData record per scanline aimed at
+ * REG_BG2PA (sub_0800D000, HBlankEffectSetup writeSize 0x10) — the
+ * hblank DMA then rewrites BG2PA..BG2PG every scanline, so a mode
+ * 18 on either layer wins over any per-frame affine write.
+ * target_bg is always 2 like the native destinations; per_scanline
+ * marks the mode-18 program (scan[] holds the 160 records, row y
+ * uses record y — the hardware rewrites BG2PA..BG2PG every
+ * scanline, so row y samples with record y's full matrix and
+ * PH/PG). frame holds the per-frame write for modes 21/27/32
+ * (texel at screen (x,y) = ((ph + pa*x + pb*y) >> 8,
+ * (pg + pc*x + pd*y) >> 8)). has_frame marks that a 21/27/32
+ * emitter produced frame this call — it stays valid even when a
+ * mode-18 program also exists, because the per-frame BgAffineSet
+ * registers are only overwritten per scanline when the mode-18
+ * records actually win the hBlankEffect buffer (aos_scroll_hblank
+ * reports that through hblank.affine). Returns nonzero when an
+ * affine program is active. */
+#define AOS_SCROLL_AFFINE_LINES 160
+typedef struct {
+    int target_bg;              /* 0: no affine program this frame */
+    bool per_scanline;          /* mode 18's hblank program */
+    bool has_frame;             /* frame holds a 21/27/32 write */
+    AosScrollAffineSample frame;
+    AosScrollAffineSample scan[AOS_SCROLL_AFFINE_LINES];
+} AosScrollAffine;
+
+/* Evaluates the winning affine program of sub_0800D288 (see
+ * AosScrollAffine). Pure function of the scroll state and world —
+ * call after aos_scroll_apply like aos_scroll_hblank. */
+int aos_scroll_affine(const AosScroll *s, const AosScrollWorld *world,
+                      AosScrollAffine *out);
+
+/* Host draw-path helper, not a native routine: the whole-texel
+ * coordinate one BgAffineSet sample produces at screen pixel
+ * (x,y) — the hardware formula
+ *   texel = ((ph + pa*x + pb*y) >> 8, (pg + pc*x + pd*y) >> 8)
+ * with the native s32 arithmetic shifts. For mode 18's
+ * per-scanline program pass the record for the pixel's row y
+ * (scan[y]); for modes 21/27/32 pass `frame`. The caller applies
+ * the BGxCNT area-overflow wrap (layer->wrap) or the
+ * out-of-bounds transparent sample. */
+void aos_scroll_affine_texel(const AosScrollAffineSample *sm, int x,
+                             int y, int32_t *tx, int32_t *ty);
 
 /* The tile-row rebuild DMA sub_0803FBBC queues through
  * BgCmdBuffer_WriteData when a scroll request crosses an 8-px

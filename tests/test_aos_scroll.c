@@ -218,7 +218,7 @@ int main(void) {
     aos_scroll_request(&s, 1, 0x40000, 0, &out);
     aos_scroll_bind(&s, 2, 2, 2, 20, 0, 0, 0, 0);
     aos_scroll_bind(&s, 3, 2, 2, 27, 0, 0, 0, 0);
-    AosScrollWorld w4 = { 0x02000000, false, 0x55, NULL, 0 };
+    AosScrollWorld w4 = { 0x02000000, false, 0x55, NULL, 0, -1 };
     memset(&out, 0, sizeof out);
     aos_scroll_apply(&s, &w4, &out);
     /* mode 20: hblank only; mode 21's flag is set but BG3 runs
@@ -282,7 +282,7 @@ int main(void) {
     aos_scroll_apply(&s, NULL, &out);
     assert(s.disp_h[2] == 0x101);
     assert(s.disp_v[3] == 0x200);          /* flag clear: no -2 */
-    AosScrollWorld w = { 0x02000000, false, 0, NULL, 0 };
+    AosScrollWorld w = { 0x02000000, false, 0, NULL, 0, -1 };
     memset(&out, 0, sizeof out);
     s.disp_v[3] = 0x200;
     aos_scroll_apply(&s, &w, &out);
@@ -782,7 +782,7 @@ int main(void) {
      * routines write per scanline. */
     {
         AosScrollHBlank hb;
-        AosScrollWorld world = { 0, false, 0, NULL, 0 };
+        AosScrollWorld world = { 0, false, 0, NULL, 0, -1 };
 
         /* No emitter: plain modes produce no program. */
         memset(&s, 0, sizeof s);
@@ -911,6 +911,121 @@ int main(void) {
         world.unk_4c8 = 0;
         assert(aos_scroll_hblank(&s, &world, 0, &hb));
         assert(hb.target_bg == 3 && hb.vertical && !hb.affine);
+    }
+
+    /* ---- aos_scroll_affine: sub_0800D288's BgAffineSet programs
+     * (unk_18 modes 18/21/27/32). Mode 18 fills the 160-record
+     * per-scanline buffer; 21/27/32 produce one frame transform.
+     * Both are reported together: the mode-18 records only mask
+     * the per-frame registers when they win the hBlankEffect
+     * buffer (aos_scroll_hblank's last-emitter rule). */
+    {
+        AosScrollAffine af;
+        AosScrollWorld aw = { 0, false, 0, NULL, 0, -1 };
+
+        /* No affine emitter: nothing reported. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 1, 0, 0, 0, 0x30 << 16);
+        aos_scroll_bind(&s, 3, 1, 1, 2, 0, 0, 0, 0x30 << 16);
+        memset(&af, 0xAA, sizeof af);
+        assert(!aos_scroll_affine(&s, &aw, &af));
+        assert(af.target_bg == 0 && !af.per_scanline &&
+               !af.has_frame);
+
+        /* Mode 18 on BG2, unk_4C8 = 0: scan[0] comes from
+         * texX 0x8000, texY -102 (var_r6 = -sx), scr (0x78,0),
+         * sx = 0x80000 / ((0x80<<5)+0x400) = 102, sy unit, alpha 0
+         * -> pa = 102 (8.8), pb = pc = 0, pd = 0x100,
+         * ph = (128 - (102/256)*120) * 256 = 20528,
+         * pg = -102. No per-frame emitter -> has_frame clear. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 18, 0, 0, 0, 0x30 << 16);
+        aos_scroll_bind(&s, 3, 1, 1, 0, 0, 0, 0, 0x30 << 16);
+        memset(&af, 0, sizeof af);
+        assert(aos_scroll_affine(&s, &aw, &af));
+        assert(af.target_bg == 2 && af.per_scanline &&
+               !af.has_frame);
+        assert(af.scan[0].pa == 102 && af.scan[0].pb == 0 &&
+               af.scan[0].pc == 0 && af.scan[0].pd == 0x100);
+        assert(af.scan[0].ph == 20528 && af.scan[0].pg == -102);
+        /* Later rows keep the pulse shape: record 0x7F is the
+         * top-half ramp end, record 0x80 the bottom-half start —
+         * denominators differ so pa differs. */
+        assert(af.scan[0x7F].pa != af.scan[0x80].pa ||
+               af.scan[0x7F].pg != af.scan[0x80].pg);
+
+        /* Mode 21 with the event flag set (unk_33C[3] bit
+         * 0x02000000): texel transform scr (0x70,0x38), half scale
+         * sx=sy=0x80, alpha 0 -> pa = pd = 0x80, pb = pc = 0,
+         * ph = (128 - 0.5*112) * 256 = 0x4800,
+         * pg = (128 - 0.5*56) * 256 = 0x6400. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 21, 0, 0, 0, 0x30 << 16);
+        aos_scroll_bind(&s, 3, 1, 1, 0, 0, 0, 0, 0x30 << 16);
+        aw.unk_33c3 = 0x02000000;
+        memset(&af, 0, sizeof af);
+        assert(aos_scroll_affine(&s, &aw, &af));
+        assert(af.target_bg == 2 && !af.per_scanline && af.has_frame);
+        assert(af.frame.pa == 0x80 && af.frame.pd == 0x80 &&
+               af.frame.pb == 0 && af.frame.pc == 0);
+        assert(af.frame.ph == 0x4800 && af.frame.pg == 0x6400);
+        /* Flag clear: mode 21's else arm disables BG2 — no affine
+         * program at all. */
+        aw.unk_33c3 = 0;
+        memset(&af, 0, sizeof af);
+        assert(!aos_scroll_affine(&s, &aw, &af));
+        aw.unk_33c3 = 0x02000000;
+
+        /* Mode 27 on BG2 + mode 18 on BG3: the per-scanline
+         * program AND the per-frame write are both reported —
+         * the draw picks per hblank.affine. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 27, 0, 0, 0, 0x30 << 16);
+        aos_scroll_bind(&s, 3, 1, 1, 18, 0, 0, 0, 0x30 << 16);
+        memset(&af, 0, sizeof af);
+        assert(aos_scroll_affine(&s, &aw, &af));
+        assert(af.target_bg == 2 && af.per_scanline && af.has_frame);
+
+        /* Mode 32's room-keyed arm: room_index 33 selects the
+         * dir = -1 record (scr 0x20/0x68). unk_4C8 = 0 -> sine 0,
+         * sx = 0x100 unit x, alpha 0 -> pa = pd = 0x100. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 32, 0, 0, 0, 0x30 << 16);
+        aos_scroll_bind(&s, 3, 1, 1, 0, 0, 0, 0, 0x30 << 16);
+        aw.room_index = 33;
+        aw.unk_33c3 = 0;
+        memset(&af, 0, sizeof af);
+        assert(aos_scroll_affine(&s, &aw, &af));
+        assert(af.target_bg == 2 && !af.per_scanline && af.has_frame);
+        assert(af.frame.pa == 0x100 && af.frame.pd == 0x100);
+        /* An unlisted room index takes the default arm (scr
+         * 0x78/0x50, dir +1) — same unit transform at phase 0. */
+        aw.room_index = -1;
+        memset(&af, 0, sizeof af);
+        assert(aos_scroll_affine(&s, &aw, &af));
+        assert(af.frame.pa == 0x100);
+
+        /* ---- aos_scroll_affine_texel: the BGxPA..PG fetch ----
+         * ph = 8<<8, pg = 48<<8, unit matrix -> texel (x+8, y+48);
+         * a half-scale pa adds x/2; pb/pd gradients add their
+         * y/x terms like the hardware. */
+        {
+            AosScrollAffineSample id = { 0x100, 0, 0, 0x100,
+                                         8 << 8, 48 << 8 };
+            int32_t tx, ty;
+            aos_scroll_affine_texel(&id, 10, 20, &tx, &ty);
+            assert(tx == 18 && ty == 68);
+            AosScrollAffineSample half = { 0x80, 0x40, 0x20, 0x100,
+                                           0, 0 };
+            aos_scroll_affine_texel(&half, 16, 8, &tx, &ty);
+            /* tx = (0 + 0x80*16 + 0x40*8) >> 8 = (2048+512)>>8 = 10;
+             * ty = (0 + 0x20*16 + 0x100*8) >> 8 = (512+2048)>>8 = 10. */
+            assert(tx == 10 && ty == 10);
+            /* Negative coordinates shift arithmetically like the
+             * native s32 >> 8 (-1 >> 8 = -1, not 0). */
+            aos_scroll_affine_texel(&id, -9, -49, &tx, &ty);
+            assert(tx == -1 && ty == -1);
+        }
     }
 
     puts("aos_scroll: ok");

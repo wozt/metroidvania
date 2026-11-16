@@ -3,6 +3,7 @@
  * and the native offsets they reproduce. See aos_scroll.h. */
 #include "aos_scroll.h"
 #include "../math/aos_math.h"
+#include <math.h>
 #include <string.h>
 
 /* The native velocity cap: 0x80 << 0xC = 0x80000 (8.0 px per call). */
@@ -456,7 +457,12 @@ void aos_scroll_apply(AosScroll *s, const AosScrollWorld *world,
                 scroll_interp(b->unk_16, b1->unk_16, sy, 0xD0), out);
             if (out) out->fx |= AOS_SCROLL_FX_CC90;
             break;
-        case 18: if (out) out->fx |= AOS_SCROLL_FX_D000; break;
+        case 18:
+            /* sub_0800D000's per-scanline affine program — the
+             * parameters are evaluated for the draw path by
+             * aos_scroll_affine; the fx bit still reports the arm. */
+            if (out) out->fx |= AOS_SCROLL_FX_D000;
+            break;
         case 19:
             if (!keep4cc && (flags & 0x40000) && out)
                 out->fx |= AOS_SCROLL_FX_BG2_DISABLE;
@@ -472,11 +478,11 @@ void aos_scroll_apply(AosScroll *s, const AosScrollWorld *world,
             break;
         case 21:
             /* Flag-gated like the native: the affine setup runs
-             * only while unk_33C[3] bit 0x02000000 is set, else
-             * BG2 is disabled outright. The affine parameters
-             * (texX/Y 0x8000, scr 0x70/0x38, sx/sy 0x80, alpha =
-             * -unk_4C8 << 9) need BgAffineSet state the host does
-             * not model; only the consumed parameter is reported. */
+             * only while unk_33C[3] bit 0x02000000 (event flag
+             * 0x79) is set, else BG2 is disabled outright. The
+             * BgAffineSet parameters are evaluated for the draw
+             * path by aos_scroll_affine; the fx bit still
+             * reports the arm/disable. */
             if (flags & 0x02000000) {
                 if (out) { out->fx |= AOS_SCROLL_FX_AFFINE;
                            out->unk_4c8_seen = p4c8; }
@@ -499,9 +505,9 @@ void aos_scroll_apply(AosScroll *s, const AosScrollWorld *world,
         case 27:
             /* BgAffineSet on BG2 with scrX/scrY = 0x100 - BG1's
              * integer position and sx/sy/alpha derived from
-             * unk_4C8 through sub_080009E4's sine table; neither
-             * the affine destination nor the sine table is
-             * modelled, so the parameter is only reported. */
+             * unk_4C8 through sub_080009E4's sine table; the
+             * parameters are evaluated for the draw path by
+             * aos_scroll_affine, the fx bit still reports the arm. */
             if (out) { out->fx |= AOS_SCROLL_FX_AFFINE;
                        out->unk_4c8_seen = p4c8; }
             break;
@@ -521,7 +527,13 @@ void aos_scroll_apply(AosScroll *s, const AosScrollWorld *world,
             aos_scroll_request(s, bg, sx, sy, out);
             if (out) out->fx |= AOS_SCROLL_FX_HBLANK;
             break;
-        case 32: if (out) out->fx |= AOS_SCROLL_FX_SCANLINE; break;
+        case 32:
+            /* sub_0800D0F8's room-keyed BgAffineSet — the
+             * parameters are evaluated for the draw path by
+             * aos_scroll_affine (world->room_index is the
+             * GetRoomFromMapPosition key). */
+            if (out) out->fx |= AOS_SCROLL_FX_SCANLINE;
+            break;
         case 36:
             /* Same hblank wave shape as case 30 over hOfs with a
              * different phase step; only the parameter is
@@ -803,6 +815,188 @@ int aos_scroll_hblank(const AosScroll *s, const AosScrollWorld *world,
         return 0;
     }
     return 1;
+}
+
+/* ---- sub_0800D288's affine programs (unk_18 modes 18/21/27/32) ----
+ * Every emitter calls svcBgAffineSet (BIOS SWI 0x0E) on bg2PA —
+ * mode 18 through the hBlankEffect buffer (sub_0800D000, one
+ * 16-byte BgAffineDstData record per scanline into REG_BG2PA),
+ * modes 21/27/32 directly once per frame. The BIOS routine is
+ * ported the way the recomp oracle's HLE BIOS computes it
+ * (third_party/aria-recomp/runtime.c): scale is 8.8 and
+ * multiplies the matrix directly, and only the angle's high byte
+ * counts. */
+
+static int32_t scroll_div(int32_t num, int32_t denom) {
+    /* BIOS Div (svc 6): truncated quotient, 0 on a zero divisor
+     * (unreachable here — every mode-18 denominator is positive). */
+    return denom ? num / denom : 0;
+}
+
+static void scroll_bg_affine_set(int32_t tex_x, int32_t tex_y,
+                                 int16_t scr_x, int16_t scr_y,
+                                 int16_t sx, int16_t sy, uint16_t alpha,
+                                 AosScrollAffineSample *out) {
+    double ox = (double)tex_x / 256.0;
+    double oy = (double)tex_y / 256.0;
+    double cx = (double)scr_x, cy = (double)scr_y;
+    double mx = (double)sx / 256.0, my = (double)sy / 256.0;
+    double th = (double)(alpha >> 8) / 128.0 *
+                3.14159265358979323846;
+    double a = cos(th) * mx, b = -sin(th) * mx;
+    double c = sin(th) * my, d = cos(th) * my;
+    int32_t pa = (int32_t)(a * 256.0), pb = (int32_t)(b * 256.0);
+    int32_t pc = (int32_t)(c * 256.0), pd = (int32_t)(d * 256.0);
+    /* The s16 stores truncate like the native register writes. */
+    out->pa = (int16_t)pa; out->pb = (int16_t)pb;
+    out->pc = (int16_t)pc; out->pd = (int16_t)pd;
+    /* PH/PG are 28-bit signed (8 fraction + 19 integer + sign):
+     * the hardware cuts the s32 write down to 28 bits. For the
+     * power-of-two affine map sizes (128..1024 px) the cut is
+     * invisible to texel sampling, but it is reproduced anyway. */
+    int32_t ph = (int32_t)((ox - (a * cx + b * cy)) * 256.0);
+    int32_t pg = (int32_t)((oy - (c * cx + d * cy)) * 256.0);
+    out->ph = (ph << 4) >> 4;
+    out->pg = (pg << 4) >> 4;
+}
+
+/* sub_0800D000: mode 18's per-scanline program. For each of the
+ * 160 scanlines it builds a BgAffineSrcData (texX slides with
+ * unk_4C8, scrX 0x78 / scrY 0, sy unit, alpha 0) whose sx is a
+ * Div(0x80000, denom) scale pulse — the top half ramps the
+ * denominator down from 0x1400 to 0x420 while var_r6 accumulates
+ * -sx, the bottom half ramps 0x400 up to 0x1380 accumulating
+ * -2*sx — and texY folds var_r6 against +/- (unk_4C8 << 7). */
+static void affine_mode18(uint32_t unk_4c8, AosScrollAffineSample *scan) {
+    int32_t var_r6 = 0;
+    for (int y = 0; y < AOS_SCROLL_AFFINE_LINES; ++y) {
+        int32_t tex_x = (int32_t)(0x8000u - (unk_4c8 << 8));
+        int32_t sx, tex_y;
+        if (y < 0x80) {
+            sx = scroll_div(0x80000, ((0x80 - y) << 5) + 0x400);
+            var_r6 -= sx;
+            tex_y = (int32_t)((uint32_t)var_r6 - (unk_4c8 << 7));
+        } else {
+            sx = scroll_div(0x80000, (y << 7) - 0x3C00);
+            var_r6 -= sx * 2;
+            tex_y = (int32_t)((uint32_t)var_r6 + (unk_4c8 << 7));
+        }
+        scroll_bg_affine_set(tex_x, tex_y, 0x78, 0, (int16_t)sx,
+                             0x100, 0, &scan[y]);
+    }
+}
+
+int aos_scroll_affine(const AosScroll *s, const AosScrollWorld *world,
+                      AosScrollAffine *out) {
+    memset(out, 0, sizeof *out);
+    uint32_t p4c8 = world ? world->unk_4c8 : 0;
+    uint32_t flags = world ? world->unk_33c3 : 0;
+    int room = world ? world->room_index : -1;
+    /* The hblank program wins over every per-frame write: the
+     * mode-18 records land on BG2PA..BG2PG every scanline of the
+     * display, overwriting whatever the update-time BgAffineSet
+     * stored. Mode 18's program is layer-independent, so one on
+     * either BG2 or BG3 suffices. Whether the records actually
+     * reach the screen is decided by the hBlankEffect buffer's
+     * last-emitter rule (aos_scroll_hblank's hblank.affine) — a
+     * later wave emitter on the other BG overwrites them, in
+     * which case any per-frame write below is what stays in the
+     * affine registers. Both are reported so the draw path can
+     * pick. */
+    for (int bg = 2; bg < 4; ++bg)
+        if (s->bg[bg].unk_18 == 18) {
+            affine_mode18(p4c8, out->scan);
+            out->target_bg = 2;
+            out->per_scanline = true;
+            break;
+        }
+    /* The per-frame emitter set: the last emitter in the native
+     * bgNum = 2,3 order wins; mode 21 only emits while its
+     * event-flag gate holds (its else arm is the dispCnt BG2
+     * clear, already reported through AOS_SCROLL_FX_BG2_DISABLE).
+     * The write happens regardless of a mode-18 program existing —
+     * the scanline records only mask it when they win the buffer. */
+    int win_bg = 0, win_mode = 0;
+    for (int bg = 2; bg < 4; ++bg) {
+        switch (s->bg[bg].unk_18) {
+        case 21:
+            if (!(flags & 0x02000000)) break;
+            win_bg = bg; win_mode = 21;
+            break;
+        case 27: win_bg = bg; win_mode = 27; break;
+        case 32: win_bg = bg; win_mode = 32; break;
+        default: break;
+        }
+    }
+    if (!win_bg) return out->per_scanline;
+    out->target_bg = 2;
+    out->has_frame = true;
+    switch (win_mode) {
+    case 21:
+        /* texX/texY 0x8000, scr (0x70,0x38), half scale, alpha =
+         * -unk_4C8 << 9 (only the u16's high byte reaches the
+         * angle). */
+        scroll_bg_affine_set(0x8000, 0x8000, 0x70, 0x38,
+                             0x80, 0x80,
+                             (uint16_t)((0u - p4c8) << 9),
+                             &out->frame);
+        break;
+    case 27: {
+        /* scrX/scrY = 0x100 - BG1's integer scroll position;
+         * sx = sy = (sine(unk_4C8 * 0x10) * 3 >> 0xD) + 0x58 —
+         * a ~0.25-0.44 uniform pulse; alpha = -unk_4C8 << 7. */
+        int32_t bx = (int32_t)(uint16_t)((uint32_t)
+                                         s->bg[1].x_pos >> 16);
+        int32_t by = (int32_t)(uint16_t)((uint32_t)
+                                         s->bg[1].y_pos >> 16);
+        int32_t sc = ((aos_sine(p4c8 * 0x10) * 3) >> 0xD) + 0x58;
+        scroll_bg_affine_set(0x8000, 0x8000,
+                             (int16_t)(0x100 - bx),
+                             (int16_t)(0x100 - by),
+                             (int16_t)sc, (int16_t)sc,
+                             (uint16_t)((0u - p4c8) << 7),
+                             &out->frame);
+        break;
+    }
+    case 32: {
+        /* sub_0800D0F8's room-keyed arm (Chaotic Realm 11_x):
+         * scr/sx/dir per GetRoomFromMapPosition, sx pulsing
+         * 0..2 around unit through sine(unk_4C8 << 7), sy unit,
+         * alpha = (unk_4C8 * dir) << 7 — a direction-reversing
+         * rotation per room. */
+        int scr_x = 0x78, scr_y = 0x50, dir = 1;
+        switch (room) {
+        case 0:  scr_x = 0xD0; scr_y = 0x30; dir =  1; break;
+        case 16: scr_x = 0x78; scr_y = 0x78; dir =  1; break;
+        case 33: scr_x = 0x20; scr_y = 0x68; dir = -1; break;
+        case 34:
+        case 35: scr_x = 0x20; scr_y = 0x50; dir = -1; break;
+        case 39: scr_x = 0x20; scr_y = 0x10; dir = -1; break;
+        default: break;
+        }
+        int32_t sx = (aos_sine(p4c8 << 7) >> 8) + 0x100;
+        scroll_bg_affine_set(0x8000, 0x8000, (int16_t)scr_x,
+                             (int16_t)scr_y, (int16_t)sx, 0x100,
+                             (uint16_t)((p4c8 * (uint32_t)dir) << 7),
+                             &out->frame);
+        break;
+    }
+    }
+    return 1;
+}
+
+void aos_scroll_affine_texel(const AosScrollAffineSample *sm, int x,
+                             int y, int32_t *tx, int32_t *ty) {
+    /* The native BGxPA..PG fetch: screen pixel (x,y) samples the
+     * texel ((PH + PA*x + PB*y) >> 8, (PG + PC*x + PD*y) >> 8)
+     * with s32 arithmetic shifts — PA/PB are the 8.8 x-axis and
+     * y-axis gradients of the texture X coordinate, PC/PD of Y.
+     * All products fit s32 (|pa| <= 0x7FFF, x < 256, ph is 28-bit
+     * signed). */
+    *tx = ((int32_t)sm->ph + (int32_t)sm->pa * x +
+           (int32_t)sm->pb * y) >> 8;
+    *ty = ((int32_t)sm->pg + (int32_t)sm->pc * x +
+           (int32_t)sm->pd * y) >> 8;
 }
 
 size_t aos_scroll_bgofs_blits(int32_t h_ofs, int32_t v_ofs,

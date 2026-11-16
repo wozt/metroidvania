@@ -10,6 +10,7 @@
 
 #include "aos/core/aos_collision.h"
 #include "aos/core/aos_scroll.h"
+#include "aos/core/aos_wall.h"
 #include "aos/math/aos_math.h"
 #include "fusion/assets/aos.h"
 
@@ -1349,14 +1350,17 @@ void draw_damage_popup(SDL_Renderer *renderer, const AriaObjects *objects,
  * Honest limits, matching the scroll port's documented gaps:
  *  - affine tile arrays now decode through the sub_0803F7C8
  *    4x4-block/8-bit-entry tiling (BG2 only, like the native
- *    routine) and draw under the load-time identity
- *    BgAffineSet transform; non-BG2 affine metadata still
- *    produces no texture.
- *  - scanline/hblank/affine fx modes update the layer's base
- *    bgOfs but their per-scanline wave / BgAffineSet transform is
- *    still unported — text layers draw flat at their faithful
- *    offset and affine layers keep the static frame-0 transform
- *    (documented approximations, never invented offsets).
+ *    routine); the draw runs the load-time identity transform
+ *    plus the frame's winning sub_0800D288 affine program —
+ *    mode 18's per-scanline hblank records and modes 21/27/32's
+ *    per-frame BgAffineSet — CPU-warped through warp_tex with
+ *    the BGxCNT area-overflow wrap honoured. Non-BG2 affine
+ *    metadata still produces no texture.
+ *  - the text-layer hblank/scanline wave modes update the
+ *    layer's base bgOfs and draw per scanline through
+ *    aria_bg_draw_hblank; the window/scanline FX writers
+ *    (sub_0800CB8C/sub_0800CED4/sub_0800D0F8 bands) remain
+ *    documented gaps.
  * OBJ-vs-BG priority now follows the native tables: the room
  * load's sub_0803DD14/sub_0803FD60 chain turns each BG
  * record's field_0 layer byte into a BGxCNT priority (kept in
@@ -1388,6 +1392,15 @@ typedef struct {
     bool enabled;           /* DISPCNT BG-enable bit at load */
     bool affine;            /* tilemap flags bit 0: BG2 affine
                                8-bit tilemap (sub_0803F7C8) */
+    bool wrap;              /* BGxCNT bit 13 area-overflow: affine
+                               texel coords wrap the map instead
+                               of going transparent (background
+                               record control bit 13) */
+    /* CPU copy of the decoded RGBA for the affine warp — SDL
+     * textures are not readable back, and the per-frame
+     * BgAffineSet transform needs texel access. Affine layers
+     * only (256x256x4 = 256 KiB); NULL for text layers. */
+    uint8_t *affine_pixels;
 } AriaBgLayerDraw;
 
 typedef struct {
@@ -1412,6 +1425,16 @@ typedef struct {
      * (aos_scroll_hblank): per-scanline absolute BGxHOFS/BGxVOFS
      * register values for the target BG, or target_bg 0. */
     AosScrollHBlank hblank;
+    /* This frame's winning sub_0800D288 affine program
+     * (aos_scroll_affine): the BgAffineSet parameters modes
+     * 18/21/27/32 write to BG2PA..BG2PG — per-scanline records
+     * for mode 18, one frame transform for 21/27/32 — or
+     * target_bg 0. */
+    AosScrollAffine affine;
+    /* Streaming texture + pixel buffer the affine warp uploads
+     * through (created lazily on the first warped frame). */
+    SDL_Texture *warp_tex;
+    uint8_t *warp_buf;
     bool bg2_disabled;      /* mode 19/21 dispCnt &= ~DCNT_BG2 */
     /* This room's sub_0803DC18/3DD14 depth tables: BGxCNT
      * priorities for BG0..BG3 and the +0x5C band -> OBJ priority
@@ -1425,6 +1448,11 @@ typedef struct {
 static const FusionRom *aria_bg_rom;
 static FusionAosAreaDirectory aria_bg_areas;
 static bool aria_bg_areas_tried, aria_bg_areas_ok;
+/* gEwramData +0x344 event bitfield — the same aria_events word
+ * array aria_entities.c feeds sub_08012078/sub_08012048. Word 3
+ * is unk_60.unk_33C[3], the flag word sub_0800D288's modes
+ * 10/19/21 gates read (mode 21's 0x02000000 is event flag 0x79). */
+extern uint32_t aria_events[AOS_WALL_EVENT_WORDS];
 /* area/number start at -1 so the empty cache can never alias a
  * real room (0/0 is a valid room). */
 static AriaBgRoomLayers aria_bg_room = { .area = -1, .number = -1 };
@@ -1437,7 +1465,17 @@ static void aria_bg_room_clear(void) {
         aria_bg_room.layer[i].width = aria_bg_room.layer[i].height = 0;
         aria_bg_room.layer[i].rank = 0;
         aria_bg_room.layer[i].enabled = false;
+        aria_bg_room.layer[i].affine = false;
+        aria_bg_room.layer[i].wrap = false;
+        free(aria_bg_room.layer[i].affine_pixels);
+        aria_bg_room.layer[i].affine_pixels = NULL;
     }
+    if (aria_bg_room.warp_tex)
+        SDL_DestroyTexture(aria_bg_room.warp_tex);
+    aria_bg_room.warp_tex = NULL;
+    free(aria_bg_room.warp_buf);
+    aria_bg_room.warp_buf = NULL;
+    memset(&aria_bg_room.affine, 0, sizeof aria_bg_room.affine);
     memset(&aria_bg_room.scroll, 0, sizeof aria_bg_room.scroll);
     aria_bg_room.area = aria_bg_room.number = -1;
     aria_bg_room.ready = false;
@@ -1525,6 +1563,11 @@ static bool aria_bg_room_ensure(SDL_Renderer *renderer,
         const FusionAosBackground *rec = &backgrounds.entries[i];
         layer->rank = rec->field_0;
         layer->affine = false;
+        layer->wrap = false;
+        /* BGxCNT bit 13 (the record's control halfword): affine
+         * area-overflow — out-of-map texel coords wrap instead of
+         * sampling transparent. */
+        layer->wrap = (rec->control & 0x2000) != 0;
         /* DISPCNT bits 9..11 enable BG1..BG3 (DCNT_BG2 = 0x0400);
          * display_control is sub_0800F9EC's gUnk_03002CB0.dispCnt
          * seed. */
@@ -1559,6 +1602,16 @@ static bool aria_bg_room_ensure(SDL_Renderer *renderer,
                     layer->width = (int)rendered.width_pixels;
                     layer->height = (int)rendered.height_pixels;
                     aria_bg_room.ready = true;
+                    if (layer->affine && rendered.rgba) {
+                        /* The affine warp samples texels per
+                         * frame; SDL textures are write-only, so
+                         * keep the decoded RGBA beside them. */
+                        layer->affine_pixels = malloc(
+                            rendered.pixel_count * 4);
+                        if (layer->affine_pixels)
+                            memcpy(layer->affine_pixels, rendered.rgba,
+                                   rendered.pixel_count * 4);
+                    }
                 }
                 fusion_aos_free_rendered_background(&rendered);
             }
@@ -1614,11 +1667,13 @@ static bool aria_bg_room_ensure(SDL_Renderer *renderer,
     aria_bg_room.prev_bg1_y = cam_y;
     aria_bg_room.scroll_bound = true;
     if (getenv("ARIA_BG_DEBUG"))
-        fprintf(stderr, "aria_bg: room %d/%d layers=%d,%d,%d disp2=(%u,%u) disp3=(%u,%u)\n",
+        fprintf(stderr, "aria_bg: room %d/%d layers=%d,%d,%d modes=%u,%u,%u disp2=(%u,%u) disp3=(%u,%u)\n",
                 room->area, room->number,
                 aria_bg_room.layer[0].texture != NULL,
                 aria_bg_room.layer[1].texture != NULL,
                 aria_bg_room.layer[2].texture != NULL,
+                backgrounds.entries[0].field_1, backgrounds.entries[1].field_1,
+                backgrounds.entries[2].field_1,
                 aria_bg_room.scroll.disp_h[2], aria_bg_room.scroll.disp_v[2],
                 aria_bg_room.scroll.disp_h[3], aria_bg_room.scroll.disp_v[3]);
     return true;
@@ -1649,7 +1704,14 @@ bool aria_bg_room_begin(SDL_Renderer *renderer, const AriaRoom *room,
     aria_bg_room.prev_bg1_x = bx;
     aria_bg_room.prev_bg1_y = by;
     ++aria_bg_room.phase;
-    AosScrollWorld world = { 0, false, aria_bg_room.phase, NULL, 0 };
+    /* unk_60.unk_33C[3] is the gEwramData +0x344 event bitfield's
+     * word 3 — aria_events[3] (mode 21's 0x02000000 gate is event
+     * flag 0x79); unk_4CC_0 stays unmodelled like the entity-side
+     * world. room_index feeds mode 32's GetRoomFromMapPosition
+     * switch. */
+    AosScrollWorld world = { aria_events[3], false,
+                             aria_bg_room.phase, NULL, 0,
+                             aria_bg_room.number };
     AosScrollOut out;
     memset(&out, 0, sizeof out);
     aos_scroll_request(&aria_bg_room.scroll, 1,
@@ -1678,6 +1740,20 @@ bool aria_bg_room_begin(SDL_Renderer *renderer, const AriaRoom *room,
                 aria_bg_room.hblank.target_bg,
                 aria_bg_room.hblank.affine ? "affine"
                 : aria_bg_room.hblank.vertical ? "vOfs" : "hOfs",
+                aria_bg_room.frame_counter);
+    /* The affine sibling of the hblank eval: modes 18/21/27/32's
+     * BgAffineSet parameters for this frame, consumed by the
+     * affine-layer warp in aria_bg_draw_priority. Evaluated after
+     * apply like the hblank pass; hblank.affine decides whether a
+     * mode-18 program actually reached the screen (it loses the
+     * single hBlankEffect buffer to a later wave emitter). */
+    aos_scroll_affine(&aria_bg_room.scroll, &world,
+                      &aria_bg_room.affine);
+    if (aria_bg_room.affine.target_bg && getenv("ARIA_BG_DEBUG"))
+        fprintf(stderr, "aria_bg: affine program bg=%d %s%s frame=%u\n",
+                aria_bg_room.affine.target_bg,
+                aria_bg_room.affine.per_scanline ? "per-scanline " : "",
+                aria_bg_room.affine.has_frame ? "+frame" : "",
                 aria_bg_room.frame_counter);
     aria_bg_room.ofs_bx = bx;
     aria_bg_room.ofs_by = by;
@@ -1728,6 +1804,95 @@ static void aria_bg_draw_hblank(SDL_Renderer *renderer,
     }
 }
 
+/* CPU warp of an affine BG layer through this frame's winning
+ * sub_0800D288 affine program (aria_bg_room.affine, evaluated in
+ * begin()). The native writes BGxPA..BG2PG — per scanline for
+ * mode 18's hBlankEffect records, once per frame for modes
+ * 21/27/32 — and the hardware then samples
+ *   texel = ((PH + PA*x + PB*y) >> 8, (PG + PC*x + PD*y) >> 8)
+ * per screen pixel; the port reproduces that fetch texel-by-texel
+ * into warp_buf (VIEW_W x VIEW_H RGBA) and streams it through
+ * warp_tex. Program selection mirrors the hardware precedence:
+ * a mode-18 program only reaches the screen when it won the
+ * hBlankEffect buffer (hblank.affine — a later wave emitter on
+ * the other BG overwrites it natively); when it lost, any
+ * per-frame write (has_frame) is what stays in the registers,
+ * and with neither the load-time identity transform applies —
+ * the caller's static draw. Out-of-map texels sample transparent
+ * unless BGxCNT bit 13 (layer->wrap, area overflow) wraps them.
+ * Returns false when no affine program applies or the warp
+ * buffers could not be allocated — the caller keeps the static
+ * frame-0 draw. */
+static bool aria_bg_draw_affine_warp(SDL_Renderer *renderer,
+                                     AriaBgLayerDraw *layer, int bg,
+                                     uint8_t fade_mod) {
+    const AosScrollAffine *af = &aria_bg_room.affine;
+    if (bg != af->target_bg || !layer->affine_pixels)
+        return false;
+    const AosScrollAffineSample *scan = NULL;
+    const AosScrollAffineSample *frame = NULL;
+    if (af->per_scanline) {
+        if (aria_bg_room.hblank.affine)
+            scan = af->scan;          /* row y uses record y */
+        else if (af->has_frame)
+            frame = &af->frame;       /* lost the buffer: the
+                                          per-frame write stands */
+        else
+            return false;             /* neither: load-time
+                                          identity stays */
+    } else {
+        frame = &af->frame;
+    }
+    if (!aria_bg_room.warp_buf) {
+        aria_bg_room.warp_buf =
+            malloc((size_t)VIEW_W * VIEW_H * 4);
+        if (!aria_bg_room.warp_buf) return false;
+    }
+    if (!aria_bg_room.warp_tex) {
+        aria_bg_room.warp_tex = SDL_CreateTexture(
+            renderer, SDL_PIXELFORMAT_RGBA32,
+            SDL_TEXTUREACCESS_STREAMING, VIEW_W, VIEW_H);
+        if (!aria_bg_room.warp_tex) return false;
+        SDL_SetTextureBlendMode(aria_bg_room.warp_tex,
+                                SDL_BLENDMODE_BLEND);
+        SDL_SetTextureScaleMode(aria_bg_room.warp_tex,
+                                SDL_SCALEMODE_NEAREST);
+    }
+    const int mw = layer->width, mh = layer->height;
+    const uint8_t *src = layer->affine_pixels;
+    uint8_t *dst = aria_bg_room.warp_buf;
+    for (int y = 0; y < VIEW_H; ++y) {
+        const AosScrollAffineSample *sm =
+            scan ? &scan[y] : frame;
+        for (int x = 0; x < VIEW_W; ++x) {
+            int32_t tx, ty;
+            aos_scroll_affine_texel(sm, x, y, &tx, &ty);
+            const uint8_t *px = NULL;
+            if (layer->wrap) {
+                /* BGxCNT area overflow: texel coords wrap the
+                 * map like the native tilemap fetch. */
+                tx %= mw; if (tx < 0) tx += mw;
+                ty %= mh; if (ty < 0) ty += mh;
+                px = src + ((size_t)ty * mw + tx) * 4;
+            } else if (tx >= 0 && tx < mw && ty >= 0 && ty < mh) {
+                px = src + ((size_t)ty * mw + tx) * 4;
+            }
+            /* Out-of-map texels are transparent on hardware. */
+            if (px) memcpy(dst, px, 4);
+            else memset(dst, 0, 4);
+            dst += 4;
+        }
+    }
+    SDL_UpdateTexture(aria_bg_room.warp_tex, NULL, aria_bg_room.warp_buf,
+                      VIEW_W * 4);
+    SDL_SetTextureColorMod(aria_bg_room.warp_tex, fade_mod, fade_mod,
+                           fade_mod);
+    SDL_FRect dst_rect = {0.0f, 0.0f, (float)VIEW_W, (float)VIEW_H};
+    SDL_RenderTexture(renderer, aria_bg_room.warp_tex, NULL,
+                      &dst_rect);
+    return true;
+}
+
 /* Draw the decoded BG layers whose sub_0803FD60 priority equals
  * `priority` (0 front .. 3 back), highest BG number first — the
  * hardware's same-priority BG tie-break (lower BG number wins,
@@ -1757,12 +1922,17 @@ void aria_bg_draw_priority(SDL_Renderer *renderer, int priority,
              * BgAffineSet): the hardware ignores bgOfs — the
              * transform is texX=texY=0x8000, scr=(0x78,0x50),
              * unit scale, alpha 0, i.e. screen pixel (x,y) samples
-             * texel (x+8, y+48) of the 256x256 tilemap. The
-             * per-frame BgAffineSet modes (unk_18 21/27/32) and
-             * mode 18's per-scanline affine hblank program stay
-             * unported, so rooms using them draw this static
-             * frame-0 transform — documented approximation, never
-             * an invented offset. */
+             * texel (x+8, y+48) of the 256x256 tilemap. When this
+             * frame's sub_0800D288 affine program targets BG2 the
+             * warp consumer reproduces it: mode 18's per-scanline
+             * hblank records, or modes 21/27/32's per-frame
+             * BgAffineSet. Rooms with no affine program — and the
+             * mode-18-lost-the-buffer case with no per-frame
+             * write — keep this static frame-0 transform, the
+             * documented approximation. */
+            if (aria_bg_draw_affine_warp(renderer, layer, bg,
+                                         fade_mod))
+                continue;
             SDL_FRect src = {8.0f, 48.0f, (float)VIEW_W,
                              (float)VIEW_H};
             SDL_FRect dst = {0.0f, 0.0f, (float)VIEW_W,

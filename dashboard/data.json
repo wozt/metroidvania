@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-16T02:03:37+00:00",
+ "generated_at": "2026-11-16T02:20:25+00:00",
  "git": {
-  "commit": "101a5244",
+  "commit": "4be0ef36",
   "branch": "main",
   "dirty": true
  },
@@ -33090,6 +33090,18 @@
  },
  "timeline": [
   {
+   "commit": "4be0ef36",
+   "date": "2026-11-16",
+   "subject": "aos: port GameModeInGameUpdate cases 5 and 7/8 (fade + warp-pad chain)",
+   "scope": "project"
+  },
+  {
+   "commit": "f7bbd7b4",
+   "date": "2026-11-16",
+   "subject": "tools: parse mgba session key masks as decimal by default",
+   "scope": "project"
+  },
+  {
    "commit": "101a5244",
    "date": "2026-11-16",
    "subject": "aria: decode enemy +0x5C draw bands and interleave them with layered BG priorities",
@@ -33555,18 +33567,6 @@
    "commit": "3eded38d",
    "date": "2026-11-13",
    "subject": "Port Aria entity math helpers sub_08068A70 through sub_08068CDC",
-   "scope": "project"
-  },
-  {
-   "commit": "e536df4f",
-   "date": "2026-11-13",
-   "subject": "Port Aria Object20 misc state callbacks",
-   "scope": "project"
-  },
-  {
-   "commit": "22290cc0",
-   "date": "2026-11-13",
-   "subject": "Port Aria Object20 talk-state callbacks",
    "scope": "project"
   }
  ],

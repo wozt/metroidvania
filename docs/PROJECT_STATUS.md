@@ -1,3 +1,49 @@
+## Patch 1169 - movement comparison corrected to world coordinates; residual divergence is enemy hit timing
+
+- **Gap.** `tests/compare_aos_movement.py` reported native Soma
+  "blocked early" (screen X saturating near 121) while the runtime
+  walked to x ~294 — read as a large movement divergence (Patch 1154
+  note, still open).
+- **Root cause of the reported stall.** `entityData` posX/posY are
+  screen-relative; the BG1 scroll (`bgInfo[1]` at `gEwramData +
+  0xA094`, struct size 0x1C, xPos/yPos 16.16 at +4/+8 =
+  `0x0200A098`/`0x0200A09C`) must be added for room-space position —
+  `sub_08001FE8`/`sub_08002028` do exactly that before every
+  `sub_08001A00` probe and `sub_0800F1FC` spawns records the same
+  way. Once the camera scrolls, screen posX pins at the player's
+  screen anchor while world X keeps advancing. Verified on the real
+  ROM: screen X saturates ~121 from frame ~120 while world X
+  (pos + scroll) advances 35 -> 737 over 700 frames at ~1.5 px/frame.
+- **Change.** `tests/compare_aos_movement.py` now peeks
+  `0x0200A098:8` alongside `0x02000524:8` per frame and reports
+  pos + scroll (world) coordinates for both the measured series and
+  the `--spawn` hand-off; added `parse_peek_blocks_strict`, which
+  keeps one entry per `peek` header and empties dumps corrupted by
+  mGBA BIOS log lines interleaving on stdout (the old lenient parser
+  silently misaligned per-frame pairs), with carry-forward sampling
+  and a retry for the moved-state read.
+- **Measured result (room 0/3, RIGHT + A|B every 90, 200 frames).**
+  Both sides now track in world space: native x 35 -> 233, runtime
+  x 35 -> 294; identical ~1.5 px/frame gait whenever moving. The
+  residual divergence is enemy contact hit-stun timing, not speed:
+  native HP 320 -> 313 (frame 17) -> 306 (frame 79) with ~25-frame
+  full stops at x 64 and x 118; the runtime takes one 7-damage hit
+  (~frame 115, HP 313) with one matching stall. Native enemies are
+  already loose in the path at measurement start because moved.state
+  carries ~600 frames of room dwell (the kind-1 record is a zombie
+  spawner, state 3, one zombie per 32 frames — `sub_0807A9EC` family,
+  with `sub_0807B310`/`sub_0807B3C8` drip/puddle children, not
+  enemies); the runtime `--simulate` starts that spawner clock at
+  frame 0, so its zombie population converges later. Both sides use
+  the same unconditional kind-1 room-load spawn
+  (`sub_0800F92C` -> `sub_0800F1FC`, mirrored in
+  `src/runtime/aria_entities.c`) and the same 1/32-frame spawner
+  cadence, so this is a comparison-setup asymmetry rather than a
+  proven spawn bug; a room-dwell warmup or native re-measure from an
+  earlier state is the open next step.
+- **Docs.** `docs/AOS_SOMA.md` gained the screen-space vs room-space
+  paragraph under room exits.
+
 ## Patch 1168 - GameModeInGameUpdate cases 5 and 7/8: fade transition and warp-pad chain
 
 - **Scope.** The remaining player-visible `sub_0800B700` dispatch

@@ -599,6 +599,25 @@ reproduces `sub_080104EC`'s `unk_65` stage ordering around `take_exit`
 (see Patch 1155). Walking from 0/6 into 0/9 arrives on the floor
 (Y 159 to 1439).
 
+Screen space vs room space. `entityData` posX/posY (`+0x40/+0x44`,
+16.16) are screen-relative: every collision probe adds the BG1 scroll
+first — `sub_08001FE8`/`sub_08002028` compute
+`bgInfo[1].xPos.part16.integer + pos` (and likewise Y) before calling
+`sub_08001A00` — and `sub_0800F1FC` spawns room entities at
+`record_xy << 16 - bgInfo[1] pos` so a record's room coordinates land
+on the same screen spot. `bgInfo[1]` is `gEwramData + 0xA094`
+(struct size 0x1C: metadata pointer, then xPos/yPos 16.16 scrolls at
++4/+8). The room-space (world) position is therefore pos + scroll;
+`tests/compare_aos_movement.py` peeks both and reports world
+coordinates. Consequence for measurement: once the camera scrolls,
+screen posX pins near the player's screen anchor (~121 px in room
+0/3) while world X keeps advancing at walk speed, so a raw posX series
+looks like a stall that is not one. Verified on the real ROM: holding
+RIGHT from the room-0/3 entry state, screen X saturates at ~121 from
+frame ~120 while bgInfo[1].xPos scrolls 0 -> 617 and world X advances
+35 -> 737 over 700 frames at ~1.5 px/frame with only enemy hit-stun
+pauses.
+
 In-game event locks. While `gameMode` (`gEwramData + 0x10`) is 1 or 4,
 `GameModeInGameUpdate` (`sub_0800B700`) dispatches on
 `unk_60.unk_64`/`unk_65` (`gEwramData + 0x64/+0x65`). Several cases call

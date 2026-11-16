@@ -31,7 +31,10 @@ never committed):
 2. Native measurement: from moved.state, RIGHT held from frame 0 with
    A taps every --a-every frames; per-frame peeks of 0x02000524:8 give
    posX,posY as 16.16 fixed point (entityData[0] +0x40/+0x44; see
-   docs/AOS_SOMA.md). The session samples a peek after the emulated
+   docs/AOS_SOMA.md) plus 0x0200A098:8 for the BG1 scroll; the reported
+   series is pos + scroll = room/world coordinates, matching the
+   runtime's room-space positions. The session samples a peek after
+   the emulated
    frame whose index matches the request, so peek frame f ~= runtime
    "after f+1 updates".
 3. Runtime side: `fusion_aria_runtime --simulate N --simulate-script
@@ -40,8 +43,9 @@ never committed):
    final integer Soma position; running it once per N in [1,frames]
    yields the per-frame trajectory. The script file encodes the same
    RIGHT + periodic-A schedule via timed spans. --spawn matches the
-   native position measured at moved.state (integer pixels; the
-   native 16.16 subpixel remainder is dropped, <=1px).
+   native WORLD position measured at moved.state (pos + BG1 scroll,
+   integer pixels; the native 16.16 subpixel remainder is dropped,
+   <=1px).
 4. Report: per-frame posX series for both sides, per-frame deltas,
    acceleration profile, max speed, and divergence metrics.
 
@@ -87,6 +91,17 @@ RUNTIME_DEFAULT = _opening.RUNTIME_DEFAULT
 
 POS_ADDR = 0x02000524          # entityData[0]+0x40 posX, +0x44 posY (16.16)
 ROOM_ADDR = 0x02000090         # area=byte14, room=byte15
+# entityData posX/posY are SCREEN-space: sub_08001FE8/sub_08002028 add
+# bgInfo[1].xPos/yPos (the BG1 scroll, gEwramData+0xA078 + 1*0x1C + 4/8)
+# before every collision probe, and sub_0800F1FC spawns room entities the
+# same way. bgInfo[1] sits at gEwramData+0xA094 (struct size 0x1C), so
+# xPos = +4 -> 0x0200A098, yPos = +8 -> 0x0200A09C; each is a 16.16
+# fixed-point pixel scroll. World position = pos + scroll; once the
+# camera starts scrolling the screen-space posX pins near the player's
+# screen anchor (~121 px here) while world X keeps advancing, so the
+# raw posX series cannot be compared against the runtime's room-space
+# coordinates.
+BG_SCROLL_ADDR = 0x0200A098    # bgInfo[1].xPos, +4 yPos (16.16 each)
 
 STORY_FRAMES = 30000           # post-story key schedule length
 SETTLE_FRAMES = 900            # A-tap run closing leftover windows
@@ -138,12 +153,64 @@ def parse_peek_blocks(text: str):
     return out
 
 
+def parse_peek_blocks_strict(text: str):
+    """Like parse_peek_blocks but corruption-safe: mGBA BIOS log lines
+    can interleave into the middle of a `peek` dump on stdout, injecting
+    non-hex tokens (some of which look like hex bytes) and corrupting
+    both length and content. Every `peek ADDR size N:` header still
+    yields exactly one (addr, bytes) entry in request order; a dump
+    whose data rows are not exactly `  ADDR  xx xx ...` hex bytes comes
+    back empty so callers can hold the previous sample instead of
+    misaligning the per-frame series."""
+    headers = list(re.finditer(r"peek ([0-9a-f]{8}) size (\d+):\n", text))
+    out = []
+    for i, m in enumerate(headers):
+        end = headers[i + 1].start() if i + 1 < len(headers) else len(text)
+        chunk = text[m.end():end]
+        data = bytearray()
+        bad = False
+        for line in chunk.splitlines():
+            if not line.startswith("  "):
+                continue  # unrelated mGBA log noise between dumps
+            row = re.fullmatch(
+                r"  [0-9a-f]{8}  ((?:[0-9a-fA-F]{2} )*[0-9a-fA-F]{2}) ?",
+                line)
+            if row is None:
+                bad = True
+                break
+            data += bytes(int(t, 16) for t in row.group(1).split())
+        out.append((int(m.group(1), 16),
+                    bytes(data) if not bad else b""))
+    return out
+
+
 def pos_from_block(block: bytes):
     """8-byte peek at 0x02000524 -> (posX 16.16, posY 16.16)."""
     if not block or len(block) < 8:
         return None
     x, y = struct.unpack_from("<II", block, 0)
     return x, y
+
+
+def scroll_from_block(block: bytes):
+    """8-byte peek at 0x0200A098 -> (bg1 xPos, yPos) 16.16 scroll."""
+    if not block or len(block) < 8:
+        return None
+    x, y = struct.unpack_from("<II", block, 0)
+    return x, y
+
+
+def world_pos(pos, scroll):
+    """Screen-space entity pos + BG1 scroll -> room/world 16.16 pos.
+
+    Both operands are 16.16 fixed point; the scroll's low word is its
+    fraction, matching the position format, so a raw u32 add is exact.
+    Scroll is signed (s32); mask keeps the fixed-point sum in range."""
+    if pos is None or scroll is None:
+        return None
+    sx = scroll[0] - (1 << 32) if scroll[0] & 0x80000000 else scroll[0]
+    sy = scroll[1] - (1 << 32) if scroll[1] & 0x80000000 else scroll[1]
+    return ((pos[0] + sx) & 0xFFFFFFFF, (pos[1] + sy) & 0xFFFFFFFF)
 
 
 def run_lab(rom, frames, keys, workdir, extra):
@@ -202,22 +269,41 @@ def ensure_native_states(rom, workdir, lab, story_frames, pulse,
     ekeys = tap_keys(entry_settle_frames, 0, 30, A | 2)
     out = run_lab(rom, entry_settle_frames, ekeys, workdir,
                   ["--state-in", entered_state, "--state-out", moved_state,
-                   "--peek", f"-1:{POS_ADDR:x}:8,-1:{ROOM_ADDR:x}:16"])
+                   "--peek", f"-1:{POS_ADDR:x}:8,-1:{BG_SCROLL_ADDR:x}:8,"
+                            f"-1:{ROOM_ADDR:x}:16"])
     if not os.path.exists(moved_state):
         sys.exit("moved state-out failed")
     pos = room = None
-    for a, d in parse_peek_blocks(out):
+    for a, d in parse_peek_blocks_strict(out):
         if a == POS_ADDR:
             pos = pos_from_block(d)
+        elif a == BG_SCROLL_ADDR:
+            pos = world_pos(pos, scroll_from_block(d))
         elif a == ROOM_ADDR and len(d) >= 16:
             room = f"{d[14]}/{d[15]}"
     print(f"[native] moved state pos={pos} room={room}")
+    if pos is None:
+        # A corrupted -1 peek (mGBA log noise on stdout) leaves pos
+        # unset; moved.state is already saved, so re-read it once.
+        out = run_lab(rom, 1, "", workdir,
+                      ["--state-in", moved_state, "--peek",
+                       f"-1:{POS_ADDR:x}:8,-1:{BG_SCROLL_ADDR:x}:8,"
+                       f"-1:{ROOM_ADDR:x}:16"])
+        pos = room = None
+        for a, d in parse_peek_blocks_strict(out):
+            if a == POS_ADDR:
+                pos = pos_from_block(d)
+            elif a == BG_SCROLL_ADDR:
+                pos = world_pos(pos, scroll_from_block(d))
+            elif a == ROOM_ADDR and len(d) >= 16:
+                room = f"{d[14]}/{d[15]}"
+        print(f"[native] moved state retry pos={pos} room={room}")
     return moved_state, pos, room
 
 
 def native_measure(rom, state, workdir, lab, frames, direction):
     """Hold `direction` with A|B taps every A_EVERY frames; per-frame
-    posX/posY peeks. Returns list of (frame, x16.16, y16.16).
+    posX/posY + BG1-scroll peeks, returned as world-space 16.16 pairs.
 
     B is tapped together with A: the earlier measurement reported a
     stage-2 KEY_B | KEY_SELECT wait while game-mode case 4 held
@@ -229,16 +315,29 @@ def native_measure(rom, state, workdir, lab, frames, direction):
     sides whip-swing symmetrically."""
     base = RIGHT if direction == "right" else LEFT
     keys = tap_keys(frames, base, A_EVERY, A | 2)
-    peeks = ",".join(f"{f}:{POS_ADDR:x}:8" for f in range(frames))
+    peeks = ",".join(
+        f"{f}:{POS_ADDR:x}:8,{f}:{BG_SCROLL_ADDR:x}:8"
+        for f in range(frames))
     out = run_lab(rom, frames, keys, workdir,
                   ["--state-in", state, "--peek", peeks])
-    blocks = parse_peek_blocks(out)
+    blocks = parse_peek_blocks_strict(out)
     series = []
+    # The lab prints one dump per request in request order, so the
+    # per-address lists stay frame-aligned as long as every request
+    # produced a header. mGBA BIOS log lines can interleave into a
+    # dump's hex row; strict_parse drops those corrupted dumps and the
+    # frame is held at the previous sample to keep index alignment.
     pos_blocks = [d for a, d in blocks if a == POS_ADDR]
-    for f, data in enumerate(pos_blocks[:frames]):
-        p = pos_from_block(data)
-        if p:
-            series.append((f, p[0], p[1]))
+    scroll_blocks = [d for a, d in blocks if a == BG_SCROLL_ADDR]
+    last = None
+    for f in range(min(frames, len(pos_blocks), len(scroll_blocks))):
+        p = pos_from_block(pos_blocks[f])
+        s = scroll_from_block(scroll_blocks[f])
+        w = world_pos(p, s)
+        if w is not None:
+            last = w
+        if last is not None:
+            series.append((f, last[0], last[1]))
     return series, out
 
 
@@ -369,14 +468,22 @@ def main():
     room_str = None
     if not args.skip_native:
         if moved_state:
-            out = run_lab(args.rom, 1, "", workdir,
-                          ["--state-in", moved_state, "--peek",
-                           f"-1:{POS_ADDR:x}:8,-1:{ROOM_ADDR:x}:16"])
-            for a, d in parse_peek_blocks(out):
-                if a == POS_ADDR:
-                    native_pos = pos_from_block(d)
-                elif a == ROOM_ADDR and len(d) >= 16:
-                    room_str = f"{d[14]}/{d[15]}"
+            for _attempt in range(3):
+                out = run_lab(args.rom, 1, "", workdir,
+                              ["--state-in", moved_state, "--peek",
+                               f"-1:{POS_ADDR:x}:8,-1:{BG_SCROLL_ADDR:x}:8,"
+                               f"-1:{ROOM_ADDR:x}:16"])
+                native_pos = room_str = None
+                for a, d in parse_peek_blocks_strict(out):
+                    if a == POS_ADDR:
+                        native_pos = pos_from_block(d)
+                    elif a == BG_SCROLL_ADDR:
+                        native_pos = world_pos(
+                            native_pos, scroll_from_block(d))
+                    elif a == ROOM_ADDR and len(d) >= 16:
+                        room_str = f"{d[14]}/{d[15]}"
+                if native_pos is not None:
+                    break
         else:
             moved_state, native_pos, room_str = ensure_native_states(
                 args.rom, workdir, args.lab, args.story_frames,

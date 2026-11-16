@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-16T01:33:07+00:00",
+ "generated_at": "2026-11-16T02:03:37+00:00",
  "git": {
-  "commit": "e939e357",
+  "commit": "101a5244",
   "branch": "main",
   "dirty": true
  },
@@ -8979,7 +8979,7 @@
     "sub_0803E528",
     "sub_0803E57C"
    ],
-   "limitations": "aos_scroll ports sub_0803FBBC (per-BG velocity request: metadata pin/clamp, ±8px per-call cap, 16.16 integration, tile-row rebuild probe on the (pos-0x10000)>>19 boundary), sub_08000F60 (negated-velocity entityData +0x40/+0x44 shift for records with flags59 bit 1) and sub_0800D288 (per-layer unk_18 mode dispatch 0-32). The four velocity helpers now report the tile-row rebuild as an AosScrollRebuild descriptor (tile origin formulas, VRAM address 0x0600E000+(bg<<11)+(tx&0x1F)<<1+(ty&0x1F)<<6, BgCmdBuffer_WriteData cmd/length/count 0x80/0x15/20 for x and 0x00/0x1F/30 for y) — the rebuild descriptors now carry real tile words: an AosScrollTileFetch bound per room resolves each sub_08001994 lookup through aos_tilemap_column/row into words[0x1F] (word_count 0 when unbound); the BgCmdBuffer_WriteData VRAM write stays unmodelled because the host draw samples a pre-rendered background.bmp with no GBA tilemap memory. unk_60.unk_4C8 is bound through AosScrollWorld and reported via unk_4c8_seen in the hblank/affine modes 20/21/27/30/36; hblank-buffer/BgAffineSet/sine consumers stay reported via fx. BG2/BG3 layer records now bind per room from the descriptor's unk_8 background table (unk_18 mode, unk_14/16 ranges, pBgMetadata dimension bytes via fusion_aos_read_room_backgrounds) with sub_0800ED5C/sub_0800EE54 load origins (aos_scroll_origin_x/y) — sub_0800D288 propagation is live with real modes; unk_60.unk_33C[3]/unk_4CC_0/unk_4C8 world flags stay zeroed; two rooms (10/1, 11/2 BG3) hit metadata_pointer==0 which the port pins as meta 0/0 (native reads address 0). flags59 bit 1 now has its ported writer: sub_0800F1FC sets it unconditionally on every spawned room entity (mirrored in entity_data_sync) and sub_0801487C on the player record, so sub_08000F60 actually shifts records — and the compensation accumulates like native: each record carries scroll_dx/scroll_dy (16.16) composed into pos40/pos44 at every sync, reset on room change/spawn, with record 0 preserved across the per-frame memset. sub_0803FC6C is now wired into GameModeIntroCutsceneUpdate stage 3 via the intro cutscene's own bound AosScroll (replacing the scroll_up approximation; identical 3220-frame stage timing). The accumulated BG1 offset IS now visible: aria_entities exposes aria_scroll_bg1_offset (transaction delta vs the camera seed) and the BG1 draw src rect adds it to cam_x/cam_y and wraps modulo the room map pixel size (all 342 background.bmp exports verified = width_screens*256 x height_screens*256) with up to 4 SDL draws for boundary-straddling windows — the hardware tilemap wrap, not SDL's texture-edge clip. sub_0803FC6C is now ported as aos_scroll_transition_request: identical skeleton to sub_0803FBBC except the y axis uses sub_0803FA10/sub_0803FAE0 with edge constants +0x14/+0xA00000 (0xA0-px screen) and a negative-y pin at 0 instead of 0x300000; its only native callers are GameModeIntroCutsceneUpdate stage 3 and GameModeCreditsUpdate stage 3 — the door transition sub_080104EC uses plain sub_0803FBBC on a blanked display, so no host transition call site exists. object20_scroll_ensure now reproduces the sub_0800F9EC room-load tail: bgInfo[1..3] bind, descriptor display_control seeds object20_disp_cnt, and one zero-velocity sub_0800D288 pass applies the meta-le-1 axis pins, one-time mode-8/9/10 bgOfs writes and mode-19/21 DCNT_BG2 clears; unk_4C8 gets a real per-frame phase. BG2/BG3 modes 0-36 verified against all 343 room descriptors (24 affine BG2 layers, mostly Chaotic Realm). aos_scroll_depth_priorities now ports the sub_0803DC18/sub_0803DD14 recompute (unk_A BG priorities, arg0 thresholds, unk_E band->priority table) that sub_0803FD60 ORs into BGxCNT and sub_0803DE10 stamps into OAM attribute 2; sub_0803E528's band bucketing order is documented but the OAM record list itself stays host-side. Consumed by aria_entities object20_scroll_tx for every Object20 sub_0800ED24 Out (shop transaction arg0=1, dirs/story ed24_a/ed24_b pairs) behind the live +0x427 gate, with the entityData mirror as the AosScrollWorld; aria_runtime.c adds the BG1 delta to the background src rect only (entities keep cam_x/cam_y), and aria_draw.c consumes the same engine display-side for the layered BG draw described below. Unit-tested in test_aos_scroll; no emulator comparison. BG2/BG3 now have a draw consumer: aria_draw.c's draw_room_backgrounds decodes the room's three background tile arrays from the bound ROM through the same fusion_aos_read_background_tiles/fusion_aos_render_background pipeline the exporter composites, keeps one SDL texture per decoded layer and draws them back-to-front (the exporter's descending field_0 sort, DISPCNT enable bits and the mode-19/21 DCNT_BG2 clear honoured) at their own bgOfs — fed by a display-side AosScroll mirroring object20_scroll_ensure's room bind plus the per-frame camera+transaction delta through aos_scroll_request(1)+aos_scroll_apply, with the wrap math factored into aos_scroll_bgofs_blits. The static composite background.bmp remains the fallback when no ROM is bound or nothing decoded, so single-layer rooms are pixel-identical. Affine tile arrays still do not decode (FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE) and the hblank/affine/scanline modes update the base bgOfs but their per-scanline wave/BgAffineSet transform stays unported — those layers draw flat at the faithful offset; OBJ-vs-BG priority is now modelled for the retained bands: the layered draw splits into the native 0-3 priority slots (aria_bg_room_begin/aria_bg_draw_priority, BG3->BG1 inside a level for the hardware same-priority BG tie-break) and aria_bg_band_priority maps entity +0x5C bands through unk_E; the player (create-time 0xE) and Object1F children (band5c) draw in their slots while every other sprite keeps the front-pass all-on-top order because its +0x5C band is not retained; unk_60.unk_33C[3]/unk_4CC_0 flag word still passed as 0.",
+   "limitations": "aos_scroll ports sub_0803FBBC (per-BG velocity request: metadata pin/clamp, ±8px per-call cap, 16.16 integration, tile-row rebuild probe on the (pos-0x10000)>>19 boundary), sub_08000F60 (negated-velocity entityData +0x40/+0x44 shift for records with flags59 bit 1) and sub_0800D288 (per-layer unk_18 mode dispatch 0-32). The four velocity helpers now report the tile-row rebuild as an AosScrollRebuild descriptor (tile origin formulas, VRAM address 0x0600E000+(bg<<11)+(tx&0x1F)<<1+(ty&0x1F)<<6, BgCmdBuffer_WriteData cmd/length/count 0x80/0x15/20 for x and 0x00/0x1F/30 for y) — the rebuild descriptors now carry real tile words: an AosScrollTileFetch bound per room resolves each sub_08001994 lookup through aos_tilemap_column/row into words[0x1F] (word_count 0 when unbound); the BgCmdBuffer_WriteData VRAM write stays unmodelled because the host draw samples a pre-rendered background.bmp with no GBA tilemap memory. unk_60.unk_4C8 is bound through AosScrollWorld and reported via unk_4c8_seen in the hblank/affine modes 20/21/27/30/36; hblank-buffer/BgAffineSet/sine consumers stay reported via fx. BG2/BG3 layer records now bind per room from the descriptor's unk_8 background table (unk_18 mode, unk_14/16 ranges, pBgMetadata dimension bytes via fusion_aos_read_room_backgrounds) with sub_0800ED5C/sub_0800EE54 load origins (aos_scroll_origin_x/y) — sub_0800D288 propagation is live with real modes; unk_60.unk_33C[3]/unk_4CC_0/unk_4C8 world flags stay zeroed; two rooms (10/1, 11/2 BG3) hit metadata_pointer==0 which the port pins as meta 0/0 (native reads address 0). flags59 bit 1 now has its ported writer: sub_0800F1FC sets it unconditionally on every spawned room entity (mirrored in entity_data_sync) and sub_0801487C on the player record, so sub_08000F60 actually shifts records — and the compensation accumulates like native: each record carries scroll_dx/scroll_dy (16.16) composed into pos40/pos44 at every sync, reset on room change/spawn, with record 0 preserved across the per-frame memset. sub_0803FC6C is now wired into GameModeIntroCutsceneUpdate stage 3 via the intro cutscene's own bound AosScroll (replacing the scroll_up approximation; identical 3220-frame stage timing). The accumulated BG1 offset IS now visible: aria_entities exposes aria_scroll_bg1_offset (transaction delta vs the camera seed) and the BG1 draw src rect adds it to cam_x/cam_y and wraps modulo the room map pixel size (all 342 background.bmp exports verified = width_screens*256 x height_screens*256) with up to 4 SDL draws for boundary-straddling windows — the hardware tilemap wrap, not SDL's texture-edge clip. sub_0803FC6C is now ported as aos_scroll_transition_request: identical skeleton to sub_0803FBBC except the y axis uses sub_0803FA10/sub_0803FAE0 with edge constants +0x14/+0xA00000 (0xA0-px screen) and a negative-y pin at 0 instead of 0x300000; its only native callers are GameModeIntroCutsceneUpdate stage 3 and GameModeCreditsUpdate stage 3 — the door transition sub_080104EC uses plain sub_0803FBBC on a blanked display, so no host transition call site exists. object20_scroll_ensure now reproduces the sub_0800F9EC room-load tail: bgInfo[1..3] bind, descriptor display_control seeds object20_disp_cnt, and one zero-velocity sub_0800D288 pass applies the meta-le-1 axis pins, one-time mode-8/9/10 bgOfs writes and mode-19/21 DCNT_BG2 clears; unk_4C8 gets a real per-frame phase. BG2/BG3 modes 0-36 verified against all 343 room descriptors (24 affine BG2 layers, mostly Chaotic Realm). aos_scroll_depth_priorities now ports the sub_0803DC18/sub_0803DD14 recompute (unk_A BG priorities, arg0 thresholds, unk_E band->priority table) that sub_0803FD60 ORs into BGxCNT and sub_0803DE10 stamps into OAM attribute 2; sub_0803E528's band bucketing order is documented but the OAM record list itself stays host-side. Consumed by aria_entities object20_scroll_tx for every Object20 sub_0800ED24 Out (shop transaction arg0=1, dirs/story ed24_a/ed24_b pairs) behind the live +0x427 gate, with the entityData mirror as the AosScrollWorld; aria_runtime.c adds the BG1 delta to the background src rect only (entities keep cam_x/cam_y), and aria_draw.c consumes the same engine display-side for the layered BG draw described below. Unit-tested in test_aos_scroll; no emulator comparison. BG2/BG3 now have a draw consumer: aria_draw.c's draw_room_backgrounds decodes the room's three background tile arrays from the bound ROM through the same fusion_aos_read_background_tiles/fusion_aos_render_background pipeline the exporter composites, keeps one SDL texture per decoded layer and draws them back-to-front (the exporter's descending field_0 sort, DISPCNT enable bits and the mode-19/21 DCNT_BG2 clear honoured) at their own bgOfs — fed by a display-side AosScroll mirroring object20_scroll_ensure's room bind plus the per-frame camera+transaction delta through aos_scroll_request(1)+aos_scroll_apply, with the wrap math factored into aos_scroll_bgofs_blits. The static composite background.bmp remains the fallback when no ROM is bound or nothing decoded, so single-layer rooms are pixel-identical. Affine tile arrays still do not decode (FUSION_AOS_TILEMAP_UNSUPPORTED_AFFINE) and the hblank/affine/scanline modes update the base bgOfs but their per-scanline wave/BgAffineSet transform stays unported — those layers draw flat at the faithful offset; OBJ-vs-BG priority is now modelled for the retained bands: the layered draw splits into the native 0-3 priority slots (aria_bg_room_begin/aria_bg_draw_priority, BG3->BG1 inside a level for the hardware same-priority BG tie-break) and aria_bg_band_priority maps entity +0x5C bands through unk_E; the player (create-time 0xE), Object1F children (band5c) and every enemy kind draw in their slots: AriaEntity.band5c retains the +0x5C create-time band (aos_scroll_enemy_band5c, the 0x71-entry table decoded from the native Enemy*Create bodies — sub_0806B04C's unconditional 0x12 default plus the post-helper overrides 3/4/9/0x11/0x13/0x14/0x1D/0x1E) and draw_enemies' prio_slot filters through the live Kyoma Demon/Altair/Mudman +0x5C mirrors and the Quezlcoatl segment number; sprites whose +0x5C band is still not retained (effects, pickups, skills, guardians, doors, walls, Object20's animation-derived anim5c) keep the front-pass all-on-top order; unk_60.unk_33C[3]/unk_4CC_0 flag word still passed as 0.",
    "next_action": "Port the affine tilemap decode (sub_0803F7C8 8x4 tiling) and the hblank/affine/scanline FX consumers for the rooms that use them; compare a scrolling multi-layer room against a native capture; retain entity +0x5C bands for enemies/effects/pickups/skills/guardians (Object20 needs the real player-band chain in aria_entities.c first) to extend the priority interleave beyond the player and Object1F children.",
    "evidence": {
     "unit_tests": [
@@ -20682,12 +20682,14 @@
     "src/runtime/gba_input.c",
     "src/runtime/aos/core/aos_input.c",
     "src/runtime/aos/game/aos_in_game_mode.c",
+    "src/runtime/aos/game/aos_map_warp.c",
     "src/runtime/aria_runtime.c"
    ],
    "tests": [
     "tests/test_gba_input.c",
     "tests/test_aos_input.c",
-    "tests/test_aos_in_game_mode.c"
+    "tests/test_aos_in_game_mode.c",
+    "tests/test_aos_map_warp.c"
    ],
    "dependencies": [],
    "native_routines": [
@@ -20704,13 +20706,14 @@
     "sub_0800FCB8",
     "sub_0800FE98"
    ],
-   "limitations": "SDL3 supplies active-high key bits. SoftResetCheck is ported and unit-tested, but the incomplete Aria boot lifecycle cannot perform the original console reset. GameModeInGameUpdate's unk_64/unk_65 dispatch channel is now tracked (aos_in_game_mode): cases 3/4/6 latch from the ported transition, quick-map and soul-menu counterparts and the per-frame SetPlayerInput(1, 0) override runs through aos_input_set_player. The post-transition input freeze is identified as sub_0800FFCC's area-name banner: sub_080104EC's stage-2 settle end arms unk_42C bit 0x80 via sub_0800FCB8 and the case-1 routine suspends the entity pass through unk_A074 bit 0 for 189 frames (stages 1-4), not through SetPlayerInput; the runtime reproduces the arm, stage machine, unk_37C shown bits and unk_A074 menu/exit gates but does not composite the WIN0 banner strip or the sub_0800FDC8/sub_08010144 display work. Cases 5 (sub_080106DC fades/camera via sub_08010978), 7/8 (sub_080116A8 warp-pad picker, sub_08011AD0/sub_08011B2C warp room swap needing the sUnk_08525FBC destination table, BG0 castle-map display and unk_3F8/unk_3FC/unk_3FE context) and 9-14 (sub_0805AFC0, sub_0800CA98 credits, the unk_66/unk_4CC_6 event chain polled by sub_080D7F28/sub_080D7F48) have no runtime counterpart; unk_4CC_6 has no writer; the entity SetPlayerInput slot still substitutes the global held mask instead of the player-only words; without --rom the banner never arms (no castle table); no in-game capture comparison of the lock itself. UpdateInput rising edges, held inputs, 32/6-frame repeats and priority reset, plus SetPlayerInput priority/override semantics are ported in device-free C. The SDL3 host remains separate from the native Aria input state. SoftResetCheck now reproduces the native one-shot inhibit flag, new-input gate and four-key chord detection without restarting the host. The in-game mode channel now reports the native per-frame player-input lock for the quick map, soul menu and gated transition stages, and the sub_0800FFCC area-banner freeze (unk_A074 bit 0 entity-pass suspension, 189 frames) is reproduced through aos_in_game_mode_area_banner_step with the sub_0800FCB8 pick driven by the quick-map castle table.",
-   "next_action": "Port sub_080106DC/sub_080116A8/sub_08011AD0/sub_08011B2C and the cutscene cases 9-14 (warp destination table, BG0 map display, unk_3F8 warp context, unk_4CC_6 writer and sub_080D7Fxx completion polls are the missing dependencies); composite the WIN0 area-name strip and hBlank fade; route entity SetPlayerInput outputs through the player-only words; validate the lock and banner timing against gameplay captures.",
+   "limitations": "SDL3 supplies active-high key bits. SoftResetCheck is ported and unit-tested, but the incomplete Aria boot lifecycle cannot perform the original console reset. GameModeInGameUpdate's unk_64/unk_65 dispatch channel is now tracked (aos_in_game_mode): cases 3/4/6 latch from the ported transition, quick-map and soul-menu counterparts and the per-frame SetPlayerInput(1, 0) override runs through aos_input_set_player. The post-transition input freeze is identified as sub_0800FFCC's area-name banner: sub_080104EC's stage-2 settle end arms unk_42C bit 0x80 via sub_0800FCB8 and the case-1 routine suspends the entity pass through unk_A074 bit 0 for 189 frames (stages 1-4), not through SetPlayerInput; the runtime reproduces the arm, stage machine, unk_37C shown bits and unk_A074 menu/exit gates but does not composite the WIN0 banner strip or the sub_0800FDC8/sub_08010144 display work. Cases 5 (sub_080106DC via sub_08010978, now modelled by aos_in_game_mode_transition_fade_* on unk_65/unk_66/fade_bldY with the bldY ramp composited as a black veil) and 7/8 (sub_080115D4/sub_080116A8 picker and sub_08011AD0/sub_08011B2C commit, now ported in aos_map_warp with the sUnk_08525FBC table and sUnk_08116650 cells read live from the ROM, the unk_378 discovered mask, the unk_3F4 cursor and the sub_08011F44 request resolved to the destination room) are wired end-to-end from Object1F's seq_end/flags_42c_20000 outputs. Case 5's stage-1 screen-scroll commit (sub_08010350/sub_0801083C) and stage-0 cleanup have no runtime channel and collapse to one frame each; the picker's sub_08002324 cursor sprite is approximated by corner brackets and the commit's native think-state-4 routing (the unk_42C 0x20000 abort) is performed through the case-8 stage model instead. Cases 9-14 (sub_0805AFC0, sub_0800CA98 credits, the unk_66/unk_4CC_6 event chain polled by sub_080D7F28/sub_080D7F48) still have no runtime counterpart; unk_4CC_6 has no writer; the entity SetPlayerInput slot still substitutes the global held mask instead of the player-only words; without --rom the banner never arms (no castle table); no in-game capture comparison of the lock itself. UpdateInput rising edges, held inputs, 32/6-frame repeats and priority reset, plus SetPlayerInput priority/override semantics are ported in device-free C. The SDL3 host remains separate from the native Aria input state. SoftResetCheck now reproduces the native one-shot inhibit flag, new-input gate and four-key chord detection without restarting the host. The in-game mode channel now reports the native per-frame player-input lock for the quick map, soul menu and gated transition stages, and the sub_0800FFCC area-banner freeze (unk_A074 bit 0 entity-pass suspension, 189 frames) is reproduced through aos_in_game_mode_area_banner_step with the sub_0800FCB8 pick driven by the quick-map castle table. Case 5's sub_080106DC stage machine and the cases 7/8 warp picker/commit now run in the SDL and --simulate loops: Object1F's update seq_end latches the fade and its think's picker-open frame latches the map picker, confirmed warps load the destination room at the sub_08011F44 (0x78, 0x80) position and sub_0804F7A4-style discovery marks warp rooms on every room load.",
+   "next_action": "Port the cutscene cases 9-14 (sub_0805AFC0, sub_0800CA98 credits and the unk_66/unk_4CC_6 event chain polled by sub_080D7F28/sub_080D7F48 — the unk_4CC_6 writer and the event/completion subsystem are the missing dependencies); model case 5's sub_08010350/sub_0801083C screen-scroll commit and stage-0 cleanup if a scroll-transition channel is added; composite the WIN0 area-name strip and hBlank fade; route entity SetPlayerInput outputs through the player-only words; validate the lock, banner timing, fade and warp picker against gameplay captures.",
    "evidence": {
     "unit_tests": [
      "tests/test_gba_input.c",
      "tests/test_aos_input.c",
-     "tests/test_aos_in_game_mode.c"
+     "tests/test_aos_in_game_mode.c",
+     "tests/test_aos_map_warp.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -20748,6 +20751,16 @@
       "registered": true,
       "ctest": [
        "aos_in_game_mode"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_map_warp.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_map_warp"
       ],
       "outcome": "passed",
       "exists": true
@@ -20805,7 +20818,7 @@
     "sub_08044840",
     "sub_0804459C"
    ],
-   "limitations": "Blinking remains approximated by alternate host frames. Icon graphics use exported textures instead of native OBJ VRAM DMA. Object10's scripted pickup has a source-derived portable constructor but no runtime producer. Headhunter, Death, Legion and Balore now emit their guaranteed sub_080D7308 soul with the native special index, and schema v12 preserves the 0x37E bits; Headhunter now waits for its staged death ending; the other three full death controllers remain absent. Other 0x42C producers remain outside the pickup module. The player's hurtbox stands for the player side of the type-0xB collision. Source-derived and locally reviewed, not emulator-compared. The scripted obtain/reward window is decoded but unported: the game-mode state machine (sub_08067310 init, sub_08067488 update, song 0xEF, confirm-button advance) lists up to 0xB entries. The script record byte +0x3D0 indexes table 0x08526C6C whose pointers lead to count-prefixed byte-index lists resolved through 0x085269FC 4-byte records (kind: 2=item table 0x08505B3C stride 16, 3=weapon 0x08505D3C stride 28, 4=armor 0x085063B0 stride 20; name text index is the record u16). Dumped lists: indices 0-2 are large story/boss-rush rewards of 18/31/38 mixed item+equipment entries, indices 3+ are alternating single-item and empty lists; sub_08066B70/66EA4 render icons (sub_08044F24/44F50/44EDC) and names, sub_08067000 grants into +0x38/+0x58 counts. Boss deaths themselves only spawn the guaranteed soul through sub_080D7308 (ported), so no runtime trigger creates these scripted rewards yet. Dropped money, items and MP hearts retain their native fall, rest, blink, collection and inventory-cap paths. sub_08044054 decodes global item ids and cases 1-4 create money, items, weapons and armor. AOSROOM-NATIVE v5 preserves every original entity field. sub_0800F1FC case 4 now spawns room entity ids 1-4 at their fixed ROM coordinates, parameter 1 selecting the record and parameter 0 selecting one of the six gEwramData + 0x360 words. Successful collection sets that bit; a full inventory leaves the pickup and bit intact. Entity ids 5-8 create the four source-derived sub_08044980 soul containers with sequence 19 primary and sequence 18 follower art. Their sub_08044840 intact update emits a palette-matched type-4 child every eighth frame before the weapon collision, using its native random offset and motion terms. Its direct type-1 sequence at 0x0852513C is exported as frames 0x49, 0x36, 0x35 and 0x34 with 3, 7, 7 and 3 updates; sub_080450C8's initial no-motion state and sequence-ending update are ported. A weapon contact with the native tall box releases sub_0804459C's homing soul, requests sound 0xA2, then hides and removes the container; only a collected released soul sets its durable bit. The eight shared icon slots now deduplicate equal icon ids, reject a ninth distinct icon until a slot is released, and back up and restore around the pause menu. Successful heart, money, item, equipment and soul collection requests 0xB4, 0xB6, 0xB5, 0xB7 and 0xBC; a full inventory requests 0x13B only once per 0x20-frame cooldown. Weapon, armor and accessory collection fills sub_0804AE3C's separate four-entry caches. The equipment controller consumes those caches before its table-order inventory and runs sub_0804AED4's exact selected-copy removal, old-equipment insertion and right compaction on every replacement. Portable save schema v12 preserves all six placed-item words independently from story events plus the special-soul halfword; older migrations initialize absent fields empty. Item and money notices use the native sibling HUD paths. Deterministic tests cover categories, bounds, fixed lifetime, icon-slot ownership and backup, recent cache population, ordering and exchange, sounds, sparkle timing and motion, container release and deferred persistence. Source-derived and unit-tested, not emulator-compared.",
+   "limitations": "Blinking remains approximated by alternate host frames. Icon graphics use exported textures instead of native OBJ VRAM DMA. Object10's scripted pickup has a source-derived portable constructor but no runtime producer. Headhunter, Death, Legion and Balore now emit their guaranteed sub_080D7308 soul with the native special index, and schema v12 preserves the 0x37E bits; Headhunter now waits for its staged death ending; the other three full death controllers remain absent. Other 0x42C producers remain outside the pickup module. The player's hurtbox stands for the player side of the type-0xB collision. Source-derived and locally reviewed, not emulator-compared. The scripted obtain/reward window is decoded but unported: the game-mode state machine (sub_08067310 init, sub_08067488 update, song 0xEF, confirm-button advance) lists up to 0xB entries. The script record byte +0x3D0 indexes table 0x08526C6C whose pointers lead to count-prefixed byte-index lists resolved through 0x085269FC 4-byte records (kind: 2=item table 0x08505B3C stride 16, 3=weapon 0x08505D3C stride 28, 4=armor 0x085063B0 stride 20; name text index is the record u16). Dumped lists: indices 0-2 are large story/boss-rush rewards of 18/31/38 mixed item+equipment entries, indices 3+ are alternating single-item and empty lists; sub_08066B70/66EA4 render icons (sub_08044F24/44F50/44EDC) and names, sub_08067000 grants into +0x38/+0x58 counts. Boss deaths themselves only spawn the guaranteed soul through sub_080D7308 (ported), so no runtime trigger creates these scripted rewards yet. Placed soul containers bound the one-based soul id to the recognised soul counts (55 red, 24 blue, 35 yellow, 6 ability); sub_08044980 stores the index unconditionally, so this only rejects ids no room record uses. Dropped money, items and MP hearts retain their native fall, rest, blink, collection and inventory-cap paths. sub_08044054 decodes global item ids and cases 1-4 create money, items, weapons and armor. AOSROOM-NATIVE v5 preserves every original entity field. sub_0800F1FC case 4 now spawns room entity ids 1-4 at their fixed ROM coordinates, parameter 1 selecting the record and parameter 0 selecting one of the six gEwramData + 0x360 words. Successful collection sets that bit; a full inventory leaves the pickup and bit intact. Entity ids 5-8 create the four source-derived sub_08044980 soul containers with sequence 19 primary and sequence 18 follower art. Their sub_08044840 intact update emits a palette-matched type-4 child every eighth frame before the weapon collision, using its native random offset and motion terms. Its direct type-1 sequence at 0x0852513C is exported as frames 0x49, 0x36, 0x35 and 0x34 with 3, 7, 7 and 3 updates; sub_080450C8's initial no-motion state and sequence-ending update are ported. A weapon contact with the native tall box releases sub_0804459C's homing soul, requests sound 0xA2, then hides and removes the container; only a collected released soul sets its durable bit. The eight shared icon slots now deduplicate equal icon ids, reject a ninth distinct icon until a slot is released, and back up and restore around the pause menu. Successful heart, money, item, equipment and soul collection requests 0xB4, 0xB6, 0xB5, 0xB7 and 0xBC; a full inventory requests 0x13B only once per 0x20-frame cooldown. Weapon, armor and accessory collection fills sub_0804AE3C's separate four-entry caches. The equipment controller consumes those caches before its table-order inventory and runs sub_0804AED4's exact selected-copy removal, old-equipment insertion and right compaction on every replacement. Portable save schema v12 preserves all six placed-item words independently from story events plus the special-soul halfword; older migrations initialize absent fields empty. Item and money notices use the native sibling HUD paths. Deterministic tests cover categories, bounds, fixed lifetime, icon-slot ownership and backup, recent cache population, ordering and exchange, sounds, sparkle timing and motion, container release and deferred persistence. Source-derived and unit-tested, not emulator-compared.",
    "next_action": "Connect the bosses' death controllers and Object10's caller, then compare collection against an emulator.",
    "evidence": {
     "unit_tests": [
@@ -30278,24 +30291,29 @@
     "src/assets/core/export.c",
     "src/editor_backend/aria_render.c",
     "src/runtime/aria_draw.c",
-    "src/runtime/aos/core/aos_scroll.c"
+    "src/runtime/aos/core/aos_scroll.c",
+    "src/runtime/aos/game/aos_map_warp.c"
    ],
    "tests": [
     "tests/test_fusion_assets_aos.c",
     "tests/test_native_golden.c",
-    "tests/test_editor_render.c"
+    "tests/test_editor_render.c",
+    "tests/test_aos_scroll.c",
+    "tests/test_aos_map_warp.c"
    ],
    "dependencies": [
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The native importer was source-compared on 342 BG1 collision maps, complete VRAM/palette snapshots for all 343 rooms, 901 expanded static tilemaps and 150929408 rendered RGBA pixels, 342 static-origin RGB composites totaling 61210624 pixels and their byte-identical 183650340-byte BMP representation, plus 342 AOSROOM-NATIVE v5 payloads totaling 2040810 bytes with 956416 cells, 725 transitions and 2335 entities. Schema v5 adds each entity list's original persistent_index without conflating it with parameters 0 and 1; the private golden inventory guards every changed payload. Its atomic writer produces the same 685 private files as the former Python exporter, including the SHA-256 index, and runs the aria_rooms rebuild task alone. One room has no BG1 payload. The editor previews use the separate native renderer of src/editor_backend/aria_render.c, byte-identical to the removed Python renderer on all 343 rooms. The runtime now also decodes each room's BG1-BG3 tile arrays from the bound ROM at load (same fusion_aos pipeline) and draws them back-to-front at their own bgOfs through a display-side AosScroll fed by the per-frame camera delta; the composite background.bmp remains the no-ROM fallback, and affine tilemaps plus the hblank/affine/scanline FX stay documented gaps. BG/OBJ priority now follows the native sub_0803DC18/3DD14/3FD60/3DE10 tables for retained bands: the layered draw runs per priority level and the player (band 0xE) plus Object1F children (band5c) interleave with BG layers; sprites whose +0x5C band the port does not retain keep the front-pass order. The sub_080104EC transition stage machine now also arms the sub_0800FFCC area-name banner at its stage-2 settle end (sub_0800FCB8 castle-cell pick, unk_42C bit 0x80, unk_37C once-per-area bits): the runtime reproduces the 189-frame unk_A074 bit-0 entity-pass freeze, the unk_A074 bit-1 menu/exit gates and the abort paths, verified as an exact 189-frame position hold in --simulate room 0/0 -> 0/3; the WIN0 banner strip, the sub_0800FDC8/sub_08010144 display work and cases 5/7/8/9-14 (warp-pad picker, warp room swap, cutscene modes) remain unported.",
+   "limitations": "The native importer was source-compared on 342 BG1 collision maps, complete VRAM/palette snapshots for all 343 rooms, 901 expanded static tilemaps and 150929408 rendered RGBA pixels, 342 static-origin RGB composites totaling 61210624 pixels and their byte-identical 183650340-byte BMP representation, plus 342 AOSROOM-NATIVE v5 payloads totaling 2040810 bytes with 956416 cells, 725 transitions and 2335 entities. Schema v5 adds each entity list's original persistent_index without conflating it with parameters 0 and 1; the private golden inventory guards every changed payload. Its atomic writer produces the same 685 private files as the former Python exporter, including the SHA-256 index, and runs the aria_rooms rebuild task alone. One room has no BG1 payload. The editor previews use the separate native renderer of src/editor_backend/aria_render.c, byte-identical to the removed Python renderer on all 343 rooms. The runtime now also decodes each room's BG1-BG3 tile arrays from the bound ROM at load (same fusion_aos pipeline) and draws them back-to-front at their own bgOfs through a display-side AosScroll fed by the per-frame camera delta; the composite background.bmp remains the no-ROM fallback, and affine tilemaps plus the hblank/affine/scanline FX stay documented gaps. BG/OBJ priority now follows the native sub_0803DC18/3DD14/3FD60/3DE10 tables for retained bands: the layered draw runs per priority level and the player (band 0xE), Object1F children (band5c) and every enemy kind (the decoded create-time +0x5C table plus the live Kyoma Demon/Altair/Mudman mirrors) interleave with BG layers; sprites whose +0x5C band the port does not retain keep the front-pass order. The sub_080104EC transition stage machine now also arms the sub_0800FFCC area-name banner at its stage-2 settle end (sub_0800FCB8 castle-cell pick, unk_42C bit 0x80, unk_37C once-per-area bits): the runtime reproduces the 189-frame unk_A074 bit-0 entity-pass freeze, the unk_A074 bit-1 menu/exit gates and the abort paths, verified as an exact 189-frame position hold in --simulate room 0/0 -> 0/3; the WIN0 banner strip, the sub_0800FDC8/sub_08010144 display work and cases 9-14 (cutscene modes) remain unported; cases 5 (sub_080106DC fade) and 7/8 (sub_080116A8 warp-pad picker, sub_08011AD0/sub_08011B2C warp room swap over the sUnk_08525FBC table) are now wired through aos_in_game_mode/aos_map_warp with Object1F triggers.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
      "tests/test_fusion_assets_aos.c",
      "tests/test_native_golden.c",
-     "tests/test_editor_render.c"
+     "tests/test_editor_render.c",
+     "tests/test_aos_scroll.c",
+     "tests/test_aos_map_warp.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -30334,6 +30352,26 @@
       "registered": true,
       "ctest": [
        "editor_render_native_contract"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_scroll.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_scroll"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aos_map_warp.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aos_map_warp"
       ],
       "outcome": "passed",
       "exists": true
@@ -32505,6 +32543,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aos_map_warp",
+    "files": [
+     "tests/test_aos_map_warp.c"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "gba_input",
     "files": [
      "tests/test_gba_input.c"
@@ -33038,12 +33083,30 @@
    }
   ],
   "summary": {
-   "passed": 228,
+   "passed": 229,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "101a5244",
+   "date": "2026-11-16",
+   "subject": "aria: decode enemy +0x5C draw bands and interleave them with layered BG priorities",
+   "scope": "project"
+  },
+  {
+   "commit": "fd9417e3",
+   "date": "2026-11-16",
+   "subject": "aos: placed soul containers accept every native soul id; fix save soul bounds",
+   "scope": "project"
+  },
+  {
+   "commit": "2107873f",
+   "date": "2026-11-16",
+   "subject": "aos: audit pause-menu OBJ layer; document transient-only gaps (Patch 1165)",
+   "scope": "project"
+  },
   {
    "commit": "e939e357",
    "date": "2026-11-16",
@@ -33504,24 +33567,6 @@
    "commit": "22290cc0",
    "date": "2026-11-13",
    "subject": "Port Aria Object20 talk-state callbacks",
-   "scope": "project"
-  },
-  {
-   "commit": "cf3468b9",
-   "date": "2026-11-13",
-   "subject": "Port Aria save-room ambience children",
-   "scope": "project"
-  },
-  {
-   "commit": "fb235a77",
-   "date": "2026-11-13",
-   "subject": "Port Aria Object1F child update routines",
-   "scope": "project"
-  },
-  {
-   "commit": "60a2da1d",
-   "date": "2026-11-13",
-   "subject": "Port Aria Object1F nine-state think machine",
    "scope": "project"
   }
  ],

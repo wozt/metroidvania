@@ -24,8 +24,11 @@
  * call through aos_input_set_player. The stage machines
  * themselves stay with their owners (room_transition,
  * quick_map_bldY, soul_menu, the sub_0800FFCC banner fields
- * below); unk_65 here records the native stage numbering for
- * traceability, not a second implementation. */
+ * below, the aos_map_warp picker/commit machines for cases 7/8);
+ * unk_65 here records the native stage numbering for
+ * traceability. Case 5 is the exception: sub_080106DC's stage
+ * machine is small enough that aos_in_game_mode_transition_fade_*
+ * below models it directly on unk_65/unk_66/fade_bldY. */
 typedef struct {
     uint8_t unk_64;     /* gEwramData + 0x64: dispatch case */
     uint8_t unk_65;     /* gEwramData + 0x65: stage within the case */
@@ -48,6 +51,11 @@ typedef struct {
     uint16_t unk_37C;
     bool unk_A074_0;
     bool unk_A074_1;
+    /* sub_080106DC (case 5) stage model: the modeled
+     * gDisplayRegisters.bldY (0..BLDY_MAX_VALUE = 16) the runtime
+     * turns into a black veil. unk_65/unk_66 already carry the
+     * native stage and shared counter. */
+    uint8_t fade_bldY;
 } AosInGameMode;
 
 /* Native unk_64 case numbers (sub_0800B700 switch). */
@@ -145,6 +153,28 @@ void aos_in_game_mode_area_banner_cancel(AosInGameMode *mode);
 int aos_area_banner_area(uint16_t cell, bool transition_room,
                          bool save_room, bool warp_room,
                          uint16_t unk_37C);
+
+/* sub_08010978's latch for case 5: unk_64 = 5, unk_65 = 0,
+ * unk_66 = 0 plus the blend registers. Call right after
+ * aos_in_game_mode_enter(mode, AOS_INGAME_TRANSITION_FADE,
+ * true) — the enter already clears unk_66 like the native
+ * writer; this only zeroes the modeled bldY. */
+void aos_in_game_mode_transition_fade_begin(AosInGameMode *mode);
+
+/* One sub_080106DC call while unk_64 == 5. Returns 1 on the frame
+ * the native routine returns 1 (bldY reached 0 in unk_65 == 3) —
+ * the caller then runs aos_in_game_mode_resume like the case-5
+ * tail's `unk_64 = 1`. Stage map: unk_65 0 ramps bldY 0->16 at one
+ * step per four unk_66 counts, 1 is the sub_08010350/sub_0801083C
+ * screen-scroll commit (no runtime counterpart — the camera already
+ * follows the player; documented divergence), 2 waits out BG1's
+ * scroll velocities (zero without the commit, so one frame), 3
+ * ramps bldY back to 0 at one step per two unk_66 counts. The
+ * stage-0 cleanup (sub_0800FBD8 transient-entity sweep,
+ * sub_0803CCBC/sub_0806C354/sub_080124A8 effect teardown,
+ * hBlankEffect stop, player unk_53C_5 = 0) has no runtime channel
+ * and is not modelled. */
+int aos_in_game_mode_transition_fade_step(AosInGameMode *mode);
 
 /* Diagnostic case label for logs; "unknown" outside 0-14. */
 const char *aos_in_game_mode_case_name(uint8_t unk_64);

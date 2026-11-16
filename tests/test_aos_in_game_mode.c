@@ -71,6 +71,26 @@ int main(void) {
     aos_in_game_mode_resume(&mode);
     assert(mode.unk_64 == AOS_INGAME_PLAY && mode.unk_65 == 3);
 
+    /* sub_080106DC (case 5): the stage machine walks unk_65 0->3,
+     * ramps the modeled bldY 0->16->0 on the unk_66 cadence and
+     * returns 1 exactly on the frame the native routine does
+     * (~95 calls: 61 ramp-up + 3 commit/settle + 31 ramp-down). */
+    aos_in_game_mode_init(&mode);
+    aos_in_game_mode_enter(&mode, AOS_INGAME_TRANSITION_FADE, true);
+    aos_in_game_mode_transition_fade_begin(&mode);
+    assert(mode.fade_bldY == 0 && mode.unk_65 == 0 && mode.unk_66 == 0);
+    int fade_frames = 0;
+    while (aos_in_game_mode_transition_fade_step(&mode) == 0) {
+        ++fade_frames;
+        assert(mode.unk_64 == AOS_INGAME_TRANSITION_FADE);
+        assert(fade_frames < 1000);
+    }
+    assert(mode.fade_bldY == 0 && mode.unk_65 == 0);
+    assert(fade_frames > 90 && fade_frames < 100);
+    /* The native tail's unk_64 = 1. */
+    aos_in_game_mode_resume(&mode);
+    assert(mode.unk_64 == AOS_INGAME_PLAY);
+
     /* sub_0800FFCC area banner: armed at sub_080104EC's stage-2
      * settle end, it suspends the entity pass through unk_A074_0
      * for 189 frames (stages 1-4: 31 + 61 + 96 + 1) after one

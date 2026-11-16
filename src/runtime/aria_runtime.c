@@ -157,6 +157,7 @@
 #include "aria_weapons.h"
 #include "aos/core/aos_input.h"
 #include "aos/game/aos_in_game_mode.h"
+#include "aos/game/aos_map_warp.h"
 #include "fusion/assets/rom.h"
 
 #include <SDL3/SDL.h>
@@ -351,6 +352,15 @@ static AriaRoomTransition room_transition;
 static AosInGameMode in_game_mode = { .unk_64 = AOS_INGAME_PLAY,
                                       .banner_area = -1,
                                       .unk_A074_1 = true };
+/* GameModeInGameUpdate cases 7/8 (sub_080115D4 -> sub_080116A8
+ * picker, sub_08011AD0 -> sub_08011B2C commit): the sUnk_08525FBC
+ * warp-point table, the unk_378 discovered mask, the unk_3F4
+ * selection and the sub_08011F44 warp request live in
+ * aos_map_warp. Available only with --rom (the native table and
+ * castle cells are ROM data); without it the Object1F picker-open
+ * frame simply never latches, matching the absent unk_88 map data. */
+static AosMapWarp map_warp = { .selected = -1, .song = -1 };
+static bool map_warp_available;
 
 /* sub_0800FCB8 through the runtime's map data: the banner pick for
  * the room the transition just committed. The native routine reads
@@ -507,6 +517,191 @@ static int room_transition_tick(AriaRoomTransition *t,
     t->active = false;
     aos_in_game_mode_resume(&in_game_mode);
     return 2;
+}
+
+/* sub_0804F7A4 runs inside every sub_0800F9EC room load: when the
+ * room just entered is a warp point its unk_378 discovered bit
+ * sets. Calling it once per frame is the same idempotent result —
+ * the mask only depends on the current room. */
+static void warp_room_discovery(const AriaRoom *room) {
+    if (map_warp_available)
+        aos_map_warp_visit(&map_warp, room->area, room->number);
+}
+
+/* sub_08010978 / sub_080115D4 writers polled after update_entities:
+ * Object1F's update seq_end latches case 5 (sub_080106DC) and its
+ * think's picker-open frame (the +0x42C |= 0x20000 / sub_080115D4
+ * pair in sub_08055748) latches case 7. Both run inside
+ * sub_08000B64, so they may also fire while case 5 itself is
+ * running — native lets sub_080115D4 preempt it by writing
+ * unk_64 = 7 unconditionally. */
+static void poll_object1f_mode_triggers(const AriaRoom *room) {
+    for (size_t wi = 0; wi < room->entity_count; ++wi) {
+        const AriaEntity *we = &room->entities[wi];
+        if (we->kind != ARIA_KIND_SPECIAL || we->id != 31 ||
+            !we->spawned)
+            continue;
+        if (we->object1f.seq_end &&
+            in_game_mode.unk_64 == AOS_INGAME_PLAY) {
+            /* sub_08010978: unk_64 = 5, unk_65 = 0, unk_66 = 0. */
+            aos_in_game_mode_enter(&in_game_mode,
+                                   AOS_INGAME_TRANSITION_FADE, true);
+            aos_in_game_mode_transition_fade_begin(&in_game_mode);
+        }
+        if (we->object1f.flags_42c_20000 && map_warp_available &&
+            (in_game_mode.unk_64 == AOS_INGAME_PLAY ||
+             in_game_mode.unk_64 == AOS_INGAME_TRANSITION_FADE) &&
+            aos_map_warp_picker_begin(&map_warp, room->area,
+                                      room->number)) {
+            /* sub_080115D4: unk_64 = 7, unk_65 = 0, bldY = MAX,
+             * unk_A074_1 = 0, unk_A074_0 = 1. */
+            in_game_mode.unk_A074_1 = false;
+            in_game_mode.unk_A074_0 = true;
+            aos_in_game_mode_enter(&in_game_mode, AOS_INGAME_MAP_SECOND,
+                                   false);
+        }
+    }
+}
+
+/* sub_08011B2C stage-1 commit for the warp picker: the same room
+ * swap sub_0800ECA0(unk_3FC, unk_3FE)/sub_0801083C perform — load
+ * the destination room folder, place Soma at the request position
+ * (unk_400/unk_402, the picker's 0x78/0x80), and run the same
+ * bookkeeping a transition commit does. Native routes Object1F's
+ * warp through the think's state 4 instead of case 8 (the
+ * unk_42C & 0x20000 abort in GameModeInGameUpdate's case-7 tail);
+ * the think's display/state outputs have no runtime channel, so
+ * the runtime performs the identical unk_88/sub_0800ECA0 sequence
+ * through this case-8 stage model — documented divergence. */
+static int warp_commit_load(SDL_Renderer *renderer, AriaRoom *room,
+                            SDL_Texture **background, AosSoma *soma,
+                            int *cam_x, int *cam_y) {
+    char folder[512];
+    room_folder(folder, sizeof folder, map_warp.req_area,
+                map_warp.req_room);
+    AriaRoom target = {0};
+    if (!load_room_folder(folder, &target)) {
+        fprintf(stderr, "Warp destination %d/%d is not exported\n",
+                map_warp.req_area, map_warp.req_room);
+        return -1;
+    }
+    SDL_Texture *texture = renderer ? load_background(renderer, folder)
+                                    : NULL;
+    if (renderer && !texture) {
+        free_room(&target);
+        return -1;
+    }
+    /* unk_524.unk_524_16.unk_526/unk_52A = unk_400/unk_402: the
+     * picker wrote (0x78, 0x80) through sub_08011F44. */
+    soma->x = (int32_t)map_warp.req_x << 16;
+    soma->y = (int32_t)map_warp.req_y << 16;
+    printf("Warp %d/%d -> %d/%d at %d,%d\n", room->area, room->number,
+           target.area, target.number, map_warp.req_x, map_warp.req_y);
+    target.effect_count = 0;
+    free_room(room);
+    *room = target;
+    aos_object01_reset();
+    if (*background) SDL_DestroyTexture(*background);
+    *background = texture;
+    follow_camera(room, soma->x >> 16, soma->y >> 16, cam_x, cam_y);
+    return 1;
+}
+
+/* The warp picker's display: the same castle map the quick map
+ * renders (sUnk_08116650 cells over the sUnk_080E3664 tileset)
+ * plus the discovered-point marks and selection cursor
+ * aos_map_warp_overlay composites — sub_08010D60's shared drawer
+ * with sub_08002324's cursor approximated. */
+static bool draw_native_warp_map(SDL_Renderer *renderer,
+                                 SDL_Texture *texture, AosQuickMap *map,
+                                 const AosStats *stats, uint32_t frame) {
+    static uint8_t pixels[VIEW_W * VIEW_H * 4];
+    if (!aos_quick_map_render(map, stats->item_counts[0x1D] != 0,
+                              stats->item_counts[0x1E] != 0,
+                              stats->item_counts[0x1F] != 0,
+                              frame, pixels, sizeof pixels))
+        return false;
+    aos_map_warp_overlay(&map_warp, pixels, sizeof pixels, frame);
+    if (!SDL_UpdateTexture(texture, NULL, pixels, VIEW_W * 4))
+        return false;
+    SDL_FRect whole = {0, 0, VIEW_W, VIEW_H};
+    return SDL_RenderTexture(renderer, texture, NULL, &whole);
+}
+
+/* One shared step for GameModeInGameUpdate cases 7/8 inside the SDL
+ * frame loop. Returns true when the frame was consumed (the caller
+ * skips the normal play update like the quick-map branch). */
+static bool warp_mode_step(SDL_Renderer *renderer, AriaRoom *room,
+                           SDL_Texture **background, AosSoma *soma,
+                           AosCollision *layer, AriaCombat *combat,
+                           AosHud *hud, AriaSouls *souls,
+                           AosSaveRoom *save_room,
+                           int *cam_x, int *cam_y,
+                           uint16_t new_input, uint16_t repeated_input,
+                           uint32_t frame) {
+    if (in_game_mode.unk_64 == AOS_INGAME_MAP_SECOND) {
+        int pick = aos_map_warp_picker_step(&map_warp, new_input,
+                                            repeated_input, frame);
+        /* unk_65 mirrors the native stage this frame's branch runs. */
+        in_game_mode.unk_65 = map_warp.stage;
+        if (map_warp.song >= 0) {
+            aos_audio_play_song((uint16_t)map_warp.song);
+            map_warp.song = -1;
+        }
+        if (pick != AOS_WARP_PICKER_BUSY) {
+            /* GameModeInGameUpdate's case-7 tail: unk_3F4 < 0
+             * (cancel) or the still-set 0x20000 bit (the Object1F
+             * path — the think owns the commit natively) both write
+             * unk_64 = 1; only an unflagged selection would run
+             * sub_08011AD0. The runtime routes the Object1F confirm
+             * through the same case-8 commit machine because the
+             * think's commit outputs have no channel. */
+            if (pick == AOS_WARP_PICKER_CONFIRMED) {
+                aos_map_warp_commit_begin(&map_warp);
+                aos_in_game_mode_enter(&in_game_mode,
+                                       AOS_INGAME_ROOM_WARP, false);
+            } else {
+                /* sub_080116A8 stage 5 restored unk_A074_1 = 1,
+                 * unk_A074_0 = 0 before returning 1. */
+                in_game_mode.unk_A074_1 = true;
+                in_game_mode.unk_A074_0 = false;
+                aos_in_game_mode_resume(&in_game_mode);
+            }
+        }
+        return true;
+    }
+    if (in_game_mode.unk_64 == AOS_INGAME_ROOM_WARP) {
+        int commit = aos_map_warp_commit_step(&map_warp);
+        in_game_mode.unk_65 = map_warp.commit_stage;
+        if (commit == AOS_WARP_COMMIT_LOAD) {
+            if (warp_commit_load(renderer, room, background, soma,
+                                 cam_x, cam_y) > 0) {
+                *layer = room_layer(room);
+                /* sub_080109B8's room-change bookkeeping like the
+                 * transition commit's (hud/souls are NULL headless). */
+                if (hud) aos_hud_clear_notice(hud);
+                combat->levelup = (AosLevelUp){0};
+                if (souls) clear_skills(souls);
+                /* The save-room UP latch belongs to the old room like
+                 * the transition commit's reset. */
+                if (save_room) *save_room = (AosSaveRoom){0};
+                warp_room_discovery(room);
+            } else {
+                /* Native failure leaves the mode latched; the
+                 * runtime resumes play rather than hanging. */
+                aos_in_game_mode_resume(&in_game_mode);
+            }
+        } else if (commit == AOS_WARP_COMMIT_DONE) {
+            /* sub_08011B2C stage 2 restored unk_A074_1 = 1 (unless
+             * unk_42C bit 0x800000 held — no runtime channel) and
+             * the case tail wrote unk_64 = 1. */
+            in_game_mode.unk_A074_1 = true;
+            in_game_mode.unk_A074_0 = false;
+            aos_in_game_mode_resume(&in_game_mode);
+        }
+        return true;
+    }
+    return false;
 }
 
 /* Soma's world sprite — the draw the render loop runs either at
@@ -1369,6 +1564,12 @@ int aria_runtime_main(int argc, char **argv) {
             sim_have_quick_map =
                 aos_quick_map_init(&sim_quick_map, &room_dialogue_rom,
                                    sim_error, sizeof sim_error);
+        /* The sUnk_08525FBC warp table for cases 7/8, same ROM the
+         * quick map uses; unavailable without --rom like the native
+         * unk_88 map data. */
+        map_warp_available = sim_have_quick_map &&
+            aos_map_warp_init(&map_warp, &room_dialogue_rom,
+                              sim_error, sizeof sim_error);
         (void)load_room_music(DEFAULT_ROOM_MUSIC);
         for (long frame = 0; frame < simulate_frames; ++frame) {
             /* sub_080104EC: while the transition stage machine runs the
@@ -1398,8 +1599,11 @@ int aria_runtime_main(int argc, char **argv) {
             /* sub_0800FFCC runs at the tail of case 1's dispatch,
              * after sub_08011CD0: the unk_A074_0 bit the previous
              * call left gates this frame's sub_08000B64 entity
-             * pass, then the stage machine advances once. */
-            bool sim_banner_freeze = in_game_mode.unk_A074_0;
+             * pass, then the stage machine advances once. The
+             * unk_64 == PLAY guard matches the SDL loop: case 5's
+             * sub_080106DC updates entities unconditionally. */
+            bool sim_banner_freeze = in_game_mode.unk_64 == AOS_INGAME_PLAY &&
+                                    in_game_mode.unk_A074_0;
             aos_in_game_mode_area_banner_step(
                 &in_game_mode, (aria_pickup_state.global_flags & 0x101) == 1);
             if (sim_banner_freeze) continue;
@@ -1426,6 +1630,20 @@ int aria_runtime_main(int argc, char **argv) {
              * lock zeroes the gameplay mask below. */
             uint16_t sim_new_input = (uint16_t)(held & ~sim_prev_held);
             sim_prev_held = held;
+            /* GameModeInGameUpdate cases 7/8: the warp picker and
+             * commit own unk_64 — no entity pass, no exit check.
+             * `held` doubles as the repeated-input word (the headless
+             * harness has no native repeat delay). */
+            if (warp_mode_step(NULL, &room, &sim_background, &soma,
+                               &layer, &combat, NULL, NULL, &save_room,
+                               &cam_x, &cam_y,
+                               sim_new_input, held, (uint32_t)frame))
+                continue;
+            /* Case 5 (sub_080106DC): entities keep updating below
+             * like the native sub_08000B64-first order. */
+            if (in_game_mode.unk_64 == AOS_INGAME_TRANSITION_FADE &&
+                aos_in_game_mode_transition_fade_step(&in_game_mode))
+                aos_in_game_mode_resume(&in_game_mode);
             /* Headless has no AosInput channel, so the mode lock
              * folds into the same player-only mask the dialogue and
              * Object1C locks use; the entity pass still reads the
@@ -1488,7 +1706,9 @@ int aria_runtime_main(int argc, char **argv) {
             /* sub_08010244 latches unk_64 = 3; the sub_080104EC stage
              * machine then commits the swap on a later blanked frame
              * (room_transition_tick at the top of the loop). */
-            if (!room_transition.active && (sim_leaving || sim_door)) {
+            if (!room_transition.active &&
+                in_game_mode.unk_64 == AOS_INGAME_PLAY &&
+                (sim_leaving || sim_door)) {
                 room_transition_begin(&room_transition,
                                       sim_leaving ? NULL : sim_door);
                 /* unk_65 == 0 cleanup: the room's effects die with the
@@ -1511,6 +1731,10 @@ int aria_runtime_main(int argc, char **argv) {
             object1c_save_path = NULL;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
                             sim_new_input, sim_held, &room_music);
+            /* sub_0804F7A4 discovery + the sub_08010978/sub_080115D4
+             * Object1F writers, same ordering as the SDL loop. */
+            warp_room_discovery(&room);
+            poll_object1f_mode_triggers(&room);
             homing_age();
             aos_enemy_set_soul_attacks(NULL, 0);
         }
@@ -1543,6 +1767,15 @@ int aria_runtime_main(int argc, char **argv) {
         }
         printf("Aria simulate: SPECIAL %d/%d spawned, %d enemies alive\n",
                spawned_special, active_special, enemies_alive);
+        if (getenv("AOS_SIM_DUMP_ENTS")) {
+            for (size_t k = 0; k < room.entity_count; ++k) {
+                const AriaEntity *e = &room.entities[k];
+                if (!e->spawned) continue;
+                printf("  ent%02zu kind=%d id=%d pos=%d,%d state=%d step=%d hp=%d\n",
+                       k, e->kind, e->id, (int)(e->enemy.x >> 16), (int)(e->enemy.y >> 16),
+                       e->enemy.state, e->enemy.step, e->enemy.hp);
+            }
+        }
         free(sim_dirs);
         if (sim_background) SDL_DestroyTexture(sim_background);
         aos_mp2k_engine_destroy(&mp2k);
@@ -1795,6 +2028,16 @@ int aria_runtime_main(int argc, char **argv) {
             fprintf(stderr, "Cannot decode the native Aria quick map: %s\n", error);
             goto cleanup;
         }
+        /* sUnk_08525FBC + sUnk_08116650 for GameModeInGameUpdate
+         * cases 7/8: optional like the map itself — without the ROM
+         * (or a truncated table) Object1F's picker-open frame simply
+         * never latches, matching the absent native unk_88 map data. */
+        map_warp_available =
+            aos_map_warp_init(&map_warp, &opening_rom,
+                              error, sizeof error);
+        if (!map_warp_available)
+            fprintf(stderr, "Cannot decode the native Aria warp map: %s\n",
+                    error);
         if (has_active_save) {
             aos_quick_map_unpack_explored(&quick_map, active_save.map_explored);
             quick_map.secret_rooms = active_save.secret_rooms;
@@ -2312,13 +2555,31 @@ int aria_runtime_main(int argc, char **argv) {
                 aria_wav_write(&wav, pcm, sizeof pcm);
             }
             if (!lifecycle.in_game_frame_requested) continue;
+            /* GameModeInGameUpdate cases 7/8 (sub_080116A8 picker /
+             * sub_08011B2C commit): neither runs sub_08000B64 nor the
+             * case-1 menu edges or exit check, so the step consumes
+             * the frame like the quick-map branch below. */
+            if (warp_mode_step(renderer, &room, &background, &soma,
+                               &layer, &combat, &hud, &souls, &save_room,
+                               &cam_x, &cam_y,
+                               aria_input.new_input,
+                               aria_input.repeated_input,
+                               (uint32_t)step)) {
+                ++step;
+                if (has_active_save) active_save.play_frames++;
+                continue;
+            }
             /* sub_0800FFCC runs at the tail of case 1's dispatch,
              * after sub_08011CD0: the unk_A074_0 bit the previous
              * call left gates this frame's sub_08000B64 entity
              * pass, then the stage machine advances once. Read the
              * bit BEFORE stepping — native runs the entity pass
-             * before sub_0800FFCC inside the same frame. */
-            bool banner_freeze = in_game_mode.unk_A074_0;
+             * before sub_0800FFCC inside the same frame. unk_64
+             * must still be case 1: sub_0800FFCC only runs there,
+             * and case 5's sub_080106DC calls sub_08000B64
+             * unconditionally regardless of the bit. */
+            bool banner_freeze = in_game_mode.unk_64 == AOS_INGAME_PLAY &&
+                                 in_game_mode.unk_A074_0;
             aos_in_game_mode_area_banner_step(
                 &in_game_mode, (aria_pickup_state.global_flags & 0x101) == 1);
             if (banner_freeze) {
@@ -2334,6 +2595,15 @@ int aria_runtime_main(int argc, char **argv) {
                 if (has_active_save) active_save.play_frames++;
                 goto aria_render_frame;
             }
+            /* Case 5 (sub_080106DC, the Object1F seal-break fade):
+             * native runs sub_08000B64 first, then the routine — the
+             * entity pass below keeps running while the modeled
+             * bldY ramps, and the black veil composites at render.
+             * The routine's return-1 tail writes unk_64 = 1 like
+             * aos_in_game_mode_resume. */
+            if (in_game_mode.unk_64 == AOS_INGAME_TRANSITION_FADE &&
+                aos_in_game_mode_transition_fade_step(&in_game_mode))
+                aos_in_game_mode_resume(&in_game_mode);
             /* +0xb==8 keeps Object20 alive for the mode-4 return pan after
              * the script's end command; the branch stays open until the
              * camera finishes recentring on Soma. */
@@ -2464,8 +2734,12 @@ int aria_runtime_main(int argc, char **argv) {
             }
             /* Case 1's menu edges run only while unk_A074_1 holds;
              * sub_0800FFCC's stage 0 clears it through
-             * sub_0800C5A8(0) for the whole banner. */
-            if (!soul_menu.open && have_quick_map && in_game_mode.unk_A074_1 &&
+             * sub_0800C5A8(0) for the whole banner. The unk_64 ==
+             * PLAY guard keeps case 5's sub_080106DC (which leaves
+             * unk_A074_1 set) from opening the map mid-fade. */
+            if (!soul_menu.open && have_quick_map &&
+                in_game_mode.unk_64 == AOS_INGAME_PLAY &&
+                in_game_mode.unk_A074_1 &&
                 (aria_input.new_input & AOS_KEY_SELECT)) {
                 char error[160];
                 if (aos_quick_map_visit(&quick_map, &opening_rom,
@@ -2493,7 +2767,9 @@ int aria_runtime_main(int argc, char **argv) {
              * sub_080473F4); while it is clear the poll sees no
              * open request. An already-open hub (case 6) keeps
              * unk_A074_1 set, so navigation is unaffected. */
-            soul_menu_event = progress.character == 0 && in_game_mode.unk_A074_1
+            soul_menu_event = progress.character == 0 &&
+                    in_game_mode.unk_64 == AOS_INGAME_PLAY &&
+                    in_game_mode.unk_A074_1
                     ? aos_pause_menu_update(&soul_menu, &progress,
                                             have_equipment ? &equipment : NULL,
                                             have_item_use ? item_use : NULL, &item_vitals,
@@ -3061,8 +3337,10 @@ int aria_runtime_main(int argc, char **argv) {
              * Case 1's check is `(sub_08011A44(...) == 0) &&
              * !unk_A074_0`: on the banner's stage-0 frame the entity
              * pass already ran but sub_0800FFCC has since set
-             * unk_A074_0, so the exit stays blocked that frame too. */
+             * unk_A074_0, so the exit stays blocked that frame too.
+             * Cases 5/7/8 own unk_64 and never reach this check. */
             if (!room_transition.active && !in_game_mode.unk_A074_0 &&
+                in_game_mode.unk_64 == AOS_INGAME_PLAY &&
                 (leaving || project_door)) {
                 room_transition_begin(&room_transition,
                                       leaving ? NULL : project_door);
@@ -3135,6 +3413,12 @@ int aria_runtime_main(int argc, char **argv) {
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
                             aria_input.new_input, aria_input.held_input,
                             &room_music);
+            /* sub_0804F7A4's room-load discovery and the
+             * sub_08010978/sub_080115D4 writers (Object1F's update
+             * seq_end and think picker-open frame) run inside the
+             * entity pass like the native sub_08000B64 ordering. */
+            warp_room_discovery(&room);
+            poll_object1f_mode_triggers(&room);
             /* --dialogue-trace: log the shared room dialogue's window
              * open/close frames so scripted-input runs can measure the
              * pulse->window latency without pixel probing. Debug
@@ -4147,6 +4431,21 @@ aria_render_frame:
                 SDL_RenderFillRect(renderer, &whole);
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
             }
+        } else if (in_game_mode.unk_64 == AOS_INGAME_MAP_SECOND &&
+                   map_warp_available && have_quick_map &&
+                   draw_native_warp_map(renderer, quick_map_texture,
+                                        &quick_map, &progress,
+                                        (uint32_t)step)) {
+            /* sub_080116A8's bldY fade: the picker opens at
+             * BLDY_MAX_VALUE and ramps down to the map. */
+            if (map_warp.fade > 0) {
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0,
+                                       (uint8_t)(map_warp.fade * 255 / 16));
+                SDL_FRect whole = {0, 0, VIEW_W, VIEW_H};
+                SDL_RenderFillRect(renderer, &whole);
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+            }
         } else if (!draw_native_equip(renderer, pause_texture, &pause_graphics,
                                     &soul_menu, &progress,
                                     have_equipment ? &equipment : NULL) &&
@@ -4169,6 +4468,17 @@ aria_render_frame:
             draw_soul_menu(renderer, &soul_menu, &progress,
                            have_equipment ? &equipment : NULL,
                            have_item_use ? item_use : NULL, &soma, &objects);
+        /* sub_080106DC's modeled bldY: the case-5 fade veils the room
+         * like the quick-map/picker ramps (weight = bldY/16). */
+        if (in_game_mode.unk_64 == AOS_INGAME_TRANSITION_FADE &&
+            in_game_mode.fade_bldY > 0) {
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0,
+                                   (uint8_t)(in_game_mode.fade_bldY * 255 / 16));
+            SDL_FRect whole = {0, 0, VIEW_W, VIEW_H};
+            SDL_RenderFillRect(renderer, &whole);
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+        }
         /* Object20's dialogue effect is applied after every targeted scene
          * layer. BG0's portrait and glyphs are then composed above it. */
         /* sub_08067934 writes WIN0V=0xC0C1 (empty) and the real bounds

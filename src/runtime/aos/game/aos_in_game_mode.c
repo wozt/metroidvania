@@ -14,6 +14,7 @@ void aos_in_game_mode_init(AosInGameMode *mode) {
     mode->unk_37C = 0;
     mode->unk_A074_0 = false;
     mode->unk_A074_1 = true;
+    mode->fade_bldY = 0;
 }
 
 void aos_in_game_mode_enter(AosInGameMode *mode, uint8_t unk_64,
@@ -183,6 +184,55 @@ int aos_area_banner_area(uint16_t cell, bool transition_room,
 
     if ((unk_37C >> area) & 1) return -1;
     return (int)area;
+}
+
+void aos_in_game_mode_transition_fade_begin(AosInGameMode *mode) {
+    /* sub_08010978: unk_64 = 5, unk_65 = 0, unk_66 = 0 (the caller's
+     * enter(..., true) already cleared unk_66) and the blend
+     * registers start the fade from bldY = 0. */
+    mode->fade_bldY = 0;
+}
+
+int aos_in_game_mode_transition_fade_step(AosInGameMode *mode) {
+    switch (mode->unk_65) {
+    case 0:
+        /* unk_A074_2 = unk_A074_4 = 3 (unmodelled bitfield) then
+         * the bldY ramp: +1 every fourth unk_66 count until
+         * BLDY_MAX_VALUE (16); the frame bldY is already max runs
+         * the cleanup tail and advances to stage 1. */
+        if (mode->fade_bldY < 16) {
+            if ((mode->unk_66 & 3) == 0) mode->fade_bldY++;
+            mode->unk_66 = (uint16_t)(mode->unk_66 + 1);
+        } else {
+            mode->unk_65 = 1;
+        }
+        return 0;
+    case 1:
+        /* sub_08010350 + sub_0801083C: the intra-room screen-scroll
+         * commit and map-position recompute. The runtime has no
+         * unk_88->unk_18 screen-transition table; the follow camera
+         * already holds the player centred, so the commit is a
+         * documented no-op and the stage lasts this one frame. */
+        mode->unk_65 = 2;
+        return 0;
+    case 2:
+        /* sub_0803FBBC scroll request + sub_08000F60/sub_0800D288
+         * until BG1's xVel/yVel reach zero. No scroll was issued,
+         * so the velocities are already zero: one frame. */
+        mode->unk_65 = 3;
+        return 0;
+    default: /* unk_65 == 3 */
+        /* unk_66 += 1; every second count bldY -= 1; at zero the
+         * routine restores unk_A074_2/4, unk_65 = 0 and returns 1. */
+        mode->unk_66 = (uint16_t)(mode->unk_66 + 1);
+        if ((mode->unk_66 & 1) == 0 && mode->fade_bldY > 0)
+            mode->fade_bldY--;
+        if (mode->fade_bldY == 0) {
+            mode->unk_65 = 0;
+            return 1;
+        }
+        return 0;
+    }
 }
 
 const char *aos_in_game_mode_case_name(uint8_t unk_64) {

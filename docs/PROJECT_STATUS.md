@@ -1,3 +1,75 @@
+## Patch 1168 - GameModeInGameUpdate cases 5 and 7/8: fade transition and warp-pad chain
+
+- **Scope.** The remaining player-visible `sub_0800B700` dispatch
+  cases with real runtime counterparts: case 5 (`sub_08010978` ->
+  `sub_080106DC`, the Object1F seal-break fade/camera transition)
+  and cases 7/8 (`sub_080115D4` -> `sub_080116A8` picker ->
+  `sub_08011AD0` -> `sub_08011B2C` commit, the castle-map warp-pad
+  chain). Cases 9-14 stay documented-missing (no event/cutscene
+  subsystem, `unk_4CC_6` still has no writer).
+- **Case 5.** `aos_in_game_mode_transition_fade_begin/_step` model
+  the native stage machine on `unk_65`/`unk_66` plus a modeled
+  `gDisplayRegisters.bldY` (`fade_bldY`): stage 0 ramps bldY
+  0 -> 16 one step per four `unk_66` counts, stage 1 (the
+  `sub_08010350`/`sub_0801083C` screen-scroll commit) and stage 2
+  (BG1 velocity settle) collapse to one frame each — no runtime
+  scroll-transition channel exists and the follow camera already
+  holds the player centred — and stage 3 ramps back to 0 one step
+  per two counts before the return-1 tail resumes play. The
+  stage-0 cleanup (`sub_0800FBD8` transient-entity sweep,
+  `sub_0803CCBC`/`sub_0806C354`/`sub_080124A8`, hBlank stop) has no
+  runtime channel and is not modelled. `aria_runtime.c` steps it
+  once per frame in both the SDL and `--simulate` loops while the
+  entity pass continues (native runs `sub_08000B64` first), and
+  composites the modeled bldY as a black veil (weight bldY/16).
+  Object1F's update `seq_end` output latches the case through
+  `poll_object1f_mode_triggers`, matching `sub_08010978`.
+- **Cases 7/8.** New module `src/runtime/aos/game/aos_map_warp.{c,h}`
+  ports the chain: `sUnk_08525FBC` (stride-8 `{s16 map_x, s16 map_y,
+  u32 room record}`, null-pointer terminated) is read live from the
+  verified ROM through the `FusionRom` slice pattern, each entry's
+  destination `(area, room)` decodes from its `sUnk_08116650` castle
+  cell (bits 6-9 / 0-5 — the native room-record pointer is not
+  dereferenced), `unk_378`'s discovered mask sets via the
+  `sub_0804F7A4`-equivalent `aos_map_warp_visit` on every room load,
+  and the picker reproduces `sub_080116A8`'s stage machine including
+  `sub_080114FC`'s UP|LEFT/DOWN|RIGHT discovered-only cursor walk,
+  the B|Select cancel (`unk_3F4 = -1`), the A confirm writing the
+  `sub_08011F44` request `{room, 0, 0, 0x78, 0x80}` and the bldY
+  16 -> 0 -> 16 fade. `sub_08011B2C`'s commit runs as a real room
+  swap: the host loads the destination room folder and places Soma
+  at the request position, mirroring the `unk_88 = unk_3F8` /
+  `sub_0800ECA0(unk_3FC, unk_3FE)` / `sub_0801083C` sequence.
+  Object1F's think `flags_42c_20000` output latches the picker
+  (`sub_080115D4`). Documented divergences: native routes the
+  Object1F warp through the think's state 4 because the case-7 tail
+  takes the `unk_42C & 0x20000` abort — the runtime performs the
+  identical commit through the case-8 model since the think's
+  commit outputs have no channel; the `sub_08002324` cursor sprite
+  is approximated by corner brackets over the quick map's castle
+  render; case 8's own fade registers are not modelled (three
+  frames); `sub_08011AD0`'s other callers (Object15/Object16 door
+  branches, link-sync) stay unported; without `--rom` the table
+  never loads and the picker frame never latches.
+- **Dispatch correctness.** Cases 7/8 consume the frame before the
+  entity pass like native (neither runs `sub_08000B64`), the
+  `unk_A074_0` banner freeze and the SELECT/START menu edges and the
+  exit check are now guarded to `unk_64 == PLAY` so case 5/7/8
+  cannot trigger them, and `warp_room_discovery`/`poll_object1f_
+  mode_triggers` run in both loops after `update_entities` like the
+  native `sub_08000B64` ordering.
+- **Evidence.** `tests/test_aos_map_warp.c` fabricates a bounded
+  `FusionRom` (three table records + castle cells) and covers the
+  table decode, `sub_0804F7A4` discovery, picker begin/cursor/cancel/
+  confirm request fields, the commit BUSY/LOAD/DONE sequence and the
+  overlay; `tests/test_aos_in_game_mode.c` covers the case-5 stage
+  walk (~95 calls to the return-1 frame), the fade latch and the
+  existing lock predicates. No native comparison capture exists for
+  the picker or the fade yet — statuses stay partial, not faithful.
+- **Validation.** warning-clean build; `fusion_aos_map_warp_tests`
+  and `fusion_aos_in_game_mode_tests` pass; full cycle results in
+  the commit message.
+
 ## Patch 1167 - enemy +0x5C draw bands decoded and interleaved with layered BG priorities
 
 - **Gap.** Patch 1159 interleaved the layered BG draw with the
@@ -264,18 +336,15 @@
   (castle cell `0x0003`), and the position holds for exactly frames
   248-436 — 189 frozen frames — after the stage-3 restore, matching
   the native stage counts (31 + 61 + 96 + 1).
-- **Still missing.** Cases 5 (`sub_080106DC` via `sub_08010978`),
-  7/8 (`sub_080116A8` warp-pad picker + `sub_08011AD0`/`sub_08011B2C`
-  warp room swap — need the `sUnk_08525FBC` destination table, the
-  BG0 castle-map display and the `unk_3F8`/`unk_3FC`/`unk_3FE` warp
-  context) and 9-14 (`sub_0805AFC0`, `sub_0800CA98` credits, the
-  `unk_66`-timed `unk_4CC_6` chain polled by `sub_080D7F28`/
-  `sub_080D7F48`) have no runtime counterpart; `unk_4CC_6` has no
-  writer; the banner's WIN0 strip/hBlank fade and the
-  `sub_0800FDC8`/`sub_08010144` display work are not composited; the
-  `room_music.tsv` flag row is OR-ed over a room's cells where the
+- **Still missing.** Cases 9-14 (`sub_0805AFC0`, `sub_0800CA98`
+  credits, the `unk_66`-timed `unk_4CC_6` chain polled by
+  `sub_080D7F28`/`sub_080D7F48`) have no runtime counterpart;
+  `unk_4CC_6` has no writer; the banner's WIN0 strip/hBlank fade and
+  the `sub_0800FDC8`/`sub_08010144` display work are not composited;
+  the `room_music.tsv` flag row is OR-ed over a room's cells where the
   native checks the single anchor cell; without `--rom` the banner
-  never arms (no castle table).
+  never arms (no castle table). (Cases 5 and 7/8 were ported later —
+  see Patch 1168.)
 - Validation: warning-clean build, `fusion_dashboard --run-tests`
   228 passed / 0 failed and `fusion_check_generated` fresh in this
   cycle.

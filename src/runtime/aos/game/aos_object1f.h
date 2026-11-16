@@ -53,9 +53,12 @@
  *  - state >= 2 is inert.
  *
  * Approximations: the gDisplayRegisters writes stay outputs, the
- * sub_08068AD4 probe geometry, the + 0x88/+ 0x3F8 record compare,
- * the + 0x3F4 sequence byte and the stage-7 game-mode sequence
- * (sub_080115D4/sub_080116A8) have no runtime channel.
+ * sub_08068AD4 probe geometry, the + 0x88/+ 0x3F8 record compare
+ * and the + 0x3F4 sequence byte have no runtime channel. The
+ * stage-7 game-mode sequence is wired: seq_end latches case 5
+ * (sub_08010978 -> sub_080106DC) and flags_42c_20000 latches the
+ * case-7 picker (sub_080115D4 -> sub_080116A8) through
+ * poll_object1f_mode_triggers in aria_runtime.c / aos_map_warp.
  *
  * record_state channel (resolved): the "slot record" the
  * children index at gEwramData + 0x4E4 + slot * 132 IS the

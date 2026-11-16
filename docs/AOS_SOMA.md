@@ -627,8 +627,11 @@ and `aos_in_game_mode_locks_input` reproduces the per-frame
 `SetPlayerInput(1, 0)` predicate; `aria_runtime.c` latches case
 3 from the `sub_080104EC` stage machine, case 4 from the SELECT quick map
 (with `unk_65` tracking the native stage numbering: open fade = 1, idle
-map = the stage-2 B|Select wait, close ramp = 3) and case 6 from the
-START soul menu, then applies the lock through `aos_input_set_player` so
+map = the stage-2 B|Select wait, close ramp = 3), case 6 from the
+START soul menu, case 5 from Object1F's update `seq_end`
+(`sub_08010978`) and cases 7/8 from its think `flags_42c_20000`
+(`sub_080115D4`) plus the picker's confirm (`sub_08011AD0`-equivalent
+commit), then applies the lock through `aos_input_set_player` so
 only the player words are masked.
 
 The ~130-frame post-commit suppression is now identified: it is not a
@@ -662,14 +665,47 @@ the WIN0 banner strip itself is not composited). Verified in
 4` reading was a misattribution — the measured window runs under
 `unk_64 == 1`; case 4 (`sub_080110E4`) is only reachable through the
 SELECT edge, which `unk_A074_1 = 0` blocks for the whole banner.
-Cases 5, 7, 8 and 9-14 still have no runtime counterpart:
-`sub_08010978` (case 5, the `sub_080106DC` fade transition) and
-`sub_080115D4`/`sub_080116A8`/`sub_08011AD0`/`sub_08011B2C` (cases 7/8,
-the warp-pad map picker `unk_3F4` cursor and the warp-room room swap,
-entered from the `code_08050A3C` event module) require the warp
-destination table `sUnk_08525FBC`, the BG0 castle-map display and the
-`unk_3F8`/`unk_3FC`/`unk_3FE` warp context none of which exist here;
-cases 9-14 are the `unk_66`-timed cutscene/`unk_4CC_6` event chain
+Cases 5, 7 and 8 are now ported. Case 5 (`sub_08010978` ->
+`sub_080106DC`, the Object1F seal-break fade) runs
+`aos_in_game_mode_transition_fade_step` on the same `unk_65`/`unk_66`
+cadence: `bldY` ramps 0 -> `BLDY_MAX_VALUE` one step per four `unk_66`
+counts, the stage-1 `sub_08010350`/`sub_0801083C` screen-scroll commit
+and the stage-0 entity/effect cleanup have no runtime channel and
+collapse to single frames (the follow camera already holds the player
+centred), then `bldY` ramps back to 0 one step per two counts and the
+routine's return-1 tail writes `unk_64 = 1`. The modeled `bldY`
+composites as a black veil (weight `bldY/16`) over the still-updating
+room — native runs `sub_08000B64` before the routine every frame, so
+the entity pass continues. Cases 7/8 are the warp-pad chain
+`sub_080115D4` -> `sub_080116A8` -> `sub_08011AD0` -> `sub_08011B2C`,
+ported in `src/runtime/aos/game/aos_map_warp.{c,h}`: the
+`sUnk_08525FBC` table (stride-8 `{s16 map_x, s16 map_y, u32 room
+record}` records, null-pointer terminated) and the `sUnk_08116650`
+castle cells are read live from the verified ROM, each warp room's
+`(area, room)` decodes from its cell's bits 6-9/0-5, `unk_378`'s
+discovered mask sets through the `sub_0804F7A4`-equivalent
+`aos_map_warp_visit` on every room load, and the picker reproduces
+the stage machine (bldY 16 -> 0 map reveal, `sub_080114FC`'s
+UP|LEFT/DOWN|RIGHT discovered-only cursor walk, B|Select cancel ->
+`unk_3F4 = -1`, A -> the `sub_08011F44` request `{room, 0, 0, 0x78,
+0x80}`). Confirming commits through the case-8 stage model: the host
+performs the `unk_88 = unk_3F8` / player-position /
+`sub_0800ECA0(unk_3FC, unk_3FE)` / `sub_0801083C` room swap as a real
+`take_exit`-style load into the destination room at (0x78, 0x80).
+Native routing note: the only shipped picker opener is Object1F's
+think (`sub_08055748`), which sets `unk_42C` bit `0x20000` on the
+`sub_080115D4` frame — `GameModeInGameUpdate`'s case-7 tail then
+takes the `unk_3F4 < 0`/`0x20000` branches to `unk_64 = 1` and the
+warp commits inside the think's state 4 instead of case 8; the
+runtime performs the identical `unk_88`/`sub_0800ECA0` sequence
+through the case-8 model because the think's commit outputs have no
+channel (documented divergence). The picker's `sub_08002324` cursor
+sprite is approximated by corner brackets over the quick map's castle
+render, and the other `sub_08011AD0` callers (Object15/Object16 door
+branches, the link-sync path) stay unported. Without `--rom` the
+table never loads and Object1F's picker frame simply never latches —
+the same absent-`unk_88`-data situation as native. Cases 9-14 remain
+unported: they are the `unk_66`-timed cutscene/`unk_4CC_6` event chain
 (`sub_0805AFC0`, `sub_0800CA98` credits, and the 11->12->13->14 chain
 polled by `sub_080D7F28`/`sub_080D7F48`) whose writers and completion
 subsystem are unported, and `unk_4CC_6` still has no writer. The

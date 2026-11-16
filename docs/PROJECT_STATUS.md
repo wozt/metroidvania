@@ -1,3 +1,59 @@
+## Patch 1165 - pause-menu OBJ-layer audit closes the remaining element gaps
+
+- **Finding.** Every `sub_08048804`/`sub_080488FC` icon-entity spawn in
+  the pause page state machines was traced call-site by call-site, and
+  the Enemy page routines (`sub_0804C668`/`sub_0804C770`/`sub_0804C8A4`/
+  `sub_0804C968`/`sub_0804CA18`/`sub_0804CA9C`/`sub_0804CDF4`/
+  `sub_0804CFE8`/`sub_0804D0D0`/`sub_0804D1DC`/`sub_0804D2C8`/
+  `sub_0804D768`) contain none. The audit resolves each previously
+  documented gap:
+  - **Item Use icons.** `sub_0804B6C4`/`sub_0804B808` each rebuild
+    exactly one `sub_08048804` entity for the selected item at pixel
+    anchor `(0x1C,0x94)`; `sub_0804B494` emits names and quantities
+    only. Its `sub_0804090C` call is the windowed-text engine's
+    dirty-rect commit into `gEwramData+0x115B2` (x/6, x%6 tile
+    coordinates), not an icon descriptor — native shows no per-slot
+    icons, matching the port. An earlier registry note claiming
+    per-slot icons is corrected.
+  - **Title/frame strips.** Soul Set, Equip, Ability and Config page
+    chrome is decoded BG0 tilemap output (`sub_08046DD4`/`sub_080471E4`
+    strip writes inside the page init routines); no OBJ banner exists.
+  - **Soul Set / Equip icons and markers.** Soul Set spawns no icon
+    entities — equipped and listed souls are BG0 text. Equip spawns
+    the three equipped icons via `sub_0804A0B4` -> `sub_080488FC` and
+    rebuilds the selected preview via `sub_08048804`; the stat
+    comparison arrows are BG0 tiles (`put_comparison` 0x34A-0x34C).
+    All are already drawn by `aos_pause_graphics`.
+  - **Enemy soul message window.** The detail page's bottom band is
+    BG0: `sub_0804D1DC` -> `sub_08047330` prints the soul/description
+    text (id bases 0x1E3/0x21B/0x233/0x256+soul, 0x34F for none)
+    through the cell engine; drop/soul grids are `sub_0804CDF4`/
+    `sub_0804D768` tile strips with `SoulInventory_GetSoulTotal`
+    ownership gating. Already ported; there is no separate OBJ window.
+  - **Cursor variants.** One hand entity family only: `sub_08048AD8`
+    anchors it per page, `sub_08048B0C`/`sub_08048C74` pick the
+    per-language sheet, and `entity+0x65` selects within a single
+    animation — no per-page frames, palettes or flips
+    (`sub_08048BC4`'s bit is the icon-overlay hand-hide flag).
+- **Port.** Documentation-only: a routine-by-routine OBJ inventory
+  comment now sits above `draw_icon` in `aos_pause_graphics.c`. No
+  renderer behaviour changed; every steady-state OBJ element the audit
+  found is already ported.
+- **Still missing (documented, transient or infrastructure-bound).**
+  `sub_0804875C`'s 16-step affine press animation on the hand
+  (entity `+0x24` modes), the Soul Set L/R category-transition second
+  hand (`sub_08048108` state machine, `sub_080486E0` trigger,
+  `sub_0804933C` per-category palette/anim swap) and the Enemy
+  portrait entity's per-enemy update (`sub_0804CA18` stores the enemy
+  record's `+4` update, e.g. `0x080AD645`; the port keeps the frame
+  the create leaves, matching `EntityUpdateNothing`-style statics only
+  by approximation). Icon entities natively resolve frames through
+  `sub_08044E94`/`sub_08044EDC`/`sub_08044F24` plus the `+0x36`
+  palette selector; the port's fixed 16x16 sheet blit matches the
+  captured simple icons but is not a general OAM compositor.
+- Validation: warning-clean build, `ctest`/`fusion_dashboard
+  --run-tests` and `fusion_check_generated` in this cycle.
+
 ## Patch 1164 - sub_08047764 pause fade state machine and START-inside-pages correction
 
 - **Finding.** `sub_08047764` (the case-6 soul/pause menu update) owns a

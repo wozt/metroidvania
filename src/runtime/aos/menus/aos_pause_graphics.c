@@ -345,6 +345,33 @@ static void draw_cursor(const AosPauseGraphics *graphics, uint8_t *rgba,
     }
 }
 
+/* Pause-menu OBJ-layer audit (Patch 1165). Every sub_08048804/
+ * sub_080488FC spawn call in the page state machines was traced:
+ *  - Item Use: sub_0804B6C4/sub_0804B808 each rebuild exactly ONE icon
+ *    entity at pixel anchor (0x1C,0x94); sub_0804B494 emits names and
+ *    quantities only, so native shows no per-slot icons. Ported below.
+ *  - Equip: sub_0804A95C -> sub_0804A0B4 spawns the three equipped
+ *    icons through sub_080488FC and sub_0804A00C/sub_0804AAF0 rebuild
+ *    the selected preview through sub_08048804. Ported below.
+ *  - Soul Set, Ability, Config, Sleep, hub and the Enemy list/detail:
+ *    no icon spawn calls at all — their content is BG0 tile/text plus
+ *    the hand cursor; the enemy detail's drop/soul grids are BG0
+ *    strips (sub_0804CDF4/sub_0804D768 -> sub_08046DD4) and its
+ *    description/soul band is sub_0804D1DC -> sub_08047330 text.
+ *  - Title/frame strips on every page come from the decoded BG0
+ *    tilemap, not OBJ.
+ *  - The hand is a single entity family: sub_08048AD8 anchors it,
+ *    sub_08048B0C/sub_08048C74 pick the per-language sheet, and the
+ *    entity+0x65 argument selects within one animation (no per-page
+ *    frames); sub_08048BC4's flag is the icon-overlay hand-hide bit,
+ *    not a flip. Remaining native-only OBJ behaviour is transient:
+ *    sub_0804875C's 16-step affine press animation (entity+0x24), the
+ *    Soul Set L/R category-transition hand (sub_08048108 state machine
+ *    + sub_080486E0 trigger + sub_0804933C palette/anim swap) and the
+ *    Enemy portrait entity's per-enemy update (sub_0804CA18 stores the
+ *    record's +4 update, e.g. 0x080AD645; the port keeps the frame the
+ *    create leaves). None of these are steady-state elements. */
+
 /* sub_08048804/sub_080488FC's icon entity: icon n is the 16x16 block
  * (n-1)%64 of sheet (n-1)/64 (eight icons per row of 16 px), sampled
  * from the 4bpp sheets loaded at init and painted with palette bank 2

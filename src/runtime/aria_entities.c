@@ -214,12 +214,24 @@ static uint8_t object20_ewram_427;
  * room loop, which stores it on in_game_mode.unk_A074_1 — the
  * byte case 1's SELECT/START menu edges gate on. Ported
  * reporters: the Object20 families (out->c5a8/dirs/story/slots),
- * the Object00 door, Object15, Object16 and Object1F (update,
- * think and children). Still unported: the Object10 sub_08050F1C
- * callback, the sub_0805B66C/sub_0805B6E4/sub_0805B718 entity
- * release family, the level-up display routines
- * sub_08045454/sub_08045654 (draw-pass, covered by the
- * unk_A074_0 freeze instead) and every enemy caller. */
+ * the Object00 door, Object15, Object16, Object1F (update,
+ * think and children), Object10's drawFunc write (applied after
+ * the entity loop, matching the native draw-pass ordering),
+ * sub_08021654's lethal-damage write and the ported enemy state
+ * machines' entry writes (Graham's sub_080D26A8 state 1).
+ * The sub_0805B66C release calls inside the ported Object20
+ * update paths need no separate report: the routine writes
+ * sub_0800C5A8(1) mid-update but the shared Object20Update
+ * tail (update_tail / the folded per-family tails) writes
+ * sub_0800C5A8 last on the same frame, so the release value
+ * is always overwritten before the room loop reads it.
+ * Still unported: the sub_0805B6E4/sub_0805B718 callback-table
+ * routines (no direct callers in the recompilation), the
+ * level-up display routines sub_08045454/sub_08045654
+ * (draw-pass during the unk_A074_0 freeze — their writes
+ * cannot reach the store, which the freeze gates) and the
+ * enemy callers whose native sites map to unported state
+ * machines or unmodelled gate globals. */
 static int8_t c5a8_pending = -1;
 /* gEwramData bgInfo[4] scroll state (+0xA078): the ported
  * sub_0803FBBC/sub_08000F60/sub_0800D288 behind every
@@ -2486,6 +2498,13 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
      * last frame's report into the room loop's store. */
     c5a8_pending = -1;
     int sound = 0;
+    /* Object10's create installs sub_08050F1C as the entity
+     * drawFunc; it writes sub_0800C5A8(0) on every invocation.
+     * The port does not instantiate the drawFunc slot, so the
+     * write is applied after the entity loop instead — the
+     * draw pass runs after every update natively, which makes
+     * it the last writer of the frame. */
+    bool object10_draw_armed = false;
     /* unk_A074_0: while the level-up display's counter sits in
      * [2, 0x3C], the native entity update loop is suspended; the
      * display and its sparkles are drawFunc-driven and keep running. */
@@ -2664,9 +2683,27 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 else
                     e->enemy.follow = e->enemy.parent;
             }
+            const int pre_enemy_state = e->enemy.state;
             AosHitReport hit = aos_enemy_update(&e->enemy, soma, layer, kind, combat->weapon,
                                                 combat->weapon_frames, combat->player->atk,
                                                 combat->player->def, cam_x, cam_y, aos_random);
+            /* sub_08021654's lethal branch calls sub_0800C5A8(0)
+             * inside the damage routine; every ported damage path
+             * funnels through aos_soma_take_elemental_hit during
+             * this update, so a hit that leaves Soma at 0 HP
+             * reports at the same slot in entity order (repeated
+             * hits while dead re-write 0 like the native calls). */
+            if (hit.soma_damage > 0 && soma->hp <= 0)
+                c5a8_pending = 0;
+            /* sub_080D26A8 (Graham's state-1 partner machine)
+             * writes sub_0800C5A8(0) at routine entry — every
+             * frame the conductor dispatches state 1. The clone
+             * and core children run their own unported callbacks
+             * and are excluded by role. */
+            if (e->id == AOS_ENEMY_GRAHAM && pre_enemy_state == 1 &&
+                e->enemy.role != AOS_ROLE_GRAHAM_CLONE &&
+                e->enemy.role != AOS_ROLE_GRAHAM_CORE)
+                c5a8_pending = 0;
             if (hit.targetable) homing_register((int)i);
             /* EnemyImpUpdate calls SetPlayerInput(1, B/0) on alternating
              * frames while its linked helper controls Soma. As with doors,
@@ -3261,6 +3298,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             uint8_t before = e->object10.state;
             aos_object10_update(&e->object10,
                                 near && (input->held & AOS_KEY_UP) != 0);
+            /* sub_08050F1C (the create-installed drawFunc) writes
+             * sub_0800C5A8(0) every draw; armed here and applied
+             * after the entity loop like the native draw pass. */
+            object10_draw_armed = true;
             if (before == 1 && e->object10.state == 2)
                 printf("Object10 %zu: save sequence committed (item 0x%X)\n",
                        i, e->object10.item_id);
@@ -4870,6 +4911,11 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             c5a8_pending = 1;
         if (played) sound = played;
     }
+    /* The drawFunc-order write: sub_08050F1C's sub_0800C5A8(0)
+     * lands after every entity update natively, so it is the
+     * frame's last writer while a save statue is active. */
+    if (object10_draw_armed)
+        c5a8_pending = 0;
     /* The blink pattern 0x08118CE0, shared by every enemy kind. */
     const uint8_t *blink = NULL;
     for (int id = 0; id < ENEMY_KINDS && !blink; ++id)

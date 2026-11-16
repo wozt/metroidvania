@@ -1,3 +1,81 @@
+## Patch 1180 - sub_0800C5A8 audit completed: Object10 draw-write, lethal damage and Graham state-1 wired; release family proven shadowed
+
+- **Item 1 — remaining caller audit (`aria_entities.c`).** Every
+  `sub_0800C5A8` call site in the recompilation was re-audited to
+  its owning routine, argument and timing, and the reachable ones
+  now report through the existing `c5a8_pending` channel in
+  native entity order:
+  - **Object10 `sub_08050F1C`**: the create-installed drawFunc
+    writes `sub_0800C5A8(0)` on every invocation. The drawFunc
+    slot stays uninstantiated, so the entity pass arms a flag
+    during the Object10 update and applies `c5a8_pending = 0`
+    after the entity loop — the native draw pass runs after all
+    updates, making it the frame's last writer. Frozen passes
+    cannot deliver it (the `unk_A074_0` store gate), matching
+    the level-up display's own unmodelled draw writes.
+  - **`sub_08021654` (player damage)**: its lethal branch calls
+    `sub_0800C5A8(0)` after `unk_42C |= 0x10` and
+    `sub_08021E50(7)`. Every ported damage path funnels through
+    `aos_soma_take_elemental_hit` inside `aos_enemy_update`, so
+    a hit report with `soma_damage > 0` leaving `soma->hp <= 0`
+    writes 0 at the same entity slot; repeated hits while dead
+    re-write 0 like the native calls. The branch's native
+    `unk_A074_0` clear is not modelled (documented).
+  - **Enemy callers**: enemy updates dispatch centrally through
+    `aos_enemy_update`, so ported native sites report via
+    entity-state inspection at the same slot — Graham's
+    `sub_080D26A8` state-1 partner machine writes
+    `sub_0800C5A8(0)` at routine entry (every frame the
+    conductor dispatches state 1; the clone/core children run
+    their own unported callbacks and are excluded by role).
+- **Item 2 — release family reachability proven.** Native
+  `sub_0805B66C(entity, arg)` calls `sub_0800C5A8(1)`
+  unconditionally at entry, and every ported call site sits
+  inside an Object20 update routine dispatched by
+  `sub_080DA7A4` — after which the shared `Object20Update` tail
+  (`0x0805B5A2`..`0x0805B5E2`) writes `sub_0800C5A8(0 or 1)`
+  keyed on `+0x42C` bit 0 on the same frame. The port already
+  folds that tail into `update_tail`/the per-family tails, so
+  the release write is always overwritten before the room loop
+  reads `unk_A074_1`; no separate report is needed or correct.
+  `sub_0805B6E4` (window-open + `sub_0800C5A8(0)`) and
+  `sub_0805B718` (flag clear + `sub_0800C5A8(1)` + anim step)
+  have no direct callers in the recompilation — callback-table
+  routines with no ported instantiation.
+- **Item 3 — level-up display verified.** `sub_08045454`/
+  `sub_08045654`'s `sub_0800C5A8(0/1)` calls run inside the
+  drawFunc-driven display whose counter span `[2, 0x3C]` is
+  exactly the `unk_A074_0` freeze; the entity pass (and this
+  channel's store) is suspended for the whole span, so the
+  writes are covered by the freeze rather than needing a
+  draw-pass channel. Residual gap: a write landing on a
+  non-frozen edge frame would not reach
+  `in_game_mode.unk_A074_1` — documented, not observed.
+- **Item 4 — remaining enemy sites documented, not ported.**
+  `sub_080BE414` (Death state-0 intro: arg-0 gated entry,
+  arg-1 strike-arm), `sub_080CFAB0`/`sub_080CFB08`/`sub_080CFD10`
+  (Belmont create and unported param0-1 states), `sub_080B6880`
+  (Balore's uninstantiated 12-state sub-machine),
+  `sub_080B6DEC`'s no-fade step-5 branch (Chronomage; gate
+  globals unmodelled), `sub_080D243C`/`sub_080D2E1E`/
+  `sub_080D3040`/`sub_080D6B0C`/`sub_080D7378` (Graham child
+  callbacks, transient gore and an unassigned routine) have no
+  ported state-machine equivalent to hang the report on;
+  `sub_0805632C` remains verified dead code.
+- **Verification.** Full build clean; `fusion_dashboard
+  --run-tests` run for the cycle (the new paths are exercised
+  through `update_entities` inside `fusion_aria_runtime`; the
+  reporters are integration-level by design).
+- **Registries.** `annotations.tsv` updated:
+  `aos.objects.save_statue` (draw-order write),
+  `aos.player.soma_controller` (lethal write + unmodelled
+  `unk_A074_0` clear), `aos.enemies.graham` (state-1 write +
+  remaining sites), `aos.enemies.balore`, `aos.enemies.death`,
+  `aos.enemies.belmont`, `aos.enemies.chronomage` (unported
+  sites named) and `aos.input.gamepad` (channel scope +
+  release-shadowing note). Statuses unchanged — no emulator
+  comparison.
+
 ## Patch 1179 - Creaking Skull container records ported: cs_rec[13], orbit math and the bone ride
 
 - **Records (`aos_enemy.h`, `creaking_skull.c`).** The previous

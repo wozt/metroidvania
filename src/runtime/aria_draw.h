@@ -57,9 +57,13 @@ void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObject
 void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                           const AriaObjects *objects, int cam_x, int cam_y,
                           unsigned step, int prio_slot);
-/* Object20's first-room actors (sub_0805D198's Mina/Arikado/skeleton). */
+/* Object20's first-room actors (sub_0805D198's Mina/Arikado/skeleton).
+ * `prio_slot` is the native OBJ-priority interleave slot (0 front ..
+ * 3 back); pass -1 for the front pass, which takes every element
+ * whose retained +0x5C band did not resolve. */
 void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
-                         const AosOpeningActors *actors, int cam_x, int cam_y);
+                         const AosOpeningActors *actors, int cam_x, int cam_y,
+                         int prio_slot);
 /* Per-actor animation durations in ticks for the opening actors. Also
  * (re)binds each actor's flattened {entry,ticks} sequences into
  * actors->anim_seqs — and the emitted Skeleton Knight children's into

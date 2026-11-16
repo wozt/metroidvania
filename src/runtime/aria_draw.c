@@ -949,12 +949,24 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
 /* Object20's first-room actors are ordinary object entities, not enemies.
  * sub_0805D198 starts Mina at animation 4, Arikado at animation 1 and the
  * distant winged skeleton at animation 4. The compact actor controller keeps
- * their fixed-point positions; the later callback branches remain a follow-up. */
+ * their fixed-point positions; the later callback branches remain a follow-up.
+ * `prio_slot` is the native OBJ-priority interleave slot (0 front .. 3
+ * back) the caller is painting: sub_0805B5E8 stamps every child +0x5C =
+ * 0x11 (parameter-bit-2 Skeleton Knights get 0x17 from sub_0805E528),
+ * debris copies its parent's band, sub_0806D578 flames draw at band-1,
+ * soul orbs and sub_0805ED80 bolts carry 0x13 and sub_08045B44 type-8
+ * sparkles 0x0C — pass -1 for the front pass, which takes every element
+ * whose band did not resolve (the layered path down or a band outside
+ * the native 0x00-0x1F range). */
 void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
-                                const AosOpeningActors *actors, int cam_x, int cam_y) {
+                                const AosOpeningActors *actors, int cam_x,
+                                int cam_y, int prio_slot) {
     if (!actors) return;
     for (int actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor) {
         if (!actors->visible[actor]) continue;
+        int band_prio = aria_bg_band_priority(0x11);
+        if (prio_slot >= 0 ? band_prio != prio_slot : band_prio >= 0)
+            continue;
         const __typeof__(objects->opening_actors[0]) *art = &objects->opening_actors[actor];
         int animation = actors->animation[actor];
         /* The export keeps OBJECT_MAX_ANIMS slots; the wider
@@ -995,6 +1007,13 @@ void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
     for (unsigned actor = 0; actor < actors->emitted_count; ++actor) {
         const AosOpeningEntity *entity = &actors->emitted[actor];
         if (!entity->active || entity->hidden) continue;
+        const uint8_t entity_band =
+            entity->entity_type == 10 && (entity->parameter & 4)
+                ? 0x17
+                : 0x11;
+        int band_prio = aria_bg_band_priority(entity_band);
+        if (prio_slot >= 0 ? band_prio != prio_slot : band_prio >= 0)
+            continue;
         /* Type 8 draws Enemy/opening_actor_8 (the actor slot-2 export)
          * and type 10 draws the Skeleton Knight enemy art; both carry
          * exported {frame,ticks} rows, so a bound sequence selects the
@@ -1057,6 +1076,12 @@ void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
     for (unsigned piece = 0; piece < actors->debris_count; ++piece) {
         const AosOpeningDebris *debris = &actors->debris[piece];
         if (!debris->active) continue;
+        /* sub_0805E8C8/sub_0805E9F0 copy the dying entity's +0x5C band
+         * onto each piece; every debris source here is a band-0x11
+         * type-8 body. */
+        int band_prio = aria_bg_band_priority(0x11);
+        if (prio_slot >= 0 ? band_prio != prio_slot : band_prio >= 0)
+            continue;
         const __typeof__(objects->enemies[0]) *art =
             &objects->enemies[debris->source_type == 8
                                   ? AOS_ENEMY_WINGED_SKELETON
@@ -1083,6 +1108,10 @@ void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
         for (unsigned index = 0; index < actors->flame_count; ++index) {
             const AosOpeningFlame *flame = &actors->flames[index];
             if (!flame->active) continue;
+            int band_prio = aria_bg_band_priority(flame->band);
+            if (prio_slot >= 0 ? band_prio != prio_slot
+                               : band_prio >= 0)
+                continue;
             unsigned age = flame->age % flame_total;
             unsigned frame = 0;
             while (frame + 1 < flame_art->def.count &&
@@ -1111,6 +1140,11 @@ void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
         for (unsigned index = 0; index < actors->projectile_count; ++index) {
             const AosOpeningProjectile *projectile = &actors->projectiles[index];
             if (!projectile->active) continue;
+            /* sub_0805ED80 stamps the bolt's +0x5C with 0x13. */
+            int band_prio = aria_bg_band_priority(0x13);
+            if (prio_slot >= 0 ? band_prio != prio_slot
+                               : band_prio >= 0)
+                continue;
             unsigned age = projectile->animation_age % projectile_total;
             unsigned frame = 0;
             while (frame + 1 < projectile_art->def.count &&
@@ -1134,6 +1168,10 @@ void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
     for (unsigned index = 0; index < actors->spark_count; ++index) {
         const AosOpeningSpark *spark = &actors->sparks[index];
         if (!spark->active || spark->kind >= AOS_EFFECT_KINDS) continue;
+        /* sub_08045B44 stamps the type-8 sparkle's +0x5C with 0x0C. */
+        int band_prio = aria_bg_band_priority(0x0C);
+        if (prio_slot >= 0 ? band_prio != prio_slot : band_prio >= 0)
+            continue;
         const __typeof__(objects->effects[0]) *art =
             &objects->effects[spark->kind];
         if (spark->entry >= art->def.count) continue;

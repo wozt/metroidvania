@@ -17,9 +17,11 @@ enum {
     AOS_OPENING_SOMA_X = 0xA8,
     AOS_OPENING_SOMA_Y = 0x2C0,
     /* Object20's actor table places Mina, Arikado and the distant winged
-     * skeleton at these world coordinates before the dialogue starts. */
+     * skeleton at these world coordinates before the dialogue starts.
+     * sub_0805D198 writes record-0 child's +0x42 as the player's own
+     * +0x42 minus 0x18 — Mina stands one step left of Soma. */
     AOS_OPENING_ACTOR_COUNT = 3,
-    AOS_OPENING_MINA_X = 0xA8,
+    AOS_OPENING_MINA_X = 0x90,
     AOS_OPENING_MINA_Y = 0x2C0,
     AOS_OPENING_ARIKADO_X = 0x119,
     AOS_OPENING_ARIKADO_Y = 0x2C0,
@@ -201,6 +203,9 @@ typedef struct {
     int32_t y;
     uint8_t age;
     uint8_t timer;
+    /* sub_0806D578's third argument is the dying entity's +0x5C band
+     * minus one — the OAM priority band the flame draws at. */
+    uint8_t band;
     bool active;
     bool mirrored;
 } AosOpeningFlame;

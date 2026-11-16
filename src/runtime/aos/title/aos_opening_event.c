@@ -728,13 +728,23 @@ static const uint8_t opening_death_blink[40] = {
     0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
 };
 
-/* sub_0806D578(x, y, priority): one flame at the death point, mirrored at
- * random like the ported enemy path. */
+/* sub_0805B5E8 stamps every Object20 child's +0x5C draw band with
+ * 0x11; sub_0805E528 overwrites a parameter-bit-2 Skeleton Knight's
+ * band with 0x17. The three story actors keep 0x11. */
+static uint8_t emitted_band(const AosOpeningEntity *entity) {
+    return entity->entity_type == 10 && (entity->parameter & 4)
+               ? 0x17
+               : 0x11;
+}
+
+/* sub_0806D578(x, y, priority): one flame at the death point, mirrored
+ * at random like the ported enemy path. The priority argument is the
+ * dying entity's +0x5C band minus one. */
 static void append_opening_flame(AosOpeningActors *actors, int32_t x,
-                                 int32_t y) {
+                                 int32_t y, uint8_t band) {
     if (actors->flame_count >= AOS_OPENING_FLAME_CAPACITY) return;
     actors->flames[actors->flame_count++] = (AosOpeningFlame){
-        .x = x, .y = y, .timer = 0x20, .active = true,
+        .x = x, .y = y, .timer = 0x20, .band = band, .active = true,
         .mirrored = actors->random
                         ? (actors->random(actors->motion_context) & 1) != 0
                         : false,
@@ -764,7 +774,8 @@ static void begin_skeleton_death(AosOpeningActors *actors) {
         .mirrored = true,
     };
     append_debris(actors, &body, 7);
-    append_opening_flame(actors, actors->x[2], actors->y[2] - 0x60000);
+    append_opening_flame(actors, actors->x[2], actors->y[2] - 0x60000,
+                         0x10);
     actors->skeleton_death = 0x28;
 }
 
@@ -776,7 +787,7 @@ static void update_skeleton_death(AosOpeningActors *actors) {
     actors->visible[2] = timer > 0x27 || !(opening_death_blink[timer] & 1);
     if ((timer & 3) == 0)
         append_opening_flame(actors, actors->x[2],
-                             actors->y[2] - 0x60000);
+                             actors->y[2] - 0x60000, 0x10);
     if (--actors->skeleton_death == 0) actors->visible[2] = false;
 }
 
@@ -860,7 +871,8 @@ static void finish_emitted(AosOpeningActors *actors, AosOpeningEntity *entity,
                            bool projectile) {
     if (emitted_in_impact_margin(actors, entity)) {
         entity->events |= AOS_OPENING_ENTITY_EVENT_SOUND_0X6B;
-        append_opening_flame(actors, entity->x, entity->y);
+        append_opening_flame(actors, entity->x, entity->y,
+                             (uint8_t)(emitted_band(entity) - 1));
         if (entity->entity_type == 8) {
             entity->events |= AOS_OPENING_ENTITY_EVENT_DEBRIS;
             append_debris(actors, entity, 7);

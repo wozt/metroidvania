@@ -1,3 +1,52 @@
+## Patch 1190 - opening scene: actor z-bands, Mina offset, Soma pose step, end-of-dialogue ambient
+
+- **Fix.** Four opening-scene divergences resolved against the native
+  disassembly and mGBA memory reads:
+  - *Z-order.* `sub_0805B5E8` stamps every Object20 child's `+0x5C`
+    with `0x11` (`sub_0805E528` overwrites parameter-bit-2 Skeleton
+    Knights with `0x17`), debris copies its parent's band,
+    `sub_0806D578` flames draw at band-1, `sub_0805EAFC`'s soul orb
+    and `sub_0805ED80` bolts carry `0x13` and `sub_08045B44` type-8
+    sparkles `0x0C`; Soma's player record keeps `0x0E`. The port's
+    `draw_opening_actors` took no priority slot and painted as a
+    flattened overlay after the OBJ interleave, so the actors always
+    covered Soma. It now takes `prio_slot` like `draw_enemies` and
+    every element resolves its band through `aria_bg_band_priority`
+    inside the runtime's p-loop (per-element `AosOpeningFlame.band`
+    records the native `entity+0x5C - 1` flame priority); the `-1`
+    front pass only takes unbanded elements.
+  - *Actor position.* `sub_0805D198` writes record-0 child's `+0x42`
+    as the player's own `+0x42` minus `0x18` — Mina stands one step
+    left of Soma. The port had her at Soma's coordinate
+    (`AOS_OPENING_MINA_X` 0xA8 -> 0x90).
+  - *Soma animation.* The runtime pinned `soma.anim.frame = 0` every
+    opening frame and assigned `soma.anim.id` directly, so pose
+    `0x52`'s three-frame sequence (the soul-absorb reach) never
+    played. It now mirrors `sub_0801D028`: rebind through
+    `aos_anim_start` only when `opening_actors.soma_animation`
+    differs (the native `+0x6D` guard) and advance with
+    `aos_anim_step` each frame.
+  - *End-of-dialogue audio.* `sub_0805CED0`'s `+0xA==0x80` tail runs
+    `sub_08013EEC(0x26)` — the breath/wind ambient into the
+    `+0x254CC` slot — and does NOT restart room music
+    (`sub_08013960` only runs on a room load). The port called
+    `aos_room_music_enter` on `opening.complete`, which is why zone-1
+    music returned; it now calls `aos_audio_ambient_set(0x26)` and
+    latches `music_area`/`music_room` so the generic enter cannot
+    fire.
+- **Verification.** Native spawn math re-derived from
+  `sub_0805D198`/`sub_0805CE28` and confirmed against mGBA memory
+  (player entity `+0x40/+0x44/+0x5C/+0x6D` = (0x88,0x8F), band
+  `0x0E`, anim `0x51`; `+0xA094` anchor words 0x20/0x230 fixed).
+  `tests/test_aos_opening_event.c` updated for the Mina offset;
+  `fusion_aos_opening_event_tests` passes; `--capture` trace shows
+  actor0 at 0x90 and the pose/ambient paths live.
+- **Scope.** `aos_opening_event.*`, the `draw_opening_actors` region
+  of `aria_draw.c/.h` and the opening branches of `aria_runtime.c`.
+  Arikado's `+0x48` walk consumer remains absent from the dump (the
+  `0xD0` guard stays a documented approximation); the band-to-priority
+  mapping itself is the room's decoded depth table, unchanged.
+
 ## Patch 1189 - intro cutscene: native BG/OBJ priority bands composite the stairs scene
 
 - **Fix.** Patch 1187's artifact 2 is resolved in the SDL preview

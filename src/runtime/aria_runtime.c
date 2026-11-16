@@ -2688,9 +2688,10 @@ int aria_runtime_main(int argc, char **argv) {
                         printf("DialogueTrace open frame=%ld text=0x%04X\n",
                                step, epilogue_window_text);
                 }
-                /* The scene owns Soma's pose until Object20 commits. */
-                soma.anim.id = AOS_SOMA_ANIM_OPENING_LYING;
-                soma.anim.frame = 0;
+                /* The scene owns Soma's pose until Object20 commits.
+                 * sub_0801D028 binds the pose once (+0x6D guard) and
+                 * the normal entity animation step advances it — the
+                 * port must not pin frame 0. */
                 /* The modal obtained-soul window consumes its own A presses;
                  * they must not also advance the blocked text script. */
                 aos_opening_actors_input(&opening_actors, aria_input.new_input);
@@ -2713,7 +2714,17 @@ int aria_runtime_main(int argc, char **argv) {
                                         &opening_actors, actor_durations);
                 AosOpeningCue actor_cue = aos_opening_actors_update(
                     &opening_actors, actor_durations, &cam_x, cam_y);
-                soma.anim.id = opening_actors.soma_animation;
+                /* sub_0801D028's +0x6D check: rebind only when the
+                 * requested pose differs, then run the same
+                 * sub_0803F17C-style tick step the normal update
+                 * uses. A failed bind keeps the old pose like the
+                 * native early-out. */
+                if (soma.anims &&
+                    soma.anim.id != opening_actors.soma_animation)
+                    (void)aos_anim_start(&soma.anim, soma.anims,
+                                         opening_actors.soma_animation,
+                                         false);
+                if (soma.anims) aos_anim_step(&soma.anim, soma.anims);
                 for (unsigned actor = 0;
                      actor < opening_actors.emitted_count; ++actor)
                     if (opening_actors.emitted[actor].events &
@@ -2748,17 +2759,15 @@ int aria_runtime_main(int argc, char **argv) {
                     printf("Aria opening story completed; event 0x20 set and "
                            "Winged Skeleton soul granted and equipped\n");
                 }
-                if (opening.complete && have_room_music && start_song < 0 &&
+                if (opening.complete && start_song < 0 &&
                     (room.area != music_area || room.number != music_room)) {
-                    AosRoomMusicFlags music_flags;
-                    const AosRoomMusicFlags *flags =
-                        room_music_flags_for(&room, &opening_rom,
-                                             &quick_map, have_quick_map,
-                                             &music_flags)
-                            ? &music_flags
-                            : NULL;
-                    aos_room_music_enter(&room_music, room.area, room.number,
-                                         flags);
+                    /* sub_0805CED0's +0xA==0x80 tail runs
+                     * sub_08013EEC(0x26): the breath/wind ambient takes
+                     * the +0x254CC slot and the tracked room song is
+                     * NOT restarted — sub_08013960 only runs on a room
+                     * load, so latch the pair to keep the generic
+                     * enter below from firing room music here. */
+                    aos_audio_ambient_set(0x26);
                     music_area = room.area;
                     music_room = room.number;
                 }
@@ -3744,6 +3753,12 @@ aria_render_frame:
          * that band ordering (enemy bands span 0x03-0x1E). */
         const int soma_band_prio =
             bg_layered ? aria_bg_band_priority(0x0E) : -1;
+        /* sub_0805EAFC stamps the soul orb's +0x5C with 0x13, so it
+         * interleaves on its own band like the actors below. */
+        const int soul_band_prio =
+            bg_layered ? aria_bg_band_priority(0x13) : -1;
+        const bool opening_draw =
+            (opening.active || opening_epilogue) && objects_ok;
         if (bg_layered) {
             for (int p = 3; p >= 0; --p) {
                 aria_bg_draw_priority(renderer, p, bg_mod);
@@ -3752,6 +3767,14 @@ aria_render_frame:
                                          cam_x, cam_y, step, p);
                 if (objects_ok)
                     draw_enemies(renderer, &room, &objects, cam_x, cam_y, p);
+                /* Object20's children carry their own +0x5C bands
+                 * (0x11 actors/emitted/debris, 0x17 bit-2 knights,
+                 * band-1 flames, 0x13 bolts, 0x0C sparks), so they
+                 * paint inside the same priority interleave instead
+                 * of flattening over Soma. */
+                if (opening_draw)
+                    draw_opening_actors(renderer, &objects,
+                                        &opening_actors, cam_x, cam_y, p);
                 /* Soma reads the player library, not `objects` —
                  * he draws even when the object tables failed. */
                 if (p == soma_band_prio)
@@ -3759,6 +3782,17 @@ aria_render_frame:
                                      cam_x, cam_y,
                                      opening.active &&
                                          opening_actors.soma_hidden);
+                if (opening.active && opening_actors.soul_active &&
+                    objects_ok && p == soul_band_prio) {
+                    AosPickup soul = {
+                        .type = AOS_PICKUP_SOUL,
+                        .x = opening_actors.soul_x,
+                        .y = opening_actors.soul_y,
+                        .age = opening_actors.soul_age,
+                    };
+                    draw_pickup_art(renderer, &objects, 9, &soul,
+                                    cam_x, cam_y);
+                }
             }
         }
         /* The save point draws through its SPECIAL id-28 entity
@@ -3769,10 +3803,15 @@ aria_render_frame:
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_BLOOD, cam_x, cam_y);
         if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y, -1);
         if (objects_ok) draw_special_objects(renderer, &room, &objects, cam_x, cam_y, step, -1);
-        /* Object20's actors stay in the room for the proximity chatter. */
-        if ((opening.active || opening_epilogue) && objects_ok)
-            draw_opening_actors(renderer, &objects, &opening_actors, cam_x, cam_y);
-        if (opening.active && opening_actors.soul_active && objects_ok) {
+        /* Object20's actors stay in the room for the proximity chatter.
+         * The -1 pass only takes elements whose +0x5C band did not
+         * resolve (no layered BG path); banded ones already painted
+         * inside the priority interleave above. */
+        if (opening_draw)
+            draw_opening_actors(renderer, &objects, &opening_actors,
+                                cam_x, cam_y, -1);
+        if (opening.active && opening_actors.soul_active && objects_ok &&
+            soul_band_prio < 0) {
             AosPickup soul = {
                 .type = AOS_PICKUP_SOUL,
                 .x = opening_actors.soul_x,

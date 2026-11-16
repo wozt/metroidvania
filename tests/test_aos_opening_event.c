@@ -315,7 +315,9 @@ static void test_skeleton_approach(void) {
 static void test_trigger(void) {
     assert(AOS_OPENING_SOMA_X == 168 && AOS_OPENING_SOMA_Y == 704);
     assert(AOS_OPENING_ACTOR_COUNT == 3);
-    assert(AOS_OPENING_MINA_X == AOS_OPENING_SOMA_X &&
+    /* sub_0805D198 writes record-0 child's +0x42 as the player's own
+     * +0x42 minus 0x18 — Mina stands one step left of Soma. */
+    assert(AOS_OPENING_MINA_X == AOS_OPENING_SOMA_X - 0x18 &&
            AOS_OPENING_MINA_Y == AOS_OPENING_SOMA_Y);
     assert(AOS_OPENING_ARIKADO_X == 0x119 && AOS_OPENING_ARIKADO_Y == 0x2C0);
     assert(AOS_OPENING_SKELETON_X == 0x16F && AOS_OPENING_SKELETON_Y == 0x268);

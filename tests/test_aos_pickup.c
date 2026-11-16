@@ -243,8 +243,13 @@ int main(void) {
     assert(aos_pickup_placed_collected(collected, 156));
     assert(!aos_pickup_create_placed_soul(&container, 6, 2, 156, 24, 56, collected) &&
            !aos_pickup_create_placed_soul(&container, 5, 0, 20, 24, 56, collected) &&
-           !aos_pickup_create_placed_soul(&container, 8, 4, 20, 24, 56, collected) &&
+           !aos_pickup_create_placed_soul(&container, 8, 7, 20, 24, 56, collected) &&
            !aos_pickup_create_placed_soul(&container, 9, 1, 20, 24, 56, collected));
+    /* The ability containers reach soul ids 5 and 6 (Hippogryph and
+     * Galamoth): indices 4 and 5 fit the six-entry ability inventory. */
+    assert(aos_pickup_create_placed_soul(&container, 8, 6, 92, 24, 56, collected) &&
+           container.type == AOS_PICKUP_SOUL + AOS_SOUL_ABILITY &&
+           container.variant == 5);
 
     /* sub_080441F8's common tail distinguishes ordinary room pickups from
      * Object10's scripted item and sub_080D7308's special soul drops. */

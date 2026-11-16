@@ -32,8 +32,11 @@ static bool valid(const AosSaveData *save) {
         return false;
     for (unsigned i = 0; i < AOS_SAVE_INVENTORY; ++i)
         if (save->inventory[i] > 9) return false;
-    if (save->souls_collected > 999 || save->red_soul > 28 || save->blue_soul > 13 ||
-        save->yellow_soul > 18 || save->mp < -1 || save->mp > 9999)
+    /* Equipped souls are the soul-set cursor values: 0 for none, else the
+     * 1-based soul number, so the bounds are the soul counts (55 red,
+     * 24 blue, 35 yellow — aos_soul_menu_count). */
+    if (save->souls_collected > 999 || save->red_soul > 55 || save->blue_soul > 24 ||
+        save->yellow_soul > 35 || save->mp < -1 || save->mp > 9999)
         return false;
     uint8_t used_buttons = 0;
     for (unsigned i = 0; i < 4; ++i) {

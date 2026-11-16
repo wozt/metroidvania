@@ -772,7 +772,11 @@ room records. Ids 1-4 are fixed money, item, weapon and armor icons. Ids 5-8
 are the red, blue, yellow and ability soul containers of `sub_08044980`: their
 one-based parameter 1 selects a soul, sequence 19 draws the primary and
 sequence 18 its follower, and the `(-8, -32, 16, 32)` weapon box releases the
-ordinary homing soul of `sub_0804459C` with sound `0xA2`. The container never
+ordinary homing soul of `sub_0804459C` with sound `0xA2`. `sub_08044980`
+stores the soul index unconditionally; the port bounds it to the recognised
+soul counts (55 red, 24 blue, 35 yellow, 6 ability), which no room record
+exceeds — this is what lets the area 9 room 6 Hippogryph (ability index 4)
+and area 7 room 22 Galamoth (index 5) containers spawn. The container never
 accepts Soma's body collision. Its parameter-0 bit remains clear if the
 released soul expires; only successful soul collection sets the corresponding
 placed-item word. While intact, `sub_08044840` emits a type-4

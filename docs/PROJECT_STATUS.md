@@ -1,3 +1,38 @@
+## Patch 1166 - placed soul containers reach every native soul id; save soul bounds corrected
+
+- **Finding.** `aos_pickup_create_placed_soul` bounded the one-based
+  soul id with the *byte* sizes of the four native nibble inventories
+  (`{0x1C, 0xD, 0x12, 3}`) instead of soul counts, rejecting every
+  placed soul whose index reached half the array. Two real room
+  records were silently dead: area_09_room_006's ability container
+  (soul id 5, Hippogryph — ability index 4, the high jump) and
+  area_07_room_022's (soul id 6, Galamoth — index 5). `sub_08044980`
+  itself performs no validation, so the port's bound now uses the
+  recognised soul counts `{55, 24, 35, 6}` — matching
+  `aos_soul_menu_count` and every enemy-drop and placed-soul id in
+  the room data — which admits all six ability souls while still
+  rejecting ids that would index past the equip tables.
+- **Save bounds.** `aos_save_validate` rejected equipped souls above
+  `red 28 / blue 13 / yellow 18` — the same byte-size confusion —
+  so any save with a soul equipped past those indices failed
+  validation. The bounds are now the soul counts `55 / 24 / 35`
+  (equipped values are the soul-set cursor values, soul index + 1).
+- **Coverage.** All ten placed soul containers in the room data now
+  spawn: Grave Keeper (back dash), Malphas (air jump), Skeleton
+  Blaze (slide), Hippogryph (high jump) and Galamoth ability
+  containers; Flying Armor, Giant Bat and Black Panther blue
+  containers; Undine and Skula yellow containers. Kicker Skeleton's
+  enemy drop remains the only source of ability index 3 (dive
+  kick). Ability index 5 sets `unk_13396` bit 5; its only located
+  native reader is the `sub_080212F4(6)` check in
+  `code_080B0AD4`, so Galamoth stays honestly partial beyond
+  collection and the menu toggle.
+- Validation: `fusion_aos_pickup_tests` and `fusion_aos_save_tests`
+  rebuilt and passing; the pickup test now covers ability soul ids
+  5 and 6 and rejects id 7. Full `fusion_dashboard --run-tests` is
+  blocked this cycle by unrelated in-progress edits in
+  `aria_runtime.c`/`aos_map_warp` from another work stream.
+
 ## Patch 1165 - pause-menu OBJ-layer audit closes the remaining element gaps
 
 - **Finding.** Every `sub_08048804`/`sub_080488FC` icon-entity spawn in

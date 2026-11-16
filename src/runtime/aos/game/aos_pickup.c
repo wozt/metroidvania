@@ -230,8 +230,12 @@ bool aos_pickup_create_placed_soul(AosPickup *pickup, uint8_t entity_id,
                                    uint16_t soul_id, uint16_t persistent_index,
                                    int32_t x, int32_t y,
                                    const uint32_t collected[AOS_PLACED_ITEM_WORDS]) {
-    /* The four native soul arrays are 0x1C, 0xD, 0x12 and 3 entries. */
-    static const uint8_t limits[] = {0x1C, 0xD, 0x12, 3};
+    /* soul_id - 1 is the 0-based soul index. sub_08044980 stores it
+     * unconditionally; the port bounds it to the recognised soul counts
+     * (the soul-set menu's 55 red, 24 blue, 35 yellow and 6 ability
+     * souls) so a phantom index cannot reach the equip tables. The
+     * nibble inventories themselves hold 56, 26, 36 and 6 entries. */
+    static const uint8_t limits[] = {55, 24, 35, 6};
     unsigned soul_type = entity_id - 5u;
     if (!pickup || entity_id < 5 || entity_id > 8 || soul_id == 0 ||
         persistent_index >= AOS_PLACED_ITEM_WORDS * 32u ||

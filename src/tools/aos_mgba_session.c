@@ -414,17 +414,27 @@ AosKeyEvent *aos_mgba_parse_keys(const char *spec, int *count) {
     char *save = NULL;
     for (char *tok = strtok_r(copy, ",", &save); tok;
          tok = strtok_r(NULL, ",", &save)) {
-        int frame = 0;
-        unsigned mask = 0;
-        if (sscanf(tok, "%d:%x", &frame, &mask) != 2 &&
-            sscanf(tok, "%d:%u", &frame, &mask) != 2)
-            continue;
+        /* "frame:mask" — the mask is a decimal AOS/GBA key bitmask by
+         * default; a 0x prefix selects hex (strtoul base 0). The test
+         * schedules emit decimal masks (RIGHT = 16, A|B = 3), so a
+         * plain %x sscanf silently corrupted every mask >= 10
+         * ("16" -> 0x16 = RIGHT|SELECT|B, "19" -> 0x19 =
+         * RIGHT|START|A), which opened the native quick map and soul
+         * menu mid-comparison. */
+        char *colon = strchr(tok, ':');
+        if (!colon) continue;
+        *colon = '\0';
+        char *end = NULL;
+        long frame = strtol(tok, &end, 10);
+        if (end == tok) continue;
+        unsigned long mask = strtoul(colon + 1, &end, 0);
+        if (end == colon + 1) continue;
         if (*count == capacity) {
             capacity *= 2;
             events = realloc(events, capacity * sizeof *events);
         }
-        events[*count].frame = frame;
-        events[*count].mask = mask;
+        events[*count].frame = (int)frame;
+        events[*count].mask = (unsigned)mask;
         ++*count;
     }
     free(copy);

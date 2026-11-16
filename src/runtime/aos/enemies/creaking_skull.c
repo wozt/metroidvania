@@ -30,12 +30,23 @@
  * record ride with the ArcTan2 aim of records {0,1,11} and the held
  * angle of records {2,8}.
  *
- * Documented approximations: the two ~2000-line choreography
- * machines keep their case order, the song stingers (0x8C bone
- * creaks, 0x86/0x80/0x84/0x76/0x77/0x7A/0x97/0xE0/0x1C/0x29/0x6B)
- * and the state transitions, while the per-case bone-target tables
- * and the sub_08097D84/sub_08097EC4 record re-arms the cases perform
- * collapse to the create bake plus a per-frame record step; the
+ * The two ~2000-line choreography machines keep their case order,
+ * the song stingers (0x8C bone creaks, 0x86/0x80/0x84/0x76/0x77/0x7A/
+ * 0x97/0xE0/0x1C/0x29/0x6B) and the state transitions.  The decoded
+ * per-case record re-arms are ported at the points the ported
+ * machines traverse: the sub_08095898 case-0 alert arms on aggro,
+ * the sub_08096A94 case-0 entry arms on the state-0->1 transition,
+ * the case-13 windup arms (song 0x86), the case-14 volley arms
+ * (song 0x80) and the case-20 reset arms on the return, each with
+ * its decoded + 0xD divider (the 0x08119070/0x08119078 timing bytes
+ * selected by entity + 0x24, or the per-case constants 2/0xE);
+ * cs_step_perm counts + 0xD down like the native cases.  The
+ * remaining case arms — the state-0 cases 3-12/20-24 strike tables,
+ * the state-1 cases 4-12/15-19/21-37 including the sub_08097EC4
+ * pairs, the RNG-driven projectile cases and the cases 9/27/37 bone
+ * throws that write + 0xA — stay unported because the ported case
+ * structure does not reproduce them; the sub_08098C1C/38 pose
+ * snapshots they bracket are folded into the arm calls.  The
  * sub_0809808C state-1/state-2 death machines keep their timers and
  * deletes while the sub_08042848/428B4/429D0 palette writes, the
  * sub_0806D3D8/sub_0806D5C0/sub_0806D518 spark helpers, the
@@ -178,6 +189,75 @@ static void cs_config_ex(AosEnemy *e, int idx, int sub, int32_t speed,
         r->ang2 = r->spd;
 }
 
+/* One sub_08097D84 record arm as the choreography machines issue
+ * them: the record index, its anchor record, the signed speed
+ * target and the explicit orbit radius (the machines always pass a
+ * nonzero radius here, so the measured fallback is unused).  Every
+ * arm ported below is a sub_08097D84 (snap ang2 to spd, signed
+ * speed compare); the sub_08097EC4 arms of state-1 cases 8/18 are
+ * documented but not wired (they belong to the unported bone-throw
+ * attack). */
+typedef struct {
+    uint8_t rec, sub;
+    int32_t spd, dist;
+} CsArm;
+
+/* sub_08095898 case 0: the alert re-arm on state-0 entry — records
+ * {12->11, 1->0, 2->1} at distances 0x1F0000/0x1E0000/0x1C0000 with
+ * speeds -0x1000/-0x800/-0x1000. */
+static const CsArm cs_arms_s0_alert[] = {
+    {0xC, 0xB, (int32_t)0xFFFFF000, 0x1F0000},
+    {1, 0, (int32_t)0xFFFFF800, 0x1E0000},
+    {2, 1, (int32_t)0xFFFFF000, 0x1C0000},
+};
+
+/* sub_08096A94 case 0: the state-1 entry re-arm — record 12 holds
+ * (speed 0 snaps ang2 to the anchor bearing), records 1/2 orbit at
+ * 0x5000/0x1000. */
+static const CsArm cs_arms_s1_entry[] = {
+    {0xC, 0xB, 0, 0x1F0000},
+    {1, 0, 0x5000, 0x1E0000},
+    {2, 1, 0x1000, 0x1C0000},
+};
+
+/* sub_08096A94 case 13 (the 0x86 windup strum): records 1/2 reverse
+ * orbit at -0x5A00/-0x7200. */
+static const CsArm cs_arms_s1_windup[] = {
+    {1, 0, (int32_t)0xFFFFA600, 0x1E0000},
+    {2, 1, (int32_t)0xFFFF8E00, 0x1C0000},
+};
+
+/* sub_08096A94 case 14 (the 0x80 volley): record 1 holds, record 2
+ * eases to a slow 0x400 orbit — the same pair cases 4/5/15/16 use
+ * around their projectile spawns. */
+static const CsArm cs_arms_s1_volley[] = {
+    {1, 0, 0, 0x1E0000},
+    {2, 1, 0x400, 0x1C0000},
+};
+
+/* sub_08096A94 case 20: the return-to-state-0 reset — all three
+ * records re-armed with speed 0 after the sub_08098C1C snapshot. */
+static const CsArm cs_arms_s1_exit[] = {
+    {0xC, 0xB, 0, 0x1F0000},
+    {1, 0, 0, 0x1E0000},
+    {2, 1, 0, 0x1C0000},
+};
+
+static void cs_run_arms(AosEnemy *e, const CsArm *arms, int n) {
+    for (int i = 0; i < n; ++i)
+        cs_config_ex(e, arms[i].rec, arms[i].sub, arms[i].spd,
+                     arms[i].dist, true, false);
+}
+
+/* The + 0xD ease divider the machines load from the stacked timing
+ * bytes through entity + 0x24 (0 for id 0x21, 1 for id 0x5C): state 0
+ * reads the {0x20,0x18} pair at 0x08119070, state 1 the
+ * {0x30,0x28,0x28} triple at 0x08119078. */
+static uint8_t cs_cool_tab(int state, uint8_t id) {
+    return state == 0 ? (id == 0x5C ? 0x18 : 0x20)
+                      : (id == 0x5C ? 0x28 : 0x30);
+}
+
 /* sub_08097B94: one record's per-frame step.  An unlaunched record
  * (spd and ang2 both 0) eases toward its variant home pair by the + 0xD
  * divider — record 2 also eases its + 8 angle toward the variant's
@@ -226,6 +306,12 @@ static void cs_step_rec(AosEnemy *e, int idx) {
  * create's 0x08119063 table); sub_08098BC0 is the identity order —
  * both gate on the + 0xD divider through cs_cool. */
 static void cs_step_perm(AosEnemy *e, const uint8_t *perm) {
+    /* The cases count + 0xD down once per update and re-arm it on
+     * case entry; the ported machines keep the decoded entry values
+     * and let the divider decay to 1 (never 0 — a zero would freeze
+     * the records where native advances the case the same frame). */
+    if (e->cs_cool > 1)
+        e->cs_cool--;
     for (int i = 0; i < CS_BONES; ++i)
         cs_step_rec(e, perm[i]);
 }
@@ -482,23 +568,30 @@ static void cs_gore_update(AosEnemy *e) {
 /* sub_08095898 state 0: the sixteen-case machine — approach with
  * wall probes, random attack entries into state 1, the 0x8C bone
  * creak stingers on case boundaries and the return cycle.  The
- * per-case bone-target tables and record re-arms collapse to this
- * documented cycle while cs_step_perm keeps the records live. */
+ * ported cycle fires the decoded case-0 alert arms on aggro while
+ * cs_step_perm keeps the records live. */
 static void cs_state0(AosEnemy *e, AosSoma *soma,
                       const AosCollision *layer, const AosAnimSet *anims,
                       uint32_t (*random)(void)) {
     (void)layer;
     switch (e->step) {
     case 0:
-        /* Aggro probe then enter the approach. */
+        /* Aggro probe then enter the approach; the alert re-arm of
+         * sub_08095898 case 0 fires on engagement with the decoded
+         * + 0xD entry divider. */
         if (player_near(soma, e->x >> 16, e->y >> 16, 0xC0, 0x80)) {
             play(e, anims, 1);
             e->step = 1;
             e->timer = 0;
+            cs_run_arms(e, cs_arms_s0_alert,
+                        (int)(sizeof cs_arms_s0_alert /
+                             sizeof cs_arms_s0_alert[0]));
+            e->cs_cool = cs_cool_tab(0, e->id);
         }
         break;
     case 1:
-        /* Approach; wall contact or proximity picks an attack. */
+        /* Approach; wall contact or proximity picks an attack — the
+         * transition runs the sub_08096A94 case-0 entry re-arm. */
         if (soma)
             aos_enemy_move_toward(e, target_x(soma), target_y(soma),
                                   0x10);
@@ -509,6 +602,10 @@ static void cs_state0(AosEnemy *e, AosSoma *soma,
             e->step = 0;
             e->substep = 0;
             e->cs_hits = 0;
+            cs_run_arms(e, cs_arms_s1_entry,
+                        (int)(sizeof cs_arms_s1_entry /
+                             sizeof cs_arms_s1_entry[0]));
+            e->cs_cool = cs_cool_tab(1, e->id);
             (void)r;
         }
         break;
@@ -541,9 +638,23 @@ static void cs_state1(AosEnemy *e, AosSoma *soma,
         aos_audio_play_song(0x86);
         e->substep = 1;
         e->timer = 0;
+        /* The 0x86 windup strum is native case 13: records 1/2
+         * reverse-orbit while + 0xD counts down from the 2 the
+         * preceding case assigned. */
+        cs_run_arms(e, cs_arms_s1_windup,
+                    (int)(sizeof cs_arms_s1_windup /
+                         sizeof cs_arms_s1_windup[0]));
+        e->cs_cool = 2;
         break;
     case 1:
-        /* Volley: two shots then the 0x80 stinger. */
+        /* Volley: the case-14 re-arm on entry (the + 0xD = 0xE the
+         * windup case assigned), two shots then the 0x80 stinger. */
+        if (e->timer == 0) {
+            cs_run_arms(e, cs_arms_s1_volley,
+                        (int)(sizeof cs_arms_s1_volley /
+                             sizeof cs_arms_s1_volley[0]));
+            e->cs_cool = 0xE;
+        }
         if (e->timer == 0x10 || e->timer == 0x28) {
             cs_fire_shot(e, soma, hit);
             if (e->timer == 0x28)
@@ -555,10 +666,15 @@ static void cs_state1(AosEnemy *e, AosSoma *soma,
         }
         break;
     case 2:
-        /* Return to the approach. */
+        /* Return to the approach — the case-20 reset re-arm with
+         * the table + 0xD divider. */
         e->state = 0;
         e->step = 1;
         e->substep = 0;
+        cs_run_arms(e, cs_arms_s1_exit,
+                    (int)(sizeof cs_arms_s1_exit /
+                         sizeof cs_arms_s1_exit[0]));
+        e->cs_cool = cs_cool_tab(1, e->id);
         play_loop(e, anims, 0, true);
         break;
     default:
@@ -647,8 +763,9 @@ AosHitReport aos_enemy_creaking_skull_update(
 
     /* The state machines step the container records through
      * sub_08098BE0 in their cases; the ported machines keep the case
-     * order but not the per-case arms, so the records take one
-     * sub_08098BE0 pass per update outside the death state. */
+     * order and fire the decoded entry/windup/volley/exit re-arms,
+     * so the records take one sub_08098BE0 pass per update outside
+     * the death state with the + 0xD divider counting down. */
     if (e->state != 2)
         cs_step_perm(e, cs_perm_tab);
 

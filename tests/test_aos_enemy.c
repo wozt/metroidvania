@@ -1375,6 +1375,16 @@ static void creaking_skull_tests(void) {
     assert(e.cs_rec[1].flag == 0x80000000u && e.cs_rec[1].sub == 0);
     assert(e.cs_rec[2].flag == 0x80000000u && e.cs_rec[2].sub == 1);
 
+    /* The aggro probe fired on the first update, so a choreography
+     * re-arm ran: records 12/1/2 now orbit anchors 11/0/1 at the
+     * 0x1F0000/0x1E0000/0x1C0000 radii and the + 0xD divider is
+     * counting down from its decoded entry value instead of
+     * staying pinned at 1. */
+    assert(e.cs_rec[12].dist == 0x1F0000 &&
+           e.cs_rec[1].dist == 0x1E0000 &&
+           e.cs_rec[2].dist == 0x1C0000);
+    assert(e.cs_cool > 1);
+
     /* A bone child tracks its parent; a state-2 parent detaches it
      * into the sub_0809808C state-1 death fall (0x08119081 timer by
      * record index), which deletes after the countdown. */
@@ -1403,17 +1413,33 @@ static void creaking_skull_tests(void) {
     assert(b.removed);
     e.state = 0;
 
-    /* State 1 volley: two CS_SHOT children then back to state 0. */
+    /* State 1 volley: the case-0 entry arms and the case-13 windup
+     * re-arm fire entering substep 0, the case-14 volley re-arm on
+     * the first volley tick, two shots then back to state 0 with
+     * the case-20 reset arms. */
     AosEnemy a;
     assert(aos_enemy_create(&a, 0x21, 150, 120, 0, 0,
                             &soma, &layer, &kind, &cs33));
     a.x = AOS_FIXED(150);
     a.y = AOS_FIXED(120);
     a.state = 1;
-    a.substep = 1;
-    a.timer = 0x10;
     a.boss_parts_spawned = true;
     a.spawned_count = 13;
+    hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    /* substep 0 -> 1: the windup arms leave records 1/2 aimed at
+     * anchors 0/1 and the divider at the assigned 2 (decremented
+     * to 1 by the same update's record step). */
+    assert(a.substep == 1);
+    assert(a.cs_rec[1].sub == 0 && a.cs_rec[2].sub == 1);
+    assert(a.cs_rec[1].dist == 0x1E0000 &&
+           a.cs_rec[2].dist == 0x1C0000);
+    /* The first volley tick (timer 0) runs the case-14 re-arm:
+     * record 1 holds, record 2 takes the 0x400 crawl. */
+    hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(a.cs_cool == 0xD); /* 0xE assigned, decremented once */
+    a.timer = 0x10;
     hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
                            10, 4, 0, 0, always_zero);
     int shots = 0;
@@ -1432,6 +1458,10 @@ static void creaking_skull_tests(void) {
     aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 0, 0, always_zero);
     assert(a.state == 0 && a.step == 1);
+    /* The case-20 reset re-armed all three records at speed 0. */
+    assert(a.cs_rec[12].dist == 0x1F0000 &&
+           a.cs_rec[1].dist == 0x1E0000 &&
+           a.cs_rec[2].dist == 0x1C0000);
 
     /* Lethal: hp 0 -> defeated, state 2 death machine with gore,
      * then the delete. */

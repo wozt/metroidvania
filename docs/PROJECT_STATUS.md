@@ -1,3 +1,42 @@
+## Patch 1183 - Creaking Skull choreography re-arms: the decoded per-case record arms and + 0xD dividers
+
+- **Decode.** `sub_08095898` (state 0, 25 cases,
+  `third_party/cvaos/asm/code/code_08090914.s:10006`) and
+  `sub_08096A94` (state 1, 38 cases, same file:12198) re-arm the
+  container records through `sub_08097D84` (snap) /
+  `sub_08097EC4` (no snap, |speed| compare) on case entry and at
+  case-internal ticks: entity + 0xA is the state, + 0xB the case,
+  + 0xC/+ 0xD the case sub-timer and ease divider. Every arm targets
+  the same trio {12->11, 1->0, 2->1} (or {1->0, 2->1} mid-attack)
+  at radii 0x1F0000/0x1E0000/0x1C0000 with per-case signed speeds;
+  the entry dividers come from the stacked timing bytes
+  0x08119070 {0x20,0x18} (state 0) and 0x08119078 {0x30,0x28,0x28}
+  (state 1) indexed by entity + 0x24 (0 for id 0x21, 1 for id
+  0x5C), and each case tail assigns the next case's + 0xD
+  (constants like 2, 6, 0xE, 0x1E, 0x3C). Songs decoded per case:
+  state-1 case 13 plays 0x86 (windup, arms -0x5A00/-0x7200), case
+  14 plays 0x80 (volley, arms 0/0x400), cases 9/27/37 write + 0xA
+  for the bone-throw attack.
+- **Port.** `src/runtime/aos/enemies/creaking_skull.c` gains the
+  `CsArm` tables and `cs_run_arms` firing `cs_config_ex` (the
+  sub_08097D84 path) at the points the ported machines traverse:
+  the case-0 alert arms on the state-0 aggro, the case-0 entry arms
+  on the state-0->1 transition, the case-13 windup arms in
+  substep 0, the case-14 volley arms on the first volley tick and
+  the case-20 reset arms on the return, each with its decoded + 0xD
+  (`cs_cool_tab` for the table values, 2/0xE for the mid-attack
+  cases). `cs_step_perm` now counts + 0xD down once per update with
+  a floor of 1, matching the native cases' decrement.
+- **Still approximated.** The ported machines keep their reduced
+  case structure, so the remaining per-case arms stay unported:
+  state-0 cases 3-12/20-24 strike tables, state-1 cases
+  4-12/15-19/21-37 including the sub_08097EC4 pairs, the RNG
+  projectile cases and the cases 9/27/37 bone throws that write
+  + 0xA; the sub_08098C1C/38 pose snapshots are folded into the arm
+  calls and the sub_0809808C death/effect helpers remain
+  undocumented. `creaking_skull_tests` covers the alert/entry/
+  windup/volley/reset arms and the + 0xD countdown.
+
 ## Patch 1182 - Big Golem part brain decoded: sub_080AC6E8's fourteen children, record bake, aim and death launch
 
 - **Decode.** `sub_080AC6E8` (~890 asm lines,

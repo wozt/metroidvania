@@ -911,6 +911,95 @@ int main(void) {
         world.unk_4c8 = 0;
         assert(aos_scroll_hblank(&s, &world, 0, &hb));
         assert(hb.target_bg == 3 && hb.vertical && !hb.affine);
+
+        /* Mode 15 (BG3): sub_0800CB8C(0,160,1) — the ramp term
+         * temp_r0 = (1*y)/160 is 0 on every row, so the wave is
+         * sine(((yPos.int + y) << 13) + (frameCtr << 10)) >> 15
+         * + bgOfs.hOfs. yPos.int = 0x30 makes (48+y)*8192 hit
+         * 0x4000 at y=2 (peak +2), 0x8000 at y=6 (zero crossing
+         * of the folded quadrant -> 0 offset from sine 0... the
+         * table returns -0x10000>>15 = -2 there; y=10 repeats
+         * the peak). */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 3, 1, 1, 15, 0, 0, 0x10 << 16,
+                        0x30 << 16);
+        world.unk_4c8 = 0;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 3 && !hb.vertical && !hb.affine);
+        assert(hb.ofs[0] == 0x10 && hb.ofs[2] == 0x12 &&
+               hb.ofs[10] == 0x12);
+        /* A nonzero frame phase shifts the band rows (frame 1
+         * adds 0x400 to the sine argument: y=2's peak folds to
+         * the +1 neighbour). */
+        assert(aos_scroll_hblank(&s, &world, 1, &hb));
+        assert(hb.ofs[2] != 0x12);
+
+        /* Mode 23 (BG2): the second CB8C call site
+         * (112,48,3) — rows below the 0x70 band keep the flat
+         * bgOfs.hOfs, rows inside it carry the steeper-phase wave
+         * (temp_r0 ramps 0..2 across the band). */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 23, 0, 0, 0x20 << 16,
+                        0x30 << 16);
+        world.unk_4c8 = 0;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 2 && !hb.vertical);
+        for (int y = 0; y < 112; ++y) assert(hb.ofs[y] == 0x20);
+        {
+            int flat = 1;
+            for (int y = 112; y < AOS_SCROLL_SCANLINES; ++y)
+                if (hb.ofs[y] != 0x20) flat = 0;
+            assert(!flat);
+        }
+
+        /* Mode 24 (BG3): sub_0800CC90(0xB0,0x200,1) — the band
+         * slides up by yPos.int: p1 = 0xB0 - 0x30 = 0x80, width
+         * clamps to 160 - 0x80 = 0x20, so rows [0x80,0xA0) wave
+         * and everything else stays flat. arg = (48+y)<<12:
+         * y=0x84 hits 0x4000 (+1 px at p3=1), y=0x88 hits 0x8000
+         * (sine 0), y=0x8C hits 0xC000 (-1). */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 3, 1, 1, 24, 0, 0, 0x10 << 16,
+                        0x30 << 16);
+        world.unk_4c8 = 0;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 3 && !hb.vertical);
+        assert(hb.ofs[0x7F] == 0x10 && hb.ofs[0x80] == 0x10 &&
+               hb.ofs[0x84] == 0x11 && hb.ofs[0x88] == 0x10 &&
+               hb.ofs[0x8C] == 0x0F && hb.ofs[0x9F] == 0x0F);
+
+        /* Mode 25 (BG2): sub_0800CC90(0x70,0x100,1) — p1 =
+         * 0x70 - 0x30 = 0x40, width 0x90 clamps to 0x78, band
+         * [0x40,0xB8). arg = (48+y)<<12: y=0x44 -> 0x4000 (+1),
+         * y=0x48 -> 0x8000 (0), y=0x4C -> 0xC000 (-1). */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 25, 0, 0, 0x18 << 16,
+                        0x30 << 16);
+        world.unk_4c8 = 0;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 2 && !hb.vertical);
+        assert(hb.ofs[0x3F] == 0x18 && hb.ofs[0x40] == 0x18 &&
+               hb.ofs[0x44] == 0x19 && hb.ofs[0x48] == 0x18 &&
+               hb.ofs[0x4C] == 0x17);
+
+        /* Mode 29 (BG2): the second sub_0800CED4 band (0x70,0xCC)
+         * — p1 = 0x70 - 0x30 = 0x40, var_sb = 0x5C, inclusive end
+         * p2c = 0x9C. Rows outside the band (and the inclusive
+         * edge rows) keep bgOfs.hOfs; inside rows deviate. */
+        memset(&s, 0, sizeof s);
+        aos_scroll_bind(&s, 2, 1, 1, 29, 0, 0, 0x08 << 16,
+                        0x30 << 16);
+        world.unk_4c8 = 0x20;
+        assert(aos_scroll_hblank(&s, &world, 0, &hb));
+        assert(hb.target_bg == 2 && !hb.vertical);
+        assert(hb.ofs[0x3F] == 0x08 && hb.ofs[0x40] == 0x08 &&
+               hb.ofs[0x9D] == 0x08);
+        {
+            int same = 1;
+            for (int y = 0x41; y < 0x9C; ++y)
+                if (hb.ofs[y] != hb.ofs[0x40]) same = 0;
+            assert(!same);
+        }
     }
 
     /* ---- aos_scroll_affine: sub_0800D288's BgAffineSet programs

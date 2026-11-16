@@ -1358,9 +1358,14 @@ void draw_damage_popup(SDL_Renderer *renderer, const AriaObjects *objects,
  *    metadata still produces no texture.
  *  - the text-layer hblank/scanline wave modes update the
  *    layer's base bgOfs and draw per scanline through
- *    aria_bg_draw_hblank; the window/scanline FX writers
- *    (sub_0800CB8C/sub_0800CED4/sub_0800D0F8 bands) remain
- *    documented gaps.
+ *    aria_bg_draw_hblank; the scanline/window FX writers are
+ *    ported too — sub_0800CB8C (modes 15/23), sub_0800CC90
+ *    (16/24/25), sub_0800CED4 (28/29) and the inline mode
+ *    20/30/31/36 programs all evaluate into the same
+ *    AosScrollHBlank ofs[] table (sub_0800D0F8 is mode 32's
+ *    affine arm, consumed by the warp below). The CPU offset
+ *    per row replaces the native hblank DMA register writes —
+ *    documented, never approximated with invented data.
  * OBJ-vs-BG priority now follows the native tables: the room
  * load's sub_0803DD14/sub_0803FD60 chain turns each BG
  * record's field_0 layer byte into a BGxCNT priority (kept in

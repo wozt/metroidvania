@@ -1,3 +1,50 @@
+## Patch 1181 - Scroll scanline/window FX audit: writers confirmed ported, coverage completed, stale gap notes corrected
+
+- **Audit.** The task brief listed the `sub_0800CB8C` /
+  `sub_0800CED4` / `sub_0800D0F8` scanline-window FX writers
+  behind scroll modes 15/16/23/24/25/28/29/30/31/36 as
+  unported. Re-decoding `third_party/cvaos/src/code_0800CB00.c`
+  against `aos/core/aos_scroll.c` shows they already are:
+  Patch 1175's `aos_scroll_hblank` ports every `sub_0800D288`
+  hBlankEffect writer — `sub_0800CB00` (mode 14),
+  `sub_0800CB8C` (15/23), `sub_0800CC90` (16/24/25),
+  `sub_0800CED4` (28/29) and the inline mode 20/30/31/36
+  buffer fills — and `sub_0800D0F8` is mode 32's per-frame
+  `BgAffineSet` arm inside `aos_scroll_affine` (Patch 1177).
+  The port reproduces each routine's band clamp against
+  `yPos.part16.integer`, the `frameCounter`/`unk_4C8` phase
+  terms through `sub_080009E4` (`aos_sine`), the s16
+  register-value fold and the single-buffer last-emitter
+  rule; `aria_bg_draw_hblank` already consumes the result as
+  per-scanline 1-px strips.
+- **Live verification.** A ROM scan of all 343 room
+  descriptors (`fusion_aos_read_room_backgrounds` field_1)
+  finds the modes in real rooms — mode 15 (7/5 BG3), 16
+  (3/9, 3/10, 11/17 BG2), 23 (7/1 BG3), 24 (7/4, 11/26 BG3),
+  25 (7/8 BG3), 28/29 (9/0, 9/4 BG2), 30 (9/7-9/9, 9/14,
+  11/15 BG2), 31 (10/5 BG2), 36 (0/1, 1/12, 3/17, 4/21, 6/16,
+  7/40, 8/22, 9/25 BG2) — and `ARIA_BG_DEBUG=1 --capture`
+  runs report the expected `hblank program bg=N hOfs|vOfs`
+  every frame on each (e.g. 9/8 mode 30 `vOfs`, 9/25 mode 36
+  `vOfs`, 7/5 mode 15 `hOfs` on BG3).
+- **Coverage.** `tests/test_aos_scroll.c` gains pinned-value
+  cases for the previously untested writers: mode 15's
+  CB8C full-band sine (`temp_r0` stays 0, frame phase shifts
+  rows), mode 23's (112,48,3) band, mode 24/25's CC90
+  yPos-slid bands with exact register values at the
+  0x4000/0x8000/0xC000 sine landmarks, and mode 29's CED4
+  (0x70,0xCC) band edges.
+- **Doc corrections.** `aria_draw.c`'s honest-limits comment
+  and the `aos.core.scroll` annotation still claimed the
+  writers were unported; both now name the ported routines
+  and the CPU-strip approximation. Patch 1177's Limits bullet
+  is left as the historical record this patch supersedes.
+- **Limits.** Still no emulator comparison; the hblank DMA
+  itself, the `sub_0800CDAC` mode-0x1A writer (BG1's
+  `sub_0800D288` prologue call) and the unrelated WIN1H
+  circular-window hBlankEffect users (`sub_08002400` family)
+  stay unported. Statuses stay `partial`.
+
 ## Patch 1180 - sub_0800C5A8 audit completed: Object10 draw-write, lethal damage and Graham state-1 wired; release family proven shadowed
 
 - **Item 1 — remaining caller audit (`aria_entities.c`).** Every

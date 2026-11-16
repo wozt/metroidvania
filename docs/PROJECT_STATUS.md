@@ -1,3 +1,58 @@
+## Patch 1162 - opening choreography corrections from a second native pass
+
+- **Re-decode.** A frame-level re-read of the Object20 opening
+  routines (`sub_0805C628`, `sub_0805CE28`, `sub_0805D198`,
+  `sub_0805DAA0`, `sub_0805D2C8`/`sub_0805D35C` children,
+  `sub_0805E2D8`, `sub_0805E5D4`, `sub_0805E9F0`, `sub_0805EAFC`,
+  `sub_0805EC20`, `sub_0805ED80`, `sub_0805EE88`, `sub_0805F044`,
+  `sub_0805F0B0`, `sub_0805F7C8`, `sub_0805FB3C`,
+  `sub_0803F17C`) against `src/runtime/aos/title/aos_opening_event.c`
+  produced the remaining divergences below; every change cites its
+  native routine in the source comments.
+- **Skeleton approach.** `sub_0805DAA0`'s stop guard compares
+  `+0x42` — the high word of the same `+0x40` that `sub_0806D430`
+  integrates — against `0xCA - camera`, so the camera cancels and
+  the scripted skeleton stops at world x `0xCA` regardless of pan
+  position (the port previously subtracted the camera again and
+  stopped early/late). The approach move `sub_0806E140(0x30000,
+  0x200000, 0x14000, 1)` runs `sub_080698A8`'s single integration;
+  the port now keeps the floor-snap double integration only when
+  floor contact actually occurs and restores the single-step
+  `-0x30000/+0x14000` net otherwise.
+- **Death tails.** Both emitted-child disappearance blinks now run
+  the full `+0xD = 0x20 -> 0xFF` underflow wrap (33 frames) instead
+  of stopping at zero; `sub_0805E2D8`'s `+0xB == 2` reload of
+  `+0xD = 0x10` gives the Winged Skeleton a 17-frame second
+  countdown before its `+0xA == 5` delete tail.
+- **Debris and bolt.** `sub_0805E9F0`'s seven `0x08526802` records
+  keep their full `+0xD` lifetime (the port halved it) and retire
+  on the `0xFF` wrap, the screen-space `+0x46 > 0xAA` limit or
+  `sub_08068AD4`. `sub_0805E5D4`'s `+0xB == 3` tail fires **no**
+  debris for Skeleton Knights — the arrival margin gates only SE
+  `0x6B` and the `sub_0806D578` flame there, while `sub_0805ED80`'s
+  bolt spawns unconditionally; the bolt's `+0x24` target is
+  Arikado (`Object20`'s `+0x18` child), not the principal enemy.
+- **Text suspend and teardown.** `+0xB == 0`'s dialogue suspend
+  wraps its `0x40` reload to `0xFF` before `+0xC == 2` clears it
+  (~66 frames), matching the native countdown order. Leaving the
+  `+0xA == 2` scripted phase sets parent `+0x20 |= 4`, which every
+  emitted child and the scripted skeleton poll to self-delete
+  through their `+0xA == 5` tails while projectiles, debris and the
+  three actors remain — the port now removes them at script end
+  instead of leaving them visible.
+- **Unchanged approximations.** Arikado's `+0x48 = 0xFFFFA000`
+  walk velocity still has no consumer anywhere in
+  `third_party/cvaos` (his only callback `sub_0805B748 ->
+  sub_0803F17C` is animation-only), so the `0xD0` screen-x guard
+  stays an approximation; the initial pre-dialogue reveal, the
+  projectile's combat callback and secondary `sub_08045B44` sparks
+  remain unported. The feature stays `partial`, not
+  emulator-compared.
+- **Tests/docs.** `tests/test_aos_opening_event.c` covers the
+  corrected approach stop, blink wraps, debris lifetime, bolt
+  target, text-suspend wrap and teardown removal;
+  `annotations.tsv`/`features.tsv` notes updated.
+
 ## Patch 1161 - combat-feel parity audit; witch guard skips the hit flash
 
 - **Audit.** A systematic pass over the player/enemy combat paths

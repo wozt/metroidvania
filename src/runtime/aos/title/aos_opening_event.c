@@ -533,7 +533,9 @@ static void append_debris(AosOpeningActors *actors,
             .vy = -vy * 0x1000,
             .frame = spec->frame,
             .source_type = entity->entity_type,
-            .timer = (uint8_t)(spec->timer / 2),
+            /* The record's timer byte is stored verbatim in +0xD;
+             * sub_0805F044 decrements it once per frame. */
+            .timer = spec->timer,
             .active = true,
             .mirrored = entity->mirrored,
         };
@@ -570,12 +572,18 @@ static void append_projectile(AosOpeningActors *actors,
     };
 }
 
+/* sub_0805F044 runs once per frame: inside the impact margin it
+ * decrements +0xD and removes the piece when the byte wraps to 0xFF
+ * (the record's full timer value, not a halved one), when the screen
+ * y word +0x46 passes 0xAA, then integrates +0x40/+0x44 by +0x48/+0x4C
+ * and grows +0x4C by 0x3000. */
 static void update_debris(AosOpeningActors *actors) {
     for (unsigned i = 0; i < actors->debris_count; ++i) {
         AosOpeningDebris *debris = &actors->debris[i];
         if (!debris->active) continue;
         if (!point_in_impact_margin(actors, debris->x, debris->y) ||
-            debris->timer-- == 0 || (debris->y >> 16) > 0xAA) {
+            debris->timer-- == 0 ||
+            ((debris->y >> 16) - actors->camera_y) > 0xAA) {
             debris->active = false;
             continue;
         }
@@ -707,12 +715,23 @@ static void update_projectiles(AosOpeningActors *actors) {
     }
 }
 
+/* sub_0805E2D8 case 4 / sub_0805E5D4 case 3, +0xB==3: the selector
+ * fires once more, then the impact margin gates only the death
+ * presentation — SE 0x6B, sub_0806D578's flame at the entity's own
+ * +0x40/+0x44 (priority +0x5C-1) and, for Winged Skeletons only,
+ * sub_0805E9F0's seven pieces. A missed margin skips the presentation
+ * but the transition still runs: type 8 goes to +0xA==5 and type 10
+ * always fires sub_0805ED80's bolt at Arikado before +0xA==4 — the
+ * Skeleton Knights never produce debris. */
 static void finish_emitted(AosOpeningActors *actors, AosOpeningEntity *entity,
                            bool projectile) {
     if (emitted_in_impact_margin(actors, entity)) {
-        entity->events |= AOS_OPENING_ENTITY_EVENT_SOUND_0X6B |
-                          AOS_OPENING_ENTITY_EVENT_DEBRIS;
-        append_debris(actors, entity, 7);
+        entity->events |= AOS_OPENING_ENTITY_EVENT_SOUND_0X6B;
+        append_opening_flame(actors, entity->x, entity->y);
+        if (entity->entity_type == 8) {
+            entity->events |= AOS_OPENING_ENTITY_EVENT_DEBRIS;
+            append_debris(actors, entity, 7);
+        }
     }
     if (projectile) {
         entity->events |= AOS_OPENING_ENTITY_EVENT_PROJECTILE;
@@ -737,24 +756,27 @@ static void update_emitted_tail(AosOpeningActors *actors,
         break;
     case 1:
         /* Both callbacks toggle the alternate OBJ attribute on odd +0xD
-         * values and exit when +0xD reaches 0 — exactly 0x20 frames for
-         * the 0x20 reload — then restore the visible attribute. Hidden
-         * is the portable renderer's approximation until the native
-         * palette/attribute path is available. */
+         * values and decrement once per frame, exiting when the stored
+         * byte wraps to 0xFF — the 0x20 reload therefore blinks exactly
+         * 33 frames (+0xD 0x20..0x00). sub_0805E2D8's +0xB==1 exit
+         * reloads +0xD=0x10 for its +0xB==2 countdown; sub_0805E5D4
+         * goes straight to its selector polls. Hidden is the portable
+         * renderer's approximation until the native palette/attribute
+         * path is available. */
         entity->hidden = (entity->timer & 1) != 0;
-        if (entity->timer == 1) {
+        entity->timer = (uint8_t)(entity->timer - 1);
+        if (entity->timer == 0xFF) {
             entity->hidden = false;
             entity->step = 2;
             if (entity->entity_type == 8) entity->timer = 0x10;
-        } else {
-            --entity->timer;
         }
         break;
     case 2:
         if (entity->entity_type == 8) {
-            /* sub_0805E2D8's +0xB==2 is a plain +0xD=0x10 countdown:
-             * 0x10 frames, exiting when the decrement reaches 0. */
-            if (!entity->timer || --entity->timer == 0) entity->step = 3;
+            /* sub_0805E2D8's +0xB==2 decrements the reloaded +0xD=0x10
+             * once per frame and exits on the 0xFF wrap: 17 frames. */
+            entity->timer = (uint8_t)(entity->timer - 1);
+            if (entity->timer == 0xFF) entity->step = 3;
         } else if (emitted_selector(actors, entity)) {
             entity->step = 3;
         }
@@ -974,8 +996,22 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
     case AOS_OPENING_CUE_COMPLETE:
         /* sub_08067A04's end command finishes the script; sub_0805CED0
          * then runs +0xA==0x80's soul commit and teardown, which the
-         * host's completion path owns. No +0xB sub-state stays armed;
-         * the absorbed pose 0x52 simply remains until teardown. */
+         * host's completion path owns. Before that, leaving +0xA==2
+         * ORs parent +0x20 with 4: every emitted child's top-of-update
+         * flag poll (sub_0805E2D8/sub_0805E5D4) and the scripted
+         * skeleton's sub_0805DAA0 mask select +0xA==5, whose tail sets
+         * +0x59 bit 3 and deletes the entity. Mina and Arikado's
+         * sub_0805B748 callback never polls the parent flags, so they
+         * remain until the object itself is torn down; debris,
+         * projectiles and the soul orb are independent entities and
+         * are not children of this flag either. */
+        for (unsigned i = 0; i < actors->emitted_count; ++i) {
+            actors->emitted[i].active = false;
+            actors->emitted[i].hidden = true;
+        }
+        actors->skeleton_state = 5;
+        actors->skeleton_death = 0;
+        actors->visible[2] = false;
         actors->soul_active = false;
         actors->soul_notice = 0;
         actors->notice_input = 0;
@@ -1132,9 +1168,10 @@ static void intro_transition_update(AosOpeningActors *actors) {
         actors->window_open = true;
         actors->transition_wait_open = false;
         /* +0xA==2's first frame runs sub_0805D410 case +0xB==0: the
-         * suspend flag rises with a 0x40-frame timer before the text
-         * engine may resume. */
-        actors->text_hold = 0x40;
+         * suspend flag rises with a 0x40 reload that wraps to 0xFF on
+         * the 65th decrement, then +0xC==2 clears it — about 66
+         * suspended frames before the text engine may resume. */
+        actors->text_hold = 0x42;
     }
 }
 
@@ -1144,9 +1181,11 @@ AosOpeningCue aos_opening_actors_update(
     int32_t *camera_x, int32_t camera_y) {
     if (!actors || !actors->active) return AOS_OPENING_CUE_NONE;
     actors->camera_y = camera_y;
-    /* +0x40 was baked at spawn as the room coordinate minus the camera
-     * word, so the +0xB==2 stop guard needs the camera value from that
-     * moment; the first update sees it before any pan step runs. */
+    /* sub_0805CE28 reads the live camera word (+0xA094+6) once at spawn
+     * to pick entity+0x38's pan mode; the latch keeps that spawn value
+     * for diagnostics now that the approach guard proved camera-
+     * independent (+0x42 is the high word of the same +0x40 the
+     * integrator updates, so the camera terms cancel). */
     if (!actors->scene_camera_set) {
         actors->scene_camera_set = true;
         actors->scene_camera_x = camera_x ? *camera_x
@@ -1193,25 +1232,21 @@ AosOpeningCue aos_opening_actors_update(
         goto scene;
     }
     /* sub_0805D198 stores 0xFFFFA000 (-0x6000, about 0.37 pixel per
-     * frame) into entity+0x48, Arikado's x velocity. The 0x081186DC
-     * table is now decoded: its 12-byte records are pure sprite
-     * resources (three words fed to sub_0803B800/sub_08068264/
-     * sub_0803B924 by sub_0805B5E8), so record 1 carries no behavior.
-     * The child's only per-frame routine is sub_0805B748 ->
-     * sub_0803F17C, the +0x5B-mode animation dispatcher
-     * (sub_0803EE24/sub_0803EEFC family) with no position or velocity
-     * work. The generic integrators exist — sub_0806D430 adds +0x50 to
-     * +0x48, clamps to its caller's bound and applies +0x40 += +0x48;
-     * sub_0806D460 does the same for +0x4C/+0x54/+0x44; sub_0806E140
-     * presets both velocities then runs them through sub_080698A8's
-     * collision probe — but every call site in this object file belongs
-     * to other callbacks (sub_0805C628's assault children,
-     * sub_0805DAA0's scripted skeleton, sub_0805DD7C, sub_0805E5D4,
-     * sub_0805F7C8, sub_0805FB3C). No dumped routine reads child18's
-     * +0x48, so the routine that walks Arikado left and stops him is
-     * absent from this dump (likely an undumped update or an entity-
-     * system pass outside code_08050A3C.s); the source-position guard
-     * keeps this partial controller bounded until it is found. */
+     * frame) into entity+0x48, Arikado's x velocity. The consumer
+     * search is now complete: sub_0805CE28 spawns all three children
+     * through sub_0805B5E8, which assigns every one of them the same
+     * update callback sub_0805B748 — a bare sub_0803F17C animation
+     * dispatch with no position or velocity work — and sub_0805D198
+     * only overrides child+0x1c's callback with sub_0805DAA0. The
+     * generic integrators exist (sub_0806D430/sub_0806D460 inside
+     * sub_080698A8, driven by sub_0806E140) and every call site in
+     * this object file belongs to other state machines — including
+     * sub_0805C628, an unrelated object's walk-on sequence whose
+     * player teleports target screen y 0xBF, not this scene. No
+     * dumped routine reads child18's +0x48, so the routine that walks
+     * Arikado left and stops him is absent from this dump; applying
+     * the stored velocity once per frame until a source-position
+     * guard keeps this partial controller bounded and honest. */
     if (actors->state == 1) {
         const int32_t stop_x = 0xD0 << 16;
         if (actors->x[1] > stop_x) {
@@ -1253,44 +1288,44 @@ AosOpeningCue aos_opening_actors_update(
             if (actors->skeleton_timer && --actors->skeleton_timer == 0)
                 actors->skeleton_step = 2;
         } else {
-            /* +0xB==2,+0xC==2 approach. The stop test reads entity
-             * +0x42 (the s16 high word of +0x40, stored at spawn as
-             * 0x16F minus the camera word) and compares it against
-             * 0xCA minus the live camera word at gEwramData+0xA094+6.
-             * In world coordinates that is x <= 0xCA + cam_spawn -
-             * cam_now. The move is sub_0806E140(e, 0x30000, 0x200000,
+            /* +0xB==1's approach move. The stop test reads entity +0x42,
+             * the high word of +0x40 — the same storage the integrator
+             * updates — against 0xCA minus the live camera word, so the
+             * camera terms cancel and the guard is simply world x <=
+             * 0xCA. The move is sub_0806E140(e, 0x30000, 0x200000,
              * 0x14000, 1): +0x48 stores -0x30000 (facing bit +0x58&0x40
              * clear) and +0x4C stores 0x14000, sub_080698A8's
-             * sub_0806D430/sub_0806D460 integrate each velocity once,
-             * and the callback then adds +0x48 and +0x4C a second
-             * time — the +0x44 add is skipped when the floor probe's
-             * flag bit 2 reports contact, in which case +0x44 was
-             * already snapped to the floor. The horizontal wall snaps
-             * of sub_0800207C/sub_08002058 (flag bits 1/2 of the
-             * sub_080698A8 result) are not modelled; the approach
-             * corridor is open floor. */
-            int32_t cam_now = camera_x ? *camera_x
-                                       : (actors->camera_x >> 16);
-            int32_t stop_x = 0xCA + actors->scene_camera_x - cam_now;
+             * sub_0806D430/sub_0806D460 integrate each velocity once
+             * and its floor probe snaps +0x44 to the floor (flag bit
+             * 2). On floor contact sub_0806E140 keeps the integrated
+             * position and the caller adds +0x48 a second time
+             * (net -0x60000 in x, snapped y); without contact it
+             * restores +0x40/+0x44 and the caller's own adds produce
+             * net -0x30000 in x and +0x14000 in y. The horizontal wall
+             * snaps of sub_0800207C/sub_08002058 (flag bits 0/1) are
+             * not modelled; the approach corridor is open floor. */
             if (actors->skeleton_death) {
                 /* generic_death owns the body from +0xD==0xD0 on. */
-            } else if ((actors->x[2] >> 16) > stop_x) {
-                int32_t next_x = actors->x[2] - 0x60000;
+            } else if ((actors->x[2] >> 16) > 0xCA) {
+                /* The floor probe runs at the post-integration screen
+                 * position: x - 0x30000, y + 0x14000. */
+                int32_t probe_x = actors->x[2] - 0x30000;
                 int32_t probe_y = actors->y[2] + 0x14000;
                 int depth = actors->floor_depth
-                                ? actors->floor_depth(next_x >> 16,
+                                ? actors->floor_depth(probe_x >> 16,
                                                       probe_y >> 16,
                                                       actors->motion_context)
                                 : 0;
                 if (depth) {
-                    /* Floor contact: sub_080698A8's sub_08001D94 probe
-                     * added the snap and cleared +0x44's low word; the
-                     * caller's second +0x44 add is gated off. */
+                    /* Floor contact: +0x44 was snapped by the probe and
+                     * the caller's second +0x44 add is gated off; x
+                     * still takes both -0x30000 adds. */
+                    actors->x[2] = probe_x - 0x30000;
                     actors->y[2] = ((probe_y >> 16) + depth) * 0x10000;
                 } else {
-                    actors->y[2] = probe_y + 0x14000;
+                    actors->x[2] = probe_x;
+                    actors->y[2] = probe_y;
                 }
-                actors->x[2] = next_x;
             } else {
                 actor_animation(actors, 2, 2, true);
                 actors->skeleton_state = 3;

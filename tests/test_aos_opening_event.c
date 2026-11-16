@@ -166,7 +166,7 @@ static void test_emitted_attack_tails(void) {
            actors.debris[0].y == entity->y - 30 * 0x10000 &&
            actors.debris[0].vx == 16 * 0x1000 &&
            actors.debris[0].vy == -64 * 0x1000 &&
-           actors.debris[0].timer == 30);
+           actors.debris[0].timer == 60);
     aos_opening_actors_update(&actors, NULL, NULL, 0x230);
     assert(!entity->active && entity->events == AOS_OPENING_ENTITY_EVENT_NONE);
 
@@ -181,9 +181,10 @@ static void test_emitted_attack_tails(void) {
     };
     entity = &actors.emitted[0];
     aos_opening_actors_update(&actors, NULL, NULL, 0x230);
-    /* The Skeleton Knight shares the 0x20-frame +0xB==1 blink, but its
-     * +0xB==2 is a single selector gate with no second countdown. */
-    for (unsigned frame = 0; frame < 32; ++frame)
+    /* The Skeleton Knight shares the 0x20->0xFF blink — 33 frames —
+     * but its +0xB==2 is a single selector gate with no second
+     * countdown. */
+    for (unsigned frame = 0; frame < 33; ++frame)
         aos_opening_actors_update(&actors, NULL, NULL, 0x230);
     assert(entity->step == 2 && entity->active);
     aos_opening_actors_update(&actors, NULL, NULL, 0x230);
@@ -217,12 +218,12 @@ static void test_emitted_attack_tails(void) {
     };
     for (unsigned frame = 0; frame < 36; ++frame)
         aos_opening_actors_update(&actors, NULL, NULL, 0x230);
-    assert(actors.emitted[0].state == 4 && actors.debris_count == 14 &&
-           actors.debris[7].source_type == 10 &&
-           actors.debris[7].frame == 0x1B &&
-           actors.debris[7].vx == 32 * 0x1000 &&
-           actors.debris[7].vy == -80 * 0x1000 &&
-           actors.projectile_count == 2);
+    /* sub_0805E5D4's +0xB==3 death gates only SE 0x6B and the flame on
+     * the impact margin; the bolt fires unconditionally and Skeleton
+     * Knights never emit debris, so the count stays at the Winged
+     * Skeleton's seven. */
+    assert(actors.emitted[0].state == 4 && actors.debris_count == 7 &&
+           actors.flame_count > 0 && actors.projectile_count == 2);
 
     actors.projectile_count = 1;
     /* sub_0805EE88's margin is on Arikado (Object20's +0x18 entity),
@@ -238,11 +239,13 @@ static void test_emitted_attack_tails(void) {
 }
 
 static void test_skeleton_approach(void) {
-    /* sub_0805DAA0 +0xB==2,+0xC==2: the stop guard compares entity
-     * +0x42 against 0xCA minus the camera scroll word, and the move
-     * integrates -0x30000/+0x14000 twice per frame (sub_0806E140 ->
-     * sub_080698A8's sub_0806D430/sub_0806D460 plus the caller's own
-     * adds). */
+    /* sub_0805DAA0 +0xB==1: the stop guard compares entity +0x42 —
+     * the high word of the same +0x40 sub_0806D430 integrates —
+     * against 0xCA minus the live camera word, so the camera terms
+     * cancel and the walk ends at world x 0xCA. The move is
+     * sub_0806E140(0x30000, 0x200000, 0x14000, 1): in open air
+     * sub_080698A8's single integrations are restored and the
+     * caller's own adds net -0x30000 in x and +0x14000 in y. */
     AosOpeningActors actors;
     aos_opening_actors_init(&actors);
     actors.state = 2;
@@ -252,25 +255,20 @@ static void test_skeleton_approach(void) {
     actors.x[2] = AOS_OPENING_SKELETON_X << 16;
     actors.y[2] = AOS_OPENING_SKELETON_Y << 16;
     int32_t camera_x = 0x30;
-    /* The first update latches the spawn camera (0x30); with the
-     * camera held there the guard stays at world X 0xCA. */
     aos_opening_actors_update(&actors, NULL, &camera_x, 0);
-    assert(actors.scene_camera_x == 0x30 && camera_x == 0x30);
-    assert(actors.x[2] == ((AOS_OPENING_SKELETON_X << 16) - 0x60000));
-    /* Open air: +0x44 gains +0x14000 from sub_0806D460 and again from
-     * the caller, i.e. +0x28000 per frame. */
-    assert(actors.y[2] == ((AOS_OPENING_SKELETON_Y << 16) + 0x28000));
-    /* One frame from 0xCB crosses the 0xCA guard on the next check:
-     * sub_0805DBFC selects animation 2 (loop bit set, arg3=1) and
-     * +0xA becomes 3. */
+    assert(actors.x[2] == ((AOS_OPENING_SKELETON_X << 16) - 0x30000));
+    assert(actors.y[2] == ((AOS_OPENING_SKELETON_Y << 16) + 0x14000));
+    /* One frame from 0xCB still walks (0xCB > 0xCA); the next update
+     * sees 0xC8 <= 0xCA and sub_0805DBFC selects animation 2 with
+     * +0xA=3 — regardless of where the camera panned. */
     actors.x[2] = 0xCB << 16;
     aos_opening_actors_update(&actors, NULL, &camera_x, 0);
     assert(actors.skeleton_state == 2);
     aos_opening_actors_update(&actors, NULL, &camera_x, 0);
     assert(actors.skeleton_state == 3 && actors.animation[2] == 2 &&
            actors.anim_loop[2]);
-    /* A camera that advanced past the spawn value moves the guard
-     * left: stop_x = 0xCA + cam_spawn - cam_now. */
+    /* The guard is camera-independent: a camera that panned away
+     * does not move the 0xCA world-space stop. */
     AosOpeningActors moved;
     aos_opening_actors_init(&moved);
     moved.state = 2;
@@ -281,11 +279,7 @@ static void test_skeleton_approach(void) {
     moved.y[2] = AOS_OPENING_SKELETON_Y << 16;
     int32_t moved_camera = 0x50;
     aos_opening_actors_update(&moved, NULL, &moved_camera, 0);
-    /* cam_spawn=0x50, cam_now=0x50 -> guard 0xCA; 0xCB still walks. */
     assert(moved.skeleton_state == 2);
-    /* The latch keeps the spawn value while cam_now moves: a camera
-     * that panned left to 0x40 shifts the guard to
-     * 0xCA + 0x50 - 0x40 = 0xDA, and the walked 0xC5 stops on it. */
     moved_camera = 0x40;
     aos_opening_actors_update(&moved, NULL, &moved_camera, 0);
     assert(moved.skeleton_state == 3);
@@ -316,9 +310,12 @@ static void test_trigger(void) {
     assert(actors.x[1] < (0x119 << 16));
     /* sub_0805D198's +0x48 velocity is -0x6000 (~0.37 px/frame); the
      * 0x119->0xD0 walk-on takes about 195 frames. The 0x081186DC record
-     * table is decoded as sprite resources only and no dumped routine
-     * integrates this child's +0x48, so the 0xD0 guard remains a
-     * documented approximation of the unidentified stop consumer. */
+     * table is decoded as sprite resources only, sub_0805B5E8 assigns
+     * every opening child the animation-only sub_0805B748 callback
+     * (only child+0x1c gets sub_0805DAA0), and sub_0805C628 is an
+     * unrelated object's walk-on, so no dumped routine integrates
+     * child18's +0x48 — the 0xD0 guard remains a documented
+     * approximation of the unidentified stop consumer. */
     unsigned walk_guard = 0;
     while (actors.state == 1 && walk_guard++ < 400)
         aos_opening_actors_update(&actors, NULL, NULL, 0);
@@ -558,16 +555,19 @@ static void test_intro_transition(void) {
     aos_opening_actors_update(&actors, NULL, &camera_x, 0);
     assert(actors.window_open);
     /* +0xA==2's first frame raises D410 +0xB==0's suspend flag with a
-     * 0x40-frame timer; the script stays blocked and the window chrome
-     * stays hidden until sub_08067A04's state 2 can run. */
-    assert(actors.text_hold == 0x40 && !actors.window_shown);
+     * 0x40 reload that wraps to 0xFF on the 65th decrement; the script
+     * stays blocked and the window chrome stays hidden until
+     * sub_08067A04's state 2 can run. */
+    assert(actors.text_hold == 0x42 && !actors.window_shown);
     unsigned held = 0;
     while (aos_opening_actors_blocks_script(&actors) && held < 80) {
         assert(!actors.window_shown);
         aos_opening_actors_update(&actors, NULL, &camera_x, 0);
         ++held;
     }
-    assert(held == 64 && actors.text_hold == 0 && actors.window_shown);
+    /* +0xD=0x40 wraps to 0xFF on the 65th decrement and +0xC==2 clears
+     * the suspend the next frame: 66 portable hold frames. */
+    assert(held == 66 && actors.text_hold == 0 && actors.window_shown);
     assert(!aos_opening_actors_blocks_script(&actors));
     aos_opening_actors_update(&actors, NULL, &camera_x, 0);
     assert(actors.mosaic == 0 && actors.window_open);

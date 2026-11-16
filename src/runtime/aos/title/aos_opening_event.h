@@ -354,11 +354,12 @@ typedef struct {
     uint8_t skeleton_step;
     uint8_t skeleton_timer;
     uint16_t skeleton_phase;
-    /* sub_0805DAA0 +0xB==2,+0xC==2 compares entity +0x42 against
-     * 0xCA minus the camera scroll word (gEwramData+0xA094+6). +0x42
-     * was baked at spawn as 0x16F minus that word, so the world-space
-     * guard needs the spawn-time camera latched on the first update;
-     * scene_camera_x holds it and scene_camera_set marks the latch. */
+    /* sub_0805CE28 latches the live camera word (+0xA094+6) once at
+     * spawn for entity+0x38's pan-mode pick. sub_0805DAA0's approach
+     * stop compares entity +0x42 — the high word of the same +0x40
+     * the integrator updates — against 0xCA minus that same camera
+     * word, so the camera terms cancel and the guard is world x <=
+     * 0xCA; the latch is retained for diagnostics only. */
     int32_t scene_camera_x;
     bool scene_camera_set;
     /* Parent +0x20 bit 1 (value 2): +0xB==4 sub-state 3 sets it when

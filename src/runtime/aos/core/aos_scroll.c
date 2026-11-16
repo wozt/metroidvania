@@ -1133,6 +1133,17 @@ void aos_scroll_depth_priorities(const uint8_t layer[4],
         out->bg_priority[i] = (uint8_t)unk_a[i];
 }
 
+uint8_t aos_scroll_blend_first_targets(uint16_t blend_control) {
+    /* BLDCNT layout: bits 0-5 first target (BG0..BG3, OBJ, BD),
+     * bits 6-7 the effect (1 = alpha), bits 8-13 second target.
+     * The BG draw consumes only the BG first-target bits; the
+     * second-target mask and the backdrop/OBJ bits stay with the
+     * hardware model — see the header note for the per-pixel
+     * eligibility the draw order reproduces. */
+    if (((blend_control >> 6) & 3) != 1) return 0;
+    return (uint8_t)(blend_control & 0xF);
+}
+
 /* Entity record +0x5C (EwramData_EntityData.unk_540) create-time
  * draw bands for the 0x71 enemy kinds, decoded from the native
  * Enemy*Create bodies under third_party/cvaos/asm/code.

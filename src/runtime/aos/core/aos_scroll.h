@@ -424,6 +424,24 @@ typedef struct {
 void aos_scroll_depth_priorities(const uint8_t layer[4],
                                  AosDepthPriorities *out);
 
+/* The room record's blend_control (EwramData_unk88.unk_1E — the
+ * descriptor +0x1E halfword sub_0800ECA0 copies into
+ * gDisplayRegisters.bldCnt on every room entry) decoded for the
+ * draw path. sub_0800C778 — inlined into sub_0800ECA0 right after
+ * that store and into sub_0800C5D8's new-game init — fixes
+ * BLDALPHA at EVA 11 / EVB 10 on every room load, and nothing in
+ * normal gameplay rewrites it, so an alpha-effect room blends its
+ * first-target BG layer(s) at those coefficients. Returns the
+ * BLDCNT-style first-target mask restricted to the BG slots
+ * (bits 0-3 = BG0..BG3; OBJ/backdrop first targets are not
+ * consumed by the BG draw) when bits 6-7 select alpha blending,
+ * else 0. The native also requires the pixel below the first
+ * target to be a second-target layer for the blend to fire —
+ * the draw path reproduces that through its priority order
+ * (layers in front repaint over the blended result), with the
+ * backdrop-only edge documented at the consumer. */
+uint8_t aos_scroll_blend_first_targets(uint16_t blend_control);
+
 /* The entity record +0x5C (unk_540) create-time draw band of an
  * enemy kind, decoded from the native Enemy*Create bodies
  * (sub_0806B04C's unconditional 0x12 default plus the per-create

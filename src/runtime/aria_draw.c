@@ -1427,7 +1427,11 @@ void draw_damage_popup(SDL_Renderer *renderer, const AriaObjects *objects,
  * exposed through aria_bg_band_priority). The runtime draws
  * back-to-front per priority level — BG layers first, then the
  * sprites whose retained band maps to it — so a sprite can sit
- * behind a foreground layer. Bands the port does not retain
+ * behind a foreground layer. The room record's blend_control
+ * (sub_0800ECA0's bldCnt store) is consumed too: alpha-effect
+ * rooms blend their first-target BG layer at sub_0800C778's
+ * fixed EVA 11 / EVB 10 — see the blend block comment above
+ * aria_bg_blend_mode. Bands the port does not retain
  * (enemies, effects, pickups, skills, guardians, walls, most
  * specials — see PROJECT_STATUS) still draw in the front pass,
  * the same all-on-top order as before; Object20's persisted
@@ -1493,6 +1497,14 @@ typedef struct {
     SDL_Texture *warp_tex;
     uint8_t *warp_buf;
     bool bg2_disabled;      /* mode 19/21 dispCnt &= ~DCNT_BG2 */
+    /* The room record's blend_control decoded once per room
+     * (aos_scroll_blend_first_targets): BLDCNT-style first-target
+     * mask over BG0..BG3 when the room selects alpha blending —
+     * sub_0800ECA0's gDisplayRegisters.bldCnt store. The shipped
+     * values are 0x1A44 (BG2 first target: the water surface
+     * layers) and 0x1C42 (BG1), always at the BLDALPHA
+     * EVA 11 / EVB 10 sub_0800C778 fixes on every room load. */
+    uint8_t blend_mask;
     /* This room's sub_0803DC18/3DD14 depth tables: BGxCNT
      * priorities for BG0..BG3 and the +0x5C band -> OBJ priority
      * map sub_0803DE10 stamps into OAM. Computed once per room
@@ -1513,6 +1525,8 @@ extern uint32_t aria_events[AOS_WALL_EVENT_WORDS];
 /* area/number start at -1 so the empty cache can never alias a
  * real room (0/0 is a valid room). */
 static AriaBgRoomLayers aria_bg_room = { .area = -1, .number = -1 };
+static void aria_bg_blend_begin(SDL_Texture *tex, uint8_t fade_mod);
+static void aria_bg_blend_end(SDL_Texture *tex, uint8_t fade_mod);
 
 static void aria_bg_room_clear(void) {
     for (int i = 0; i < FUSION_AOS_BACKGROUND_COUNT; ++i) {
@@ -1541,6 +1555,7 @@ static void aria_bg_room_clear(void) {
     aria_bg_room.phase = 0;
     memset(&aria_bg_room.hblank, 0, sizeof aria_bg_room.hblank);
     aria_bg_room.bg2_disabled = false;
+    aria_bg_room.blend_mask = 0;
     memset(&aria_bg_room.depth, 0, sizeof aria_bg_room.depth);
     aria_bg_room.depth_ok = false;
     aria_bg_room.ofs_bx = aria_bg_room.ofs_by = 0;
@@ -1607,6 +1622,11 @@ static bool aria_bg_room_ensure(SDL_Renderer *renderer,
         aos_scroll_depth_priorities(layer_bytes, &aria_bg_room.depth);
         aria_bg_room.depth_ok = true;
     }
+    /* sub_0800ECA0's bldCnt store: the resolved room record's
+     * blend_control halfword, decoded to the BG first-target mask
+     * (0 for the 261 no-blend rooms and any non-alpha effect). */
+    aria_bg_room.blend_mask =
+        aos_scroll_blend_first_targets(descriptor.blend_control);
     FusionAosVideoMemory *memory = malloc(sizeof *memory);
     if (!memory) return false;
     bool mem_ok = fusion_aos_load_video_memory(
@@ -1942,12 +1962,90 @@ static bool aria_bg_draw_affine_warp(SDL_Renderer *renderer,
     }
     SDL_UpdateTexture(aria_bg_room.warp_tex, NULL, aria_bg_room.warp_buf,
                       VIEW_W * 4);
-    SDL_SetTextureColorMod(aria_bg_room.warp_tex, fade_mod, fade_mod,
-                           fade_mod);
+    /* The warp texture is the layer's draw surface too: a blended
+     * first-target BG gets the same BLDCNT/BLDALPHA pass the flat
+     * paths get (warp_tex is per-room, so its mods restore after
+     * the draw like the layer texture's). */
+    const bool blend = (aria_bg_room.blend_mask & (1u << bg)) != 0;
+    if (blend)
+        aria_bg_blend_begin(aria_bg_room.warp_tex, fade_mod);
+    else
+        SDL_SetTextureColorMod(aria_bg_room.warp_tex, fade_mod,
+                               fade_mod, fade_mod);
     SDL_FRect dst_rect = {0.0f, 0.0f, (float)VIEW_W, (float)VIEW_H};
     SDL_RenderTexture(renderer, aria_bg_room.warp_tex, NULL,
                       &dst_rect);
+    if (blend)
+        aria_bg_blend_end(aria_bg_room.warp_tex, fade_mod);
     return true;
+}
+
+/* ---- room alpha blend (BLDCNT/BLDALPHA) ----
+ * sub_0800ECA0 stores the room record's blend_control into
+ * gDisplayRegisters.bldCnt on every room entry and sub_0800C778
+ * (inlined there and into sub_0800C5D8's new-game init) fixes
+ * BLDALPHA at EVA 11 / EVB 10; nothing in normal gameplay
+ * rewrites either, so an alpha-effect room — 82 of the 343,
+ * the water-surface rooms — blends its first-target BG layer at
+ * those coefficients for the whole stay. The hardware rule
+ * (GBATEK): per pixel the topmost non-transparent first-target
+ * pixel mixes with the next-lower non-transparent second-target
+ * pixel, result = (EVA*first + EVB*second) >> 4; everywhere else
+ * the top pixel shows unchanged.
+ *
+ * The draw reproduces that through paint order: the blended
+ * layer draws while the framebuffer still holds exactly the
+ * layers BELOW it in priority (every layer in front — higher
+ * priority sprites included — repaints over the result, which
+ * is precisely the native "first target must be topmost"
+ * condition). The remaining approximation is the second-target
+ * eligibility of the pixel underneath: the shipped second-target
+ * masks (BG1|BG3|OBJ for 0x1A44, BG2|BG3|OBJ for 0x1C42) cover
+ * every layer that can sit below the blended BG except the
+ * unused BG0 and the backdrop, so the only divergence is a
+ * pixel where the blended layer is the sole cover — the native
+ * shows it opaque (backdrop is no second target), the port
+ * blends it over the black clear (the native backdrop colour
+ * is black in these rooms anyway). */
+
+/* sub_0800C778's fixed BLDALPHA coefficients. */
+#define ARIA_BG_BLEND_EVA 11
+#define ARIA_BG_BLEND_EVB 10
+
+/* RGB = src * EVA/16 + dst * EVB/16: the texture colour
+ * modulation carries EVA (combined with the caller's BG fade),
+ * the alpha modulation carries 1 - EVB so ONE_MINUS_SRC_ALPHA
+ * is EVB on opaque texels and 1 on transparent ones — the same
+ * factoring room_runtime.c's sprite alpha blend uses. The GBA's
+ * 5-bit >>4 math rounds differently than the 8-bit SDL path;
+ * documented, sub-LSB. */
+static SDL_BlendMode aria_bg_blend_mode(void) {
+    static SDL_BlendMode mode;
+    static bool initialized;
+    if (!initialized) {
+        mode = SDL_ComposeCustomBlendMode(
+            SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+            SDL_BLENDOPERATION_ADD,
+            SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+            SDL_BLENDOPERATION_ADD);
+        initialized = true;
+    }
+    return mode;
+}
+
+static void aria_bg_blend_begin(SDL_Texture *tex, uint8_t fade_mod) {
+    const Uint8 eva =
+        (Uint8)((unsigned)fade_mod * ARIA_BG_BLEND_EVA / 16);
+    SDL_SetTextureBlendMode(tex, aria_bg_blend_mode());
+    SDL_SetTextureColorMod(tex, eva, eva, eva);
+    SDL_SetTextureAlphaMod(
+        tex, (Uint8)((16 - ARIA_BG_BLEND_EVB) * 255 / 16));
+}
+
+static void aria_bg_blend_end(SDL_Texture *tex, uint8_t fade_mod) {
+    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureColorMod(tex, fade_mod, fade_mod, fade_mod);
+    SDL_SetTextureAlphaMod(tex, 255);
 }
 
 /* Draw the decoded BG layers whose sub_0803FD60 priority equals
@@ -1972,8 +2070,17 @@ void aria_bg_draw_priority(SDL_Renderer *renderer, int priority,
         /* bgOfs shadow: BG1 is the drawn camera+delta position;
          * BG2/BG3 are the scroll state's faithful integer offsets
          * (absolute positions in each layer's own map space). */
-        SDL_SetTextureColorMod(layer->texture, fade_mod, fade_mod,
-                               fade_mod);
+        /* A first-target BG of the room's alpha blend draws with
+         * the BLDCNT/BLDALPHA coefficients — see the block comment
+         * above aria_bg_blend_mode for the hardware rule and the
+         * paint-order reproduction. */
+        const bool blend =
+            (aria_bg_room.blend_mask & (1u << bg)) != 0;
+        if (blend)
+            aria_bg_blend_begin(layer->texture, fade_mod);
+        else
+            SDL_SetTextureColorMod(layer->texture, fade_mod,
+                                   fade_mod, fade_mod);
         if (layer->affine) {
             /* Affine BG (BG2 only, sub_0803F7C8 + the load-time
              * BgAffineSet): the hardware ignores bgOfs — the
@@ -1987,50 +2094,53 @@ void aria_bg_draw_priority(SDL_Renderer *renderer, int priority,
              * mode-18-lost-the-buffer case with no per-frame
              * write — keep this static frame-0 transform, the
              * documented approximation. */
-            if (aria_bg_draw_affine_warp(renderer, layer, bg,
-                                         fade_mod))
-                continue;
-            SDL_FRect src = {8.0f, 48.0f, (float)VIEW_W,
-                             (float)VIEW_H};
-            SDL_FRect dst = {0.0f, 0.0f, (float)VIEW_W,
-                             (float)VIEW_H};
-            SDL_RenderTexture(renderer, layer->texture, &src, &dst);
-            continue;
-        }
-        /* The frame's hBlankEffect program, when this layer is its
-         * target: per-scanline BGxHOFS/BGxVOFS strips. hblank.affine
-         * (mode 18's sub_0800D000 per-scanline BgAffineSet) and
-         * affine tilemaps (bgOfs ignored by the hardware) fall
-         * through to the flat draw — documented, never approximated
-         * with invented transform data. */
-        if (aria_bg_room.hblank.target_bg == bg && !layer->affine &&
-            !aria_bg_room.hblank.affine) {
+            if (!aria_bg_draw_affine_warp(renderer, layer, bg,
+                                          fade_mod)) {
+                SDL_FRect src = {8.0f, 48.0f, (float)VIEW_W,
+                                 (float)VIEW_H};
+                SDL_FRect dst = {0.0f, 0.0f, (float)VIEW_W,
+                                 (float)VIEW_H};
+                SDL_RenderTexture(renderer, layer->texture, &src,
+                                  &dst);
+            }
+        } else if (aria_bg_room.hblank.target_bg == bg &&
+                   !aria_bg_room.hblank.affine) {
+            /* The frame's hBlankEffect program, when this layer
+             * is its target: per-scanline BGxHOFS/BGxVOFS strips.
+             * hblank.affine (mode 18's sub_0800D000 per-scanline
+             * BgAffineSet) and affine tilemaps (bgOfs ignored by
+             * the hardware) fall through to the flat draw —
+             * documented, never approximated with invented
+             * transform data. */
             aria_bg_draw_hblank(renderer, layer, bg,
                                 &aria_bg_room.hblank);
-            continue;
-        }
-        int32_t h_ofs, v_ofs;
-        if (bg == 1) {
-            h_ofs = aria_bg_room.ofs_bx; v_ofs = aria_bg_room.ofs_by;
         } else {
-            h_ofs = aria_bg_room.scroll.disp_h[bg];
-            v_ofs = aria_bg_room.scroll.disp_v[bg];
+            int32_t h_ofs, v_ofs;
+            if (bg == 1) {
+                h_ofs = aria_bg_room.ofs_bx; v_ofs = aria_bg_room.ofs_by;
+            } else {
+                h_ofs = aria_bg_room.scroll.disp_h[bg];
+                v_ofs = aria_bg_room.scroll.disp_v[bg];
+            }
+            AosScrollBlit blits[4];
+            size_t count = aos_scroll_bgofs_blits(
+                h_ofs, v_ofs, layer->width, layer->height,
+                VIEW_W, VIEW_H, blits);
+            for (size_t b = 0; b < count; ++b) {
+                SDL_FRect src = {(float)blits[b].src_x,
+                                 (float)blits[b].src_y,
+                                 (float)blits[b].w,
+                                 (float)blits[b].h};
+                SDL_FRect dst = {(float)blits[b].dst_x,
+                                 (float)blits[b].dst_y,
+                                 (float)blits[b].w,
+                                 (float)blits[b].h};
+                SDL_RenderTexture(renderer, layer->texture, &src,
+                                  &dst);
+            }
         }
-        AosScrollBlit blits[4];
-        size_t count = aos_scroll_bgofs_blits(
-            h_ofs, v_ofs, layer->width, layer->height,
-            VIEW_W, VIEW_H, blits);
-        for (size_t b = 0; b < count; ++b) {
-            SDL_FRect src = {(float)blits[b].src_x,
-                             (float)blits[b].src_y,
-                             (float)blits[b].w,
-                             (float)blits[b].h};
-            SDL_FRect dst = {(float)blits[b].dst_x,
-                             (float)blits[b].dst_y,
-                             (float)blits[b].w,
-                             (float)blits[b].h};
-            SDL_RenderTexture(renderer, layer->texture, &src, &dst);
-        }
+        if (blend)
+            aria_bg_blend_end(layer->texture, fade_mod);
     }
 }
 

@@ -1,3 +1,58 @@
+## Patch 1195 - room BLDCNT/BLDALPHA alpha blend: water surfaces draw semi-transparent
+
+- **Bug.** Water surfaces rendered fully opaque: the layered BG
+  draw consumed the room record's `blend_control`
+  (`EwramData_unk88.unk_1E`, the halfword `sub_0800ECA0` copies
+  into `gDisplayRegisters.bldCnt` on every room entry) nowhere —
+  it was decoded into the world catalog but had no draw consumer,
+  so the 82 alpha-effect rooms (all water areas: Castle Corridor,
+  Underground region, Chaotic Realm, ...) showed their first-target
+  BG layer opaque.
+- **Native mechanism.** `sub_0800C778` (inlined into `sub_0800ECA0`
+  right after the `bldCnt` store and into `sub_0800C5D8`'s
+  new-game init) fixes `BLDALPHA` at `C_16_2_8(11, 10)` — EVA 11 /
+  EVB 10 — on every room load and nothing in normal gameplay
+  rewrites it. Per GBATEK the blend fires per pixel only where the
+  topmost non-transparent pixel is a first-target layer and the
+  next-lower one a second-target layer:
+  `result = (EVA*first + EVB*second) >> 4`. The shipped values are
+  `0x1A44` (first target BG2, second BG1|BG3|OBJ — the water
+  surface/swell layers, e.g. Castle Corridor 1's mode-36 BG2) and
+  `0x1C42` (first target BG1, second BG2|BG3|OBJ — the
+  Underground-region/Chaotic-Realm water overlay rooms).
+- **Port.** `aos_scroll_blend_first_targets` decodes
+  `blend_control` to the BG first-target mask (alpha effect only);
+  `aria_bg_room_ensure` stores it per room and
+  `aria_bg_draw_priority`/`aria_bg_draw_affine_warp` draw a masked
+  layer through a custom SDL blend mode
+  (`SDL_BLENDFACTOR_ONE`/`ONE_MINUS_SRC_ALPHA`, ADD — the same
+  factoring `room_runtime.c`'s sprite alpha blend uses): the
+  texture colour modulation carries EVA combined with the BG fade,
+  the alpha modulation carries `1 - EVB`, so opaque texels blend
+  `11/16*src + 10/16*dst` and transparent texels pass the
+  destination through. The native topmost/next-lower pixel rule is
+  reproduced by paint order: the blended layer draws while the
+  framebuffer holds only lower-priority content, and every layer
+  in front (BGs, sprites of any retained band) repaints over the
+  result — exactly the "first target must be topmost" condition.
+  Documented approximations: the 5-bit `>>4` coefficient math is
+  carried in 8-bit SDL modulations (sub-LSB rounding), and a
+  blended pixel whose only underneath cover is the backdrop blends
+  over the black clear where the native shows it opaque (backdrop
+  is no second target; unused BG0 is the only other exclusion and
+  no room enables it). The no-ROM composite fallback cannot blend —
+  it stays a single flattened texture.
+- **Verification.** `tests/test_aos_scroll.c` pins the decode
+  (`0x1A44 -> BG2`, `0x1C42 -> BG1`, brightness/no-effect/OBJ-mask
+  cases -> 0). `ARIA_BG_DEBUG=1 --capture` on room 0/1 (mode-36
+  BG2 hblank waves) and room 7/4 (`0x1C42` BG1 water) with `--rom`:
+  before/after binary diff shows 70272 resp. 55072 pixels changed
+  confined to the water bands, blending toward the native
+  brightened look.
+- **Registries.** `aos.core.scroll` in `annotations.tsv`,
+  `assets.aria_rooms` in `features.tsv`; status stays `partial` —
+  no emulator comparison of the blended output yet.
+
 ## Patch 1194 - quick map: mark explored cells on room entry via sub_08011430
 
 - **Bug.** The SELECT quick map only discovered a room when the map

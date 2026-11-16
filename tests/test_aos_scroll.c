@@ -730,6 +730,34 @@ int main(void) {
     }
 
     {
+        /* aos_scroll_blend_first_targets: the room record's
+         * blend_control (EwramData_unk88.unk_1E -> bldCnt) decoded
+         * for the draw path. Only the two alpha-effect values the
+         * ROM ships produce a mask: 0x1A44 (Castle Corridor 1 and
+         * 59 siblings) selects BG2 as first target, 0x1C42
+         * (Clock Tower 8, Underground region 3/4/5/8/14/17-19/25/
+         * 29-33/42/45/49 and the Chaotic Realm boss rooms)
+         * selects BG1. Everything else — no blend, brightness
+         * effects, OBJ/backdrop-only first targets — reports 0. */
+        assert(aos_scroll_blend_first_targets(0x0000) == 0x0);
+        assert(aos_scroll_blend_first_targets(0x1A44) == 0x4);
+        assert(aos_scroll_blend_first_targets(0x1C42) == 0x2);
+        /* Brightness increase (effect 2) and decrease (effect 3)
+         * are not alpha blends even with BG first targets set. */
+        assert(aos_scroll_blend_first_targets(0x0004 | (2u << 6)) == 0);
+        assert(aos_scroll_blend_first_targets(0x0004 | (3u << 6)) == 0);
+        /* First-target bits with no effect stay 0 (0x0044 would
+         * be BG2 + the alpha bit — covered above). */
+        assert(aos_scroll_blend_first_targets(0x0004) == 0);
+        /* BG0's first-target bit is kept in the mask (bit 0) —
+         * the draw only consumes bits 1-3. */
+        assert(aos_scroll_blend_first_targets(0x0041) == 0x1);
+        /* OBJ (bit 4) and backdrop (bit 5) first targets are not
+         * BG slots: masked out. */
+        assert(aos_scroll_blend_first_targets(0x017F) == 0xF);
+    }
+
+    {
         /* aos_scroll_enemy_band5c: the entity record +0x5C
          * create-time bands decoded from the native Enemy*Create
          * bodies — sub_0806B04C's unconditional 0x12 default plus

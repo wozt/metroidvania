@@ -364,13 +364,23 @@ static void draw_cursor(const AosPauseGraphics *graphics, uint8_t *rgba,
  *    sub_08048B0C/sub_08048C74 pick the per-language sheet, and the
  *    entity+0x65 argument selects within one animation (no per-page
  *    frames); sub_08048BC4's flag is the icon-overlay hand-hide bit,
- *    not a flip. Remaining native-only OBJ behaviour is transient:
- *    sub_0804875C's 16-step affine press animation (entity+0x24), the
- *    Soul Set L/R category-transition hand (sub_08048108 state machine
- *    + sub_080486E0 trigger + sub_0804933C palette/anim swap) and the
- *    Enemy portrait entity's per-enemy update (sub_0804CA18 stores the
- *    record's +4 update, e.g. 0x080AD645; the port keeps the frame the
- *    create leaves). None of these are steady-state elements. */
+ *    not a flip. Patch 1166 ports the Enemy portrait entity's
+ *    per-enemy update: sub_0804CA18 stores the record's +4 update
+ *    (e.g. 0x080AD645) and the port retains the created probe and
+ *    re-runs aos_enemy_step_anim once per pause frame in
+ *    aria_menus_debug.c, so animated enemies cycle frames instead of
+ *    keeping the create frame. Remaining native-only OBJ behaviour
+ *    is transient: sub_0804875C's 16-step affine press animation
+ *    (entity+0x24: init sets the draw anchor to pixel (0x35,9), resets
+ *    the +0x0D timer and steps sub_0803E058 with angle timer<<12 and
+ *    scale from +0x2C for timer <= 0xF, then clears the +0x59 affine
+ *    bit) and the Soul Set L/R category-transition hand
+ *    (sub_08048108 state machine + sub_080486E0 trigger +
+ *    sub_0804933C palette/anim swap; sub_08048AD8 anchors at
+ *    cell*8+6/+3 and sub_08048B0C allocates affine slot 2 through
+ *    sub_0803E654). Neither is a steady-state element; their affine
+ *    matrices still need the sub_0803E058/sub_0803E968 decode before
+ *    a faithful port. */
 
 /* sub_08048804/sub_080488FC's icon entity: icon n is the 16x16 block
  * (n-1)%64 of sheet (n-1)/64 (eight icons per row of 16 px), sampled

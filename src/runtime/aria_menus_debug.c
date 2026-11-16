@@ -12,6 +12,7 @@
 
 #include "aos/core/aos_collision.h"
 #include "aos/core/aos_enemy.h"
+#include "aos/core/aos_enemy_internal.h"
 #include "aos/core/aos_soma.h"
 #include "aos/core/aos_stats.h"
 #include "aos/game/aos_bestiary.h"
@@ -379,10 +380,54 @@ bool draw_native_item_use(SDL_Renderer *renderer, SDL_Texture *texture,
 /* sub_0804CA18: the detail page's enemy portrait is a real enemy entity —
  * the record's +0x00 create fn runs and +0x04 becomes the entity update,
  * but the main entity loop skips slots 0x00-0xCF while unk_A074_0 is set
- * (the pause menu), so the portrait keeps the frame the create leaves.
- * The create runs once per enemy with the shared RNG state preserved; a
- * far decoy makes every enemy face right, matching the native case where
- * the player entity sits far from the menu anchor. */
+ * (the pause menu). Patch 1166 keeps the created probe per enemy and
+ * steps its animation once per rendered pause frame (see
+ * enemy_portrait_advance); enemies whose +0x04 is per-family AI code
+ * still surface only their animation advance here, matching the
+ * externally visible part of the native update. The create runs once
+ * per enemy with the shared RNG state preserved; a far decoy makes
+ * every enemy face right, matching the native case where the player
+ * entity sits far from the menu anchor. */
+/* The native portrait entity's update is `sub_0804CA18`, which delegates to
+ * the enemy record's +0x04 routine: most enemies keep animating their idle
+ * frames while the pause menu is up, so the portrait is not a frozen
+ * create-frame still. The port keeps the created `AosEnemy` probe per enemy
+ * and re-runs `aos_enemy_step_anim` once per rendered pause frame, which is
+ * the same frame-advance the native entity update performs (the routine
+ * itself is per-family AI code that does not apply while paused; the anim
+ * step is the only externally visible part of it). */
+static AosEnemy portrait_probe[ENEMY_KINDS];
+static bool portrait_probe_valid[ENEMY_KINDS];
+
+static void portrait_decode_frame(AriaObjects *objects, int id,
+                                  const char *path, const AriaFrame *frame) {
+    __typeof__(objects->enemies[0]) *art = &objects->enemies[id];
+    free(art->portrait);
+    art->portrait = NULL;
+    art->portrait_state = -1;
+    art->portrait_frame = NULL;
+    SDL_Surface *surface = SDL_LoadBMP(path);
+    if (!surface) return;
+    SDL_Surface *rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
+    SDL_DestroySurface(surface);
+    if (!rgba) return;
+    int w = rgba->w, h = rgba->h;
+    uint8_t *pixels = malloc((size_t)w * h * 4);
+    if (!pixels) {
+        SDL_DestroySurface(rgba);
+        return;
+    }
+    for (int y = 0; y < h; ++y)
+        memcpy(pixels + (size_t)y * w * 4,
+               (const uint8_t *)rgba->pixels + (size_t)y * rgba->pitch, (size_t)w * 4);
+    SDL_DestroySurface(rgba);
+    art->portrait = pixels;
+    art->portrait_w = w;
+    art->portrait_h = h;
+    art->portrait_frame = frame;
+    art->portrait_state = 1;
+}
+
 static void enemy_portrait_init(AriaObjects *objects, int id) {
     __typeof__(objects->enemies[0]) *art = &objects->enemies[id];
     if (art->portrait_state) return;
@@ -415,27 +460,27 @@ static void enemy_portrait_init(AriaObjects *objects, int id) {
         frame = &art->frames[probe.anim.id][probe.anim.frame];
     }
     if (!path || !frame) return;
-    SDL_Surface *surface = SDL_LoadBMP(path);
-    if (!surface) return;
-    SDL_Surface *rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
-    SDL_DestroySurface(surface);
-    if (!rgba) return;
-    int w = rgba->w, h = rgba->h;
-    uint8_t *pixels = malloc((size_t)w * h * 4);
-    if (!pixels) {
-        SDL_DestroySurface(rgba);
-        return;
-    }
-    for (int y = 0; y < h; ++y)
-        memcpy(pixels + (size_t)y * w * 4,
-               (const uint8_t *)rgba->pixels + (size_t)y * rgba->pitch, (size_t)w * 4);
-    SDL_DestroySurface(rgba);
-    art->portrait = pixels;
-    art->portrait_w = w;
-    art->portrait_h = h;
-    art->portrait_frame = frame;
+    portrait_probe[id] = probe;
+    portrait_probe_valid[id] = probe.static_frame < 0;
+    portrait_decode_frame(objects, id, path, frame);
     art->portrait_flip = probe.mirrored;
-    art->portrait_state = 1;
+}
+
+/* One pause frame == one native update: step the retained probe's animation
+ * and swap the cached BMP whenever the resolved anim frame changes. */
+static void enemy_portrait_advance(AriaObjects *objects, int id) {
+    __typeof__(objects->enemies[0]) *art = &objects->enemies[id];
+    if (art->portrait_state != 1 || !portrait_probe_valid[id]) return;
+    AosEnemy *probe = &portrait_probe[id];
+    aos_enemy_step_anim(probe, art->kind.anims);
+    if (probe->static_frame >= 0 ||
+        probe->anim.id >= AOS_ENEMY_MAX_ANIMS ||
+        probe->anim.frame >= MAX_FRAMES)
+        return;
+    const char *path = art->paths[probe->anim.id][probe->anim.frame];
+    const AriaFrame *frame = &art->frames[probe->anim.id][probe->anim.frame];
+    if (!path || art->portrait_frame == frame) return;
+    portrait_decode_frame(objects, id, path, frame);
 }
 
 /* The entity anchor is (0x40, 0x58) plus the record's +0x1E/+0x20 pixel
@@ -445,6 +490,7 @@ static void enemy_portrait_init(AriaObjects *objects, int id) {
 static void enemy_portrait_blit(AriaObjects *objects, int id, uint8_t *pixels) {
     if (id < 0 || id >= ENEMY_KINDS) return;
     enemy_portrait_init(objects, id);
+    enemy_portrait_advance(objects, id);
     const __typeof__(objects->enemies[0]) *art = &objects->enemies[id];
     if (art->portrait_state != 1 || !art->portrait || !art->portrait_frame) return;
     const AriaFrame *frame = art->portrait_frame;

@@ -22887,3 +22887,36 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-12: the warning-clean build succeeded, CTest passed
   28/28, the Python suite passed 418/418, `check_generated` reported fresh
   documents and the proprietary-file guard passed.
+## Patch 1166 - enemy portrait per-enemy animation; transient decode notes
+
+- **Port.** The Enemy detail portrait is no longer a frozen create
+  frame. `enemy_portrait_init` in `src/runtime/aria_menus_debug.c`
+  now retains the created `AosEnemy` probe per enemy id and
+  `enemy_portrait_advance` re-runs `aos_enemy_step_anim` once per
+  rendered pause frame — the externally visible part of
+  `sub_0804CA18`'s record `+0x04` update dispatch while
+  `unk_A074_0` skips the entity loop. When the stepped animation
+  resolves a different exported frame, the cached BMP is re-decoded
+  through the same `art->paths[anim.id][anim.frame]` /
+  `art->frames[anim.id][anim.frame]` records the create used.
+  Static-frame enemies are unchanged; the per-family AI inside the
+  `+0x04` routines is not emulated (partial, not emulator-compared).
+- **Still transient-only (decoded, awaiting the affine matrix port).**
+  `sub_0804875C`'s press entity: `+0x24` state 1 anchors the draw
+  position at pixel `(0x35,9)`, resets the `+0x0D` timer, then for
+  `timer <= 0xF` calls `sub_0803E058` with angle `timer << 12` and
+  scale from `+0x2C` before clearing the `+0x59` affine bit — a
+  one-shot 16-update affine sequence. The Soul Set transition hand:
+  `sub_080486E0` compares the requested category against the hand's
+  current one and sets `+0x38` plus palette/anim state that
+  `sub_0804933C` applies; `sub_08048108` is the movement/affine state
+  machine (anchors via `sub_08048AD8` at `cell*8+6`/`cell*8+3`,
+  affine slot via `sub_0803E654(2)` in `sub_08048B0C`). Both need
+  the `sub_0803E058`/`sub_0803E968` sine/scale matrix decode before
+  a faithful host port; the pause renderer has no affine blit path
+  wired to its RGBA output yet (`aos_obj_layer_draw`'s Q8.8 inverse
+  mapping exists but is not used by the pause pages).
+- **Docs/registries.** `annotations.tsv` (`aos.menus.enemy`,
+  `aos.souls.equipment_menu`), `features.tsv` and the OBJ audit
+  comment in `aos_pause_graphics.c` updated; derived docs regenerated.
+

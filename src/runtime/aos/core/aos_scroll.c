@@ -624,3 +624,61 @@ void aos_scroll_depth_priorities(const uint8_t layer[4],
     for (int i = 0; i < 4; ++i)
         out->bg_priority[i] = (uint8_t)unk_a[i];
 }
+
+/* Entity record +0x5C (EwramData_EntityData.unk_540) create-time
+ * draw bands for the 0x71 enemy kinds, decoded from the native
+ * Enemy*Create bodies under third_party/cvaos/asm/code.
+ * sub_0806B04C — the shared enemy common-init every create calls
+ * on its entity — stores 0x12 unconditionally, so a kind ends at
+ * 0x12 unless its create writes +0x5C AFTER that call; the
+ * pre-helper stores several creates emit (EnemySkeletonCreate's
+ * 0x11, EnemyFleamanCreate's/Bael's 0x14, EnemyBuerCreate's
+ * 0x14, EnemyNeedlesCreate's/BeamSkeleton's/Mandragora's 0x11,
+ * EnemyBelmontCreate's 0x11, EnemyRockArmorCreate's 0x13,
+ * EnemyGhostDancerCreate's/AltairCreate's 3) are dead writes
+ * the helper overwrites. Creates whose only +0x5C traffic is
+ * parent-band +/- delta copies onto child records
+ * (EnemyGolemCreate, EnemyGreatArmorCreate, EnemyCreakingSkull-
+ * Create, EnemyBigGolemCreate, EnemyGladiatorCreate,
+ * EnemyStolasCreate, EnemyHeadhunterCreate, EnemyArachneCreate,
+ * EnemyGiantGhostCreate, EnemyQuezlcoatlCreate) leave the main
+ * record at the helper's 0x12. Family thunks resolve to their
+ * target (EnemySirenCreate->HarpyCreate, the golem/demon/
+ * armor/worm/minotaur/crow variants, EnemyErinysCreate->
+ * ValkyrieCreate, EnemyGremlinCreate->GargoyleCreate,
+ * EnemyDurgaCreate->CurlyCreate, EnemyCatoblepasCreate->
+ * GorgonCreate). BonePillar/FishHead share sub_080B3BAC, which
+ * only bands the spawned pillar segments 0x0A — the parent
+ * record's +0x5C is never written, so the port uses the
+ * segments' band for the drawn sprite. Three kinds keep a live
+ * +0x5C the draw path reads instead of this table (Kyoma
+ * Demon 0x1D/0x11, Altair 3/0x30 dash, Mudman's spawned-child
+ * counter); state-dependent +0x5C rewrites inside enemy updates
+ * (Lightning Doll's per-step 3/9, the worm segment bands, the
+ * Nemesis helper's parent+2, ...) are not yet tracked, so this
+ * is the create-time band, not the live one. */
+static const uint8_t enemy_band5c[0x71] = {
+    /* 0x00-0x0F */ 0x12,0x12,0x12,0x12,0x13,0x12,0x03,0x12,
+                     0x0A,0x03,0x12,0x03,0x12,0x12,0x03,0x03,
+    /* 0x10-0x1F */ 0x04,0x12,0x12,0x12,0x03,0x13,0x13,0x12,
+                     0x12,0x13,0x12,0x03,0x09,0x12,0x13,0x09,
+    /* 0x20-0x2F */ 0x12,0x12,0x12,0x12,0x12,0x12,0x03,0x1D,
+                     0x13,0x03,0x04,0x12,0x12,0x03,0x11,0x13,
+    /* 0x30-0x3F */ 0x04,0x04,0x12,0x09,0x12,0x12,0x11,0x03,
+                     0x03,0x03,0x13,0x09,0x12,0x12,0x11,0x12,
+    /* 0x40-0x4F */ 0x12,0x0A,0x09,0x12,0x11,0x12,0x12,0x11,
+                     0x04,0x04,0x12,0x12,0x04,0x12,0x12,0x12,
+    /* 0x50-0x5F */ 0x12,0x03,0x12,0x13,0x12,0x13,0x12,0x03,
+                     0x12,0x12,0x03,0x04,0x12,0x12,0x09,0x12,
+    /* 0x60-0x70 */ 0x12,0x12,0x03,0x04,0x11,0x12,0x04,0x12,
+                     0x04,0x12,0x12,0x13,0x12,0x1E,0x12,0x14,
+                     0x12,
+};
+
+/* The create-time +0x5C draw band of an enemy kind (the table
+ * above), or 0xFF for an id outside the native 0x71 records —
+ * the caller treats 0xFF like any out-of-range band and keeps
+ * the sprite in the front pass. */
+uint8_t aos_scroll_enemy_band5c(uint8_t enemy_id) {
+    return enemy_id < 0x71 ? enemy_band5c[enemy_id] : 0xFF;
+}

@@ -2482,6 +2482,11 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                               (int16_t)e->param0, (int16_t)e->param1, soma, layer,
                                               kind, combat->stats[e->id]);
                 e->spawner = -1;
+                /* The record's +0x5C draw band: the kind's
+                 * create-time band (the draw path overrides it
+                 * with the live +0x5C mirrors of Kyoma Demon,
+                 * Altair and Mudman). */
+                e->band5c = aos_scroll_enemy_band5c((uint8_t)e->id);
                 continue;
             }
             bool was_removed = e->enemy.removed;
@@ -2719,6 +2724,11 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_GLADIATOR_GORE
                                    ? (int)i
                                    : -1,
+                    /* Linked pieces copy the parent's +0x5C at spawn
+                     * natively (parent band +/- a small delta); the
+                     * copied AosEnemy's live +0x5C mirrors carry the
+                     * parent's value for the three dynamic kinds. */
+                    .band5c = e->band5c,
                     .enemy = hit.children[c]};
             if (hit.wake_spawner && e->spawner >= 0) {
                 /* sub_080993EC: a waiting Mimic (state 0, step 0) wakes. */
@@ -2729,7 +2739,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 AriaEntity *child = &room->entities[room->entity_count];
                 *child = (AriaEntity){.kind = ARIA_KIND_ENEMY, .id = e->id, .x = hit.spawn_x,
                                       .y = hit.spawn_y, .param1 = hit.spawn_param1,
-                                      .spawned = true, .spawner = (int)i};
+                                      .spawned = true, .spawner = (int)i,
+                                      /* Same kind as the producer:
+                                       * its own create band. */
+                                      .band5c = aos_scroll_enemy_band5c((uint8_t)e->id)};
                 /* Merman's hidden producer writes parameter 0 = 1 on its
                  * children, selecting their 60-frame submerged wait. Ghost
                  * producer children keep both parameters at zero. */
@@ -2776,7 +2789,9 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                           .id = e->param0, .x = e->x,
                                           .y = e->y, .persistent_index = -1,
                                           .param0 = 0, .param1 = 0,
-                                          .spawner = -1};
+                                          .spawner = -1,
+                                          .band5c = aos_scroll_enemy_band5c(
+                                              (uint8_t)e->param0)};
                     child->spawned = aos_enemy_create(
                         &child->enemy, (uint8_t)e->param0, e->x, e->y, 0, 0,
                         soma, layer, combat->kinds[e->param0],

@@ -1,3 +1,89 @@
+## Patch 1167 - enemy +0x5C draw bands decoded and interleaved with layered BG priorities
+
+- **Gap.** Patch 1159 interleaved the layered BG draw with the
+  sprites whose `+0x5C` band the port retained — the player
+  (`0x0E`) and Object1F's children — but every enemy still drew
+  in the all-on-top front pass, so no enemy could sit behind a
+  foreground BG layer even though the native `sub_0803E528`/
+  `sub_0803DE10` pipeline bands every entity record.
+- **Native band audit (cvaos asm).** `+0x5C`
+  (`EwramData_EntityData.unk_540`, range `0x00..0x1F`) is written
+  per enemy create. `sub_0806B04C` — the shared enemy common-init
+  (`code_08060B98.s:21106`) — stores `0x12` unconditionally, so a
+  kind ends at `0x12` unless its create writes `+0x5C` AFTER that
+  call; the pre-helper stores several creates emit
+  (EnemySkeletonCreate's `0x11`, Fleaman/Bael/Buer `0x14`,
+  Needles/BeamSkeleton/Mandragora `0x11`, Belmont `0x11`,
+  RockArmor `0x13`, GhostDancer/Altair `3`) are dead writes the
+  helper overwrites. Real post-helper overrides decoded: `3`
+  (Peeping Eye, Blue Crow, White Dragon, Ghost, Winged Skeleton,
+  Siren-via-Harpy, Harpy, Nemesis,
+  Sky Fish, Medusa Head, Ectoplasm, Valkyrie+Erinys, Alastor,
+  Gargoyle+Gremlin), `4` (Tiny Devil, Witch, Devil family,
+  Imp, Ukoback, Skull Millione/Cagnazzo/Lubicant via
+  `sub_080B7E80`), `9` (Gorgon+Catoblepas, Killer Doll,
+  Lightning Doll, Nightmare, Succubus), `0x11` (Cockatrice/
+  Basilisk via `sub_080BBFF0`, Giant/Poison Worm via
+  `sub_080AD7F0`, Manticore, Slime), `0x13` (Axe/Bomber Armor,
+  Chronomage, Dead Warrior, Student Witch, Evil Butcher,
+  Kicker/Waiter Skeleton, Killer Mantle, Death, Minotaur/
+  Red Minotaur via `sub_080B0AD4`), `0x14` (Graham), `0x1D`
+  (Kyoma Demon create), `0x1E` (Balore); every other kind stays
+  at the `0x12` default, including the creates whose only
+  `+0x5C` traffic is parent-band `+/-` delta copies onto child
+  records (Golem, Great Armor, Creaking Skull, Big Golem,
+  Gladiator, Stolas, Headhunter, Arachne, Giant Ghost,
+  Quezlcoatl families). BonePillar/FishHead share `sub_080B3BAC`,
+  which bands only the spawned segments `0x0A` — the port uses
+  that band for the drawn sprite. Three kinds keep a live `+0x5C`
+  the draw path reads instead: Kyoma Demon (`kd_5c` `0x1D`/`0x11`),
+  Altair (`al_draw5c` `3`/`0x30` dash) and Mudman (`md_spawns`,
+  the spawned-child counter that natively reuses the byte); the
+  Quezlcoatl segment records' `+0x5C` is their segment number
+  (`qz_seg` `1..15`), which doubles as the band.
+- **Change.** `aos_scroll_enemy_band5c` (`aos_scroll.c/.h`)
+  carries the 0x71-entry create-time band table (`0xFF` outside
+  the native records). `AriaEntity.band5c` retains the band:
+  room spawns and Object0A/0B gate children take the kind's
+  table band, `hit.spawn` producer children take their own
+  kind's band, and `hit.children` copies inherit the parent's
+  (the native children copy `parent +0x5C +/- delta` at spawn;
+  the copied `AosEnemy`'s live mirrors carry the parent's value
+  for the three dynamic kinds). `draw_enemies` gained the same
+  `prio_slot` contract as `draw_special_objects` and resolves
+  each enemy through `enemy_band5c` (live mirrors, the
+  Quezlcoatl segment number, else `band5c`) into
+  `aria_bg_band_priority`; `aria_runtime.c` calls it inside the
+  back-to-front priority loop between specials and Soma (the
+  dominant `0x11..0x14` bands sit between the `0x15+` special
+  bands and the player's `0x0E`), and the front pass keeps the
+  `prio_slot = -1` fallback for anything unresolved.
+- **Honest limits.** The table is the CREATE-time band:
+  state-dependent `+0x5C` rewrites inside enemy updates (the
+  Lightning Doll's per-step `3`/`9`, worm segment bands, the
+  Nemesis helper's `parent+2`, Mandragora/Waiter Skeleton child
+  inherits, ...) are documented in `aos_enemy.h`/enemy sources
+  but not yet tracked, so a kind whose native band changes
+  mid-fight keeps its create band. Within a shared priority the
+  slot order stays the fixed specials->enemies->Soma
+  approximation — enemy bands span `0x03..0x1E`, so band-`3`/`4`
+  fliers that natively paint in front of Soma still land behind
+  it, and Kyoma Demon/Balores's `0x1D`/`0x1E` bands paint after
+  the `0x15+` specials instead of before. Effects, particles,
+  pickups, skills, guardians, doors and walls still have no
+  retained band (native object creates do write `unk_540` —
+  e.g. `code_08002454.c`'s `6`/`7`/`0x11`/`0x12`,
+  `code_08008750.c`'s `0x16`/`0x19`/`0x1A`,
+  `code_08032E4C.c`/`code_08033CAC.c`'s `0xD`/`0xE`/`0xF`/
+  `0x11` — but mapping them onto the port's object/pickup/effect
+  kinds is future work), and Object20's `anim5c` fields remain
+  animation-derived approximations, not the native player-band
+  chain, so Object20 sprites stay in the front pass.
+- **Tests.** `tests/test_aos_scroll.c` spot-checks the decoded
+  table (default `0x12`, every override band, the thunks, the
+  `0x0A` segment band, `0xFF` out-of-range) and asserts every
+  in-range kind band stays inside `0x00..0x1F`.
+
 ## Patch 1166 - placed soul containers reach every native soul id; save soul bounds corrected
 
 - **Finding.** `aos_pickup_create_placed_soul` bounded the one-based

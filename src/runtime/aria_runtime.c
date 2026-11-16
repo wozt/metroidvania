@@ -3355,13 +3355,17 @@ aria_render_frame:
          * 3DD14 -> sub_0803FD60 BGxCNT bits; sub_0803E528/3DE10
          * band -> OAM priority): back to front, each GBA priority
          * level paints its BG layers then the sprites whose
-         * retained +0x5C band maps to it. Today the player
-         * (create-time band 0xE) and Object1F's children
-         * (band5c) are the only resolved bands — every other
-         * sprite keeps the old all-on-top behaviour in the front
-         * pass below. Within a shared priority the lower band is
-         * the lower OAM index (sub_0803DE10 emits band 0 first),
-         * so specials (bands 0x15+) paint before Soma. */
+         * retained +0x5C band maps to it. Resolved bands today:
+         * the player (create-time band 0xE), Object1F's children
+         * (band5c) and every enemy kind (the create-time
+         * +0x5C table plus the live Kyoma Demon/Altair/Mudman
+         * mirrors) — every other sprite keeps the old all-on-top
+         * behaviour in the front pass below. Within a shared
+         * priority the lower band is the lower OAM index
+         * (sub_0803DE10 emits band 0 first), so specials (bands
+         * 0x15+) and the 0x11-0x14 enemy bands paint before Soma;
+         * the fixed specials->enemies->Soma order approximates
+         * that band ordering (enemy bands span 0x03-0x1E). */
         const int soma_band_prio =
             bg_layered ? aria_bg_band_priority(0x0E) : -1;
         if (bg_layered) {
@@ -3370,6 +3374,8 @@ aria_render_frame:
                 if (objects_ok)
                     draw_special_objects(renderer, &room, &objects,
                                          cam_x, cam_y, step, p);
+                if (objects_ok)
+                    draw_enemies(renderer, &room, &objects, cam_x, cam_y, p);
                 /* Soma reads the player library, not `objects` —
                  * he draws even when the object tables failed. */
                 if (p == soma_band_prio)
@@ -3385,7 +3391,7 @@ aria_render_frame:
         draw_doors(renderer, &room, objects_ok ? &objects : NULL, step, cam_x, cam_y);
         if (objects_ok) draw_walls(renderer, &room, &objects, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_BLOOD, cam_x, cam_y);
-        if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y);
+        if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y, -1);
         if (objects_ok) draw_special_objects(renderer, &room, &objects, cam_x, cam_y, step, -1);
         /* Object20's actors stay in the room for the proximity chatter. */
         if ((opening.active || opening_epilogue) && objects_ok)

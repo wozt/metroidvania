@@ -163,6 +163,11 @@ typedef struct {
     int kind, id, x, y, persistent_index, param0, param1, flags;
     bool spawned;           /* gEwramData + 0x3D0 bit of the record */
     int spawner;            /* entity index of a zombie's spawner, or -1 */
+    uint8_t band5c;         /* entity record +0x5C (unk_540) draw band:
+                             * the kind's create-time band for enemies
+                             * (aos_scroll_enemy_band5c), the spawner's
+                             * for linked child copies; 0 for kinds
+                             * without a resolved band */
     AosDoor door;
     AosWall wall;           /* objects 0x08 and 0x09 */
     AosObject02 object02;   /* object 0x02: the cutscene director */

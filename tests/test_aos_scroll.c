@@ -729,6 +729,53 @@ int main(void) {
         assert(d.band_priority[0x1F] == 3);
     }
 
+    {
+        /* aos_scroll_enemy_band5c: the entity record +0x5C
+         * create-time bands decoded from the native Enemy*Create
+         * bodies — sub_0806B04C's unconditional 0x12 default plus
+         * the per-create overrides that land after it (the
+         * pre-helper stores are dead writes). Spot-checks cover
+         * the default, each override band and the family thunks;
+         * ids outside the native 0x71 records report 0xFF. */
+        assert(aos_scroll_enemy_band5c(0x00) == 0x12);  /* Bat */
+        assert(aos_scroll_enemy_band5c(0x02) == 0x12);  /* Skeleton:
+            * its create's 0x11 precedes sub_0806B04C — dead write */
+        assert(aos_scroll_enemy_band5c(0x06) == 0x03);  /* Peeping Eye */
+        assert(aos_scroll_enemy_band5c(0x08) == 0x0A);  /* Bone Pillar:
+            * only its spawned segments carry a band natively */
+        assert(aos_scroll_enemy_band5c(0x0B) == 0x03);  /* White Dragon */
+        assert(aos_scroll_enemy_band5c(0x10) == 0x04);  /* Tiny Devil */
+        assert(aos_scroll_enemy_band5c(0x15) == 0x13);  /* Minotaur via
+            * sub_080B0AD4 */
+        assert(aos_scroll_enemy_band5c(0x1C) == 0x09);  /* Catoblepas via
+            * the GorgonCreate thunk */
+        assert(aos_scroll_enemy_band5c(0x27) == 0x1D);  /* Kyoma Demon
+            * create band (its live +0x5C is dynamic) */
+        assert(aos_scroll_enemy_band5c(0x2C) == 0x12);  /* Altair create
+            * band (its create's 3 precedes the helper) */
+        assert(aos_scroll_enemy_band5c(0x2E) == 0x11);  /* Cockatrice via
+            * sub_080BBFF0 */
+        assert(aos_scroll_enemy_band5c(0x36) == 0x11);  /* Manticore */
+        assert(aos_scroll_enemy_band5c(0x3E) == 0x11);  /* Giant Worm via
+            * sub_080AD7F0 */
+        assert(aos_scroll_enemy_band5c(0x44) == 0x11);  /* Slime */
+        assert(aos_scroll_enemy_band5c(0x49) == 0x04);  /* Cagnazzo via
+            * sub_080B7E80 */
+        assert(aos_scroll_enemy_band5c(0x56) == 0x12);  /* Mudman create
+            * band (its +0x5C is the live child counter) */
+        assert(aos_scroll_enemy_band5c(0x62) == 0x03);  /* Erinys via the
+            * ValkyrieCreate thunk */
+        assert(aos_scroll_enemy_band5c(0x6D) == 0x1E);  /* Balore */
+        assert(aos_scroll_enemy_band5c(0x6F) == 0x14);  /* Graham */
+        assert(aos_scroll_enemy_band5c(0x70) == 0x12);  /* Chaos */
+        assert(aos_scroll_enemy_band5c(0x71) == 0xFF);
+        assert(aos_scroll_enemy_band5c(0xFF) == 0xFF);
+        /* Every in-range kind band sits inside the native 0x00-0x1F
+         * band space, so aria_bg_band_priority can resolve it. */
+        for (int id = 0; id < 0x71; ++id)
+            assert(aos_scroll_enemy_band5c((uint8_t)id) < 0x20);
+    }
+
     puts("aos_scroll: ok");
     return 0;
 }

@@ -42,9 +42,13 @@ void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *object
 /* The breakable walls: their entry's frame at their position. */
 void draw_walls(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,
                 int cam_x, int cam_y);
-/* Enemies: sprites face left; mirrored ones are flipped around x. */
+/* Enemies: sprites face left; mirrored ones are flipped around x.
+ * `prio_slot` is the native OBJ-priority interleave slot (0 front
+ * .. 3 back) the caller is painting; only enemies whose resolved
+ * +0x5C band maps to it draw — pass -1 for the front pass, which
+ * takes every enemy without a resolved band. */
 void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,
-                  int cam_x, int cam_y);
+                  int cam_x, int cam_y, int prio_slot);
 /* Room SPECIAL objects (kind 2): drawn from their exported sprite sheets.
  * `prio_slot` is the native OBJ-priority interleave slot (0 front ..
  * 3 back) the caller is painting; only drawable units whose retained

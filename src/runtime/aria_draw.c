@@ -123,9 +123,38 @@ static int enemy_bank(const AosEnemy *enemy) {
     return 0;
 }
 
-/* Enemies: sprites face left; mirrored ones are flipped around x. */
+/* The entity record +0x5C draw band an enemy entity resolves to:
+ * the live +0x5C mirrors for the three kinds whose native byte is
+ * dynamic (Kyoma Demon's kd_5c 0x1D/0x11, Altair's al_draw5c
+ * 3/0x30 dash, Mudman's md_spawns spawned-child counter — a
+ * hit.children copy carries the parent's values at spawn, like
+ * the native child records), the Quezlcoatl segment's own +0x5C
+ * segment number (qz_seg, 1..15 — the native byte doubles as
+ * the segment's band), and the create-time kind band
+ * (AriaEntity.band5c, aos_scroll_enemy_band5c) for everything
+ * else. State-dependent +0x5C rewrites inside enemy updates are
+ * not yet tracked — see aos_scroll_enemy_band5c. */
+static uint8_t enemy_band5c(const AriaEntity *e) {
+    const AosEnemy *en = &e->enemy;
+    switch (en->id) {
+    case AOS_ENEMY_KYOMA_DEMON: return en->kd_5c;
+    case AOS_ENEMY_ALTAIR: return en->al_draw5c;
+    case AOS_ENEMY_MUDMAN: return en->md_spawns;
+    case AOS_ENEMY_QUEZLCOATL:
+        if (en->role == AOS_ROLE_QUEZLCOATL_SEGMENT) return en->qz_seg;
+        return e->band5c;
+    default: return e->band5c;
+    }
+}
+
+/* Enemies: sprites face left; mirrored ones are flipped around x.
+ * `prio_slot` is the native OBJ-priority interleave slot (0 front
+ * .. 3 back) the caller is painting; only enemies whose resolved
+ * +0x5C band maps to it draw — pass -1 for the front pass, which
+ * takes every enemy without a resolved band (the layered path
+ * down, or a band outside the native 0x00-0x1F range). */
 void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,
-                         int cam_x, int cam_y) {
+                         int cam_x, int cam_y, int prio_slot) {
     for (size_t n = 0; n < 4 * room->entity_count; ++n) {
         size_t i = n % room->entity_count;
         const AriaEntity *e = &room->entities[i];
@@ -133,6 +162,9 @@ void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObject
         if (!e->spawned || e->kind != ARIA_KIND_ENEMY || e->id >= ENEMY_KINDS ||
             e->enemy.removed || e->enemy.hidden || e->enemy.anim.id >= AOS_ENEMY_MAX_ANIMS ||
             e->enemy.anim.frame >= MAX_FRAMES)
+            continue;
+        int eprio = aria_bg_band_priority(enemy_band5c(e));
+        if (prio_slot >= 0 ? eprio != prio_slot : eprio >= 0)
             continue;
         const AriaFrame *frame = &objects->enemies[e->id].frames[e->enemy.anim.id][e->enemy.anim.frame];
         int bank = enemy_bank(&e->enemy);

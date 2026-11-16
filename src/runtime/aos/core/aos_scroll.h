@@ -314,4 +314,15 @@ typedef struct {
 void aos_scroll_depth_priorities(const uint8_t layer[4],
                                  AosDepthPriorities *out);
 
+/* The entity record +0x5C (unk_540) create-time draw band of an
+ * enemy kind, decoded from the native Enemy*Create bodies
+ * (sub_0806B04C's unconditional 0x12 default plus the per-create
+ * overrides that land after it). Returns 0xFF for an id outside
+ * the native 0x71 enemy records — treat it like any out-of-range
+ * band (front pass). Three kinds keep a live +0x5C the draw path
+ * reads instead (Kyoma Demon, Altair, Mudman); state-dependent
+ * +0x5C rewrites inside enemy updates are not yet tracked, so
+ * this is the create-time band. */
+uint8_t aos_scroll_enemy_band5c(uint8_t enemy_id);
+
 #endif /* AOS_SCROLL_H */

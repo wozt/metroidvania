@@ -1270,9 +1270,14 @@ int aria_title_preview_main(int argc, char **argv) {
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
         }
         /* Diagnostic 'ready' light; not part of native GBA imagery, so not
-         * drawn over the screens shown natively (logos, title, main menu). */
+         * drawn over the screens shown natively (logos, title, main menu,
+         * the introduction cutscene and the game-over screen once their
+         * native graphics are up). */
         bool native_frame =
             (in_main_menu && have_menu_objects) ||
+            (in_intro && have_intro_resources) ||
+            (lifecycle.game_mode.mode == AOS_MODE_GAME_OVER &&
+             have_game_over_graphics) ||
             (lifecycle.game_mode.mode == AOS_MODE_TITLE_SCREEN && title_texture) ||
             (have_logos && (lifecycle.game_mode.mode == AOS_MODE_LICENSED_BY_NINTENDO ||
                             lifecycle.game_mode.mode == AOS_MODE_KONAMI_LOGO));

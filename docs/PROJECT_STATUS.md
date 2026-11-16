@@ -1,3 +1,24 @@
+## Patch 1188 - title preview: ready light no longer covers the native introduction and game-over screens
+
+- **Fix.** Patch 1187's diagnosis confirmed by capture: the preview
+  host's diagnostic "ready" light (5x5 rect at GBA (227,147),
+  RGB (120,200,145)) composited over `AOS_MODE_INTRO_CUTSCENE`
+  because `native_frame` only listed the main menu, title and the
+  two logos. `native_frame` now also covers the introduction
+  cutscene once `have_intro_resources` is up and the game-over
+  screen once `have_game_over_graphics` is up, matching the
+  marker's own contract ("not drawn over the screens shown
+  natively"). The debug fallbacks (no --rom) still show it.
+- **Verification.** `fusion_aria_title_preview --rom ... --mute
+  --screenshot 2400`: the (120,200,145) pixels at GBA
+  (227..232,147..152) are gone (region now shows scene pixels);
+  the same capture without --rom still shows the marker on the
+  debug screen. `cmake --build build`, `fusion_checklist`,
+  `fusion_dashboard --run-tests`, `fusion_check_generated`.
+- **Scope.** Presentation host only; the Patch 1187 artifacts 2
+  (actor/BG plane order) and 3 (spawn occlusion) remain with
+  their owners.
+
 ## Patch 1187 - Diagnosis: intro stairs scene artifacts (green marker, actor/BG planes, spawn timing) - no fix yet
 
 - **Scene identified.** The reported "stairs intro scene" is the

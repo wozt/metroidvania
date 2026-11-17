@@ -218,8 +218,11 @@ static uint8_t object20_ewram_427;
  * the Object00 door, Object15, Object16, Object1F (update,
  * think and children), Object10's drawFunc write (applied after
  * the entity loop, matching the native draw-pass ordering),
- * sub_08021654's lethal-damage write and the ported enemy state
- * machines' entry writes (Graham's sub_080D26A8 state 1).
+ * sub_08021654's lethal-damage write (plus its unk_A074_0
+ * clear through aria_entities_lethal_clear_result) and the
+ * ported enemy state machines' transition writes (Graham's
+ * sub_080D26A8 state 1, Death's sub_080BE414 intro, Chronomage's
+ * sub_080B6DEC no-fade step).
  * The sub_0805B66C release calls inside the ported Object20
  * update paths need no separate report: the routine writes
  * sub_0800C5A8(1) mid-update but the shared Object20Update
@@ -232,8 +235,16 @@ static uint8_t object20_ewram_427;
  * (draw-pass during the unk_A074_0 freeze — their writes
  * cannot reach the store, which the freeze gates) and the
  * enemy callers whose native sites map to unported state
- * machines or unmodelled gate globals. */
+ * machines or unmodelled gate globals (Belmont's param0-1
+ * variant, Balore's sub_080B6880 controller, Chronomage's
+ * + 0x4BE arm, Graham's clone/core and 0xF0 cinematic
+ * callbacks). */
 static int8_t c5a8_pending = -1;
+/* sub_08021654's lethal branch also clears gEwramData->
+ * unk_A074_0 inside the damage routine; the port cannot reach
+ * in_game_mode from the entity pass, so the same detection
+ * arms this flag for the room loop to consume. */
+static bool lethal_clear_pending;
 /* Debug-only reporter identity for ARIA_DEBUG_C5A8 (diagnostic;
  * never gameplay state): the entity and source line of the last
  * write. */
@@ -1456,6 +1467,15 @@ int aria_entities_c5a8_result(void) {
     return c5a8_pending;
 }
 
+/* sub_08021654's lethal branch clears gEwramData->unk_A074_0
+ * inside the damage routine; the entity pass cannot reach
+ * in_game_mode, so the room loop reads this once per
+ * update_entities call (after the pass) and clears its own
+ * unk_A074_0. Resets at the next call's top like c5a8_pending. */
+bool aria_entities_lethal_clear_result(void) {
+    return lethal_clear_pending;
+}
+
 /* ARIA_DEBUG_C5A8 diagnostics: the last reporter's entity pointer
  * and source line (NULL/-1 after a silent frame). */
 void aria_entities_c5a8_debug(const void **ent, int *line) {
@@ -2555,6 +2575,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
      * the entity pass runs; reset so a frozen pass cannot leak
      * last frame's report into the room loop's store. */
     c5a8_pending = -1;
+    lethal_clear_pending = false;
     c5a8_dbg_ent = NULL;
     c5a8_dbg_line = -1;
     int sound = 0;
@@ -2567,8 +2588,14 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     bool object10_draw_armed = false;
     /* unk_A074_0: while the level-up display's counter sits in
      * [2, 0x3C], the native entity update loop is suspended; the
-     * display and its sparkles are drawFunc-driven and keep running. */
-    const bool entities_frozen = aos_levelup_frozen(&combat->levelup);
+     * display and its sparkles are drawFunc-driven and keep running.
+     * sub_08021654's lethal branch clears unk_A074_0 inside the
+     * damage routine, so a dead Soma (hp <= 0) lifts the freeze
+     * even mid-display — the port has no separate died flag, hp is
+     * the lethal signal. */
+    const bool entities_frozen =
+        aos_levelup_frozen(&combat->levelup) &&
+        (soma == NULL || soma->hp > 0);
     /* entityData[0] is the player record natively (slot 0):
      * pos40/pos44 are the +0x40/+0x44 fine words and +0x58 the
      * facing-bit approximation shared with player_flags58. The
@@ -2745,17 +2772,56 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     e->enemy.follow = e->enemy.parent;
             }
             const int pre_enemy_state = e->enemy.state;
+            const int pre_enemy_step = e->enemy.step;
+            const int pre_enemy_substep = e->enemy.substep;
             AosHitReport hit = aos_enemy_update(&e->enemy, soma, layer, kind, combat->weapon,
                                                 combat->weapon_frames, combat->player->atk,
                                                 combat->player->def, cam_x, cam_y, aos_random);
+            /* sub_080BE414 (Death's state-0 intro, the + 0xB
+             * substep machine): + 0xB == 1 writes sub_0800C5A8(0)
+             * every frame — the + 0x42C-bit-0 gate frame and the
+             * whole wait-for-player-in-range phase, which the port
+             * folds into substep <= 1; the + 0xB == 2 arm (strike
+             * zones, song 0x121) writes sub_0800C5A8(1) on the
+             * substep 2 -> 3 transition. The six child roles run
+             * their own callbacks and are excluded. */
+            if (e->id == AOS_ENEMY_DEATH &&
+                !(e->enemy.role >= AOS_ROLE_DEATH_MIRROR &&
+                  e->enemy.role <= AOS_ROLE_DEATH_GORE) &&
+                e->enemy.state == 0) {
+                if (pre_enemy_substep <= 1)
+                    C5A8_REPORT(0, e);
+                else if (pre_enemy_substep == 2 && e->enemy.substep == 3)
+                    C5A8_REPORT(1, e);
+            }
+            /* sub_080B6DEC case 4 -> 5 (Chronomage's time-stop):
+             * when the + 0xD ramp completes, the no-fade branch
+             * (+ 0x4BE clear and sub_080212F4(6) — ability bit 5 of
+             * unk_13396 — clear) writes sub_0800C5A8(0); the fade
+             * branch writes nothing. + 0x4BE has no runtime channel
+             * and is treated as clear; the ported sequence
+             * collapses both branches into steps 4 -> 5, so the
+             * report is gated on the modelled ability bit only.
+             * The wisp child is excluded by role. */
+            if (e->id == AOS_ENEMY_CHRONOMAGE &&
+                e->enemy.role != AOS_ROLE_CHRONO_WISP &&
+                e->enemy.state == 1 && pre_enemy_step == 4 &&
+                e->enemy.step == 5 &&
+                !(combat->progress &&
+                  (combat->progress->abilities[0] & 0x20)))
+                C5A8_REPORT(0, e);
             /* sub_08021654's lethal branch calls sub_0800C5A8(0)
-             * inside the damage routine; every ported damage path
+             * inside the damage routine and clears
+             * gEwramData->unk_A074_0; every ported damage path
              * funnels through aos_soma_take_elemental_hit during
              * this update, so a hit that leaves Soma at 0 HP
              * reports at the same slot in entity order (repeated
-             * hits while dead re-write 0 like the native calls). */
-            if (hit.soma_damage > 0 && soma->hp <= 0)
+             * hits while dead re-write 0 like the native calls)
+             * and arms the freeze release for the room loop. */
+            if (hit.soma_damage > 0 && soma->hp <= 0) {
                 C5A8_REPORT(0, e);
+                lethal_clear_pending = true;
+            }
             /* sub_080D26A8 (Graham's state-1 partner machine)
              * writes sub_0800C5A8(0) at routine entry — every
              * frame the conductor dispatches state 1. The clone
@@ -2765,6 +2831,20 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 e->enemy.role != AOS_ROLE_GRAHAM_CLONE &&
                 e->enemy.role != AOS_ROLE_GRAHAM_CORE)
                 C5A8_REPORT(0, e);
+            /* sub_080D2BDC (Graham's state-0xF0 cinematic): the
+             * shared tail at _080D3192 writes sub_0800C5A8 every
+             * frame — 0 for cases 0-4 and 6, 1 while + 0xB == 5
+             * (case 5's own mid-body write is the same value).
+             * The ported step machine keeps the case cadence but
+             * merges native cases 5/6 into the step >= 5 tail, so
+             * the report is 1 there and 0 earlier; the brief
+             * native case-6 0-write is absorbed into the tail
+             * (documented). Same role exclusions as state 1. */
+            if (e->id == AOS_ENEMY_GRAHAM &&
+                e->enemy.state == 0xF0 &&
+                e->enemy.role != AOS_ROLE_GRAHAM_CLONE &&
+                e->enemy.role != AOS_ROLE_GRAHAM_CORE)
+                C5A8_REPORT(e->enemy.step >= 5 ? 1 : 0, e);
             if (hit.targetable) homing_register((int)i);
             /* EnemyImpUpdate calls SetPlayerInput(1, B/0) on alternating
              * frames while its linked helper controls Soma. As with doors,

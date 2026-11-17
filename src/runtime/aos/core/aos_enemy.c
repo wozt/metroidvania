@@ -1375,14 +1375,19 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
          * scythe sub_080BD358) emit on the first updates via
          * boss_parts_spawned; the gEwramData + 0x8E & 0x40 flag parks
          * state 8; hp = 0x98C; hurt callbacks sub_080BF4AC/sub_080BF504
-         * and the lethal path fold into the shared collide/update. */
+         * and the lethal path fold into the shared collide/update.
+         * The + 0x30 gate: param0 != 0 stores r6 (= 0 on the flag-clear
+         * path) into + 0xA — state 0, the sub_080BE414 intro with the
+         * mid child, the + 0x42/+ 0x46 screen offsets and song
+         * 0x1010 (the offsets/song are not ported); param0 == 0 takes
+         * _080BF444's state 1 with sub_08013CF0(0x10). */
         enemy->hp = 0x98C;
         enemy->dth_atk = 0;
         enemy->dth_flags = 0;
         enemy->dth_idx = enemy->dth_g6c = enemy->dth_g6e = 0;
         enemy->dth_dx = enemy->dth_dy = 0;
         enemy->dth_vx = enemy->dth_vy = 0;
-        enemy->state = flag_8e_40 ? 8 : (param0 ? 1 : 0);
+        enemy->state = flag_8e_40 ? 8 : (param0 ? 0 : 1);
         enemy->step = 0;
         enemy->substep = 0;
         enemy->timer = 0;

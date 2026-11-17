@@ -3645,6 +3645,13 @@ int aria_runtime_main(int argc, char **argv) {
                 int c5a8 = aria_entities_c5a8_result();
                 if (c5a8 >= 0) in_game_mode.unk_A074_1 = c5a8 != 0;
             }
+            /* sub_08021654's lethal branch clears gEwramData->
+             * unk_A074_0 inside the damage routine — after the
+             * c5a8(0) write above, so the store gate above still
+             * sees the pre-clear state like the native ordering
+             * (the write lands, then the flag drops). */
+            if (aria_entities_lethal_clear_result())
+                in_game_mode.unk_A074_0 = false;
             /* sub_0804F7A4's room-load discovery and the
              * sub_08010978/sub_080115D4 writers (Object1F's update
              * seq_end and think picker-open frame) run inside the

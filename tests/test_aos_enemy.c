@@ -1820,12 +1820,13 @@ static void death_tests(void) {
     AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
     soma.max_hp = soma.hp = 800;
 
-    /* EnemyDeathCreate: hp 0x98C, state 0 (or 8 dormant, or 1 when
-     * param0 set), the three child roles emitted on first update. */
+    /* EnemyDeathCreate: hp 0x98C, state 1 (or 8 dormant, or 0 with
+     * the sub_080BE414 intro when param0 set), the three child roles
+     * emitted on first update. */
     AosEnemy e;
     assert(aos_enemy_create(&e, 0x6B, 300, 150, 0, 0,
                             &soma, &layer, &kind, &dt));
-    assert(e.state == 0 && e.hp == 0x98C);
+    assert(e.state == 1 && e.hp == 0x98C);
     assert(e.dth_atk == 0 && !e.boss_parts_spawned);
     aos_enemy_set_flag_8e_40(true);
     AosEnemy ed;
@@ -1836,7 +1837,7 @@ static void death_tests(void) {
     AosEnemy ep;
     assert(aos_enemy_create(&ep, 0x6B, 300, 150, 1, 0,
                             &soma, &layer, &kind, &dt));
-    assert(ep.state == 1);
+    assert(ep.state == 0);
 
     /* First update: emits the mirror + mid (param0) + scythe. */
     e.x = AOS_FIXED(150);
@@ -1879,7 +1880,7 @@ static void death_tests(void) {
 
     /* State 0 intro walks the substeps toward the dive. */
     AosEnemy w;
-    assert(aos_enemy_create(&w, 0x6B, 300, 150, 0, 0,
+    assert(aos_enemy_create(&w, 0x6B, 300, 150, 1, 0,
                             &soma, &layer, &kind, &dt));
     w.x = AOS_FIXED(150);
     w.y = AOS_FIXED(120);

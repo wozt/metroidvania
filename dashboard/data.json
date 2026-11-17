@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-17T00:29:29+00:00",
+ "generated_at": "2026-11-17T00:47:32+00:00",
  "git": {
-  "commit": "85371c00",
+  "commit": "ba4b5f8d",
   "branch": "main",
   "dirty": true
  },
@@ -105,8 +105,8 @@
    },
    "functional_or_better": 226,
    "functional_or_better_percent": 65.3,
-   "with_passing_tests": 190,
-   "with_passing_tests_percent": 54.9,
+   "with_passing_tests": 331,
+   "with_passing_tests_percent": 95.7,
    "unknown_or_blocked": 1,
    "features": [
     "mzm.animation.particles",
@@ -476,8 +476,8 @@
    },
    "functional_or_better": 92,
    "functional_or_better_percent": 100.0,
-   "with_passing_tests": 87,
-   "with_passing_tests_percent": 94.6,
+   "with_passing_tests": 92,
+   "with_passing_tests_percent": 100.0,
    "unknown_or_blocked": 0,
    "features": [
     "mzm.animation.particles",
@@ -593,8 +593,8 @@
    },
    "functional_or_better": 119,
    "functional_or_better_percent": 59.5,
-   "with_passing_tests": 77,
-   "with_passing_tests_percent": 38.5,
+   "with_passing_tests": 198,
+   "with_passing_tests_percent": 99.0,
    "unknown_or_blocked": 0,
    "features": [
     "aos.audio.play_song",
@@ -818,8 +818,8 @@
    },
    "functional_or_better": 8,
    "functional_or_better_percent": 33.3,
-   "with_passing_tests": 10,
-   "with_passing_tests_percent": 41.7,
+   "with_passing_tests": 23,
+   "with_passing_tests_percent": 95.8,
    "unknown_or_blocked": 0,
    "features": [
     "assets.aria_early_enemy_components_0477",
@@ -867,8 +867,8 @@
    },
    "functional_or_better": 5,
    "functional_or_better_percent": 33.3,
-   "with_passing_tests": 11,
-   "with_passing_tests_percent": 73.3,
+   "with_passing_tests": 12,
+   "with_passing_tests_percent": 80.0,
    "unknown_or_blocked": 0,
    "features": [
     "tools.dashboard",
@@ -969,8 +969,8 @@
    },
    "functional_or_better": 2,
    "functional_or_better_percent": 66.7,
-   "with_passing_tests": 1,
-   "with_passing_tests_percent": 33.3,
+   "with_passing_tests": 2,
+   "with_passing_tests_percent": 66.7,
    "unknown_or_blocked": 1,
    "features": [
     "platform.dashboard_offline",
@@ -1135,7 +1135,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -1149,11 +1149,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -2575,7 +2573,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -2589,11 +2587,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -4919,7 +4915,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -4933,11 +4929,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -7587,7 +7581,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -7611,11 +7605,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -7746,7 +7738,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -7780,11 +7772,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -8946,13 +8936,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -9340,15 +9330,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -9444,15 +9432,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -9541,15 +9527,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -9658,15 +9642,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -9732,15 +9714,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -9860,15 +9840,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -9950,15 +9928,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -10051,7 +10027,7 @@
     "RandomNumberGenerator",
     "RandomNumberGenerator2"
    ],
-   "limitations": "The three sub_0806DFF8 part entities fold into the persistent BALO_WING/LIMB0/LIMB1 roles emitted under the 8-child cap; the gEwramData + 0x3E0/+ 0x3F0 OAM slot writes collapse into the BALO_FX children; the blade and shot flight machines are sine approximations of the native case tables; the sub_080B67A8 param0 cutscene spawn, the sub_08021654/sub_08021530 emits, the sub_080428F0 box presets, the + 0x5A palette merge, the sub_08045CEC gore positions and the sub_08013CF0/sub_08034498 event calls are approximated or not ported and the sub_080B6880 sub-machine's sub_0800C5A8(0/1) transition writes are not ported (that state machine is not instantiated); and there is no emulator comparison. EnemyBaloreCreate (0x080B5C38) through sub_080B45C0 loads the two-block encoding-2 tiles 0x081193FC (five 16x16 sub-sheet entries exported by the extended objects.c branch), palette 0x0820B92C bank 7 and frames 0x08244220, runs the param0 room gates and the sub_080B67A8 cutscene spawn (approximated), sets + 0x5C = 0x1E, + 0x12 = 4 and + 0x20 = 0x10000, spawns the orbit wing sub_080B41E0, the flap limb sub_080B4370 and the locked limb sub_080B44C4 and parks state 5 under the global 0x8E & 0x40 else state 0. EnemyBaloreUpdate (0x080B5DC0) dispatches state 0 (the sub_08013CF0(0x11) claim into state 1), state 1 sub_080B569C (the rise: two sub_080B4FB0 effects at screen x 0x40/0x1C0, song 0x1D4, the + 0x44 rise), state 2 sub_080B577C (the sine hover, the player-delta animation index, the hp <= 0x7CF phase gate), state 3 sub_080B5860 (the attack: two sub_080B5094 blades, song 0x1D5, the sub_080B53F8 shot, hp-scaled timers), state 4 sub_080B594C (the seven-case death: songs 0x1D6/0x77/0x7C, sub_08045CEC gore, the delete) and state 5 dormant. Unit-tested in balore_tests.",
+   "limitations": "The three sub_0806DFF8 part entities fold into the persistent BALO_WING/LIMB0/LIMB1 roles emitted under the 8-child cap; the gEwramData + 0x3E0/+ 0x3F0 OAM slot writes collapse into the BALO_FX children; the blade and shot flight machines are sine approximations of the native case tables; the sub_080B67A8 param0 cutscene spawn, the sub_08021654/sub_08021530 emits, the sub_080428F0 box presets, the + 0x5A palette merge, the sub_08045CEC gore positions and the sub_08013CF0/sub_08034498 event calls are approximated or not ported and the sub_080B6880 sub-machine's sub_0800C5A8(0/1) transition writes are not ported (the extracted param0 = 1 record's native spawn installs that update callback through sub_080B67A8, which the port does not instantiate either way); and there is no emulator comparison. EnemyBaloreCreate (0x080B5C38) through sub_080B45C0 loads the two-block encoding-2 tiles 0x081193FC (five 16x16 sub-sheet entries exported by the extended objects.c branch), palette 0x0820B92C bank 7 and frames 0x08244220, runs the param0 room gates and the sub_080B67A8 cutscene spawn (approximated), sets + 0x5C = 0x1E, + 0x12 = 4 and + 0x20 = 0x10000, spawns the orbit wing sub_080B41E0, the flap limb sub_080B4370 and the locked limb sub_080B44C4 and parks state 5 under the global 0x8E & 0x40 else state 0. EnemyBaloreUpdate (0x080B5DC0) dispatches state 0 (the sub_08013CF0(0x11) claim into state 1), state 1 sub_080B569C (the rise: two sub_080B4FB0 effects at screen x 0x40/0x1C0, song 0x1D4, the + 0x44 rise), state 2 sub_080B577C (the sine hover, the player-delta animation index, the hp <= 0x7CF phase gate), state 3 sub_080B5860 (the attack: two sub_080B5094 blades, song 0x1D5, the sub_080B53F8 shot, hp-scaled timers), state 4 sub_080B594C (the seven-case death: songs 0x1D6/0x77/0x7C, sub_08045CEC gore, the delete) and state 5 dormant. Unit-tested in balore_tests.",
    "next_action": "Compare the rise/hover cadence, the blade volley and the death-case timing against an emulator; port the full blade/shot case tables and the param0 cutscene.",
    "evidence": {
     "unit_tests": [
@@ -10088,15 +10064,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -10191,15 +10165,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -10268,15 +10240,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -10355,15 +10325,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -10434,7 +10402,7 @@
     "PlaySong",
     "RandomNumberGenerator"
    ],
-   "limitations": "The param0 == 1 cutscene variant and its sub_080CFC04 Object20 dialogue entities are not ported (the boss room spawns the fight variant); the state-2 sub_080D0044 wall probes (sub_0806DF40/sub_0806E140), the 0x080E9644 HP-gate table, the + 0x14 cornered flag and the Object20 + 0x13110 checks collapse to the shared probes and a documented random pick; each attack state keeps its entry song accents and return to state 2 while the per-case choreography collapses to a windup/strike/recover cycle; the sub_080D1BB4/sub_080D1ADC projectile entities fold into BEL_SHOT children sharing the parent kind; the + 0x20 juggle counter folds into bel_juggle; the sub_08013CF0/sub_08034498/sub_0806E1B8 event calls are covered by the shared paths or not ported; the sub_080CFAB0 create and the sub_080CFB08/sub_080CFD10 state routines' sub_0800C5A8 writes belong to the unported param0-1 variant and states; and there is no emulator comparison. EnemyBelmontCreate (0x080CFAB0) loads tiles 0x08119520 — an encoding-2 container of four 16x8 sub-sheets — palette 0x0820C028 and frames 0x08252748, runs the first-visit and dormant gates (+ 0x5C = 0x11, + 0x3E bit 2, state 3 or 0xC) and registers the sub_080D1A44 hurt callback. EnemyBelmontUpdate (0x080CFED0) dispatches states 1, 9, 0xB, 0xC, 0xD and 0xF0 to dedicated handlers and states 2-10 through the jump table: state 2 (sub_080D0044) is the main machine whose decoded random pick enters the attack states; state 3 (sub_080D2328) hands off to state 2; states 4-10 run the attack envelopes with their native song accents (0xF6/0x93, 0xFC, 0x94, 0x80/0xF0) and projectile volleys; state 0xB (sub_080D1580) is the hurt-stun/juggle/lethal exit driven by the sub_080D1A44 callback (lethal song 0x1E1, juggle songs 0x1E2/0x1E3 past the + 0x20 > 2 gate); state 0xF0 (sub_080D1854) is the death machine with gore and the delete. Unit-tested in belmont_tests.",
+   "limitations": "The param0 == 1 cutscene variant and its sub_080CFC04 Object20 dialogue entities are not ported (the boss room spawns the fight variant); the state-2 sub_080D0044 wall probes (sub_0806DF40/sub_0806E140), the 0x080E9644 HP-gate table, the + 0x14 cornered flag and the Object20 + 0x13110 checks collapse to the shared probes and a documented random pick; each attack state keeps its entry song accents and return to state 2 while the per-case choreography collapses to a windup/strike/recover cycle; the sub_080D1BB4/sub_080D1ADC projectile entities fold into BEL_SHOT children sharing the parent kind; the + 0x20 juggle counter folds into bel_juggle; the sub_08013CF0/sub_08034498/sub_0806E1B8 event calls are covered by the shared paths or not ported; the param0 == 1 room record (area_05_room_006) folds into the fight path, so the sub_080CFAB0 create's variant writes, the sub_080CFD0C state-1 per-frame sub_0800C5A8(0) and the Object20 dialogue machinery stay unported (the param0 != 1 create's sub_0800C5A8(1) is unreachable in the port); and there is no emulator comparison. EnemyBelmontCreate (0x080CFAB0) loads tiles 0x08119520 — an encoding-2 container of four 16x8 sub-sheets — palette 0x0820C028 and frames 0x08252748, runs the first-visit and dormant gates (+ 0x5C = 0x11, + 0x3E bit 2, state 3 or 0xC) and registers the sub_080D1A44 hurt callback. EnemyBelmontUpdate (0x080CFED0) dispatches states 1, 9, 0xB, 0xC, 0xD and 0xF0 to dedicated handlers and states 2-10 through the jump table: state 2 (sub_080D0044) is the main machine whose decoded random pick enters the attack states; state 3 (sub_080D2328) hands off to state 2; states 4-10 run the attack envelopes with their native song accents (0xF6/0x93, 0xFC, 0x94, 0x80/0xF0) and projectile volleys; state 0xB (sub_080D1580) is the hurt-stun/juggle/lethal exit driven by the sub_080D1A44 callback (lethal song 0x1E1, juggle songs 0x1E2/0x1E3 past the + 0x20 > 2 gate); state 0xF0 (sub_080D1854) is the death machine with gore and the delete. Unit-tested in belmont_tests.",
    "next_action": "Port the param0 == 1 cutscene variant with its Object20 dialogue entities; port the per-case attack choreography tables and compare against an emulator.",
    "evidence": {
     "unit_tests": [
@@ -10471,15 +10439,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -10601,15 +10567,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -10711,15 +10675,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -10797,15 +10759,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -10889,15 +10849,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -10974,15 +10932,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -11065,15 +11021,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -11140,15 +11094,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -11214,15 +11166,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -11379,7 +11329,7 @@
     "sub_0804277C",
     "PlaySong"
    ],
-   "limitations": "The gEwramData + 0x12FE4 time-scale writes and + 0x4BE pause reads, the sub_080212F4(6) room-warp gate, the sub_08011F44 / sub_08011AD0 and sub_0803D18C palette fades, the sub_080B6DEC no-fade step-5 branch's sub_0800C5A8(0) (its gate globals are unmodelled) and the target entity + 0x10 & 0x360 action mask are not ported (the mask is approximated by the attack flags and the damaged flag stands in for + 0x4BE); the sub_0806CD38 target-x pick is inlined, the + 0x54 = 0x2000 field, the + 0x58 palette nibbles, the sub_0803E6BC palette restore and the sub_0803E058 affine fade bookkeeping are not ported (the wisp scale is approximated through affine_sx/sy), the sub_080428F0 / sub_08042884 box presets are replaced by the exported frame boxes, the sub_0803E654 sign draw is the RNG bit 15 and the sub_080421AC room query is skipped; no emulator comparison. EnemyChronomageCreate (0x080B712C) loads tiles 0x081EC1EC, palette 0x0820BBB0 and frames 0x08245CA8, sets + 0x5C = 0x13, plays animation 0 looping and enters state 4 under the global 0x8E & 0x40 else state 0 after the sub_0806E1B8 contact and sub_080B72B8 hurt callbacks, the 0x2008E0FC box preset, + 0x72 bit 2, the sub_0806AF98 floor snap, a one-pixel lift and + 0x59 bit 1. EnemyChronomageUpdate (0x080B71F8) skips the sub_0806AE54 hit flash only in state 3, dispatches the states, runs the sub_080421AC room query outside states 3-4 and steps the animation (state 4 steps it inside sub_080B70B4). State 0 (sub_080B6D68) compares the target x within 0x6F or the action mask for state 1, and + 0x4BE for state 2; state 1 (sub_080B6DEC) is the eight-step time-stop — animation 1 once (skipped on the action mask), animation 3 once with the 0x18 timer and song 0xEC at 8, the + 0xD ramp to 0x10 with the time-scale writes, the fade steps, then the sub_080B6C3C wisp spawned at (x, y - 0x20) with + 0x59 bit 1 once animation 3 ends, and the 0x30 return timer into state 2; state 2 (sub_080B6FB8) clears + 0x72 bit 2, plays animation 1, picks animation 4 or 5 looping by the target x (sub_0806CD38), ramps + 0x18 by 0x2000 to 0x2FFFF negated on animation 4, walks the 0x08528824 probes (mode 2) with the -0x30000 hop on the floor+wall result and runs the sub_0806D128(3) margin every tick; state 3 plays animation 1 once with the 0x28 timer and the sub_0806AEAC flames deleting on the animation end; state 4 (sub_080B70B4) is the inert animation 0 / 1 / 2 sequence. The wisp shares the resources, keeps the sub_0803E654 sign draw, ramps + 0x18 by 0x1000 to 0x10000, holds 0x20, decays by 0x2000 and deletes. The hurt sub_080B72B8 enters state 3 on a lethal blow. Unit-tested in chronomage_tests.",
+   "limitations": "The gEwramData + 0x12FE4 time-scale writes and + 0x4BE pause reads, the sub_080212F4(6) room-warp gate, the sub_08011F44 / sub_08011AD0 and sub_0803D18C palette fades, the sub_080B6DEC no-fade step-4->5 transition's sub_0800C5A8(0) reports through the entity pass gated on the modelled sub_080212F4(6) ability bit (unk_13396 bit 5) with + 0x4BE treated as clear (the + 0x4BE pause read itself stays unmodelled) and the target entity + 0x10 & 0x360 action mask is not ported (the mask is approximated by the attack flags and the damaged flag stands in for + 0x4BE); the sub_0806CD38 target-x pick is inlined, the + 0x54 = 0x2000 field, the + 0x58 palette nibbles, the sub_0803E6BC palette restore and the sub_0803E058 affine fade bookkeeping are not ported (the wisp scale is approximated through affine_sx/sy), the sub_080428F0 / sub_08042884 box presets are replaced by the exported frame boxes, the sub_0803E654 sign draw is the RNG bit 15 and the sub_080421AC room query is skipped; no emulator comparison. EnemyChronomageCreate (0x080B712C) loads tiles 0x081EC1EC, palette 0x0820BBB0 and frames 0x08245CA8, sets + 0x5C = 0x13, plays animation 0 looping and enters state 4 under the global 0x8E & 0x40 else state 0 after the sub_0806E1B8 contact and sub_080B72B8 hurt callbacks, the 0x2008E0FC box preset, + 0x72 bit 2, the sub_0806AF98 floor snap, a one-pixel lift and + 0x59 bit 1. EnemyChronomageUpdate (0x080B71F8) skips the sub_0806AE54 hit flash only in state 3, dispatches the states, runs the sub_080421AC room query outside states 3-4 and steps the animation (state 4 steps it inside sub_080B70B4). State 0 (sub_080B6D68) compares the target x within 0x6F or the action mask for state 1, and + 0x4BE for state 2; state 1 (sub_080B6DEC) is the eight-step time-stop — animation 1 once (skipped on the action mask), animation 3 once with the 0x18 timer and song 0xEC at 8, the + 0xD ramp to 0x10 with the time-scale writes, the fade steps, then the sub_080B6C3C wisp spawned at (x, y - 0x20) with + 0x59 bit 1 once animation 3 ends, and the 0x30 return timer into state 2; state 2 (sub_080B6FB8) clears + 0x72 bit 2, plays animation 1, picks animation 4 or 5 looping by the target x (sub_0806CD38), ramps + 0x18 by 0x2000 to 0x2FFFF negated on animation 4, walks the 0x08528824 probes (mode 2) with the -0x30000 hop on the floor+wall result and runs the sub_0806D128(3) margin every tick; state 3 plays animation 1 once with the 0x28 timer and the sub_0806AEAC flames deleting on the animation end; state 4 (sub_080B70B4) is the inert animation 0 / 1 / 2 sequence. The wisp shares the resources, keeps the sub_0803E654 sign draw, ramps + 0x18 by 0x1000 to 0x10000, holds 0x20, decays by 0x2000 and deletes. The hurt sub_080B72B8 enters state 3 on a lethal blow. Unit-tested in chronomage_tests.",
    "next_action": "Compare the time-stop sequence, the wisp and the chase cadence against an emulator; port the time-scale global, the room-warp gate and the palette fades.",
    "evidence": {
     "unit_tests": [
@@ -11416,15 +11366,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -11520,15 +11468,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -11662,15 +11608,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -11744,15 +11688,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -11822,15 +11764,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -11901,15 +11841,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -11963,7 +11901,7 @@
     "sub_080BFBF4",
     "sub_080BFCD8"
    ],
-   "limitations": "The gEwramData + 0x4E4 slot table (stride 0x84) folds into parent pointers and the DEATH_MIRROR/MID/SCYTHE/SHOT/GORE roles; the three sub_0806DFF8 child callbacks persist as those roles emitted over the first updates under the 8-child room cap; the wall probes sub_0806D490/sub_0806D4A8/sub_0806D3D8 and the sub_080009E4 sine offsets collapse into player_in and documented constants; the scythe sub-children and the projectile helpers fold into the SHOT/GORE roles; the sub_08021654 ring emits, the sub_080427B8/sub_0804277C box registrations, the + 0x5A palette merge and the sub_08013CF0/sub_08034498 event calls are not ported and the sub_080BE414 state-0 intro's two sub_0800C5A8 writes (argument 0 on the gated entry transition, argument 1 on the strike-arm transition) await substep mapping. EnemyDeathCreate (0x080BF2E8) loads the encoding-2 multi-sheet tiles 0x08119498 (four concatenated 16x16 sub-sheets, exported by the new objects.c branch), palette 0x0820BC1C and frames 0x08249C48, spawns the three child callbacks sub_080BC298/sub_080BD094/sub_080BD358 through sub_0806DFF8, and starts the nine-state update machine of EnemyDeathUpdate (0x080BF5FC): state 0 sub_080BE414 intro/aggro waits on the global flag, checks player distance, plays song 0x121 and dashes in; state 1 sub_080BE608 is the eight-case hover/attack machine; states 2-6 are the dive/wander/charge/sweep/beat phases; state 7 sub_080BF178 is the death sequence that deletes; state 8 falls back to sub_0803F17C. The mirror child copies the parent animation/facing, the mid child rides a slot with timers and emits the scythe, and the scythe child is a nine-state machine of its own. Unit-tested in death_tests.",
+   "limitations": "The gEwramData + 0x4E4 slot table (stride 0x84) folds into parent pointers and the DEATH_MIRROR/MID/SCYTHE/SHOT/GORE roles; the three sub_0806DFF8 child callbacks persist as those roles emitted over the first updates under the 8-child room cap; the wall probes sub_0806D490/sub_0806D4A8/sub_0806D3D8 and the sub_080009E4 sine offsets collapse into player_in and documented constants; the scythe sub-children and the projectile helpers fold into the SHOT/GORE roles; the sub_08021654 ring emits, the sub_080427B8/sub_0804277C box registrations, the + 0x5A palette merge and the sub_08013CF0/sub_08034498 event calls, the param0 intro's + 0x42/+ 0x46 screen offsets and song 0x1010 are not ported; the sub_080BE414 state-0 intro's two sub_0800C5A8 writes (argument 0 on the gated entry/wait phase, argument 1 on the strike-arm transition) report through the entity pass's state inspection, and the + 0x30 param0 create gate is corrected to the native direction (param0 != 0 takes the state-0 intro, param0 == 0 state 1). EnemyDeathCreate (0x080BF2E8) loads the encoding-2 multi-sheet tiles 0x08119498 (four concatenated 16x16 sub-sheets, exported by the new objects.c branch), palette 0x0820BC1C and frames 0x08249C48, spawns the three child callbacks sub_080BC298/sub_080BD094/sub_080BD358 through sub_0806DFF8, and starts the nine-state update machine of EnemyDeathUpdate (0x080BF5FC): state 0 sub_080BE414 intro/aggro waits on the global flag, checks player distance, plays song 0x121 and dashes in; state 1 sub_080BE608 is the eight-case hover/attack machine; states 2-6 are the dive/wander/charge/sweep/beat phases; state 7 sub_080BF178 is the death sequence that deletes; state 8 falls back to sub_0803F17C. The mirror child copies the parent animation/facing, the mid child rides a slot with timers and emits the scythe, and the scythe child is a nine-state machine of its own. Unit-tested in death_tests.",
    "next_action": "Compare the attack choreography and child timing against an emulator; port the full case tables of the state-1 and scythe machines, the ring emits and the projectile helpers.",
    "evidence": {
     "unit_tests": [
@@ -12000,15 +11938,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -12074,15 +12010,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -12204,15 +12138,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -12299,15 +12231,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -12398,15 +12328,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -12471,15 +12399,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -12570,15 +12496,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -12643,15 +12567,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -12738,15 +12660,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -12858,15 +12778,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -12948,15 +12866,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -13022,15 +12938,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -13102,15 +13016,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -13232,15 +13144,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -13312,15 +13222,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -13388,15 +13296,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -13468,15 +13374,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -13552,15 +13456,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -13666,15 +13568,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -13764,15 +13664,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -13903,15 +13801,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -14033,15 +13929,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -14113,15 +14007,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -14190,7 +14082,7 @@
     "ArcTan2",
     "SetPlayerInput"
    ],
-   "limitations": "The gEwramData + 0x4E4 partner slot table and the sub_080D2584 Object20 dialogue entities are not ported; the sub_080D26A8 state-1 cases collapse to the clone/core emit plus the 0x50 partner timer; the state-3 partner-death gate into 0xF0 is approximated by the lethal-hit path; the seven-case sub_080D2BDC cinematic keeps its case cadence and song accents with the sub_080D5F88/sub_080D2850 scripted spawns flame-folded and the SetPlayerInput locks dropped; the ~7000-line sub_080D42A8/sub_080D32F8 child combat brains are not ported (the clone mirrors the conductor); the gEwramData + 0x42C/+ 0x8E/+ 0x13266/+ 0x37E create gates keep only the + 0x8E & 0x40 dormant park; the state-1 entry's sub_0800C5A8(0) feeds unk_A074_1 through the entity pass while the state-0xF0 cinematic-end write and the unported child-callback sites (sub_080D243C/sub_080D2E1E/sub_080D3040/sub_080D6B0C/sub_080D7378) stay unported; and there is no emulator comparison. EnemyGrahamCreate (0x080D2424) gates on gEwramData + 0x42C bit 0x10000, the + 0x30 param path through sub_080D2584(.,5) vs state 2, the + 0x13266/+ 0x37E/+ 0x4CC & 3 cleared-spawn delete and the + 0x8E & 0x40 dormant park (state 0xD0), runs sub_0800C5A8/sub_08034498/sub_08013CF0 story calls and otherwise emits the sub_080D4168 shadow clone (tiles 0x081FB2BC, palette 0x0820C090, frames 0x08253D60) and state 3; EnemyGrahamUpdate (0x080D5DF4) dispatches state 1 to sub_080D26A8 (partner-slot machine: claim/position, SetPlayerInput lock, + 0xD = 0x50 countdown, sub_080D2584 re-arms and the partner-state checks), states 2 and 0xD0 to empty stubs, state 0xF0 to sub_080D2BDC (seven cases: + 0x16 or-ed with 0x20, + 0xD = 0x8C, song 0x1DE/0x1DB variant, the + 0xD = 0x20 sub_080D5F88 anchor spawn, the sub_080D2850/sub_080D2584 scripted emits under SetPlayerInput locks and the sub_0800C5A8(1) release) and state 3 to sub_080D27C8 (song 0x1DD on the + 0x16 & 4 gate, the sub_080D31D0 weak point 0x081FD2C0/0x0820C158/0x08254D84, the partner + 0x36 match and + 0x3E & 2 dead flag -> sub_080683BC -> 0xF0). Unit-tested in graham_tests.",
+   "limitations": "The gEwramData + 0x4E4 partner slot table and the sub_080D2584 Object20 dialogue entities are not ported; the sub_080D26A8 state-1 cases collapse to the clone/core emit plus the 0x50 partner timer; the state-3 partner-death gate into 0xF0 is approximated by the lethal-hit path; the seven-case sub_080D2BDC cinematic keeps its case cadence and song accents with the sub_080D5F88/sub_080D2850 scripted spawns flame-folded and the SetPlayerInput locks dropped; the ~7000-line sub_080D42A8/sub_080D32F8 child combat brains are not ported (the clone mirrors the conductor); the gEwramData + 0x42C/+ 0x8E/+ 0x13266/+ 0x37E create gates keep only the + 0x8E & 0x40 dormant park; the state-1 entry's sub_0800C5A8(0) and the state-0xF0 cinematic's per-frame tail write (_080D3192: 0 for cases 0-4/6, 1 while + 0xB == 5, reported as step >= 5 ? 1 : 0 with the case-5/6 merge documented) feed unk_A074_1 through the entity pass; the create's state-1-variant sub_0800C5A8(0) is subsumed by the per-frame state-1 write, the normal-variant sub_0800C5A8(1) is unreachable (the port always takes the intro path), and the transient-entity sites sub_080D6B0C/sub_080D7378 of the unported sub_080D6EF8 defeat burst stay unported; and there is no emulator comparison. EnemyGrahamCreate (0x080D2424) gates on gEwramData + 0x42C bit 0x10000, the + 0x30 param path through sub_080D2584(.,5) vs state 2, the + 0x13266/+ 0x37E/+ 0x4CC & 3 cleared-spawn delete and the + 0x8E & 0x40 dormant park (state 0xD0), runs sub_0800C5A8/sub_08034498/sub_08013CF0 story calls and otherwise emits the sub_080D4168 shadow clone (tiles 0x081FB2BC, palette 0x0820C090, frames 0x08253D60) and state 3; EnemyGrahamUpdate (0x080D5DF4) dispatches state 1 to sub_080D26A8 (partner-slot machine: claim/position, SetPlayerInput lock, + 0xD = 0x50 countdown, sub_080D2584 re-arms and the partner-state checks), states 2 and 0xD0 to empty stubs, state 0xF0 to sub_080D2BDC (seven cases: + 0x16 or-ed with 0x20, + 0xD = 0x8C, song 0x1DE/0x1DB variant, the + 0xD = 0x20 sub_080D5F88 anchor spawn, the sub_080D2850/sub_080D2584 scripted emits under SetPlayerInput locks and the sub_0800C5A8(1) release) and state 3 to sub_080D27C8 (song 0x1DD on the + 0x16 & 4 gate, the sub_080D31D0 weak point 0x081FD2C0/0x0820C158/0x08254D84, the partner + 0x36 match and + 0x3E & 2 dead flag -> sub_080683BC -> 0xF0). Unit-tested in graham_tests.",
    "next_action": "Port the sub_080D42A8/sub_080D32F8 child combat brains and the sub_080D2584 Object20 dialogue path; decode the state-1 partner choreography and compare against an emulator.",
    "evidence": {
     "unit_tests": [
@@ -14351,15 +14243,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -14424,15 +14314,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -14509,15 +14397,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -14753,15 +14639,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -14883,15 +14767,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -14973,15 +14855,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -15058,15 +14938,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -15152,15 +15030,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -15251,15 +15127,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -15352,15 +15226,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -15453,15 +15325,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -15540,15 +15410,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -15652,15 +15520,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -15732,15 +15598,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -15841,15 +15705,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -15939,15 +15801,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -16078,15 +15938,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -16159,15 +16017,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -16243,15 +16099,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -16325,15 +16179,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -16421,15 +16273,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -16521,15 +16371,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -16600,15 +16448,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -16693,15 +16539,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -16793,15 +16637,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -16878,15 +16720,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -16996,15 +16836,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -17094,15 +16932,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -17176,15 +17012,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -17255,15 +17089,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -17351,15 +17183,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -17433,15 +17263,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -17514,15 +17342,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -17634,15 +17460,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -17707,15 +17531,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -17796,15 +17618,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -17875,15 +17695,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -17960,15 +17778,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -18035,15 +17851,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -18128,15 +17942,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -18243,15 +18055,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -18387,15 +18197,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -18487,15 +18295,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -18598,15 +18404,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -18678,15 +18482,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -18799,15 +18601,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -18909,15 +18709,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -19004,15 +18802,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -19112,15 +18908,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -19194,15 +18988,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -19307,15 +19099,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -19415,15 +19205,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -19523,15 +19311,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -19639,15 +19425,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -19731,15 +19515,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -19814,15 +19596,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -19932,15 +19712,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -20062,15 +19840,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -20159,7 +19935,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -20173,11 +19949,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -20249,15 +20023,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -20336,15 +20108,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -20421,7 +20191,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -20435,11 +20205,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -20575,15 +20343,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -21048,7 +20814,7 @@
     "sub_080D7F78",
     "sub_080D7FB8"
    ],
-   "limitations": "SDL3 supplies active-high key bits. SoftResetCheck is ported and unit-tested, but the incomplete Aria boot lifecycle cannot perform the original console reset. GameModeInGameUpdate's unk_64/unk_65 dispatch channel is now tracked (aos_in_game_mode): cases 3/4/6 latch from the ported transition, quick-map and soul-menu counterparts and the per-frame SetPlayerInput(1, 0) override runs through aos_input_set_player. The post-transition input freeze is identified as sub_0800FFCC's area-name banner: sub_080104EC's stage-2 settle end arms unk_42C bit 0x80 via sub_0800FCB8 and the case-1 routine suspends the entity pass through unk_A074 bit 0 for 189 frames (stages 1-4), not through SetPlayerInput; the runtime reproduces the arm, stage machine, unk_37C shown bits and unk_A074 menu/exit gates and composites the 256x16 per-area strip (the 13 LZ77 records of 0x08260328 baked to RGBA in area_banners.bin, palette row 3 of 0x0820C428 as a documented approximation of BG palette row 12) with an alpha ramp standing in for the bldY fade; the WIN0 darkening band and the sub_0800FDC8/sub_08010144 display-register work remain unmodelled. Cases 5 (sub_080106DC via sub_08010978, now modelled by aos_in_game_mode_transition_fade_* on unk_65/unk_66/fade_bldY with the bldY ramp composited as a black veil) and 7/8 (sub_080115D4/sub_080116A8 picker and sub_08011AD0/sub_08011B2C commit, now ported in aos_map_warp with the sUnk_08525FBC table and sUnk_08116650 cells read live from the ROM, the unk_378 discovered mask, the unk_3F4 cursor and the sub_08011F44 request resolved to the destination room) are wired end-to-end from Object1F's seq_end/flags_42c_20000 outputs. Case 5's stage-1 screen-scroll commit (sub_08010350/sub_0801083C) and stage-0 cleanup have no runtime channel and collapse to one frame each — sub_08010350 scans the room header's unk_88->unk_18 screen-transition table (unexported ROM data) to pick the target room for its sub_0800F9EC reload, so the commit cannot be wired without fabricating the room choice; the picker's sub_08002324 cursor sprite is approximated by corner brackets and the commit's native think-state-4 routing (the unk_42C 0x20000 abort) is performed through the case-8 stage model instead. Cases 9-14 are now decoded but still have no runtime counterpart: case 9 is sub_0805AFC0, the shared window-manager coroutine (unk_65 stages 0-13, language portrait tables 0x0815F120/0x0815F480/0x0815F2D0, sub_08067310/sub_08067488 text paging), armed only by sub_0805AF68 which func_08065DB8 calls on its text-done tail (asm/code/code_08060B98.s) — that arm channel is unported; case 10 is sub_0800CA98, a one-frame entry returning GAME_MODE_CREDITS (GameModeCreditsUpdate, src/code_08013960.c), written by the Object20 story endings sub_0805C08C/sub_0805C628/sub_08062664 (param0 29/31/23 store gEwramData+0x64=0x0A; the runtime write_64_0a reports cover all sites) but no AOS_MODE_CREDITS handler exists; cases 11-14 are the unk_4CC_6-gated multi-SIO link-sync chain (sub_080D7F78/sub_080D7FB8 init, sub_080D7F28/sub_080D7F48 link-ready polls for partner 0xA2C, sub_0803407C/sub_0803427C/sub_080341D0/sub_08034498 player-record exchange, all exits to case 2), reachable only from the case-0/3 tails while unk_4CC_6 holds — an exhaustive C+asm scan found no unk_4CC_6 set-to-1 writer (only clears and bit-0/1/2 accesses), so the flag is either set by link code outside the corpus or dead in retail; the entity SetPlayerInput slot still substitutes the global held mask instead of the player-only words; without --rom the banner never arms (no castle table); the entity-pass sub_0800C5A8 channel now also carries Object10's draw-order write, sub_08021654's lethal-damage write and Graham's state-1 entry write; the sub_0805B66C release writes inside Object20 updates are always overwritten by the shared update tail on the same frame; no in-game capture comparison of the lock itself. UpdateInput rising edges, held inputs, 32/6-frame repeats and priority reset, plus SetPlayerInput priority/override semantics are ported in device-free C. The SDL3 host remains separate from the native Aria input state. SoftResetCheck now reproduces the native one-shot inhibit flag, new-input gate and four-key chord detection without restarting the host. The in-game mode channel now reports the native per-frame player-input lock for the quick map, soul menu and gated transition stages, and the sub_0800FFCC area-banner freeze (unk_A074 bit 0 entity-pass suspension, 189 frames) is reproduced through aos_in_game_mode_area_banner_step with the sub_0800FCB8 pick driven by the quick-map castle table. Case 5's sub_080106DC stage machine and the cases 7/8 warp picker/commit now run in the SDL and --simulate loops: Object1F's update seq_end latches the fade and its think's picker-open frame latches the map picker, confirmed warps load the destination room at the sub_08011F44 (0x78, 0x80) position and sub_0804F7A4-style discovery marks warp rooms on every room load.",
+   "limitations": "SDL3 supplies active-high key bits. SoftResetCheck is ported and unit-tested, but the incomplete Aria boot lifecycle cannot perform the original console reset. GameModeInGameUpdate's unk_64/unk_65 dispatch channel is now tracked (aos_in_game_mode): cases 3/4/6 latch from the ported transition, quick-map and soul-menu counterparts and the per-frame SetPlayerInput(1, 0) override runs through aos_input_set_player. The post-transition input freeze is identified as sub_0800FFCC's area-name banner: sub_080104EC's stage-2 settle end arms unk_42C bit 0x80 via sub_0800FCB8 and the case-1 routine suspends the entity pass through unk_A074 bit 0 for 189 frames (stages 1-4), not through SetPlayerInput; the runtime reproduces the arm, stage machine, unk_37C shown bits and unk_A074 menu/exit gates and composites the 256x16 per-area strip (the 13 LZ77 records of 0x08260328 baked to RGBA in area_banners.bin, palette row 3 of 0x0820C428 as a documented approximation of BG palette row 12) with an alpha ramp standing in for the bldY fade; the WIN0 darkening band and the sub_0800FDC8/sub_08010144 display-register work remain unmodelled. Cases 5 (sub_080106DC via sub_08010978, now modelled by aos_in_game_mode_transition_fade_* on unk_65/unk_66/fade_bldY with the bldY ramp composited as a black veil) and 7/8 (sub_080115D4/sub_080116A8 picker and sub_08011AD0/sub_08011B2C commit, now ported in aos_map_warp with the sUnk_08525FBC table and sUnk_08116650 cells read live from the ROM, the unk_378 discovered mask, the unk_3F4 cursor and the sub_08011F44 request resolved to the destination room) are wired end-to-end from Object1F's seq_end/flags_42c_20000 outputs. Case 5's stage-1 screen-scroll commit (sub_08010350/sub_0801083C) and stage-0 cleanup have no runtime channel and collapse to one frame each — sub_08010350 scans the room header's unk_88->unk_18 screen-transition table (unexported ROM data) to pick the target room for its sub_0800F9EC reload, so the commit cannot be wired without fabricating the room choice; the picker's sub_08002324 cursor sprite is approximated by corner brackets and the commit's native think-state-4 routing (the unk_42C 0x20000 abort) is performed through the case-8 stage model instead. Cases 9-14 are now decoded but still have no runtime counterpart: case 9 is sub_0805AFC0, the shared window-manager coroutine (unk_65 stages 0-13, language portrait tables 0x0815F120/0x0815F480/0x0815F2D0, sub_08067310/sub_08067488 text paging), armed only by sub_0805AF68 which func_08065DB8 calls on its text-done tail (asm/code/code_08060B98.s) — that arm channel is unported; case 10 is sub_0800CA98, a one-frame entry returning GAME_MODE_CREDITS (GameModeCreditsUpdate, src/code_08013960.c), written by the Object20 story endings sub_0805C08C/sub_0805C628/sub_08062664 (param0 29/31/23 store gEwramData+0x64=0x0A; the runtime write_64_0a reports cover all sites) but no AOS_MODE_CREDITS handler exists; cases 11-14 are the unk_4CC_6-gated multi-SIO link-sync chain (sub_080D7F78/sub_080D7FB8 init, sub_080D7F28/sub_080D7F48 link-ready polls for partner 0xA2C, sub_0803407C/sub_0803427C/sub_080341D0/sub_08034498 player-record exchange, all exits to case 2), reachable only from the case-0/3 tails while unk_4CC_6 holds — an exhaustive C+asm scan found no unk_4CC_6 set-to-1 writer (only clears and bit-0/1/2 accesses), so the flag is either set by link code outside the corpus or dead in retail; the entity SetPlayerInput slot still substitutes the global held mask instead of the player-only words; without --rom the banner never arms (no castle table); the entity-pass sub_0800C5A8 channel now also carries Object10's draw-order write, sub_08021654's lethal-damage write (whose unk_A074_0 clear reaches in_game_mode through aria_entities_lethal_clear_result and lifts the level-up freeze on death), Graham's state-1 entry and state-0xF0 cinematic writes, Death's sub_080BE414 intro writes and Chronomage's sub_080B6DEC no-fade write; the sub_0805B66C release writes inside Object20 updates are always overwritten by the shared update tail on the same frame; no in-game capture comparison of the lock itself. UpdateInput rising edges, held inputs, 32/6-frame repeats and priority reset, plus SetPlayerInput priority/override semantics are ported in device-free C. The SDL3 host remains separate from the native Aria input state. SoftResetCheck now reproduces the native one-shot inhibit flag, new-input gate and four-key chord detection without restarting the host. The in-game mode channel now reports the native per-frame player-input lock for the quick map, soul menu and gated transition stages, and the sub_0800FFCC area-banner freeze (unk_A074 bit 0 entity-pass suspension, 189 frames) is reproduced through aos_in_game_mode_area_banner_step with the sub_0800FCB8 pick driven by the quick-map castle table. Case 5's sub_080106DC stage machine and the cases 7/8 warp picker/commit now run in the SDL and --simulate loops: Object1F's update seq_end latches the fade and its think's picker-open frame latches the map picker, confirmed warps load the destination room at the sub_08011F44 (0x78, 0x80) position and sub_0804F7A4-style discovery marks warp rooms on every room load.",
    "next_action": "Port case 9 by adding the sub_0805AF68 arm channel to func_08065DB8's text-done tail and the sub_0805AFC0 window coroutine (gEwramData+0xE2C control block, 0x0815F120/0x0815F480/0x0815F2D0 portrait tables, sub_08067310/sub_08067488 text paging, display-register writes); add an AOS_MODE_CREDITS handler for case 10's GameModeCreditsUpdate; cases 11-14 need a link session (the unk_4CC_6 writer is still unidentified — none exists in the decomp corpus) plus the multi-SIO routines sub_080D7F78/sub_080D7FB8/sub_080D7F28/sub_080D7F48 and the sub_0803407C/sub_0803427C/sub_080341D0/sub_08034498 record exchange; model case 5's sub_08010350/sub_0801083C screen-scroll commit and stage-0 cleanup if a scroll-transition channel is added; model the WIN0 darkening band and the sub_0800FDC8 hBlank fade behind the area-name strip (the strip itself is drawn); route entity SetPlayerInput outputs through the player-only words; validate the lock, banner timing, fade and warp picker against gameplay captures.",
    "evidence": {
     "unit_tests": [
@@ -21230,13 +20996,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -21736,7 +21502,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -21750,9 +21516,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -22718,13 +22484,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -22920,13 +22686,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -23050,13 +22816,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -25070,13 +24836,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -25336,13 +25102,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -28193,15 +27959,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -29276,7 +29040,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -29340,9 +29104,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -29918,13 +29682,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -30239,13 +30003,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -30367,7 +30131,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -30441,9 +30205,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -30769,7 +30533,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -30803,11 +30567,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -30876,7 +30638,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -30910,9 +30672,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -30971,15 +30733,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -31041,7 +30801,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -31055,11 +30815,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -31207,7 +30965,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -31251,9 +31009,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -31326,13 +31084,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -31390,15 +31148,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -31459,7 +31215,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -31473,11 +31229,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -31552,7 +31306,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -31566,9 +31320,9 @@
       "exists": true
      }
     ],
-    "verdict": "failing",
+    "verdict": "passing",
     "warnings": [],
-    "verified_on": null
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -31640,15 +31394,13 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -31713,7 +31465,7 @@
        "native_golden_aos",
        "native_golden_mzm"
       ],
-      "outcome": "failed",
+      "outcome": "passed",
       "exists": true
      },
      {
@@ -31891,14 +31643,12 @@
       "test": "@all-tests on linux",
       "kind": "suite",
       "registered": true,
-      "outcome": "failed"
+      "outcome": "passed"
      }
     ],
-    "verdict": "failing",
-    "warnings": [
-     "declared functional, but no passing test was observed in this run"
-    ],
-    "verified_on": null
+    "verdict": "passing",
+    "warnings": [],
+    "verified_on": "2026-11-17"
    }
   },
   {
@@ -32102,7 +31852,7 @@
     "files": [
      "tests/test_native_golden.c"
     ],
-    "outcome": "failed"
+    "outcome": "passed"
    },
    {
     "name": "native_golden_mzm",
@@ -33537,12 +33287,18 @@
    }
   ],
   "summary": {
-   "passed": 230,
-   "failed": 1,
+   "passed": 231,
+   "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "ba4b5f8d",
+   "date": "2026-11-17",
+   "subject": "aos: kind-3 breakable variants, drops and conditional pickups (Patch 1198)",
+   "scope": "project"
+  },
   {
    "commit": "85371c00",
    "date": "2026-11-17",
@@ -34015,12 +33771,6 @@
    "commit": "fa034e02",
    "date": "2026-11-14",
    "subject": "Add room dialogue bridge for Object20 text windows",
-   "scope": "project"
-  },
-  {
-   "commit": "27ca0ced",
-   "date": "2026-11-14",
-   "subject": "Port Object20 param0 4-8 director variants (aos_object20_dirs)",
    "scope": "project"
   }
  ],

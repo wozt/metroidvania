@@ -127,10 +127,13 @@ static void gr_state1(AosEnemy *enemy, AosHitReport *report) {
  * loads + 0xD = 0x8C and plays song 0x1DE (0x1DB on the variant),
  * case 2 fires the sub_080D5F88 spawn at the + 0x40/+ 0x44 anchor
  * when + 0xD hits 0x20, the later cases run the sub_080D2850/
- * sub_080D2584 scripted emits under the SetPlayerInput locks and
- * the machine ends through sub_0800C5A8(1). The port keeps the case
- * order, the song accents, two flame-folded volleys and the delete
- * at the end of the sequence. */
+ * sub_080D2584 scripted emits under the SetPlayerInput locks.
+ * The shared tail (_080D3192) writes sub_0800C5A8 every frame —
+ * 0 for cases 0-4/6, 1 while + 0xB == 5 — reported from
+ * aria_entities.c as step >= 5 ? 1 : 0 (the ported machine merges
+ * native cases 5/6 into the tail; documented there). The port
+ * keeps the case order, the song accents, two flame-folded
+ * volleys and the delete at the end of the sequence. */
 static AosHitReport gr_cinematic(AosEnemy *enemy, AosHitReport *report,
                                  uint32_t (*random)(void)) {
     switch (enemy->step) {

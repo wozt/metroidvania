@@ -1,3 +1,44 @@
+## Patch 1199 - sub_0800C5A8 enemy callers: Death intro, Chronomage no-fade, Graham cinematic; lethal unk_A074_0 clear
+
+- **Scope.** Closes most of Patch 1180's remaining enemy/boss
+  `sub_0800C5A8` sites through the existing `c5a8_pending`
+  last-writer-wins channel in `aria_entities.c`:
+  - **Death `sub_080BE414`** (state-0 intro): `+0xB` substep
+    machine writes `C5A8(0)` through the gated entry/wait phase
+    (ported substeps <= 1) and `C5A8(1)` on the substep 2 -> 3
+    strike-arm transition; the six child roles are excluded.
+    `EnemyDeathCreate`'s `+0x30` gate was also corrected: param0
+    now selects state 0 (the intro) and param0 == 0 takes state 1
+    — the port had them swapped.
+  - **Chronomage `sub_080B6DEC`** case 4 -> 5: the no-fade branch
+    (ability bit 5 of `unk_13396` clear; `+0x4BE` treated clear —
+    no runtime channel) writes `C5A8(0)`; the ported step machine
+    collapses both branches so the report is gated on the modelled
+    ability bit only. Wisp child excluded by role.
+  - **Graham `sub_080D2BDC`** state-0xF0 cinematic: the shared
+    `_080D3192` tail writes `C5A8` every frame — 0 for cases
+    0-4/6, 1 while `+0xB == 5`; the ported machine merges native
+    cases 5/6 into the `step >= 5` tail (documented).
+- **Lethal `unk_A074_0` clear.** `sub_08021654`'s lethal branch
+  clears `gEwramData->unk_A074_0` inside the damage routine. The
+  entity pass cannot reach `in_game_mode`, so the same
+  `soma_damage > 0 && hp <= 0` detection arms
+  `lethal_clear_pending`; both loops consume it right after the
+  c5a8 store (native ordering: the `C5A8(0)` write lands first,
+  then the flag drops). The level-up freeze
+  (`entities_frozen`) also lifts on dead Soma — native has no
+  separate died flag, `hp <= 0` is the lethal signal.
+- **Still unported (documented).** Belmont's param0-1 variant
+  (`0xCFAB0`/`0xCFB08`/`0xCFD10`), Balore's `sub_080B6880`
+  controller, Chronomage's `+0x4BE` arm, Graham's clone/core and
+  remaining `0xD2xxx` callbacks.
+- **Verification.** `ctest -R aos_enemy` passes with the
+  Death state-swap assertions updated; full cycle:
+  `fusion_checklist`, `fusion_dashboard --run-tests` (230
+  passed), `fusion_check_generated` all clean. No emulator
+  comparison; the c5a8 channel is exercised through the runtime
+  loops, not unit-tested directly.
+
 ## Patch 1198 - kind-3 breakable variants and drops, conditional pickups (room records kinds 5/6)
 
 - **Variant tile DMA (`sub_08046148`).** The kind-3 prop's per-param0

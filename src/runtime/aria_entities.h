@@ -132,6 +132,12 @@ int aria_entities_c5a8_result(void);
  * the frame's last sub_0800C5A8 report (NULL/-1 when silent). */
 void aria_entities_c5a8_debug(const void **ent, int *line);
 
+/* sub_08021654's lethal branch clears gEwramData->unk_A074_0 inside
+ * the damage routine; the entity pass cannot reach in_game_mode, so
+ * it reports through this channel and the room loop clears its own
+ * unk_A074_0 (once per update_entities call, after the pass). */
+bool aria_entities_lethal_clear_result(void);
+
 /* Object1C's SetPlayerInput(1, 0x40) host channel: freezes Soma's
  * player_* input words while the save sequence runs WITHOUT touching
  * the global held/new words the entity dispatch reads (the shared

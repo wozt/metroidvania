@@ -23,8 +23,10 @@
 
 static void hh_fire_shot(AosEnemy *enemy, AosHitReport *report,
                          int32_t dx, int32_t dy, int32_t vx, int32_t vy);
-static void hh_aim_velocity(int32_t dx, int32_t dy, int32_t *vx,
-                            int32_t *vy);
+static void hh_dash_velocity(const AosEnemy *enemy, const AosSoma *soma,
+                             int32_t anchor_x, int32_t anchor_y,
+                             uint32_t (*random)(void),
+                             int32_t *vx, int32_t *vy);
 static AosHitReport hh_shot_update(AosEnemy *enemy, AosSoma *soma,
                                    const AosEnemyKind *kind,
                                    const AosWeaponEntity *weapon,
@@ -114,11 +116,17 @@ static AosEnemy headhunter_head(AosEnemy *body, unsigned index, int cam_x, int c
  * frame-gated waits (11, 13, 21, 24, 31, 34, 41 and the head of 44)
  * never write + 0xB natively — the linked head actors advance it — so
  * this port advances them on the animation end (cycle_done), a
- * documented approximation. The dash cases 22/32/42 compute a
- * player-tracking velocity and fire sub_080858B8 with song 0x67
- * (only case 22's stinger was decoded); the spawn folds into
- * spawn_flame_at. Cases 12/14 and 37/43/44/47 hand control back to
- * state 0 with their decoded step writes. */
+ * documented approximation. The dash cases 22/32/42 gate on + 0xD >
+ * 0x13 with + 0xD & 3 == 0 and fire sub_080858B8 with song 0x67 on
+ * every volley; the + 0xD tail stores the incremented byte and exits
+ * on the OLD value > 0x2D. Case 22 keeps the decoded facing
+ * velocity; cases 32/42 run the decoded ArcTan2 aim — s16 pixel
+ * deltas from the (sb, anchor-y) spawn anchor to the player, the
+ * + 0x4000 lead angle and the sub_0803E86C 0x28000 scale feeding
+ * sub_080009E4 sine lookups — plus the +/-0x8000 random spread on
+ * both axes. The spawn folds into spawn_flame_at's child record.
+ * Cases 12/14 and 37/43/44/47 hand control back to state 0 with
+ * their decoded step writes. */
 static void headhunter_attack(AosEnemy *enemy, const AosEnemyKind *kind,
                               const AosSoma *soma, AosHitReport *report,
                               uint32_t (*random)(void)) {
@@ -209,22 +217,24 @@ static void headhunter_attack(AosEnemy *enemy, const AosEnemyKind *kind,
         }
         break;
     case 22:
-        /* Dash: once + 0xD > 0x13 on a multiple of 4, a player-tracking
-         * sub_080858B8 shot with song 0x67; + 0xD > 0x2D advances. */
+        /* Dash: once + 0xD > 0x13 on a multiple of 4, a facing-based
+         * sub_080858B8 shot with song 0x67 — spawn offset
+         * (+/-0x1D0000, -0x120000), vx (+/-0x20000 - 0x8000 +
+         * rand16) and vy (rand16 - 0x8000) by the + 0x58 facing. */
         if (enemy->timer > 0x13 && (enemy->timer & 3) == 0) {
-            /* sub_080858B8: facing-based vx, the -0x8000/+rand spread
-             * and the (+29, +28) spawn offset. */
             int32_t vx = (enemy->mirrored ? 0x20000 : -0x20000) - 0x8000 +
                          (int32_t)(random() & 0xFFFF);
             int32_t vy = (int32_t)(random() & 0xFFFF) - 0x8000;
             hh_fire_shot(enemy, report,
-                         enemy->mirrored ? 0x1D0000 : -0x1D0000, 0x1C0000,
+                         enemy->mirrored ? 0x1D0000 : -0x1D0000, -0x120000,
                          vx, vy);
             aos_audio_play_song(0x67);
         }
-        if (++enemy->timer > 0x2D) {
+        if (enemy->timer > 0x2D) {
             enemy->step++;
             enemy->timer = 0;
+        } else {
+            enemy->timer++;
         }
         break;
     case 23:
@@ -234,6 +244,10 @@ static void headhunter_attack(AosEnemy *enemy, const AosEnemyKind *kind,
         }
         break;
     case 24:
+        /* Native sub_080833D4 also advances + 0xB twice and fires
+         * sub_08085A48 (the sub_08085BF0 sine-wave shot, song 0x130)
+         * on the same + 0x6E > 1 gate; that projectile's brain is not
+         * ported yet, so this case keeps only the frame advance. */
         if (enemy->anim.frame > 1 && enemy->cycle_done) {
             enemy->cycle_done = false;
             enemy->step++;
@@ -254,20 +268,23 @@ static void headhunter_attack(AosEnemy *enemy, const AosEnemyKind *kind,
         }
         break;
     case 32:
+        /* Aimed dash: same + 0xD gate; the ArcTan2 runs from the
+         * (sb = +/-0x100000, +0x2C0000) anchor — note the aim anchor
+         * differs from the (+/-0x100000, +0x1C0000) spawn offset —
+         * and song 0x67 plays on every volley. */
         if (enemy->timer > 0x13 && (enemy->timer & 3) == 0) {
-            /* Aimed sub_080858B8 shot, (+/-16, +28) offset. */
+            int32_t anchor = enemy->mirrored ? 0x100000 : -0x100000;
             int32_t vx, vy;
-            hh_aim_velocity(soma->x - enemy->x, soma->y - enemy->y,
-                            &vx, &vy);
-            vx += (int32_t)(random() & 0xFFFF) - 0x8000;
-            vy += (int32_t)(random() & 0xFFFF) - 0x8000;
-            hh_fire_shot(enemy, report,
-                         enemy->mirrored ? 0x100000 : -0x100000, 0x1C0000,
-                         vx, vy);
+            hh_dash_velocity(enemy, soma, anchor, 0x2C0000,
+                             random, &vx, &vy);
+            hh_fire_shot(enemy, report, anchor, 0x1C0000, vx, vy);
+            aos_audio_play_song(0x67);
         }
-        if (++enemy->timer > 0x2D) {
+        if (enemy->timer > 0x2D) {
             enemy->step++;
             enemy->timer = 0;
+        } else {
+            enemy->timer++;
         }
         break;
     case 33:
@@ -302,20 +319,23 @@ static void headhunter_attack(AosEnemy *enemy, const AosEnemyKind *kind,
         }
         break;
     case 42:
+        /* Aimed dash: the ArcTan2 runs from the (sb = mirrored ?
+         * -0x180000 : +0x180000, -0x100000) anchor to the
+         * (+/-0x180000, -0x200000) spawn offset, song 0x67 on every
+         * volley. */
         if (enemy->timer > 0x13 && (enemy->timer & 3) == 0) {
-            /* Aimed sub_080858B8 shot, (+/-24, -32) offset. */
+            int32_t anchor = enemy->mirrored ? -0x180000 : 0x180000;
             int32_t vx, vy;
-            hh_aim_velocity(soma->x - enemy->x, soma->y - enemy->y,
-                            &vx, &vy);
-            vx += (int32_t)(random() & 0xFFFF) - 0x8000;
-            vy += (int32_t)(random() & 0xFFFF) - 0x8000;
-            hh_fire_shot(enemy, report,
-                         enemy->mirrored ? -0x180000 : 0x180000,
-                         -0x200000, vx, vy);
+            hh_dash_velocity(enemy, soma, anchor, -0x100000,
+                             random, &vx, &vy);
+            hh_fire_shot(enemy, report, anchor, -0x200000, vx, vy);
+            aos_audio_play_song(0x67);
         }
-        if (++enemy->timer > 0x2D) {
+        if (enemy->timer > 0x2D) {
             enemy->step++;
             enemy->timer = 0;
+        } else {
+            enemy->timer++;
         }
         break;
     case 43:
@@ -732,21 +752,27 @@ static void hh_fire_shot(AosEnemy *enemy, AosHitReport *report,
     report->children[report->child_count++] = c;
 }
 
-/* The aimed velocity of cases 32/42: ArcTan2 toward the player, the
- * + 0x4000 lead angle and the sub_0803E86C scale of 0x28000 fold into
- * a normalized 16.16 direction here. */
-static void hh_aim_velocity(int32_t dx, int32_t dy, int32_t *vx,
-                            int32_t *vy) {
-    int64_t ax = dx < 0 ? -(int64_t)dx : dx;
-    int64_t ay = dy < 0 ? -(int64_t)dy : dy;
-    int64_t m = ax > ay ? ax : ay, n = ax < ay ? ax : ay;
-    int64_t len = m + (n >> 1);
-    if (len == 0) {
-        *vx = *vy = 0;
-        return;
-    }
-    *vx = (int32_t)((int64_t)dx * 0x28000 / len);
-    *vy = (int32_t)((int64_t)dy * 0x28000 / len);
+/* sub_08082FFC cases 32/42 aim: the s16 pixel deltas from the body
+ * plus the (anchor_x, anchor_y) offset to the player feed ArcTan2,
+ * the + 0x4000 lead angle rotates the first sub_080009E4 lookup and
+ * both sines scale through sub_0803E86C by 0x28000; each axis then
+ * takes the decoded +/-0x8000 random spread. */
+static void hh_dash_velocity(const AosEnemy *enemy, const AosSoma *soma,
+                             int32_t anchor_x, int32_t anchor_y,
+                             uint32_t (*random)(void),
+                             int32_t *vx, int32_t *vy) {
+    int32_t dx = soma->x - (enemy->x + anchor_x);
+    int32_t dy = soma->y - (enemy->y + anchor_y);
+    /* The native truncates each 16.16 delta toward zero to whole
+     * pixels before ArcTan2 (the negate/shift/negate/shift fold). */
+    int16_t dx16 = (int16_t)(dx / 0x10000);
+    int16_t dy16 = (int16_t)(dy / 0x10000);
+    uint16_t angle = aos_arctan2(dx16, dy16);
+    int32_t base_x = aos_fixed_mul(aos_sine((uint32_t)angle + 0x4000),
+                                   0x28000);
+    int32_t base_y = aos_fixed_mul(aos_sine(angle), 0x28000);
+    *vx = base_x - 0x8000 + (int32_t)(random() & 0xFFFF);
+    *vy = base_y - 0x8000 + (int32_t)(random() & 0xFFFF);
 }
 
 /* sub_0808597C: the shot damps both velocities by 31/32

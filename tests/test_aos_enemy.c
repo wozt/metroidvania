@@ -253,10 +253,60 @@ static void headhunter_death_tests(void) {
     aos_enemy_update(&proj, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 10, 20, never_zero);
     assert(proj.removed);
+    /* The + 0xD tail stores the incremented byte and exits on the OLD
+     * value > 0x2D, so 0x2D ticks to 0x2E before advancing. */
     body.timer = 0x2D;
     aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 10, 20, never_zero);
+    assert(body.step == 22 && body.timer == 0x2E);
+    aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
     assert(body.step == 23 && body.timer == 0);
+    /* Case 32's aimed dash: ArcTan2 from the (+/-0x100000, +0x2C0000)
+     * anchor — mirrored=false anchors at -0x100000 — with the + 0x4000
+     * lead, the 0x28000 scale and the +/-0x8000 spread, song 0x67 on
+     * every volley. Player 32px right of the anchor and level with it
+     * gives angle 0: vx = 0x28000, vy = 0 before the spread. */
+    body.state = 1;
+    body.step = 32;
+    body.timer = 0x14;
+    body.mirrored = false;
+    body.x = AOS_FIXED(200);
+    body.y = AOS_FIXED(100);
+    soma.x = body.x - AOS_FIXED(0x10) + AOS_FIXED(0x20);
+    soma.y = body.y + AOS_FIXED(0x2C);
+    script = (const uint32_t[]){0x8000, 0x8000};
+    script_at = 0;
+    aos_audio_clear();
+    AosHitReport aimed = aos_enemy_update(&body, &soma, &layer, &kind,
+                                          NULL, NULL, 10, 4, 10, 20,
+                                          scripted);
+    assert(aimed.child_count == 1 &&
+           aimed.children[0].role == AOS_ROLE_HH_SHOT &&
+           aimed.children[0].x == body.x - AOS_FIXED(0x10) &&
+           aimed.children[0].y == body.y + AOS_FIXED(0x1C) &&
+           aimed.children[0].vx == 0x28000 &&
+           aimed.children[0].vy == 0 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x67) == 1);
+    /* Case 42 mirrors the aim through the (-0x180000, -0x100000)
+     * anchor to the (-0x180000, -0x200000) spawn with song 0x67. */
+    body.step = 42;
+    body.timer = 0x14;
+    body.mirrored = true;
+    soma.x = body.x - AOS_FIXED(0x38);
+    soma.y = body.y - AOS_FIXED(0x10);
+    script = (const uint32_t[]){0x8000, 0x8000};
+    script_at = 0;
+    aos_audio_clear();
+    aimed = aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                             10, 4, 10, 20, scripted);
+    assert(aimed.child_count == 1 &&
+           aimed.children[0].role == AOS_ROLE_HH_SHOT &&
+           aimed.children[0].x == body.x - AOS_FIXED(0x18) &&
+           aimed.children[0].y == body.y - AOS_FIXED(0x20) &&
+           aimed.children[0].vx == -0x28000 &&
+           aimed.children[0].vy == 0 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x67) == 1);
     /* Cases 37 and 47 hand control back to state 0 with their decoded
      * step writes (0x1E flee / 0x32 exit). */
     body.step = 37;

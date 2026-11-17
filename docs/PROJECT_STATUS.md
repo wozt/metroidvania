@@ -1,3 +1,34 @@
+## Patch 1197 - Headhunter dash cases: faithful ArcTan2 aim, song 0x67 on every volley
+
+- The state-1 (`sub_08082FFC`) dash cases 22/32/42 are now decoded
+  case-for-case against `code_080809C0.s`. All three gate on
+  `+ 0xD > 0x13` with `+ 0xD & 3 == 0`, fire `sub_080858B8` and play
+  song 0x67 on EVERY volley (cases 32/42 previously fired silently),
+  and share the native `+ 0xD` tail that stores the incremented byte
+  and exits on the OLD value `> 0x2D` — the port advanced one frame
+  early.
+- Case 22's spawn offset is corrected to the decoded
+  `(+/-0x1D0000, -0x120000)` (patch 0997 recorded +28; the literal
+  pool entry is `0xFFEE0000`); its facing velocity and +/-0x8000
+  spread were already faithful.
+- Cases 32/42 replace the normalized-direction approximation with
+  the real aim: s16 pixel deltas (16.16 truncated toward zero) from
+  the body plus the decoded anchor offsets — case 32
+  `(+/-0x100000, +0x2C0000)` which differs from its
+  `(+/-0x100000, +0x1C0000)` spawn offset, case 42
+  `(-/+0x180000, -0x100000)` — through ArcTan2, the +0x4000 lead
+  angle, `sub_080009E4` sines scaled by `sub_0803E86C` 0x28000
+  (`aos_arctan2`/`aos_sine`/`aos_fixed_mul`), then the +/-0x8000
+  spread on both axes.
+- Newly identified remaining gap, documented in the module: case
+  24's `+ 0x6E > 1` gate also advances `+ 0xB` twice and fires
+  `sub_08085A48` (the `sub_08085BF0` sine-wave shot, song 0x130);
+  that projectile brain (~450 asm lines with `sub_08085E48`) is not
+  ported.
+- `headhunter_tests` covers the corrected `+ 0xD` tail and the two
+  aimed volleys end-to-end (anchor offsets, angle-0 and angle-0x8000
+  velocities, song 0x67). No emulator comparison.
+
 ## Patch 1196 - room objects: ambient-mote drift fix, kind-3 breakables, placed-pickup floor snap
 
 - **Ambient motes (Object07).** `aos_object07_update` integrated the
@@ -1155,8 +1186,8 @@
   the largest remaining approximations are Creaking Skull's two
   ~2000-line choreography machines (its container records and bone
   ride are now ported — Patch 1179), Big Golem's sub_080AC6E8
-  (~1000 lines undecoded), Headhunter's dash cases and the
-  sub_08073568 Manticore child brain.
+  (~1000 lines undecoded), the sub_08085A48/sub_08085BF0 Headhunter
+  case-24 projectile and the sub_08073568 Manticore child brain.
 - **Evidence and limits.** Source-derived from sub_080733D4 /
   sub_08073308 in code_080709D8.s; unit-tested in
   `tests/test_aos_enemy.c` (manticore_tests). Not emulator-compared.

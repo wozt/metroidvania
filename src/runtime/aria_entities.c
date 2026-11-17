@@ -2879,6 +2879,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             const int pre_enemy_state = e->enemy.state;
             const int pre_enemy_step = e->enemy.step;
             const int pre_enemy_substep = e->enemy.substep;
+            const uint32_t pre_soma_flags10 = soma->flags;
             AosHitReport hit = aos_enemy_update(&e->enemy, soma, layer, kind, combat->weapon,
                                                 combat->weapon_frames, combat->player->atk,
                                                 combat->player->def, cam_x, cam_y, aos_random);
@@ -2894,6 +2895,17 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             else if (hit.escort_op == 2)
                 aria_ewram_escort_13220 = NULL;
             aria_pickup_state.global_flags |= hit.flags42c_set;
+            /* sub_0802346C's exception: while the + 0x4CC bit-6 swap
+             * byte is set the contact callback arms + 0x10 bit
+             * 0x80000 (AOS_FLAG_KICK_HIT, set inside
+             * aos_enemy_update) only when the touched entity IS the
+             * + 0x13220 escort partner. Undo this frame's arm for a
+             * non-escort touch; a flag already latched by an earlier
+             * contact this frame stays. */
+            if (hit.enemy_hit && !(pre_soma_flags10 & AOS_FLAG_KICK_HIT) &&
+                (aria_ewram_cine_4cc & 0x40) &&
+                &e->enemy != (const AosEnemy *)aria_ewram_escort_13220)
+                soma->flags &= ~AOS_FLAG_KICK_HIT;
             /* sub_080BE414 (Death's state-0 intro, the + 0xB
              * substep machine): + 0xB == 1 writes sub_0800C5A8(0)
              * every frame — the + 0x42C-bit-0 gate frame and the

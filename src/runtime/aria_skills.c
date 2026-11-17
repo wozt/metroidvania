@@ -19,6 +19,79 @@ int static_index(const int *ids, int count, int id);
  * aria_pickup_state. */
 extern int16_t aria_ewram_pause_4be;
 
+/* gEwramData + 0x13220 (defined in aria_runtime.c): the escort
+ * partner entity sub_08034498 stored — the persistent AosEnemy
+ * record, the port's entity identity. gEwramData + 0x42C is
+ * aria_pickup_state.global_flags. */
+extern void *aria_ewram_escort_13220;
+extern AosPickupCollectionState aria_pickup_state;
+
+/* sub_080213F4: the + 0x42C bit-1 gate, the + 0x13220 escort partner
+ * present and its + 0x518 u16 in 1..0xC6 — the empowered-song variant
+ * SkillBaloreUse (0x19F for 0x1A1), SkillLightningDollUse (0x1A2 for
+ * 0x1A9) and Skill_Devil_Manticore_Curly_Use (0x19F for the record's
+ * + 8 song) pick instead of the plain one. + 0x518 is per-entity
+ * scratch whose writers are the individual enemy routines and has no
+ * ported equivalent, so the record's + 0x34 hp stands in for the
+ * native range check — a documented approximation, not a verified
+ * field map. */
+static bool escort_bonus(void) {
+    const AosEnemy *escort = (const AosEnemy *)aria_ewram_escort_13220;
+    return escort != NULL && (aria_pickup_state.global_flags & 2) != 0 &&
+           escort->hp > 0 && escort->hp < 200;
+}
+
+/* The escort partner as a homing target: the native picks
+ * (sub_0802D484/sub_0802D510 and the SkillKillerFishUse /
+ * SkillTinyDevilUpdate / sub_0802A49C / sub_08024530 inline scans)
+ * return + 0x13220 unconditionally while it is set, never scanning
+ * + 0x13194. The pick sites below feed it as the only candidate,
+ * which reproduces the override; the chase keeps the homing list's
+ * slot-index identity approximation (a mid-chase escort swap can
+ * re-aim a slot-0 chase, where the native stored entity pointer
+ * would not). */
+static const AosEnemy *escort_target_enemy(void) {
+    const AosEnemy *escort = (const AosEnemy *)aria_ewram_escort_13220;
+    return escort != NULL && !escort->removed ? escort : NULL;
+}
+
+/* The escort partner's index in the live room entity table — the
+ * skills' fire_target/imp_target chase identity; -1 when the record
+ * is not a room entity (released, or a stale pointer). */
+static int escort_room_index(void) {
+    const AosEnemy *escort = (const AosEnemy *)aria_ewram_escort_13220;
+    if (escort == NULL || homing_room == NULL) return -1;
+    for (int i = 0; i < (int)homing_room->entity_count; ++i)
+        if (&homing_room->entities[i].enemy == escort) return i;
+    return -1;
+}
+
+/* Fills `targets` (n slots) from the + 0x13194 homing list, or —
+ * while the + 0x13220 escort partner is set — with the escort alone
+ * in slot 0, reproducing the native picks' unconditional override
+ * (sub_0802D484/sub_0802D510 and the sub_0802A49C inline scan).
+ * Returns the escort's room entity index, -1 without one. */
+static int homing_targets(AosSkillTarget *targets, int n) {
+    const AosEnemy *escort = escort_target_enemy();
+    if (escort) {
+        targets[0] = (AosSkillTarget){true, escort->x, escort->y, escort->hp};
+        for (int i = 1; i < n; ++i) targets[i] = (AosSkillTarget){0};
+        return escort_room_index();
+    }
+    for (int slot = 0; slot < n; ++slot) {
+        int index = homing.index[slot];
+        if (index < 0 || !homing_room || (size_t)index >= homing_room->entity_count) {
+            targets[slot] = (AosSkillTarget){0};
+            continue;
+        }
+        const AriaEntity *entity = &homing_room->entities[index];
+        targets[slot] = (AosSkillTarget){entity->spawned && !entity->enemy.removed,
+                                         entity->enemy.x, entity->enemy.y,
+                                         entity->enemy.hp};
+    }
+    return -1;
+}
+
 /* sub_08031EA4(entity, source, dx, dy): the source's facing and whole
  * position (only + 0x42 and + 0x46 are written; a fresh entity's fractions
  * are 0), dx mirrored when it faces left. */
@@ -625,14 +698,10 @@ void update_guardian(AriaGuardian *guardian) {
         if (guardian->core.state != AOS_PERSEPHONE_LEAVING)
             aos_anim_step(&guardian->anim, guardian->persephone_art);
     } else if (guardian->routine == GUARDIAN_DEATH_ROUTINE) {
+        /* sub_0802D484's pick: the + 0x13220 escort while set, else the
+         * nearest of the four + 0x13194 slots. */
         AosSkillTarget targets[AOS_DEATH_TARGETS] = {{0}};
-        for (int slot = 0; slot < AOS_DEATH_TARGETS; ++slot) {
-            int index = homing.index[slot];
-            if (index < 0 || !homing_room || (size_t)index >= homing_room->entity_count) continue;
-            const AriaEntity *entity = &homing_room->entities[index];
-            targets[slot] = (AosSkillTarget){entity->spawned && !entity->enemy.removed,
-                                             entity->enemy.x, entity->enemy.y, entity->enemy.hp};
-        }
+        homing_targets(targets, AOS_DEATH_TARGETS);
         int mx = guardian->margins ? guardian->margins[1][0] : 16;
         int my = guardian->margins ? guardian->margins[1][1] : 16;
         aos_death_guardian_update(&guardian->death, &guardian->core, guardian->stats,
@@ -703,7 +772,8 @@ void update_guardian(AriaGuardian *guardian) {
                                      &soma->friction, &soma->gravity_mod};
         bool alive = aos_curly_guardian_update(&guardian->curly, &guardian->core, guardian->stats,
                                                guardian->records, soma->held, soma->pressed,
-                                               soma->x, soma->y, soma->facing_left, target);
+                                               soma->x, soma->y, soma->facing_left, target,
+                                               escort_bonus());
         /* sub_0802ECF4: a translucent spark at Soma with his facing, its
          * sequence r & 3 played once, deleted at its end; the guardian's
          * end deletes them (sub_0802DD84). */
@@ -743,9 +813,22 @@ void update_guardian(AriaGuardian *guardian) {
         if (first) aos_anim_start(&guardian->anim, art, guardian->ghost.giant ? 1 : 0, true);
         aos_anim_step(&guardian->anim, art);
     } else if (guardian->routine == GUARDIAN_IMP_ROUTINE) {
-        /* The homing list's slots; a chased slot keeps its entity. */
+        /* sub_0802D484's pick: the + 0x13220 escort alone (slot 0)
+         * while set, else the homing list's slots; a chased slot
+         * keeps its entity through imp_target's cached index. */
+        const AosEnemy *escort = escort_target_enemy();
+        const int escort_idx = escort ? escort_room_index() : -1;
         AosSkillTarget targets[AOS_IMP_TARGETS] = {{0}};
         for (int slot = 0; slot < AOS_IMP_TARGETS; ++slot) {
+            if (escort) {
+                /* The override feeds the escort record itself — no
+                 * homing-room lookup, so a stale or foreign-room
+                 * pointer still aims the dive. */
+                if (slot == 0)
+                    targets[0] = (AosSkillTarget){true, escort->x, escort->y,
+                                                 escort->hp};
+                continue;
+            }
             int index = homing.index[slot];
             if (guardian->core.state == AOS_IMP_DIVING && guardian->imp.target == slot &&
                 guardian->imp_target >= 0)
@@ -764,8 +847,9 @@ void update_guardian(AriaGuardian *guardian) {
             return;
         if (guardian->imp.target != chased || guardian->imp_target < 0)
             guardian->imp_target = guardian->imp.target >= 0
-                                       ? homing.index[guardian->imp.target]
-                                       : -1;
+                ? (escort && guardian->imp.target == 0 ? escort_idx
+                   : homing.index[guardian->imp.target])
+                : -1;
         /* sub_0802E1D0 (not in state 6): its looping sequence 0 and the
          * frame's attack box (sub_08042A54(2, 0x3C) is not run). */
         if (first) aos_anim_start(&guardian->anim, guardian->imp_art, 0, true);
@@ -817,19 +901,12 @@ void update_guardian(AriaGuardian *guardian) {
         aos_anim_step(&guardian->anim, guardian->creaking_skull_art);
     } else if (guardian->routine == GUARDIAN_ALASTOR_ROUTINE) {
         /* SkillAlastorUse: the spinning guardian parks at the cast
-         * spot and whirls toward the homing list; the aim point is
+         * spot and whirls toward sub_0802D484's pick — the + 0x13220
+         * escort while set, else the homing list; the aim point is
          * the focus entity (Soma) 0x28 px up — sub_0806CD38/78's
          * +0x13118 approximation. */
         AosSkillTarget targets[AOS_ALASTOR_TARGETS] = {{0}};
-        for (int slot = 0; slot < AOS_ALASTOR_TARGETS; ++slot) {
-            int index = homing.index[slot];
-            if (index < 0 || !homing_room || (size_t)index >= homing_room->entity_count)
-                continue;
-            const AriaEntity *entity = &homing_room->entities[index];
-            targets[slot] = (AosSkillTarget){entity->spawned && !entity->enemy.removed,
-                                             entity->enemy.x, entity->enemy.y,
-                                             entity->enemy.hp};
-        }
+        homing_targets(targets, AOS_ALASTOR_TARGETS);
         bool first = guardian->core.state == 0;
         if (!aos_alastor_guardian_update(&guardian->alastor, &guardian->core,
                                          guardian->stats, guardian->records,
@@ -1335,16 +1412,16 @@ void update_skills(AriaSouls *souls) {
             break;
         case SKILL_BALORE:
             /* SkillBaloreUse: counted on its first update, attack box
-             * preset 5, song 0x1A1 — the sub_080213F4 bonus branch (shared
-             * with SkillLightningDollUse and Skill_Devil_Manticore_Curly_Use)
-             * is approximated as false because its + 0x13220 record is
-             * never populated; sub_08031EA4(entity, source, 0, 0) re-places
-             * it on Soma every frame, and it ends on the animation end or
-             * the (source + 0x10 & 0x180) != 0x100 check. */
+             * preset 5, song 0x1A1 — or 0x19F on the sub_080213F4 bonus
+             * (shared with SkillLightningDollUse and
+             * Skill_Devil_Manticore_Curly_Use); sub_08031EA4(entity,
+             * source, 0, 0) re-places it on Soma every frame, and it
+             * ends on the animation end or the (source + 0x10 & 0x180)
+             * != 0x100 check. */
             if (!skill->started) {
                 skill->started = true;
                 souls->caster.active++;
-                aos_audio_play_song(0x1A1);
+                aos_audio_play_song(escort_bonus() ? 0x19F : 0x1A1);
                 aos_anim_start(&skill->anim, souls->balore, 0, false);
             }
             place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, 0);
@@ -2138,19 +2215,16 @@ void update_skills(AriaSouls *souls) {
             }
             if (ghost->state == 1) {
                 if (aos_anim_step(&skill->anim, souls->devil) == 3) {
+                    /* sub_0802A49C's pick: the + 0x13220 escort alone
+                     * while set, else the nearest of the homing slots. */
                     AosSkillTarget targets[4] = {{0}};
-                    for (int slot = 0; slot < 4; ++slot) {
-                        int index = homing.index[slot];
-                        if (index < 0 || !homing_room ||
-                            (size_t)index >= homing_room->entity_count)
-                            continue;
-                        const AriaEntity *entity = &homing_room->entities[index];
-                        targets[slot] = (AosSkillTarget){
-                            entity->spawned && !entity->enemy.removed,
-                            entity->enemy.x, entity->enemy.y, entity->enemy.hp};
-                    }
+                    const bool escort = escort_target_enemy() != NULL;
+                    const int escort_idx = homing_targets(targets, 4);
                     aos_ghost_soul_launch(ghost, targets);
-                    skill->fire_target = ghost->target >= 0 ? homing.index[ghost->target] : -1;
+                    skill->fire_target = ghost->target >= 0
+                        ? (escort && ghost->target == 0 ? escort_idx
+                           : homing.index[ghost->target])
+                        : -1;
                     skill->started = true;
                 }
             } else {
@@ -2335,16 +2409,24 @@ void update_skills(AriaSouls *souls) {
                 souls->caster.active++;
                 aos_anim_start(&skill->anim, souls->killer_fish, 1, false);
             }
+            /* SkillKillerFishUse's aim: the + 0x13220 escort alone
+             * while set, else the nearest of the homing slots. */
             AosKillerFishTarget targets[4] = {{0}};
-            for (int slot = 0; slot < 4; ++slot) {
-                int index = homing.index[slot];
-                if (index < 0 || !homing_room ||
-                    (size_t)index >= homing_room->entity_count)
-                    continue;
-                const AriaEntity *entity = &homing_room->entities[index];
-                targets[slot] = (AosKillerFishTarget){
-                    entity->spawned && !entity->enemy.removed,
-                    entity->enemy.x, entity->enemy.y};
+            const AosEnemy *kf_escort = escort_target_enemy();
+            if (kf_escort) {
+                targets[0] = (AosKillerFishTarget){!kf_escort->removed,
+                                                  kf_escort->x, kf_escort->y};
+            } else {
+                for (int slot = 0; slot < 4; ++slot) {
+                    int index = homing.index[slot];
+                    if (index < 0 || !homing_room ||
+                        (size_t)index >= homing_room->entity_count)
+                        continue;
+                    const AriaEntity *entity = &homing_room->entities[index];
+                    targets[slot] = (AosKillerFishTarget){
+                        entity->spawned && !entity->enemy.removed,
+                        entity->enemy.x, entity->enemy.y};
+                }
             }
             uint8_t old_state = skill->killer_fish.state;
             AosKillerFishEffect effect;
@@ -2484,14 +2566,14 @@ void update_skills(AriaSouls *souls) {
             aos_anim_step(&skill->anim, souls->devil);
             break;
         case SKILL_LIGHTNING:
-            /* SkillLightningDollUse: counted with sounds 0x1A9 (sub_080213F4
-             * is false: 0x13220 is never set) and 0xE9 and sequence 0 once
-             * on its first update; deleted when it ends or beyond the
-             * screen margins of entry 2 (sub_0806D128). */
+            /* SkillLightningDollUse: counted with sounds 0x1A9 — or
+             * 0x1A2 on the sub_080213F4 bonus — and 0xE9 and sequence 0
+             * once on its first update; deleted when it ends or beyond
+             * the screen margins of entry 2 (sub_0806D128). */
             if (!skill->started) {
                 skill->started = true;
                 souls->caster.active++;
-                aos_audio_play_song(0x1A9);
+                aos_audio_play_song(escort_bonus() ? 0x1A2 : 0x1A9);
                 aos_audio_play_song(0xE9);
                 aos_anim_start(&skill->anim, souls->lightning, 0, false);
             }
@@ -2553,13 +2635,27 @@ void update_skills(AriaSouls *souls) {
             }
             if (fire->state == 1) {
                 if (aos_anim_step(&skill->anim, souls->devil) == 3) {
-                    /* The homing list's filled slots (0x13220 is never set
-                     * by the runtime), the 0x134 sound; the two afterimage
-                     * trails of sub_0802383C are not ported. */
+                    /* SkillTinyDevilUpdate's pick: the + 0x13220 escort
+                     * unconditionally while set — the native skips
+                     * RandomNumberGenerator then — else the first
+                     * filled homing slot from (random & 3); the 0x134
+                     * sound; the two afterimage trails of sub_0802383C
+                     * are not ported. */
+                    const bool escort = escort_target_enemy() != NULL;
+                    const int escort_idx = escort ? escort_room_index() : -1;
                     bool slots[4];
-                    for (int slot = 0; slot < 4; ++slot) slots[slot] = homing.index[slot] >= 0;
-                    aos_devil_fire_launch(fire, aos_random(), slots);
-                    skill->fire_target = fire->target >= 0 ? homing.index[fire->target] : -1;
+                    for (int slot = 0; slot < 4; ++slot)
+                        slots[slot] = !escort && homing.index[slot] >= 0;
+                    aos_devil_fire_launch(fire, escort ? 0 : aos_random(), slots);
+                    if (escort) {
+                        /* The escort pick homes deterministically
+                         * (native state 2, the + 0x0D timer armed). */
+                        fire->state = 2;
+                        fire->timer = AOS_DEVIL_TIMER;
+                        fire->target = -1;
+                    }
+                    skill->fire_target = escort ? escort_idx
+                        : fire->target >= 0 ? homing.index[fire->target] : -1;
                     aos_audio_play_song(0x134);
                     skill->started = true;
                 }

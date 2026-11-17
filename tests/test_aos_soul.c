@@ -613,27 +613,27 @@ int main(void) {
     assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, false, &soma_flags));
     /* Attacking (0x20) when it starts: the first update ends it... */
     assert(!aos_curly_guardian_update(&curly, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
-                                      100 << 16, 200 << 16, false, target));
+                                      100 << 16, 200 << 16, false, target, false));
     assert(!guardian.active && soma_state == 0);
     soma_flags = 0x100000;
     assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, false, &soma_flags));
     assert(aos_curly_guardian_update(&curly, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
-                                     100 << 16, 200 << 16, true, target));
+                                     100 << 16, 200 << 16, true, target, false));
     assert(soma_state == 9 && soma_step == 0 && variant == 2 && friction == 0 &&
            soma_gravity == 0 && (abilities & 0x1000) && curly.x == 100 << 16 &&
            curly.facing_left && !curly.attacking);
     soma_step = 3;
     assert(aos_curly_guardian_update(&curly, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
-                                     100 << 16, 200 << 16, true, target));
+                                     100 << 16, 200 << 16, true, target, false));
     assert(curly.attacking && curly.child && guardian.state == 2 &&
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x1B0) == 1);
     for (int k = 0; k < 7; ++k)
         aos_curly_guardian_update(&curly, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
-                                  100 << 16, 200 << 16, true, target);
+                                  100 << 16, 200 << 16, true, target, false);
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x93) == 1);
     /* Released: ended, bits 8-13 cleared (0x1000 with them). */
     assert(!aos_curly_guardian_update(&curly, &guardian, &guard_stats, blue, 0, 0, 100 << 16,
-                                      200 << 16, true, target));
+                                      200 << 16, true, target, false));
     assert(!guardian.active && abilities == 0 && !curly.child && !(soma_flags & 0x200));
     /* Devil (soul 18, variant 0): its start sound 0x1B1 and the sparks
      * child: 0x90 every eighth frame and a spark every fourth, from its
@@ -647,13 +647,13 @@ int main(void) {
     soma_step = 7;
     assert(aos_guardian_try(&guardian, &guard_stats, blue, AOS_KEY_R, 0, false, &soma_flags));
     assert(aos_curly_guardian_update(&curly, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
-                                     100 << 16, 200 << 16, false, target));
+                                     100 << 16, 200 << 16, false, target, false));
     assert(variant == 0 && curly.variant == 0 && !curly.spawn_spark);
     soma_step = 3;
     int devil_sparks = 0;
     for (int k = 0; k < 9; ++k) {
         assert(aos_curly_guardian_update(&curly, &guardian, &guard_stats, blue, AOS_KEY_R, 0,
-                                         100 << 16, 200 << 16, false, target));
+                                         100 << 16, 200 << 16, false, target, false));
         devil_sparks += curly.spawn_spark;
     }
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x1B1) == 1 && devil_sparks == 3 &&
@@ -661,7 +661,7 @@ int main(void) {
            !aos_audio_requested(AOS_AUDIO_START_SONG, 0x93) &&
            aos_transform_variants[1].power == 0x46);
     assert(!aos_curly_guardian_update(&curly, &guardian, &guard_stats, blue, 0, 0, 100 << 16,
-                                      200 << 16, false, target));
+                                      200 << 16, false, target, false));
     /* sub_08021994's statuses: poison quarters STR, CON and INT (Zombie's
      * soul then multiplies them by 5.5); curse drains max MP / 128 every
      * 4 frames instead of regenerating; both run out. */

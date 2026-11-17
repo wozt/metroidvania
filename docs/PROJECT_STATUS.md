@@ -1,3 +1,68 @@
+## Patch 1218 - Aria + 0x13220 escort consumers wired; + 0x4CC bit-6 audit closed
+
+- **Scope.** `src/runtime/aria_skills.c`,
+  `src/runtime/aria_entities.c`,
+  `src/runtime/aos/souls/aos_soul.c/.h`,
+  `tests/test_aos_soul.c`,
+  `data/native_parity/annotations.tsv` and this file. Consumer
+  side of the `gEwramData + 0x13220` escort pointer made live by
+  patch 1217's write side.
+- **Reader catalog (native).** `sub_080213F4`
+  (`code_080211F0.c:201`) gates the empowered-song variants of
+  SkillBaloreUse / SkillLightningDollUse /
+  Skill_Devil_Manticore_Curly_Use on `+ 0x42C` bit 1, the escort
+  record and its `+ 0x518` u16 in 1..0xC6. `sub_0802346C` /
+  `sub_080234B0` (`code_080211F0.c:2014/:2028`) arm the player
+  `+ 0x10` bit `0x80000` on weapon contact unless `+ 0x4CC` bit 6
+  is set and the touched entity is not the escort — the
+  kick-hit flag. `sub_0802D484` / `sub_0802D510`
+  (`code_080211F0.s:24334/:24407`) return the escort
+  unconditionally while set, else the nearest / a random
+  `+ 0x13194` homing slot; callers are SkillDeathUse's sickle
+  (`sub_08030238`), SkillImpUse and SkillAlastorUse (2D484) and
+  no ported routine for 2D510 (no callers in the corpus). The
+  inline scans of SkillKillerFishUse, SkillTinyDevilUpdate,
+  `sub_0802A49C` (Ghost) and `sub_08024530` pick the escort the
+  same way. `sub_0803427C` (`code_08033CAC.c:405`) feeds the
+  escort's `+ 0x524/+ 0x528` screen position into the
+  `+ 0x13118` camera-focus record only when `+ 0x64 == 0xE`.
+  Object03Update (`code_08040A38.s` ~`0x0804E52C`) skips state 0
+  while the pointer holds and otherwise compares the `+ 0x13114` /
+  `+ 0x13118` companion screen positions. `sub_080344AC`
+  (`code_08033CAC.c:507`) sets the same `+ 0x10` bit when `+ 0x4CC`
+  bit 6 is set.
+- **Wired.** `aria_skills.c` gains `escort_bonus()` (the
+  sub_080213F4 gate; `+ 0x518` has no ported equivalent so the
+  record's `+ 0x34` hp stands in — documented approximation),
+  `escort_target_enemy()` / `escort_room_index()` /
+  `homing_targets()`: every reachable pick now feeds the escort
+  record alone in slot 0 while set — Death, Imp (aim fed from the
+  record directly so a stale pointer still aims), Alastor,
+  Ghost's launch, Tiny Devil's deterministic state-2 homing
+  (native skips RandomNumberGenerator on the escort pick) and
+  Killer Fish. Balore/Lightning/Curly play the empowered songs.
+  `aria_entities.c` applies the sub_0802346C exception: a
+  non-escort weapon touch no longer latches
+  `AOS_FLAG_KICK_HIT` while `+ 0x4CC` bit 6 is set. Object03 was
+  already live on `!= NULL` + the cinematic flag.
+- **Bit-6 audit verdict.** No reachable writer of `+ 0x4CC` bit 6
+  exists in either corpus: the only setters are link/SIO-mode and
+  cinematic paths (`code_0800B700.c` region init reads it to arm
+  `sub_08033EA0` companion creation; `sub_080344AC`'s two callers
+  `sub_08097FFC` / `sub_080A0D7C` sit in unported cinematic
+  sequences). Ordinary gameplay only clears the bit
+  (`code_08002454.c`). `sub_08033EA0` companion creation is
+  therefore unreachable in the supported runtime; the
+  `+ 0x13114/+ 0x13118` companion probes stay approximated.
+- **Tests.** Targeted `aos_soul*`/`aos_in_game_mode` runs pass;
+  `test_aos_soul.c` call sites updated for the Curly
+  `escort_bonus` parameter.
+- **Remaining.** The `sub_0803427C` `+ 0x13118` camera-focus
+  record (needs the companion entities and the `+ 0x64 == 0xE`
+  mode), `sub_080344AC`'s cinematic callers, the class-4 shot
+  entity of sub_080234B0, and the sub_08024530 soul's exact
+  mapping stay unported; no emulator comparison.
+
 ## Patch 1217 - Aria + 0x13220 escort channel write side: boss lifecycle sites ported
 
 - **Scope.** `src/runtime/aos/core/aos_enemy.c/.h`,

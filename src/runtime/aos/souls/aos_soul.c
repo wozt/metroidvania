@@ -626,7 +626,8 @@ const AosTransformVariant aos_transform_variants[AOS_TRANSFORM_VARIANTS] = {
 bool aos_curly_guardian_update(AosCurlyGuardian *curly, AosGuardian *guardian, AosStats *stats,
                                const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
                                uint16_t held, uint16_t pressed, int32_t soma_x, int32_t soma_y,
-                               bool soma_facing_left, AosTransformTarget soma) {
+                               bool soma_facing_left, AosTransformTarget soma,
+                               bool escort_bonus) {
     if (aos_guardian_upkeep(guardian, stats, records, held, pressed) ||
         (*soma.flags & 0x81A2u)) {
         aos_curly_guardian_end(curly, guardian, soma.flags, soma.abilities);
@@ -648,8 +649,10 @@ bool aos_curly_guardian_update(AosCurlyGuardian *curly, AosGuardian *guardian, A
             curly->child = true;
             curly->child_timer = 0;
             curly->attacking = true;
-            /* The sound 0x19F of sub_080213F4 is not modelled. */
-            aos_audio_play_song(aos_transform_variants[curly->variant].sound);
+            /* Skill_Devil_Manticore_Curly_Use's two sounds come from
+             * sub_080213F4: the 0x19F bonus when the + 0x13220 escort
+             * is eligible, the record's own sound otherwise. */
+            aos_audio_play_song(escort_bonus ? 0x19F : aos_transform_variants[curly->variant].sound);
             guardian->state = 2;
         }
     } else if (guardian->state == 2) {

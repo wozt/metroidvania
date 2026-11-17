@@ -500,7 +500,8 @@ typedef struct {
 bool aos_curly_guardian_update(AosCurlyGuardian *curly, AosGuardian *guardian, AosStats *stats,
                                const AosBlueSoulRecord records[AOS_BLUE_SOUL_RECORDS],
                                uint16_t held, uint16_t pressed, int32_t soma_x, int32_t soma_y,
-                               bool soma_facing_left, AosTransformTarget soma);
+                               bool soma_facing_left, AosTransformTarget soma,
+                               bool escort_bonus);
 /* sub_0802DFF0 / sub_0802DD84 for the transformation: the guardian and its
  * child are gone and 0x13260 bits 8-13 cleared. */
 void aos_curly_guardian_end(AosCurlyGuardian *curly, AosGuardian *guardian, uint32_t *soma_flags,

@@ -27,10 +27,27 @@
  * + shot spawn order, song 0x1D5 and the hp-scaled timers; the
  * state-4 seven-case death keeps songs 0x1D6/0x77/0x7C, the
  * sub_08045CEC gore and the delete; the blade/shot flight
- * machines and the sub_080B67A8 param0 cutscene spawn, the
+ * machines and the sub_080B67A8 spawn side-effects, the
  * sub_08021654/sub_08021530 emits, the sub_080428F0 box presets,
  * the + 0x5A palette merge and the sub_08013CF0/sub_08034498
- * event calls are approximated or not ported. */
+ * event calls are approximated or not ported.
+ *
+ * The param0 != 0 variant (sub_080B67A8 -> sub_080B6880) is now
+ * ported as the bl_intro machine: its twelve + 0x0A states keep
+ * the native order, the two sub_0806E3F8 player-distance gates
+ * (0xBFFFFF then 0x3FFFFF), songs 0x1010/0x100/0xFF/0xD2/0x101,
+ * the case-4 sub_080B60EC materialize child (role
+ * AOS_ROLE_BALO_INTRO_FX with its own six-state machine), the
+ * case-6 sub_080B4FB0 effect, the + 0x58 |= 0x20 hide and the
+ * case-11 boss handoff through hit.spawn. The + 0x42C bit0/bit1
+ * writes, the sub_0800C5A8(0/1) transitions, the sub_08013CF0(0x10)
+ * claim, the sub_08068F48/sub_0803B980 calls, the + 0x17 palette
+ * variant, the dormant statue art (tiles 0x0811940C, frames
+ * 0x08244D4C — the port draws the shared balore record), the
+ * 32-child sub_080B5F1C sparkle row and the sub_080B60EC OAM
+ * nibble writes remain approximated or not ported; the
+ * SetPlayerInput(2, mask) tail runs through hit.force_input
+ * gated on state >= 2 (the + 0x42C bit0 window). */
 
 #include "../core/aos_enemy_internal.h"
 #include "../core/aos_audio.h"
@@ -50,6 +67,7 @@
 #define play aos_enemy_play
 #define integrate aos_enemy_integrate
 #define player_near aos_enemy_player_near
+#define player_in_range aos_enemy_player_in_range
 
 static bool bl_is_balore(uint8_t id) { return id == 0x6D; }
 
@@ -488,6 +506,226 @@ static void bl_state4(AosEnemy *e, AosHitReport *hit,
     }
 }
 
+/* sub_080B60EC: the case-4 materialize child of the intro
+ * controller — a six-state sparkle that sits 0x10 frames, plays
+ * song 0xD2, counts down 0x30 frames of OAM nibble writes (the
+ * gEwramData + 0x3F0 slot table, collapsed), then rises 0x50
+ * frames under sub_0806D460(0x80000) with song 0x101, launches
+ * right at + 0x48 = 0x60000 decelerated by + 0x50 = 0xFFFF8000
+ * through sub_0806D430(0x100000) and deletes on the + 0x6C & 4
+ * flag (approximated by the launch decaying to the 0x20000
+ * move-gate floor). The parent's
+ * + 0x0A == 0xA prologue fast-forwards it to the delete state. */
+static void bl_intro_fx_update(AosEnemy *e, const AosAnimSet *anims) {
+    AosEnemy *p = e->parent;
+    if (p && bl_is_balore(p->id) && p->bl_intro && p->state == 10)
+        e->state = 5;
+    if (!p || !bl_is_balore(p->id) || p->removed) {
+        e->removed = true;
+        return;
+    }
+    switch (e->state) {
+    case 0:
+        e->state = 1;
+        e->timer = 0x10;
+        break;
+    case 1:
+        if (e->timer == 0) {
+            e->state = 2;
+            e->timer = 0x30;
+            aos_audio_play_song(0xD2);
+        } else {
+            e->timer--;
+        }
+        break;
+    case 2:
+        if (e->timer == 0) {
+            /* + 0x4C = 0xFFFE1000, + 0x54 = 0xC00: the rise
+             * velocity/acceleration pair. */
+            e->state = 3;
+            e->timer = 0;
+            e->vy = (int32_t)0xFFFE1000;
+            e->ay = 0xC00;
+            aos_audio_play_song(0x101);
+        } else {
+            e->timer--;
+        }
+        break;
+    case 3:
+        /* sub_0806D460(e, 0x80000) every frame, then the + 0x0D
+         * count to 0x50 launches the state-4 drift. */
+        e->vy += e->ay;
+        if (e->ay >= 0 ? e->vy > 0x80000 : e->vy < -0x80000)
+            e->vy = e->ay >= 0 ? 0x80000 : -0x80000;
+        e->y += e->vy;
+        if (e->timer > 0x4F) {
+            e->vy = 0;
+            e->ay = 0;
+            e->state = 4;
+            e->vx = 0x60000;
+            e->ax = (int32_t)0xFFFF8000;
+        } else {
+            e->timer++;
+        }
+        break;
+    case 4:
+        /* sub_0806D430(e, 0x100000) while + 0x48 stays above
+         * 0x20000; the + 0x6C & 4 delete is approximated by the
+         * decelerated launch running out. */
+        if (e->vx > 0x20000) {
+            e->vx += e->ax;
+            if (e->ax >= 0 ? e->vx > 0x100000 : e->vx < -0x100000)
+                e->vx = e->ax >= 0 ? 0x100000 : -0x100000;
+            e->x += e->vx;
+        }
+        if (e->vx <= 0x20000)
+            e->removed = true;
+        break;
+    default:
+        /* Case 5: EntityDelete. */
+        e->removed = true;
+        break;
+    }
+    play_loop(e, anims, 0, true);
+    step_anim(e, anims);
+}
+
+/* sub_080B6880: the param0 != 0 intro controller installed by
+ * sub_080B67A8 — the dormant Balore waits for the player inside
+ * 0xBFFFFF (whole pixels through sub_0806E3F8's Sqrt), plays
+ * song 0x1010 and sets the + 0x42C bit0/sub_0800C5A8(0) pair,
+ * waits for 0x3FFFFF, claims channel 0x10, then runs the
+ * 0xA0/0x80/1/0x70/0x30-frame cinematic tail (songs 0x100 and
+ * 0xFF, the sub_080B60EC materialize child, the sub_080B4FB0
+ * effect, the + 0x58 |= 0x20 hide) before spawning the real
+ * boss through sub_0806DFF8(EnemyBaloreUpdate) + EnemyBaloreCreate
+ * and deleting itself. The + 0x42C bit writes and the
+ * sub_0800C5A8/sub_08013CF0/sub_08068F48/sub_0803B980 calls have
+ * no enemy channel and stay documented; the SetPlayerInput(2, …)
+ * tail reports through hit.force_input on state >= 2. */
+static void bl_intro_update(AosEnemy *e, AosHitReport *hit,
+                            AosSoma *soma) {
+    switch (e->state) {
+    case 0:
+        e->timer = 0x80;
+        e->state = 1;
+        break;
+    case 1:
+        if (soma && player_in_range(e, soma, 0xBFFFFF)) {
+            e->state = 2;
+            aos_audio_play_song(0x1010);
+            /* + 0x42C |= 1 and sub_0800C5A8(0): the bit0 arms the
+             * tail's SetPlayerInput — modelled as state >= 2. */
+        }
+        break;
+    case 2:
+        if (soma && player_in_range(e, soma, 0x3FFFFF)) {
+            e->state = 3;
+            /* sub_08013CF0(0x10): channel claim, not ported. */
+        }
+        break;
+    case 3:
+        e->state = 4;
+        e->timer = 0xA0;
+        aos_audio_play_song(0x100);
+        break;
+    case 4:
+        if (e->timer == 0) {
+            /* EntityCreateInRange(0x49, 0xCF, sub_080B60EC) at the
+             * parent position with + 0x59 |= 2; the native case
+             * then falls through into case 5's decrement. */
+            if (hit->child_count < AOS_ENEMY_MAX_CHILDREN) {
+                AosEnemy c;
+                memset(&c, 0, sizeof c);
+                c.id = e->id;
+                c.role = AOS_ROLE_BALO_INTRO_FX;
+                c.parent = e;
+                c.x = e->x;
+                c.y = e->y;
+                c.hp = 1;
+                hit->children[hit->child_count++] = c;
+            }
+            e->timer = 0x80;
+            e->state = 5;
+            e->timer--;
+        } else {
+            if (e->timer == 0x50)
+                aos_audio_play_song(0xFF);
+            e->timer--;
+        }
+        break;
+    case 5:
+        if (e->timer == 0) {
+            e->state = 6;
+        } else {
+            e->timer--;
+        }
+        break;
+    case 6:
+        /* sub_080B4FB0(this, 0x40, 0x90, 1, stack 1): the
+         * sub_080B6524/sub_080B6298 variant pair collapses into
+         * the shared FX child like the state-1 spawns. */
+        bl_spawn_fx(e, hit, 0x40, 0x90, 1);
+        e->state = 7;
+        e->timer = 0x70;
+        break;
+    case 7:
+        if (e->timer == 0) {
+            e->state = 8;
+            e->timer = 0x30;
+        } else {
+            e->timer--;
+        }
+        break;
+    case 8:
+        if (e->timer == 0) {
+            e->state = 9;
+            e->timer = 0;
+        } else {
+            e->timer--;
+        }
+        break;
+    case 9:
+        if (e->timer == 0) {
+            e->state = 10;
+        } else {
+            e->timer--;
+        }
+        break;
+    case 10:
+        /* + 0x58 |= 0x20: the dormant statue hides for the handoff. */
+        e->hidden = true;
+        e->state = 11;
+        break;
+    case 11:
+        /* + 0x42C &= ~2, sub_0800C5A8(1), sub_08068F48 and
+         * sub_0803B980(+ 0x17) precede the spawn; the boss child of
+         * sub_0806DFF8(EnemyBaloreUpdate) + EnemyBaloreCreate keeps
+         * param0 = 0 and takes the normal create path. */
+        hit->spawn = true;
+        hit->spawn_x = e->x >> 16;
+        hit->spawn_y = e->y >> 16;
+        hit->spawn_param1 = 0;
+        e->removed = true;
+        break;
+    default:
+        break;
+    }
+    /* The shared tail's SetPlayerInput(2, mask) while + 0x42C bit0
+     * is set (state >= 2 here): state 2 pulls Soma toward the
+     * statue (0x20 LEFT / 0x10 RIGHT by the x compare), states
+     * above 5 hold DOWN (0x80) and the rest lock (0). */
+    if (e->state >= 2 && soma) {
+        uint16_t mask = 0;
+        if (e->state == 2)
+            mask = e->x <= target_x(soma) ? AOS_KEY_LEFT : AOS_KEY_RIGHT;
+        else if (e->state > 5)
+            mask = AOS_KEY_DOWN;
+        hit->force_input = true;
+        hit->forced_held = mask;
+    }
+}
+
 AosHitReport aos_enemy_balore_update(
     AosEnemy *e, AosSoma *soma, const AosCollision *layer,
     const AosEnemyKind *kind,
@@ -521,8 +759,24 @@ AosHitReport aos_enemy_balore_update(
         bl_fx_update(e);
         return hit;
     }
+    if (e->role == AOS_ROLE_BALO_INTRO_FX) {
+        bl_intro_fx_update(e, anims);
+        return hit;
+    }
     if (!bl_is_balore(e->id))
         return hit;
+
+    /* The param0 intro entity runs sub_080B6880 instead of
+     * EnemyBaloreUpdate: no sub_0806AE54 activity gate, no
+     * collide (sub_080B67A8 registers no hurt callback) and no
+     * body parts — just the case machine, its tail anim step and
+     * the SetPlayerInput report. */
+    if (e->bl_intro) {
+        bl_intro_update(e, &hit, soma);
+        play_loop(e, anims, 0, true);
+        step_anim(e, anims);
+        return hit;
+    }
 
     /* EnemyBaloreUpdate prologue: state 4 skips the activity gate;
      * the + 0x1E bit 0 clear and the sub_08068AD4/sub_080421AC room

@@ -1478,14 +1478,39 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         /* EnemyBaloreCreate 0x080B5C38 through sub_080B45C0: tiles
          * 0x081193FC, palette 0x0820B92C bank 7 (bank 0 dormant),
          * frames 0x08244220 shared by the body and the three part
-         * entities; the param0 + 0x4CC/+ 0x37E gates and the
-         * sub_080B67A8 cutscene spawn fold into param0 (documented);
-         * + 0x5C = 0x1E, + 0x12 = 4, + 0x20 = 0x10000 (the wing
-         * orbit radius is a fixed 0x10000 in balore.c); the three children of
+         * entities; + 0x5C = 0x1E, + 0x12 = 4, + 0x20 = 0x10000
+         * (the wing orbit radius is a fixed 0x10000 in balore.c);
+         * the three children of
          * sub_080B41E0/sub_080B4370/sub_080B44C4 emit on the first
          * updates via boss_parts_spawned; the 0x8E & 0x40 flag
          * parks state 5; the hurt callback sub_080B6AE8 enters the
-         * state-4 death machine through the lethal pass. */
+         * state-4 death machine through the lethal pass.
+         * The param0 != 0 && gEwramData + 0x4CC & 3 == 0 branch runs
+         * sub_080B67A8 instead: it installs sub_080B6880's
+         * twelve-state cutscene controller (the port's bl_intro
+         * variant), draws the dormant statue of tiles 0x0811940C /
+         * frames 0x08244D4C, sets + 0x5C = 0x14 and + 0x58 |= 0x20,
+         * writes + 0x42C |= 2 and emits the 32-child sub_080B5F1C
+         * sparkle row. The + 0x4CC sub-gate, the + 0x37E & 0x40
+         * already-beaten delete and the sparkle row are not modelled
+         * (documented); the boss that case 11 spawns keeps
+         * param0 = 0 and takes the normal path below. */
+        if (enemy->param0 != 0) {
+            enemy->bl_intro = 1;
+            enemy->bl_idx = 0;
+            enemy->bl_f1c = enemy->bl_f1d = 0;
+            enemy->bl_hover = 0;
+            enemy->bl_ang = enemy->bl_fade = 0;
+            enemy->state = 0;
+            enemy->step = 0;
+            enemy->substep = 0;
+            enemy->timer = 0;
+            enemy->boss_parts_spawned = true;
+            enemy->spawned_count = 0;
+            play_loop(enemy, anims, 0, true);
+            step_anim(enemy, anims);
+            return true;
+        }
         enemy->bl_idx = 4;
         enemy->bl_f1c = enemy->bl_f1d = 0;
         enemy->bl_hover = 0;

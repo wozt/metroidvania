@@ -301,7 +301,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_CHAOS_ORB = 180, AOS_ROLE_CHAOS_ORB2 = 181,
        AOS_ROLE_CHAOS_LIMB = 182, AOS_ROLE_CHAOS_MUZZLE = 183,
        AOS_ROLE_CHAOS_BURST = 184, AOS_ROLE_CHAOS_BODY = 185,
-       AOS_ROLE_CHAOS_BODY_LIMB = 186, AOS_ROLE_CHAOS_BODY_SHOT = 187 };
+       AOS_ROLE_CHAOS_BODY_LIMB = 186, AOS_ROLE_CHAOS_BODY_SHOT = 187,
+       AOS_ROLE_BALO_INTRO_FX = 188 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -958,8 +959,12 @@ typedef struct AosEnemy {
      * of the wing child of sub_080B41E0; the three body parts are
      * roles AOS_ROLE_BALO_WING/LIMB0/LIMB1, the sub_080B5094 and
      * sub_080B53F8 attacks AOS_ROLE_BALO_BLADE/SHOT and the
-     * sub_080B4FB0 effects AOS_ROLE_BALO_FX. */
-    uint8_t bl_idx, bl_f1c, bl_f1d, bl_hover;
+     * sub_080B4FB0 effects AOS_ROLE_BALO_FX. `bl_intro` marks the
+     * param0 != 0 variant whose update is sub_080B6880's twelve-state
+     * cutscene machine instead of EnemyBaloreUpdate; on that entity
+     * state/+ 0x0A runs 0..11 and timer/+ 0x0D its case counters, and
+     * the sub_080B60EC materialize effect is AOS_ROLE_BALO_INTRO_FX. */
+    uint8_t bl_idx, bl_f1c, bl_f1d, bl_hover, bl_intro;
     int32_t bl_ang, bl_fade;
     AosCombat combat;
     AosAnimState anim;

@@ -1,3 +1,81 @@
+## Patch 1211 - Balore param0 intro: sub_080B67A8/sub_080B6880 twelve-state cutscene controller
+
+- **Scope.** `src/runtime/aos/enemies/balore.c`,
+  `src/runtime/aos/core/aos_enemy.c`,
+  `src/runtime/aos/core/aos_enemy.h` and `tests/test_aos_enemy.c`
+  only. Ports the documented remaining gap from the c5a8/boss
+  audits: `EnemyBaloreCreate`'s `param0 != 0 && gEwramData +
+  0x4CC & 3 == 0` branch, which installs `sub_080B6880` through
+  `sub_080B67A8` instead of running the normal boss create.
+- **Native decode.** `sub_080B67A8` swaps the entity's update to
+  `sub_080B6880`, loads the dormant statue art (tiles 0x0811940C,
+  frames 0x08244D4C, + 0x5C = 0x14, + 0x17 palette variant), sets
+  + 0x58 |= 0x20 and + 0x42C |= 2, then emits 32 type-0x49 /
+  band-0xCF `sub_080B5F1C` sparkle children in a row at
+  + 0x42 - 0x80 + 8i / + 0x46 + 0x20. `sub_080B6880` is a
+  twelve-case machine on + 0x0A with the + 0x0D counter: case 0
+  arms 0x80; case 1 waits for the player inside 0xBFFFFF
+  (sub_0806E3F8's Sqrt distance, ~192 px) then state 2,
+  `PlaySong(0x1010)` (the AOS_AUDIO_SONG_MUTE AudioCommand),
+  + 0x42C |= 1 and `sub_0800C5A8(0)`; case 2 waits for 0x3FFFFF
+  (~64 px) then state 3 and `sub_08013CF0(0x10)`; case 3 arms
+  0xA0 with `PlaySong(0x100)`; case 4 counts down — at + 0x0D ==
+  0 it spawns the `EntityCreateInRange(0x49, 0xCF,
+  sub_080B60EC)` materialize child at the parent position and
+  falls through into case 5's decrement, at + 0x0D == 0x50 it
+  plays 0xFF; case 5 waits out 0x80; case 6 fires
+  `sub_080B4FB0(this, 0x40, 0x90, 1, stack 1)` (the
+  sub_080B6524/sub_080B6298 variant pair) and arms 0x70; cases
+  7/8/9 run the 0x30-frame tail; case 10 sets + 0x58 |= 0x20;
+  case 11 clears + 0x42C bit 1, calls `sub_0800C5A8(1)`,
+  `sub_08068F48` and `sub_0803B980(+ 0x17)`, spawns the real
+  boss through `sub_0806DFF8(EnemyBaloreUpdate)` +
+  `EnemyBaloreCreate` (param0 = 0, the normal path) and deletes
+  the intro entity. The shared tail runs `sub_0803F17C` and, while
+  + 0x42C bit 0 holds, `SetPlayerInput(2, mask)`: state 2 masks
+  0x20 LEFT / 0x10 RIGHT by the entity-vs-player x compare,
+  states above 5 mask 0x80 DOWN, the rest mask 0.
+  `sub_080B60EC` is a six-state child: 0x10 + 0x30 frame waits
+  (songs 0xD2 and 0x101, the + 0x3F0 OAM nibble writes), a
+  0x50-frame `sub_0806D460(0x80000)` rise from + 0x4C =
+  0xFFFE1000 / + 0x54 = 0xC00, then a state-4 launch
+  (+ 0x48 = 0x60000, + 0x50 = 0xFFFF8000 through
+  `sub_0806D430(0x100000)`) deleting on + 0x6C & 4; the parent
+  + 0x0A == 0xA prologue fast-forwards it to the delete.
+- **Port.** `AosEnemy` gains `bl_intro` (the sub_080B67A8
+  variant marker) and `AOS_ROLE_BALO_INTRO_FX` (188). The
+  create's param0 != 0 branch sets `bl_intro` with state 0 —
+  the + 0x4CC & 3 sub-gate and the + 0x37E & 0x40
+  already-beaten delete stay unmodelled, as with the sibling
+  creates. `bl_intro_update` keeps all twelve cases in order,
+  including the case-4 -> 5 same-frame fallthrough decrement,
+  the case-11 `hit.spawn` boss handoff and the
+  `hit.force_input` SetPlayerInput tail gated on state >= 2
+  (the + 0x42C bit0 window). `bl_intro_fx_update` ports
+  `sub_080B60EC` with the native + 0x48/+ 0x4C/+ 0x50/+ 0x54
+  velocity slots mapped onto vx/vy/ax/ay; its + 0x6C & 4 delete
+  is approximated by the launch decaying to the 0x20000
+  move-gate floor. Documented approximations: the intro entity
+  skips the activity gate and collide (sub_080B67A8 registers
+  no hurt callback), draws through the shared balore record
+  instead of the dormant statue art, emits no body parts, the
+  32-child sparkle row and the + 0x42C/sub_0800C5A8/
+  sub_08013CF0/sub_08068F48/sub_0803B980 writes have no enemy
+  channel and stay unported.
+- **Tests.** `balore_tests` grows the intro block: param0 = 1
+  creates `bl_intro` state 0; the distance gates hold a far
+  player in states 1-2; the close player reaches state 4 with
+  song 0x100 and the 0x1010 AudioCommand; the tail emits one
+  INTRO_FX child, one FX child, song 0xFF, repeated
+  `force_input` reports and the final `hit.spawn` (param1 0)
+  before `removed`; a synthetic INTRO_FX child fast-forwards
+  to delete under parent state 0xA and otherwise walks states
+  1-4 with songs 0xD2/0x101 and the rise/launch delete.
+- **Registries.** `annotations.tsv` (`aos.enemies.balore`) and
+  `aos_monster_aspects.tsv` (balore) divergences, notes, sounds
+  and next-actions updated; status stays `functional`/`ported`
+  — still no emulator comparison.
+
 ## Patch 1210 - Chaos phase 2: sub_080A57BC crawler body, eight trail limbs and mouth shots
 
 - **Scope.** `src/runtime/aos/enemies/chaos.c`,

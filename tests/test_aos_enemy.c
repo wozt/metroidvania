@@ -1758,6 +1758,131 @@ static void balore_tests(void) {
     hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
                            10, 4, 0, 0, always_zero);
     assert(el.removed);
+
+    /* The param0 != 0 variant: EnemyBaloreCreate's sub_080B67A8
+     * branch installs sub_080B6880's twelve-state intro
+     * controller (bl_intro), which waits on the two
+     * sub_0806E3F8 distance gates, runs the cinematic tail and
+     * hands off to the real boss through hit.spawn. */
+    aos_audio_clear();
+    AosEnemy in;
+    assert(aos_enemy_create(&in, 0x6D, 150, 120, 1, 0,
+                            &soma, &layer, &kind, &bl));
+    assert(in.bl_intro && !in.bl_idx && in.state == 0);
+    in.x = AOS_FIXED(150);
+    in.y = AOS_FIXED(120);
+    /* Case 0 arms + 0x0D = 0x80 into state 1; the close player
+     * passes both distance gates on the next updates. */
+    hit = aos_enemy_update(&in, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(in.state == 1 && in.timer == 0x80);
+    assert(!hit.force_input);
+    hit = aos_enemy_update(&in, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(in.state == 2);
+    /* 0x1010 >= 0x400: PlaySong routes it through AudioCommand
+     * (AOS_AUDIO_SONG_MUTE — the cutscene mutes the room song). */
+    assert(aos_audio_requested(AOS_AUDIO_COMMAND, 0x1010) == 1);
+    /* State 2's tail pulls Soma toward the statue: equal x keeps
+     * the 0x20 LEFT mask through hit.force_input. */
+    assert(hit.force_input && hit.forced_held == 0x20);
+    hit = aos_enemy_update(&in, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(in.state == 3);
+    hit = aos_enemy_update(&in, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(in.state == 4 && in.timer == 0xA0);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x100) == 1);
+    /* A far player never leaves the state-1/2 gates. */
+    AosEnemy far_;
+    assert(aos_enemy_create(&far_, 0x6D, 400, 120, 1, 0,
+                            &soma, &layer, &kind, &bl));
+    far_.x = AOS_FIXED(400);
+    far_.y = AOS_FIXED(120);
+    for (int i = 0; i < 4; ++i)
+        aos_enemy_update(&far_, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(far_.state <= 2);
+    /* Run the cinematic tail: the INTRO_FX materialize child
+     * emits at the case-4 -> 5 fallthrough, the sub_080B4FB0 FX
+     * at case 6, song 0xFF mid-case-4, and case 11 spawns the
+     * boss (hit.spawn, param1 0) then deletes. */
+    int intro_fx = 0, screen_fx = 0, spawned = 0, forced = 0;
+    for (int i = 0; i < 700 && !in.removed; ++i) {
+        hit = aos_enemy_update(&in, &soma, &layer, &kind, NULL,
+                               NULL, 10, 4, 0, 0, always_zero);
+        for (int c = 0; c < hit.child_count; ++c) {
+            if (hit.children[c].role == AOS_ROLE_BALO_INTRO_FX)
+                intro_fx++;
+            if (hit.children[c].role == AOS_ROLE_BALO_FX) screen_fx++;
+        }
+        if (hit.spawn) {
+            spawned++;
+            assert(hit.spawn_param1 == 0);
+        }
+        if (hit.force_input) forced++;
+    }
+    assert(in.removed && spawned == 1);
+    assert(intro_fx == 1 && screen_fx == 1);
+    assert(forced > 0);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0xFF) == 1);
+    /* No body parts ever emit on the intro entity. */
+    for (int i = 0; i < hit.child_count; ++i)
+        assert(hit.children[i].role != AOS_ROLE_BALO_WING &&
+               hit.children[i].role != AOS_ROLE_BALO_LIMB0 &&
+               hit.children[i].role != AOS_ROLE_BALO_LIMB1);
+
+    /* sub_080B60EC: the materialize child's own six states —
+     * 0x10 + 0x30 frame waits with songs 0xD2/0x101, the
+     * sub_0806D460 rise and the state-4 launch delete. */
+    aos_audio_clear();
+    AosEnemy fx2;
+    assert(aos_enemy_create(&fx2, 0x6D, 150, 120, 1, 0,
+                            &soma, &layer, &kind, &bl));
+    fx2.bl_intro = 1;
+    fx2.x = AOS_FIXED(150);
+    fx2.y = AOS_FIXED(120);
+    fx2.state = 10;           /* parent prologue -> child state 5 */
+    AosEnemy ch;
+    memset(&ch, 0, sizeof ch);
+    ch.id = 0x6D;
+    ch.role = AOS_ROLE_BALO_INTRO_FX;
+    ch.parent = &fx2;
+    ch.x = AOS_FIXED(150);
+    ch.y = AOS_FIXED(120);
+    ch.hp = 1;
+    aos_enemy_update(&ch, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(ch.removed);       /* parent state 0xA -> delete state */
+    /* Fresh child under a live intro parent runs the machine. */
+    fx2.state = 4;
+    memset(&ch, 0, sizeof ch);
+    ch.id = 0x6D;
+    ch.role = AOS_ROLE_BALO_INTRO_FX;
+    ch.parent = &fx2;
+    ch.x = AOS_FIXED(150);
+    ch.y = AOS_FIXED(120);
+    ch.hp = 1;
+    aos_enemy_update(&ch, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(ch.state == 1 && ch.timer == 0x10);
+    for (int i = 0; i < 0x12 && ch.state == 1; ++i)
+        aos_enemy_update(&ch, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(ch.state == 2 && ch.timer == 0x30);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0xD2) == 1);
+    for (int i = 0; i < 0x32 && ch.state == 2; ++i)
+        aos_enemy_update(&ch, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(ch.state == 3 && ch.vy == (int32_t)0xFFFE1000 &&
+           ch.ay == 0xC00);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x101) == 1);
+    /* The 0x51-frame rise then the state-4 launch delete. */
+    int guard = 0;
+    while (!ch.removed && guard++ < 400)
+        aos_enemy_update(&ch, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(ch.removed && ch.state == 4);
 }
 
 static void manticore_tests(void) {

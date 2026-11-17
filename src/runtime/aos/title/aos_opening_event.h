@@ -295,6 +295,15 @@ typedef struct {
      * rewrites child1 as (old & ~0x41) | (!bit6 << 6). */
     uint8_t actor_flags58[AOS_OPENING_ACTOR_COUNT];
     bool visible[AOS_OPENING_ACTOR_COUNT];
+    /* State 0 is the +0xB==0 0x40-frame suspend timer; state 2 is the
+     * post-suspend idle. There is deliberately no walk state: native
+     * WRAM captures keep Arikado's entity +0x40 world x at 0x119 for
+     * the whole scene even though sub_0805D198 stores 0xFFFFA000 in
+     * his +0x48, and every update path that could consume it
+     * (sub_0805B748 -> sub_0803F17C, sub_0805D410's child writes,
+     * sub_0805DAA0 which belongs to the skeleton child) is animation
+     * or flag work only. The perceived approach is the camera pans;
+     * any residual draw-side offset is aria_draw.c's concern. */
     uint8_t state;
     uint8_t step;
     uint8_t timer;

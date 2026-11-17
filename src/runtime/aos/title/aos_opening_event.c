@@ -1387,66 +1387,45 @@ AosOpeningCue aos_opening_actors_update(
     if (actors->text_hold && actors->scene_state == 0) --actors->text_hold;
     if (actors->window_open && !actors->text_hold) actors->window_shown = true;
     intro_transition_update(actors);
-    /* sub_0805D410 state 0: its entry timer is 0x40 frames. */
+    /* sub_0805D410 state 0: its entry timer is 0x40 frames. Native
+     * WRAM captures keep Arikado's entity +0x40 world x at 0x119 for
+     * the whole scene, so the timer expiry goes straight to the
+     * post-suspend idle; there is no native position walk to port. */
     if (actors->state == 0) {
         if (actors->timer) --actors->timer;
         if (!actors->timer) {
-            actors->state = 1;
+            actors->state = 2;
             actors->step = 0;
         }
         goto scene;
     }
     /* sub_0805D198 stores 0xFFFFA000 (-0x6000, about 0.37 pixel per
-     * frame) into entity+0x48, Arikado's x velocity. The consumer
-     * search is now complete: sub_0805CE28 spawns all three children
-     * through sub_0805B5E8, which assigns every one of them the same
-     * update callback sub_0805B748 — a bare sub_0803F17C animation
-     * dispatch with no position or velocity work — and sub_0805D198
-     * only overrides child+0x1c's callback with sub_0805DAA0.
-     * Object20Update itself only dispatches the +0x30 param0 handler
-     * table; it has no per-child follower or velocity pass.
-     * sub_0805D410's child18 writes touch only +0x58 (the mirror bit),
-     * +0x59/+0x6C/+0x6D/+0x6E/+0x6F through sub_0803F2C8/sub_0803F17C
-     * and never +0x40/+0x42/+0x44/+0x46/+0x48 — so no scripted
-     * per-frame position write exists either. The generic integrators
-     * (sub_0806D430/sub_0806D460 inside sub_080698A8, driven by
-     * sub_0806E140) have call sites only in other state machines —
-     * sub_0805C628's unrelated walk-on, the scripted skeleton's
-     * approach and the emitted children's flight — and sub_0806E0D0's
-     * +0x48-family writes land on draw-slot fields, not this entity.
-     * Animation cannot move an entity: sub_0803F17C only advances
-     * +0x6D..+0x72 sequence state. No dumped routine reads child18's
-     * +0x48, so the routine that walks Arikado left and stops him is
-     * absent from this dump; applying the stored velocity once per
-     * frame until a source-position guard keeps this partial
-     * controller bounded and honest. */
-    if (actors->state == 1) {
-        /* Arikado walks left toward the Soma/Mina group and stops one
-         * step to the right of the player — world x 0xD0 against Soma's
-         * 0xA8 (+0x28). The native stop consumer is still absent from
-         * the dump, so this bound is the port's honest approximation;
-         * expressing it relative to the player's own position keeps the
-         * approach honest if the spawn record ever moves him. */
-        const int32_t stop_x = ((actors->soma_x >> 16) + 0x28) << 16;
-        if (actors->x[1] > stop_x) {
-            actors->x[1] -= 0x6000;
-            if (actors->x[1] < stop_x) actors->x[1] = stop_x;
-            /* The missing native walk routine plausibly also rebinds
-             * child18's animation: opening_actor_1's only multi-frame
-             * non-attack sequence is anim_0 (the 10-entry cycle), while
-             * the spawn/default pick anim_1 is a single held frame.
-             * Playing anim_0 for the bounded walk keeps the ported
-             * movement from reading as a sliding statue; the sequence
-             * loops through the real sub_0803F17C tick chain. */
-            if (actors->animation[1] != 0)
-                actor_animation(actors, 1, 0, true);
-        } else {
-            actors->state = 2;
-            actors->step = 0;
-            if (actors->animation[1] != 1)
-                actor_animation(actors, 1, 1, true);
-        }
-    }
+     * frame) into entity+0x48, Arikado's x velocity, but the consumer
+     * search is complete and negative: sub_0805CE28 spawns all three
+     * children through sub_0805B5E8, which assigns every one of them
+     * the same update callback sub_0805B748 — a bare sub_0803F17C
+     * animation dispatch with no position or velocity work — and
+     * sub_0805D198 only overrides child+0x1c's callback with
+     * sub_0805DAA0 (the skeleton). Object20Update itself only
+     * dispatches the +0x30 param0 handler table; it has no per-child
+     * follower or velocity pass. sub_0805D410's child18 writes touch
+     * only +0x58 (the mirror bit), +0x59/+0x6C/+0x6D/+0x6E/+0x6F
+     * through sub_0803F2C8/sub_0803F17C and never +0x40/+0x42/+0x44/
+     * +0x46/+0x48 — so no scripted per-frame position write exists
+     * either. The generic integrators (sub_0806D430/sub_0806D460
+     * inside sub_080698A8, driven by sub_0806E140) have call sites
+     * only in other state machines — sub_0805C628's unrelated
+     * walk-on, the scripted skeleton's approach and the emitted
+     * children's flight — and sub_0806E0D0's +0x48-family writes
+     * land on draw-slot fields, not this entity. Animation cannot
+     * move an entity: sub_0803F17C only advances +0x6D..+0x72
+     * sequence state, and opening_actor_1's anim_0 frames carry
+     * constant sprite offsets, so no walk cycle hides in the art
+     * either. The native +0x48 store therefore has no consumer in
+     * this scene: Arikado keeps his spawn world x (0x119) and the
+     * approach the player sees is the sub_0805CCE4 camera pans, not
+     * entity translation. Any remaining on-screen offset would be a
+     * draw/OAM concern owned by aria_draw.c, not this model. */
 
     /* sub_0805DAA0, the scripted Winged Skeleton's own callback:
      * +0xA==0 waits on parent +0x20 bit 8 (the distant batch), +0xA==1

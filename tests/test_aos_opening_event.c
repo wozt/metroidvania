@@ -334,22 +334,18 @@ static void test_trigger(void) {
     assert(actors.animation[0] == 4 && actors.animation[1] == 1 && actors.animation[2] == 4);
     for (unsigned frame = 0; frame < 64; ++frame)
         aos_opening_actors_update(&actors, NULL, NULL, 0);
-    assert(actors.state == 1 && actors.timer == 0 && actors.x[1] == (0x119 << 16));
-    aos_opening_actors_update(&actors, NULL, NULL, 0);
-    assert(actors.x[1] < (0x119 << 16));
-    /* sub_0805D198's +0x48 velocity is -0x6000 (~0.37 px/frame); the
-     * 0x119->0xD0 walk-on takes about 195 frames. The 0x081186DC record
-     * table is decoded as sprite resources only, sub_0805B5E8 assigns
-     * every opening child the animation-only sub_0805B748 callback
-     * (only child+0x1c gets sub_0805DAA0), and sub_0805C628 is an
-     * unrelated object's walk-on, so no dumped routine integrates
-     * child18's +0x48 — the port stops him at the player's x + 0x28
-     * (0xD0 against Soma's 0xA8), a documented approximation of the
-     * unidentified stop consumer. */
-    unsigned walk_guard = 0;
-    while (actors.state == 1 && walk_guard++ < 400)
+    /* sub_0805D198's +0x48 store of -0x6000 has no consumer in the
+     * dump: every opening child runs the animation-only sub_0805B748
+     * (only the skeleton child gets sub_0805DAA0), sub_0805D410 never
+     * writes child18's position fields, and native WRAM captures keep
+     * his entity +0x40 world x at 0x119 for the whole scene. The
+     * timer therefore goes straight to the post-suspend idle and he
+     * never translates; the perceived approach is the camera pan. */
+    assert(actors.state == 2 && actors.timer == 0 && actors.x[1] == (0x119 << 16));
+    assert(actors.animation[1] == 1);
+    for (unsigned frame = 0; frame < 200; ++frame)
         aos_opening_actors_update(&actors, NULL, NULL, 0);
-    assert(actors.state == 2 && actors.x[1] == (0xD0 << 16));
+    assert(actors.x[1] == (0x119 << 16) && actors.animation[1] == 1);
     assert(actors.visible[0] && actors.visible[1] && actors.visible[2]);
 
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_CONFRONTATION);

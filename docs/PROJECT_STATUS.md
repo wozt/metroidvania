@@ -1,3 +1,71 @@
+## Patch 1206 - opening: Arikado +0x48 consumer search closed, sub_08067A04 wait model decoded
+
+- **Scope.** Resolves Patch 1203 next-action (1) and retires the
+  Patch 1202/1185 "missing walk consumer" approximation, and decodes
+  the `sub_08067A04` page-wait/glyph-delay model that Patch 1203
+  next-action (3) suspected of hiding the ~1085-frame pacing gap.
+  `aos_opening_event.c`/`.h` and `tests/test_aos_opening_event.c`
+  only; `aria_draw.c` untouched (sibling-owned).
+- **Arikado entity position is now native-exact.** The consumer
+  search is complete and negative: `sub_0805D198` stores
+  `0xFFFFA000` in child18 `+0x48`, but every opening child is spawned
+  through `sub_0805B5E8` with the animation-only `sub_0805B748`
+  (`sub_0803F17C` dispatch), `sub_0805D198` overrides only the
+  skeleton child's callback with `sub_0805DAA0`, `sub_0805D410`'s
+  child writes touch `+0x58`/`+0x59`/`+0x6C`-`+0x6F` and never
+  `+0x40`-`+0x48`, and the `sub_0806D430`/`sub_0806D460`/
+  `sub_0806E140` integrator call sites all belong to other
+  state machines. Native WRAM captures keep his entity `+0x40`
+  world x at `0x119` for the whole scene. The port's state-1 walk
+  (x `0x119`->`0xD0`, anim_0 cycle, player-relative stop guard) is
+  removed: the `+0xB==0` `0x40`-frame suspend now expires straight
+  into the post-suspend idle and `actors->x[1]` stays `0x119`.
+  Any remaining on-screen approach offset is a draw/OAM concern for
+  the `aria_draw.c` owner, not this model.
+- **`sub_08067A04` wait/page-turn model decoded**
+  (`code_08060B98.s` `_08067A04`-`_08068104`): the low nibble of the
+  `+0x414` state byte is the sub-state (0 byte-loop, 1 "press A"
+  prompt blink, 2/3 page-turn button polls via `sub_08067804`,
+  4 glyph-delay dwell, 5 pad-latch clear, 6 window close + return 1).
+  The page wait is *level*-triggered: command 4 (`_08067D8C`) bumps
+  the sub-state to 1, case 1 (`_08067E7A`) only redraws the blinking
+  prompt tiles each frame, and the shared epilogue `_08068076`
+  watches `gEwramData+0x16` bit 0 — on a set bit at sub-state 1 it
+  plays `0x132`, hides the prompt, latches `+0x416`=1 and clears the
+  sub-state back to the byte loop. Glyph delay is
+  `max(1, +0x416)` frames per glyph (`+0x415` counter, sub-state 4),
+  and `+0x416` is only ever 0 or 1 (written solely by that epilogue),
+  so effective glyph rate is one per frame; `gEwramData+0x14` bit 1
+  is the hold-to-fast-forward override that forces the counter to 0.
+  **The portable typewriter's level-triggered wait and one-glyph-per-
+  frame model is therefore validated against the native engine — the
+  ~1085f gap is NOT in the text path.**
+- **Residual pacing gap, localized.** With the wait model cleared,
+  the remaining ~1085 frames sit in the beat-dense segments: the
+  runtime still completes the scene near frame ~3600 under the
+  `/tmp/opening_cmp/cap_a60.txt` 60-frame tap schedule versus native
+  Object20 `+0xB`->0 near frame ~4685 (Patch 1203 capture). Per-beat
+  comparison puts roughly 500f in the entry-pan->confrontation
+  dialogue block and ~340f in the post-battle block, pointing at
+  `sub_0805D410` inter-cue dwell states and the `sub_0805CCE4`
+  camera-mode timing rather than text. Next step: decode the
+  `+0xB`/`+0xC`/`+0xD` dwell values for those two blocks against
+  `nat_fine.json` and re-check the native capture's frame origin.
+- **Verification.** `tests/test_aos_opening_event.c` now asserts the
+  no-walk contract: after the 64-frame `+0xB==0` suspend the actors
+  sit at `state==2`, `x[1]==0x119<<16`, `animation[1]==1`, and 200
+  further frames leave position and animation untouched.
+  `fusion_aos_opening_event_tests` passes; `fusion_aria_runtime`
+  builds clean. An xvfb `--capture-script cap_a60.txt --capture
+  ... 9000 0` run still completes the story (event `0x20`, Winged
+  Skeleton soul granted/equipped) with Arikado pinned at x=281 in the
+  per-frame `ARIA_OPENING_TRACE` dump.
+- **Registries.** `annotations.tsv` (`aos.events.opening_scene`)
+  remaining-work note and `features.tsv` (`story.aria_opening_event`)
+  note updated: the Arikado walk approximation is retired, the
+  text-engine model is validated, and the pacing gap is re-scoped to
+  the Object20 beat dwells.
+
 ## Patch 1205 - opening: full Soma beat-animation chain and entry-pan step excursion
 
 - **Scope.** Closes Patch 1203 next-action (2): the runtime sampled only

@@ -11,7 +11,9 @@
  *   AOS_ROLE_MANTICORE_WING children; the attack shot of
  *   sub_08073D98 (update sub_08074048) becomes AOS_ROLE_MANTICORE_SHOT;
  * - the + 0x6E/+ 0x6F attack counters, the + 0x24/+ 0x25 variant picks
- *   and the container + 0x1F launch count fold into mt_* fields.
+ *   and the container + 0x1F launch count fold into mt_* fields; the
+ *   sub_08073568 + 0x1C == 6 container entity folds its + 0x20 phase
+ *   and + 0x1F/+ 0x1E substate machine into mt_cphase/mt_csub/mt_ccnt.
  *
  * Documented approximations: the state-0 six-case approach machine
  * keeps its probes, random attack triggers and palette flashes but
@@ -20,9 +22,11 @@
  * == 0xE wing/shot/song marker and the + 0x25 variant pick, while
  * the container + 0x1F gates read the launched-child count; the
  * child launch keeps the native slot velocity table, facing offset
- * and sign while the 797-line sub_08073568 child brain collapses to
- * a sine flight toward the player with contact and a lifetime; the
- * wing part's
+ * and sign while the sub_08073568 child brain is ported for the
+ * volley children (the + 0x1C != 6 paths): the parent + 0x6D anim
+ * dispatch, the anim-8 launch windows and the _08073A8A orbit
+ * integrate, with the container entity itself folded into the
+ * parent's mt_c* fields; the wing part's
  * sub_08073C3C flap machine collapses to an orbiting hitbox;
  * sub_0806AEAC maps to the shared generic flame death. */
 
@@ -60,13 +64,25 @@ static int32_t mt_mul(int32_t a, int32_t b) {
 }
 
 /* sub_080733D4 launch velocity magnitude: slot * 0x80000 plus a base
- * of 0x60000 for slot 0 and 0xA00000 for slots 1-5 (the native
- * `slot << 0x13` + base table).  The sign and the spawn offset follow
- * the parent's + 0x58 bit 0x40 facing: set (the enemy sits left of
- * the player, the port's `mirrored`) negates both, clear keeps them
- * positive. */
+ * of 0x60000 for slot 0 and 0xA0000 for slots 1-5 (the native
+ * `slot << 0x13` + `0xC0 << 0xB` / `0xA0 << 0xC` table).  The sign
+ * and the spawn offset follow the parent's + 0x58 bit 0x40 facing:
+ * set (the enemy sits left of the player, the port's `mirrored`)
+ * negates both, clear keeps them positive — the wrapper launch
+ * fires the children backward; the brain's anim-8 windows re-launch
+ * them forward. */
 static int32_t mt_launch_mag(int slot) {
-    return slot * 0x80000 + (slot == 0 ? 0x60000 : 0xA00000);
+    return slot * 0x80000 + (slot == 0 ? 0x60000 : 0xA0000);
+}
+
+/* sub_0803E8BC: the 16.16 fixed divide (a8/b8 shifted back). */
+static int32_t mt_div(int32_t a, int32_t b) {
+    if (!b) return 0;
+    if (b == 0x10000) return a;
+    int32_t a8 = a < 0 ? -((-a) >> 8) : a >> 8;
+    int32_t b8 = b < 0 ? -((-b) >> 8) : b >> 8;
+    if (!b8) return 0;
+    return ((a8 << 8) / b8) << 8;
 }
 
 /* Emit the six children of sub_08073308 over the first updates,
@@ -130,11 +146,33 @@ static void mt_fire_shot(AosEnemy *e, AosHitReport *hit) {
     hit->children[hit->child_count++] = c;
 }
 
-/* sub_080733D4 + sub_08073568: a launched child takes the native
- * facing-dependent spawn offset and per-slot velocity, then flies
- * toward the player on a sine path (the 797-line phase brain
- * collapses to this approximation), deals contact and dies on the
- * parent's death, state 2 or a lifetime. */
+/* _08073A8A: the volley child's orbit integrate — the child's slot
+ * and the folded container's + 0x20 phase (parent mt_cphase) derive
+ * a heading, + 0x48 is rescaled by the phase factor, the position
+ * advances by sine/cosine of the heading times that speed and both
+ * + 0x48/+ 0x4C are cleared.  With no launch velocity armed the
+ * child simply holds its position. */
+static void mt_child_orbit(AosEnemy *e, AosEnemy *p) {
+    int32_t cph = p->mt_cphase;
+    int32_t q = ((cph - 0x4000) * 5) / 6;
+    int32_t r5 = q * 24 + 0x70000;
+    int32_t r7 = ((int32_t)e->mt_slot << 16) + r5 - 0x60000;
+    int32_t head = mt_div(mt_mul(cph, r7), r5);
+    int32_t sp = (cph - 0x7000) / 4;
+    e->vx = mt_div(mt_mul(e->vx, sp + 0x4000), 0x4000);
+    if (!e->mirrored)
+        head = 0x10000 - head;
+    e->x += mt_mul(mt_sin((uint32_t)(head + 0x4000)), e->vx);
+    e->y += mt_mul(mt_sin((uint32_t)head), e->vx);
+    e->vx = e->vy = 0;
+}
+
+/* sub_08073568 for the + 0x1C != 6 volley children: the parent + 0x6D
+ * anim dispatch.  Only anim id 8 repositions and re-launches the
+ * children (the two + 0xD timer windows of _080738D4/_08073940); every
+ * other id — and the inactive parent of _080739D4 — falls into the
+ * _08073A8A orbit integrate.  The brain holds no lifetime: the
+ * children live until the wrapper deletes them with the parent. */
 static void mt_child_update(AosEnemy *e, const AosAnimSet *anims,
                             AosSoma *soma, const AosEnemyKind *kind) {
     AosEnemy *p = e->parent;
@@ -148,10 +186,10 @@ static void mt_child_update(AosEnemy *e, const AosAnimSet *anims,
      * and the recursion launches all six children in one pass, slot
      * 5 first).  The child copies the container's + 0x40/+ 0x44
      * position plus the facing offset — x +/- 0xC0000 and y
-     * -0x150000 — and takes the signed slot velocity into + 0x48. */
+     * -0xE0000 — and takes the signed slot velocity into + 0x48. */
     if (!e->mt_act) {
         e->x = p->x + (p->mirrored ? -0xC0000 : 0xC0000);
-        e->y = p->y - 0x150000;
+        e->y = p->y - 0xE0000;
         int32_t mag = mt_launch_mag(e->mt_slot);
         e->vx = p->mirrored ? -mag : mag;
         e->vy = 0;
@@ -159,27 +197,124 @@ static void mt_child_update(AosEnemy *e, const AosAnimSet *anims,
         e->mt_act = 1;
         e->timer = 0;
     }
-    /* Sine flight toward the player (sub_08073568 approximation). */
-    e->phase += 0x400;
-    int32_t ty = soma ? target_y(soma) : e->y;
-    int32_t tx = soma ? target_x(soma) : e->x;
-    int32_t dx = (tx - e->x) >> 16, dy = (ty - e->y) >> 16;
-    if (dx > 0x7FFF) dx = 0x7FFF;
-    if (dx < -0x8000) dx = -0x8000;
-    if (dy > 0x7FFF) dy = 0x7FFF;
-    if (dy < -0x8000) dy = -0x8000;
-    if (dx || dy) {
-        uint32_t ang = (uint32_t)aos_arctan2((int16_t)dy, (int16_t)dx);
-        int32_t sp = 0x30000;
-        e->vx = mt_mul(sp, mt_cos(ang));
-        e->vy = mt_mul(sp, mt_sin(ang)) + mt_sin(e->phase) / 4;
+    /* Parent anim id 8: the launch windows — (timer - 0xA) & 0xFF in
+     * [0, 4] uses the +/- 0x80000 offset, above 0xE the +/- 0xC0000
+     * one, both with y - 0x150000, the slot velocity re-armed and
+     * the facing bit inverted; the gap in between keeps the last
+     * position. */
+    if (p->anim.id == 8) {
+        uint32_t t = (uint32_t)(p->timer - 0xA) & 0xFF;
+        if (t <= 4 || t > 0xE) {
+            int32_t off = t <= 4 ? 0x80000 : 0xC0000;
+            e->x = p->x + (p->mirrored ? off : -off);
+            e->y = p->y - 0x150000;
+            int32_t mag = mt_launch_mag(e->mt_slot);
+            e->vx = p->mirrored ? mag : -mag;
+            e->vy = 0;
+            e->mirrored = !p->mirrored;
+        }
     }
-    integrate(e);
-    /* Lifetime then delete (the native child dies on its own timer
-     * or when the parent's attack mask clears). */
-    if (++e->timer > 0xA0)
-        e->removed = true;
-    (void)anims; (void)kind;
+    mt_child_orbit(e, p);
+    (void)anims; (void)soma; (void)kind;
+}
+
+/* The + 0x1C == 6 container entity of sub_08073120 folded onto the
+ * parent: its + 0x20 phase (+ mt_cphase, created 0x4000) and the
+ * + 0x1F/+ 0x1E substate machine it runs while the parent's + 0x6D
+ * anim id is 2 or 3.  sub_0806ADBC's + 0x2D hit-flash gate maps to
+ * hit_flash (its gEwramData and + 0x38 branches are not ported); the
+ * container's own position and + 0x48 speed only drive its drawing,
+ * so they are not modeled. */
+static void mt_container_tick(AosEnemy *p) {
+    if (p->hit_flash)
+        return;
+    switch (p->anim.id) {
+    case 0: {
+        /* + 0x6E jump table: frames 0/5/6/7 ratchet up by 0x60 while
+         * <= 0x3FFF, frames 1-4 decay by 0x60 while > 0x3800. */
+        unsigned f = p->anim.frame;
+        if (f > 7)
+            break;
+        if (f == 0 || f == 5 || f == 6 || f == 7) {
+            if (p->mt_cphase <= 0x3FFF)
+                p->mt_cphase += 0x60;
+        } else if (p->mt_cphase > 0x3800) {
+            p->mt_cphase -= 0x60;
+        }
+        break;
+    }
+    case 1: {
+        /* Frames 2/3/8/9 decay, the rest grow by 0x40. */
+        unsigned f = p->anim.frame;
+        if (f == 2 || f == 3 || (f >= 8 && f <= 9)) {
+            if (p->mt_cphase > 0x3800)
+                p->mt_cphase -= 0x60;
+        } else if (p->mt_cphase <= 0x3FFF) {
+            p->mt_cphase += 0x40;
+        }
+        break;
+    }
+    case 2:
+    case 3:
+        switch (p->mt_csub) {
+        case 0:
+            p->mt_csub = 1;
+            p->mt_ccnt = 0;
+            break;
+        case 1: {
+            uint8_t c = ++p->mt_ccnt;
+            if (c & 8) {
+                /* Every second half of the ramp slews the phase
+                 * toward 0x8000 by 0x40 (the + 0x4C heading writes of
+                 * the native case are dead stores, overwritten by
+                 * _08073A06). */
+                if (p->mt_cphase - 0x8000 > 0x40)
+                    p->mt_cphase -= 0x40;
+                else if (p->mt_cphase - 0x8000 < -0x40)
+                    p->mt_cphase += 0x40;
+            }
+            if (c > 0x1F) {
+                p->mt_csub = 2;
+                p->mt_ccnt = 0;
+            }
+            break;
+        }
+        case 2:
+            if (++p->mt_ccnt > 0x13) {
+                p->mt_ccnt = 0;
+                p->mt_csub = 3;
+                aos_audio_play_song(0x86);
+            }
+            break;
+        case 3:
+            p->mt_cphase += 0x800;
+            if (p->mt_cphase > 0x7FFF) {
+                p->mt_cphase = 0x8000;
+                p->mt_csub = 4;
+            }
+            break;
+        case 4:
+            if (++p->mt_ccnt > 0xB) {
+                p->mt_ccnt = 0;
+                p->mt_csub = 5;
+            }
+            break;
+        case 5:
+            p->mt_cphase -= 0x400;
+            if (p->mt_cphase <= 0x3FFF) {
+                p->mt_cphase = 0x4000;
+                p->mt_csub = 6;
+                p->mt_ccnt = 0;
+            }
+            break;
+        default:
+            break;
+        }
+        break;
+    default:
+        /* Anim ids 4/7 hover and 8 launch: no + 0x20 phase writes. */
+        break;
+    }
 }
 
 /* sub_08073C3C: the grown wing — a flapping hitbox orbiting beside
@@ -453,6 +588,11 @@ AosHitReport aos_enemy_manticore_update(
         else
             e->removed = true;
     }
+
+    /* The folded + 0x1C == 6 container entity's + 0x20 phase and
+     * attack substate machine (sub_08073568), advanced once per
+     * parent update for the volley children's orbit integrate. */
+    mt_container_tick(e);
 
     step_anim(e, anims);
     return hit;

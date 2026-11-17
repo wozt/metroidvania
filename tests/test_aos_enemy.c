@@ -1754,6 +1754,66 @@ static void manticore_tests(void) {
     assert(kid.removed);
     e.state = 0;
 
+    /* sub_08073568: outside the parent anim-8 windows the child holds
+     * its position (the orbit integrate displaces only an armed
+     * + 0x48, cleared each pass). */
+    memset(&kid, 0, sizeof kid);
+    kid.id = 0x36;
+    kid.role = AOS_ROLE_MANTICORE_CHILD1;
+    kid.parent = &e;
+    kid.mt_slot = 1;
+    e.anim.id = 0;
+    for (int i = 0; i < 4; ++i) {
+        aos_enemy_update(&kid, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    }
+    assert(!kid.removed && kid.vx == 0 && kid.vy == 0);
+
+    /* Parent anim id 8, timer window (timer - 0xA) & 0xFF <= 4: the
+     * child re-anchors at the parent position +/- 0x80000 with the
+     * slot velocity re-armed, y - 0x150000 and the facing bit
+     * inverted (e is not mirrored: offset and velocity negative). */
+    memset(&kid, 0, sizeof kid);
+    kid.id = 0x36;
+    kid.role = AOS_ROLE_MANTICORE_CHILD2;
+    kid.parent = &e;
+    kid.mt_slot = 2;
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(120);
+    e.mirrored = false;
+    e.anim.id = 8;
+    e.timer = 0xA;
+    e.mt_cphase = 0x4000;
+    aos_enemy_update(&kid, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    /* Native: x = px - 0x80000 + orbit displacement, y = py -
+     * 0x150000 + orbit displacement; vx was 2*0x80000+0xA0000 before
+     * the orbit cleared it.  The orbit moves it, so check the
+     * re-anchor happened through the facing-inverted mirrored bit
+     * and that it did not die. */
+    assert(!kid.removed && kid.mt_act == 1 && kid.mirrored);
+    /* Outside the window (timer - 0xA in [5, 0xE]) no re-anchor. */
+    e.timer = 0x12;
+    int32_t ax = kid.x, ay = kid.y;
+    aos_enemy_update(&kid, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(kid.x == ax && kid.y == ay);
+
+    /* The folded container's + 0x20 phase: anim id 0 frame 0 ratchets
+     * + 0x60 per update while <= 0x3FFF (sub_08073568 case 0). */
+    AosEnemy ec;
+    assert(aos_enemy_create(&ec, 0x36, 150, 120, 0, 0,
+                            &soma, &layer, &kind, &mt));
+    ec.x = AOS_FIXED(150);
+    ec.y = AOS_FIXED(120);
+    ec.state = 3;
+    ec.mt_cphase = 0x3000;
+    ec.anim.id = 0;
+    ec.anim.frame = 0;
+    aos_enemy_update(&ec, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(ec.mt_cphase == 0x3060);
+
     /* State 1 attack: the + 0x6E == 0xE marker grows a wing and
      * fires the shot. */
     AosEnemy a;

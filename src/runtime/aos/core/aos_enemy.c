@@ -1418,6 +1418,10 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->mt_f6f = enemy->mt_cnt24 = enemy->mt_var25 = 0;
         enemy->mt_launched = 0;
         enemy->mt_slot = enemy->mt_act = 0;
+        /* sub_08073120: the + 0x1C == 6 container's + 0x20 phase
+         * starts at 0x4000 with a clear + 0x1F/+ 0x1E substate. */
+        enemy->mt_cphase = 0x4000;
+        enemy->mt_csub = enemy->mt_ccnt = 0;
         enemy->state = flag_8e_40 ? 3 : 0;
         enemy->step = 0;
         enemy->substep = 0;

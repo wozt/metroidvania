@@ -1,3 +1,47 @@
+## Patch 1200 - Manticore sub_08073568 child brain ported; container folded
+
+- **Scope.** The 797-line `sub_08073568` update shared by the
+  Manticore's `+0x1C == 6` container entity (`sub_08073120`,
+  wrapper `sub_08073214`) and its six volley children
+  (`sub_080733D4`) is decoded and ported for the children in
+  `src/runtime/aos/enemies/manticore.c`:
+  - **Dispatch.** The brain switches on the parent's `+0x6D` anim
+    id (`AosEnemy.anim.id`, `+0x6E` = `anim.frame`). For volley
+    children every id except 8 falls into the `_08073A8A` orbit
+    integrate; id 8 runs the two `(timer - 0xA) & 0xFF` launch
+    windows (`<= 4` offset `+/- 0x80000`, `> 0xE` offset
+    `+/- 0xC0000`, `y - 0x150000`, slot velocity re-armed, facing
+    bit inverted) of `_080738D4`/`_08073940`.
+  - **Orbit integrate.** `_08073A8A` derives a heading from the
+    container `+0x20` phase and the child slot
+    (`slot*0x10000 + 20*(cphase-0x4000) + 0x10000`, mirrored by
+    `0x10000 - head` when the facing bit is clear), rescales `+0x48`
+    by `((cphase-0x7000)/4 + 0x4000)/0x4000` through
+    `sub_0803E86C`/`sub_0803E8BC`, advances the position by
+    sine/cosine times the speed and clears `+0x48`/`+0x4C` — so a
+    child moves only while a launch armed its velocity.
+  - **Container fold.** The container entity's `+0x20` phase
+    (created `0x4000`) and its `+0x1F`/`+0x1E` six-substate attack
+    machine (ramp 32t, `PlaySong 0x86` wait, phase spin-up/down)
+    live on the parent as `mt_cphase`/`mt_csub`/`mt_ccnt`, ticked
+    once per `aos_enemy_manticore_update` by `mt_container_tick`;
+    the anim-0/1 frame ratchets are ported too. Its own position
+    and `+0x48` speed only drive its drawing and are not modeled.
+- **Corrections found by the decode.** The slot-1..5 velocity base
+  is `0xA0 << 0xC = 0xA0000`, not `0xA00000` (16x too fast), and
+  the `sub_080733D4` wrapper's y offset is `-0xE0000` (the
+  `-0x150000` belongs to the brain's anim-8 re-anchor).
+- **Still approximated.** `sub_0806ADBC`'s inactive gate maps to
+  `hit_flash` only; the children's `+0x4C` draw rotation, contact
+  and lifetime stay unported (the native brain has none); the
+  parent animation table `0x08526D2C` that can drive anim id 8 is
+  not reproduced by the state-1 port, so the launch windows arm
+  only if the parent reaches id 8.
+- **Verification.** `manticore_tests` extended (anim-8 windows,
+  gap hold, container phase ratchet); `ctest -R aos_enemy` and the
+  full cycle (`fusion_checklist`, `fusion_dashboard --run-tests`,
+  `fusion_check_generated`) clean. No emulator comparison.
+
 ## Patch 1199 - sub_0800C5A8 enemy callers: Death intro, Chronomage no-fade, Graham cinematic; lethal unk_A074_0 clear
 
 - **Scope.** Closes most of Patch 1180's remaining enemy/boss

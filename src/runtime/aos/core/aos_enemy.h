@@ -861,6 +861,14 @@ typedef struct AosEnemy {
     uint16_t mt_phase;
     uint8_t mt_f6f, mt_cnt24, mt_var25, mt_launched;
     uint8_t mt_slot, mt_act;
+    /* sub_08073568's + 0x1C == 6 container entity folded onto the
+     * parent: mt_cphase its + 0x20 orbit phase (created 0x4000),
+     * mt_csub/+ 0x1F and mt_ccnt/+ 0x1E the attack substate machine
+     * it runs while the parent's + 0x6D anim id is 2 or 3.  The
+     * volley children read mt_cphase through their parent in the
+     * _08073A8A orbit integrate. */
+    int32_t mt_cphase;
+    uint8_t mt_csub, mt_ccnt;
     /* Creaking Skull / Giant Skeleton (EnemyCreakingSkullCreate
      * 0x0809549C, EnemyCreakingSkullUpdate 0x08095320): `cs_rec[13]`
      * folds the + 0x1C container's thirteen 0x30-byte bone records,

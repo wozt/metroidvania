@@ -13040,6 +13040,88 @@ static void belmont_tests(void) {
         ++frames;
     }
     assert(el.removed);
+
+    /* The param0 == 1 record (area_05_room_006) enters the
+     * sub_080CFD0C intro: state 1 hidden, SetPlayerInput(1, 0x20)
+     * LEFT for cases 0-3, the 0x38/0x20/0x20 countdowns, then the
+     * record poll's param0 = 0 re-create folds into state 3. */
+    AosEnemy ei;
+    assert(aos_enemy_create(&ei, 0x6E, 288, 175, 1, 0,
+                            &soma, &layer, &kind, &bel));
+    assert(ei.state == 1);
+    hit = aos_enemy_update(&ei, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(ei.hidden && hit.force_input &&
+           hit.forced_held == AOS_KEY_LEFT);
+    assert(ei.substep == 1 && ei.timer == 0x38);
+    /* Cases 1 and 3 share the u8 countdown wrap; case 2 arms the
+     * 0x20 dialogue beat (the Object20 spawn stays unported). */
+    ei.timer = 0;
+    hit = aos_enemy_update(&ei, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(ei.substep == 2 && hit.force_input);
+    hit = aos_enemy_update(&ei, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(ei.substep == 3 && ei.timer == 0x20 && hit.force_input);
+    ei.timer = 0;
+    hit = aos_enemy_update(&ei, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(ei.substep == 4 && hit.force_input);
+    hit = aos_enemy_update(&ei, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(ei.state == 3 && !hit.force_input);
+    hit = aos_enemy_update(&ei, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(ei.state == 2);
+
+    /* The low-HP cornered path (hp < record hp / 3): a wall on
+     * either side probe enters state 9 with the facing bit
+     * following the + 0x80 probe; no wall latches the + 0x14 & 8
+     * one-shot state 8 and reports the + 0x42C |= 0x1000 write. */
+    AosEnemy ec;
+    assert(aos_enemy_create(&ec, 0x6E, 150, 120, 0, 0,
+                            &soma, &layer, &kind, &bel));
+    ec.x = AOS_FIXED(150);
+    ec.y = AOS_FIXED(120);
+    ec.state = 2;
+    ec.step = 0;
+    ec.hp = 100; /* below 6000 / 3 */
+    /* Wall at the + 0x80 probe: pixel (150 + 0x80, 120) -> cell
+     * (34, 15). */
+    cells[15 * W + 34] = 0x03;
+    hit = aos_enemy_update(&ec, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(ec.state == 9 && !ec.mirrored);
+    /* No wall either side: the one-shot state 8 latches. */
+    cells[15 * W + 34] = 0;
+    ec.state = 2;
+    ec.step = ec.substep = 0;
+    ec.bel_flags = 0;
+    hit = aos_enemy_update(&ec, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(ec.state == 8 && (ec.bel_flags & 8) &&
+           (hit.flags42c_set & 0x1000));
+    /* The cornered state-6 volley: with the + 0x14 & 8 latch, a
+     * clear + 0x22 settle and the player inside 0x100 x 0x80 but
+     * outside the wide pick box, always_zero's % 30 roll fires
+     * state 6 and reloads the settle with rng & 3. */
+    ec.state = 2;
+    ec.step = ec.substep = 0;
+    ec.bel_flags = 8;
+    ec.bel_settle = 0;
+    soma.x = AOS_FIXED(150) + AOS_FIXED(100);
+    soma.y = AOS_FIXED(120);
+    hit = aos_enemy_update(&ec, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(ec.state == 6 && ec.step == 0 && ec.substep == 0);
+    /* While the settle ticks the volley cannot refire. */
+    ec.state = 2;
+    ec.step = ec.substep = 0;
+    ec.bel_settle = 2;
+    hit = aos_enemy_update(&ec, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(ec.state == 2 && ec.bel_settle == 1);
+    soma.x = AOS_FIXED(150);
 }
 
 static void big_golem_tests(void) {

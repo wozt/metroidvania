@@ -12,22 +12,33 @@
  * - the death debris becomes AOS_ROLE_BEL_GORE.
  *
  * Documented approximations: the state-2 sub_080D0044 machine keeps
- * its substep order, facing-change tracking and the decoded random
- * attack pick (mod 12 == 0 -> state 9, & 7 == 0 -> state 4, & 3 ->
- * state 8 else state 6/10) while the per-case wall probes
- * (sub_0806DF40), the 0x080E9644 HP-gate table and the Object20
- * (+ 0x13110) checks collapse to the shared probes; each attack
- * state keeps its entry song accents (0xF6/0x93 state 4, 0xFC state
- * 7, 0x94 state 9, 0x80/0xF0 state 10) and its return to state 2
- * while the per-case choreography tables collapse to a documented
- * windup/strike/recover cycle; the state-0xB hurt path keeps the
- * lethal song 0x1E1 and the juggle songs 0x1E2/0x1E3 with the
- * + 0x20 > 2 gate, and the state-0xF0 death machine keeps its
- * role as the post-0xB exit with a gore timer; the param0 == 1
- * cutscene variant (sub_080CFC04 Object20 dialogue entities,
- * states 1/0xD) is not ported — the room spawns the boss variant;
- * the sub_08013CF0/sub_08034498/sub_0806E1B8 event calls are
- * covered by the shared spawn/collide paths or not ported. */
+ * its + 0xB case order (approach / facing tracker / turn delay),
+ * the + 0x22 settle, the + 0x34-vs-record-hp/3 HP gate, the
+ * sub_0806DF40 wall probes (shared cell read, wall bit), the + 0x14
+ * cornered latch with its state-8 one-shot and + 0x42C |= 0x1000
+ * write, the sub_0806C1B0 proximity picks (close 0x20x0x30: %12->9,
+ * &7->4, &3->10; wide 0x80x0x40 behind the Soma state-1/facing check:
+ * &7->9, %6->4, %10->7, %50->10; cornered 0x100x0x80 %30->6 with the
+ * + 0x22 rng&3 reload) and the facing-change advance to the turn
+ * case; the sub_0806E140 walk/integrate, the sub_0803F2C8 per-frame
+ * helper, the sub_080212C8 player + 0x4F4 action word (its two gated
+ * picks stay collapsed) and the + 0x6E byte stay approximated or
+ * unported; each attack state keeps its entry song accents
+ * (0xF6/0x93 state 4, 0xFC state 7, 0x94 state 9, 0x80/0xF0 state
+ * 10) and its return to state 2 while the per-case attack
+ * choreography tables collapse to a documented windup/strike/
+ * recover cycle; the state-0xB hurt path keeps the lethal song
+ * 0x1E1 and the juggle songs 0x1E2/0x1E3 with the + 0x20 > 2 gate,
+ * and the state-0xF0 death machine keeps its role as the post-0xB
+ * exit with a gore timer; the param0 == 1 room record
+ * (area_05_room_006) runs the sub_080CFD0C five-case intro —
+ * SetPlayerInput(1, 0x20) LEFT for cases 0-3, the 0x38/0x20/0x20
+ * countdowns, the hidden stateless entity — while the case-2
+ * sub_080CFC04 Object20 dialogue spawn and the gEwramData + 0x4E4
+ * record poll stay unported and case 4 folds into the state-3
+ * fight entry (the param0 = 0 re-create); the
+ * sub_08013CF0/sub_08034498/sub_0806E1B8 event calls are covered by
+ * the shared spawn/collide paths or not ported. */
 
 #include "../core/aos_enemy_internal.h"
 #include "../core/aos_audio.h"
@@ -139,51 +150,183 @@ static void bel_gore_update(AosEnemy *e) {
         e->removed = true;
 }
 
-/* sub_080D0044 state 2: the main combat machine. substep 0 is the
- * approach/idle case (the + 0x22 settle timer, the wall probes and
- * the decoded attack pick), substep 1 the facing-change tracker and
- * substep 2 the post-pick settle. */
+/* sub_0806DF40(e, dx, dy): the collision attribute at the point
+ * dx/dy pixels from the entity's + 0x42/+ 0x46 anchor; the map
+ * edge reads as a wall natively. The port probes the same pixel
+ * offset from the body position and tests the wall bit (2); the
+ * + 0x42/+ 0x46 anchor and the raw attribute byte fold into the
+ * shared cell read (documented). */
+static int bel_wall(const AosEnemy *e, const AosCollision *layer,
+                    int dx, int dy) {
+    if (!layer || !layer->cells)
+        return 0;
+    int32_t px = (e->x >> 16) + dx, py = (e->y >> 16) + dy;
+    if (px < 0 || py < 0 || px >= layer->width_cells * 8 ||
+        py >= layer->height_cells * 8)
+        return 1;
+    return (aos_collision_cell(layer, px, py) & 2) != 0;
+}
+
+/* sub_0806C1B0(e, w, h): the player inside the w x h box centred
+ * on the entity's anchor — the shared centred probe. */
+#define player_box(e, soma, w, h) \
+    aos_enemy_player_in_centred((e), (soma), (w), (h))
+
+/* The state-2 attack pick's shared tail (_080D024E): state + 0xA,
+ * case + 0xB and substep + 0xC — the RNG remainder r1 is always 0
+ * on the decoded picks (the & / % tests only pass on zero), so
+ * every entry lands on case 0 substep 0. */
+static void bel_enter(AosEnemy *e, uint8_t state, uint8_t step) {
+    e->state = state;
+    e->step = step;
+    e->substep = 0;
+}
+
+/* sub_080D0044 state 2: the main combat machine. + 0xB is the case
+ * (0 approach, 1 facing tracker, 2 turn delay — and it carries
+ * into the attack states as their own case byte), + 0xC the
+ * substep, + 0xD the u8 timer and + 0x22 the u16 settle.
+ *
+ * Case 0/1 body: the + 0x22 settle ticks down, the per-frame
+ * sub_0803F2C8(e,1,1,1) and the sub_0806E140 walk/integrate stay
+ * approximated by the shared move/face helpers; below the
+ * 0x080E9644[+ 0x36].unk_C / 3 HP gate (the enemy record's hp
+ * field, e->stats.hp) the wall probes and the + 0x14 cornered
+ * latch run; then the sub_0806C1B0 close pick (0x20 x 0x30:
+ * rng % 12 == 0 -> 9, rng & 7 == 0 -> 4, rng & 3 == 0 -> 10),
+ * the facing tracker, the 0x80 x 0x40 wide pick behind the
+ * gEwramData + 0x13110 Soma check (state 1, same facing, + 0x6E
+ * == 0 — + 0x6E is not modeled and reads clear: rng & 7 -> 9,
+ * rng % 6 -> 4, rng % 10 -> 7, rng % 50 -> 10) and the cornered
+ * state-6 volley pick (0x100 x 0x80, rng % 30, + 0x22 reload).
+ * The sub_080212C8 player + 0x4F4 action word is not modeled, so
+ * its two gated picks (the far state-4 and the case-2 state-4)
+ * stay collapsed. */
 static void bel_state2(AosEnemy *e, AosSoma *soma,
                        const AosAnimSet *anims,
+                       const AosCollision *layer, AosHitReport *hit,
                        uint32_t (*random)(void)) {
-    switch (e->step) {
-    case 0:
-        if (soma)
+    (void)anims;
+    /* r7: the + 0x58 bit-6 facing read at entry, for the + 0xB == 1
+     * tracker. */
+    int facing0 = e->mirrored;
+    if (e->step <= 1) {
+        if (e->bel_settle)
+            e->bel_settle--;
+        if (soma) {
+            face_player(e, soma);
             aos_enemy_move_toward(e, target_x(soma), target_y(soma),
                                   0x10);
-        if (player_near(soma, e->x >> 16, e->y >> 16, 0xA0, 0x80)) {
-            /* The decoded pick: 1/12 -> state 9, 1/8 -> state 4,
-             * then & 3 -> state 8 or the state 6/10 pair. */
-            uint32_t r = random();
-            if (r % 0xC == 0) {
-                e->state = 9;
-            } else if ((random() & 7) == 0) {
-                e->state = 4;
-            } else if (random() & 3) {
-                e->state = 8;
-            } else {
-                e->state = (random() & 1) ? 6 : 10;
+        }
+        /* The HP gate: + 0x34 < record hp / 3 (unsigned div). */
+        if (e->stats.hp > 0 && e->hp < (int16_t)(e->stats.hp / 3)) {
+            bool wall_r = bel_wall(e, layer, 0x80, 0) != 0;
+            bool wall_l = bel_wall(e, layer, -0x80, 0) != 0;
+            if (wall_r || wall_l) {
+                /* A wall on either side: the facing bit follows
+                 * the + 0x80 probe (set when it reads clear) and
+                 * the cornered attack is state 9. */
+                e->mirrored = !wall_r;
+                bel_enter(e, 9, 0);
+                return;
             }
-            e->step = e->substep = 0;
-            e->timer = 0;
+            if (!(e->bel_flags & 8)) {
+                /* Cornered with no wall: the one-shot state 8 and
+                 * the + 0x14 |= 8 latch with its + 0x42C |= 0x1000
+                 * write. */
+                bel_enter(e, 8, 0);
+                e->bel_flags |= 8;
+                hit->flags42c_set |= 0x1000;
+                return;
+            }
         }
-        break;
-    case 1:
-        /* Facing-change tracker: the native + 0xB increments when
-         * the player crosses the body; approximated as a short
-         * tracking beat before the next pick. */
-        if (soma)
-            face_player(e, soma);
-        if (++e->timer > 0x20) {
-            e->step = 0;
-            e->timer = 0;
+        /* The close pick (sub_0806C1B0 0x20 x 0x30). */
+        if (player_box(e, soma, 0x20, 0x30)) {
+            if (random() % 0xC == 0) {
+                bel_enter(e, 9, 0);
+                return;
+            }
+            if ((random() & 7) == 0) {
+                bel_enter(e, 4, 0);
+                return;
+            }
+            if ((random() & 3) == 0) {
+                bel_enter(e, 10, 0);
+                return;
+            }
         }
-        break;
-    default:
-        e->step = 0;
-        break;
+        /* _080D0196: the facing tracker — a player crossing the
+         * body advances to the turn case, otherwise the case
+         * becomes 1 and the wide pick runs the same frame. */
+        if (e->step == 1) {
+            if (facing0 != e->mirrored) {
+                e->step = 2;
+                e->substep = 0;
+                return;
+            }
+        } else {
+            e->step = 1;
+        }
+        /* _080D01B8: the wide pick (sub_0806C1B0 0x80 x 0x40)
+         * behind the Soma state/facing check. */
+        if (player_box(e, soma, 0x80, 0x40)) {
+            if (soma && soma->state == 1 &&
+                (int)soma->facing_left == (int)e->mirrored) {
+                if ((random() & 7) == 0) {
+                    bel_enter(e, 9, 0);
+                    return;
+                }
+                if (random() % 6 == 0) {
+                    bel_enter(e, 4, 0);
+                    return;
+                }
+            }
+            if (random() % 0xA == 0) {
+                bel_enter(e, 7, 0);
+                return;
+            }
+            if (random() % 0x32 == 0) {
+                bel_enter(e, 10, 0);
+                return;
+            }
+        }
+        /* _080D0256: the far state-4 pick needs the sub_080212C8
+         * action word — not modeled, stays collapsed. */
+        /* _080D027C: the cornered state-6 volley — the + 0x14 & 8
+         * gate and the 0x100 x 0x80 box run first, then the
+         * rng % 30 roll (consumed even when the + 0x22 settle is
+         * still ticking) and the settle-zero check gates the
+         * rng & 3 reload. */
+        if ((e->bel_flags & 8) &&
+            player_box(e, soma, 0x100, 0x80) &&
+            random() % 0x1E == 0 && e->bel_settle == 0) {
+            e->bel_settle = (uint16_t)(random() & 3);
+            bel_enter(e, 6, 0);
+        }
+        return;
     }
-    (void)anims;
+    if (e->step == 2) {
+        /* _080D02C0: the ten-frame turn — substep 0 arms the
+         * timer, then the walk, the rng & 3 gate (its player-box
+         * and sub_080212C8 checks stay collapsed) and the
+         * countdown back to case 1. */
+        if (e->substep == 0) {
+            e->timer = 10;
+            e->substep = 1;
+        }
+        if (soma) {
+            face_player(e, soma);
+            aos_enemy_move_toward(e, target_x(soma), target_y(soma),
+                                  0x10);
+        }
+        (void)(random() & 3);
+        if ((uint8_t)--e->timer == 0xFF) {
+            e->step = 1;
+            e->substep = 0;
+        }
+        return;
+    }
+    /* Other + 0xB values do nothing natively. */
 }
 
 /* The shared attack envelope: windup (song accent), strike
@@ -249,7 +392,7 @@ AosHitReport aos_enemy_belmont_update(
     const AosAnimSet *anims = kind->anims;
     AosHitReport hit;
     memset(&hit, 0, sizeof hit);
-    (void)layer; (void)cam_x; (void)cam_y;
+    (void)cam_x; (void)cam_y;
 
     /* Children dispatch on their roles. */
     if (e->role == AOS_ROLE_BEL_SHOT) {
@@ -264,9 +407,11 @@ AosHitReport aos_enemy_belmont_update(
     if (!bel_is_belmont(e->id))
         return hit;
 
-    /* EnemyBelmontUpdate prologue: the dormant state skips the
-     * gates; the shared collide covers the hurt/attack boxes. */
-    if (e->state != 0xC) {
+    /* EnemyBelmontUpdate prologue: the dormant state and the
+     * param0 == 1 intro's stateless entity skip the gates (the
+     * native intro has no sprite object at all); the shared
+     * collide covers the hurt/attack boxes. */
+    if (e->state != 0xC && e->state != 1) {
         if (outside_margins(kind, 6, cam_x, cam_y)) {
             e->hidden = true;
             return hit;
@@ -274,7 +419,7 @@ AosHitReport aos_enemy_belmont_update(
         hit = collide(e, soma, kind, weapon, weapon_frames,
                       soma_atk, soma_def);
     }
-    e->hidden = e->y + 0x20 >= 0x44000;
+    e->hidden = (e->state == 1) || (e->y + 0x20 >= 0x44000);
 
     switch (e->state) {
     case 0xC:
@@ -287,19 +432,46 @@ AosHitReport aos_enemy_belmont_update(
         e->timer = 0;
         break;
     case 1:
-        /* sub_080CFD0C: the cutscene variant's active state — not
-         * spawned by the boss room; treated as an approach that
-         * hands off to state 2. */
-        if (soma)
-            aos_enemy_move_toward(e, target_x(soma), target_y(soma),
-                                  0x18);
-        if (++e->timer > 0x40) {
-            e->state = 2;
+        /* sub_080CFD0C: the param0 == 1 intro machine — five
+         * cases behind SetPlayerInput(1, 0x20) (LEFT held) for
+         * cases 0-3. Case 2's sub_080CFC04 Object20 dialogue
+         * spawn and the gEwramData + 0x4E4 + slot * 0x84 record
+         * poll stay unported; the case-4 exit re-runs
+         * EnemyBelmontCreate with param0 = 0, which the port
+         * folds into the state-3 fight entry. */
+        if (e->substep < 4) {
+            hit.force_input = true;
+            hit.forced_held = AOS_KEY_LEFT;
+        }
+        switch (e->substep) {
+        case 0:
+            e->timer = 0x38;
+            e->substep = 1;
+            break;
+        case 1:
+        case 3:
+            /* _080CFD8E: the u8 countdown wraps to 0xFF. */
+            if ((uint8_t)--e->timer == 0xFF)
+                e->substep++;
+            break;
+        case 2:
+            /* _080CFD6E: + 0x58 |= 0x20 (hidden, already set) and
+             * the sub_080CFC04(e, 0) Object20 dialogue entities —
+             * not ported. */
+            e->timer = 0x20;
+            e->substep = 3;
+            break;
+        default:
+            /* _080CFDA4: the record poll treats the dialogue as
+             * finished and re-creates with param0 = 0. */
+            e->state = 3;
+            e->step = e->substep = 0;
             e->timer = 0;
+            break;
         }
         break;
     case 2:
-        bel_state2(e, soma, anims, random);
+        bel_state2(e, soma, anims, layer, &hit, random);
         break;
     case 4:
         bel_attack(e, soma, anims, &hit, 0xF6, 0x93, 0, 0);

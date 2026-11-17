@@ -951,8 +951,15 @@ typedef struct AosEnemy {
      * + 0x20 hit counter the stun gate reads (> 2 enters state 0xB)
      * and reuses as the state-0xF0 gore spawn index.  The thrown
      * projectiles of sub_080D1BB4/sub_080D1ADC are
-     * AOS_ROLE_BEL_SHOT and the death debris AOS_ROLE_BEL_GORE. */
+     * AOS_ROLE_BEL_SHOT and the death debris AOS_ROLE_BEL_GORE.
+     * `bel_settle` is the state-2 + 0x22 u16 settle timer the
+     * cornered state-6 pick reloads with rng & 3; `bel_flags` is
+     * the + 0x14 flag byte — bit 0x10 marks the param0 == 1 intro
+     * create and bit 0x08 latches the low-HP cornered one-shot
+     * (state 8) and gates the state-6 volleys. */
     uint8_t bel_juggle;
+    uint16_t bel_settle;
+    uint8_t bel_flags;
     /* Great Armor (id 0x3C): `ga_f1a` is the + 0x1A flag the update
      * tail clears on a (rng & 0x7F) <= 3 roll; the fourteen body
      * parts are AOS_ROLE_GA_PART children indexed by `variant`. */

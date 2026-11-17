@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-17T17:32:23+00:00",
+ "generated_at": "2026-11-17T17:57:50+00:00",
  "git": {
-  "commit": "356fc888",
+  "commit": "c101d73c",
   "branch": "main",
   "dirty": true
  },
@@ -10402,8 +10402,8 @@
     "PlaySong",
     "RandomNumberGenerator"
    ],
-   "limitations": "The param0 == 1 cutscene variant and its sub_080CFC04 Object20 dialogue entities are not ported (the boss room spawns the fight variant); the state-2 sub_080D0044 wall probes (sub_0806DF40/sub_0806E140), the 0x080E9644 HP-gate table, the + 0x14 cornered flag and the Object20 + 0x13110 checks collapse to the shared probes and a documented random pick; each attack state keeps its entry song accents and return to state 2 while the per-case choreography collapses to a windup/strike/recover cycle; the sub_080D1BB4/sub_080D1ADC projectile entities fold into BEL_SHOT children sharing the parent kind; the + 0x20 juggle counter folds into bel_juggle; the sub_08013CF0/sub_08034498/sub_0806E1B8 event calls are covered by the shared paths or not ported; the param0 == 1 room record (area_05_room_006) folds into the fight path, so the sub_080CFAB0 create's variant writes, the sub_080CFD0C state-1 per-frame sub_0800C5A8(0) and the Object20 dialogue machinery stay unported (the param0 != 1 create's sub_0800C5A8(1) is unreachable in the port); and there is no emulator comparison. EnemyBelmontCreate (0x080CFAB0) loads tiles 0x08119520 — an encoding-2 container of four 16x8 sub-sheets — palette 0x0820C028 and frames 0x08252748, runs the first-visit and dormant gates (+ 0x5C = 0x11, + 0x3E bit 2, state 3 or 0xC) and registers the sub_080D1A44 hurt callback. EnemyBelmontUpdate (0x080CFED0) dispatches states 1, 9, 0xB, 0xC, 0xD and 0xF0 to dedicated handlers and states 2-10 through the jump table: state 2 (sub_080D0044) is the main machine whose decoded random pick enters the attack states; state 3 (sub_080D2328) hands off to state 2; states 4-10 run the attack envelopes with their native song accents (0xF6/0x93, 0xFC, 0x94, 0x80/0xF0) and projectile volleys; state 0xB (sub_080D1580) is the hurt-stun/juggle/lethal exit driven by the sub_080D1A44 callback (lethal song 0x1E1, juggle songs 0x1E2/0x1E3 past the + 0x20 > 2 gate); state 0xF0 (sub_080D1854) is the death machine with gore and the delete. Unit-tested in belmont_tests.",
-   "next_action": "Port the param0 == 1 cutscene variant with its Object20 dialogue entities; port the per-case attack choreography tables and compare against an emulator.",
+   "limitations": "The param0 == 1 intro machine (sub_080CFD0C) is ported as the state-1 five-case machine — SetPlayerInput(1, 0x20) LEFT for cases 0-3, the 0x38/0x20/0x20 u8 countdowns, the hidden stateless entity and the case-4 fold into the state-3 fight entry (the param0 = 0 re-create) — while its case-2 sub_080CFC04 Object20 dialogue spawn and the gEwramData + 0x4E4 + slot * 0x84 record poll stay unported; the state-2 sub_080D0044 machine keeps its + 0xB case order (approach / facing tracker / ten-frame turn), the + 0x22 u16 settle, the record-hp/3 HP gate, the sub_0806DF40 wall probes (shared cell read, wall bit), the + 0x14 cornered latch with its state-8 one-shot and + 0x42C ORs 0x1000 write and the sub_0806C1B0 proximity picks (close 0x20x0x30, wide 0x80x0x40 behind the Soma state-1/facing check, cornered 0x100x0x80 with the settle reload) while the sub_0806E140 walk/integrate, the sub_0803F2C8 per-frame helper, the sub_080212C8 player action word (its far state-4 and case-2 state-4 picks stay collapsed) and the + 0x6E byte stay approximated or unported; each attack state keeps its entry song accents and return to state 2 while the per-case choreography tables collapse to a windup/strike/recover cycle; the sub_080D1BB4/sub_080D1ADC projectile entities fold into BEL_SHOT children sharing the parent kind; the + 0x20 juggle counter folds into bel_juggle; the sub_08013CF0/sub_08034498/sub_0806E1B8 event calls are covered by the shared paths or not ported; and there is no emulator comparison. EnemyBelmontCreate (0x080CFAB0) loads tiles 0x08119520 — an encoding-2 container of four 16x8 sub-sheets — palette 0x0820C028 and frames 0x08252748, runs the param0 == 1 intro gate (state 1, + 0x14 ORs 0x10) or the first-visit/dormant gates (+ 0x5C = 0x11, + 0x3E bit 2, state 3 or 0xC) and registers the sub_080D1A44 hurt callback. The param0 == 1 record (area_05_room_006) runs the sub_080CFD0C five-case intro: sub_0800C5A8(0) per frame, SetPlayerInput(1, 0x20) while + 0xC <= 3, case 0 arms the 0x38 countdown, cases 1/3 wrap the u8 timer, case 2 sets + 0x58 ORs 0x20 and spawns the sub_080CFC04 Object20 dialogue entities (unported), and case 4 polls the gEwramData + 0x4E4 record — absent here — re-running the create with param0 = 0, folded into the state-3 handoff. EnemyBelmontUpdate (0x080CFED0) dispatches states 1, 9, 0xB, 0xC, 0xD and 0xF0 to dedicated handlers and states 2-10 through the jump table: state 2 (sub_080D0044) is the main machine whose + 0xB cases run the settle tick, the sub_0806E140 walk, the record-hp/3 wall-probe cornered latch, the sub_0806C1B0 close/wide/cornered attack picks and the facing-change turn; state 3 (sub_080D2328) hands off to state 2; states 4-10 run the attack envelopes with their native song accents (0xF6/0x93, 0xFC, 0x94, 0x80/0xF0) and projectile volleys; state 0xB (sub_080D1580) is the hurt-stun/juggle/lethal exit driven by the sub_080D1A44 callback (lethal song 0x1E1, juggle songs 0x1E2/0x1E3 past the + 0x20 > 2 gate); state 0xF0 (sub_080D1854) is the death machine with gore and the delete. Unit-tested in belmont_tests.",
+   "next_action": "Port the case-2 sub_080CFC04 Object20 dialogue entities and the gEwramData + 0x4E4 record poll behind the shared Object20 owner; port the per-case attack choreography tables (sub_080D03F8/sub_080D0AA8/sub_080D0B8C/sub_080D0DC4/sub_080D0E60/sub_080D10B0/sub_080D1240), the sub_0806E140 walk/integrate and the sub_080212C8 action-word picks, and compare against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
@@ -33363,6 +33363,12 @@
  },
  "timeline": [
   {
+   "commit": "c101d73c",
+   "date": "2026-11-17",
+   "subject": "aos: port Big Golem's +0x1C record engine (sub_080AC014 stepper, AC468/AC314 armers, helpers)",
+   "scope": "project"
+  },
+  {
    "commit": "356fc888",
    "date": "2026-11-17",
    "subject": "aos: wire the + 0x13220 escort pointer's reachable consumers",
@@ -33834,12 +33840,6 @@
    "commit": "5a7ce0f4",
    "date": "2026-11-15",
    "subject": "Run opening actors on the real animation tick chain; document missing Arikado walk consumer",
-   "scope": "project"
-  },
-  {
-   "commit": "fb185c57",
-   "date": "2026-11-15",
-   "subject": "Wire held-sound callers, port scroll room-load tail, decode opening approach",
    "scope": "project"
   }
  ],
@@ -39249,7 +39249,7 @@
        "loot": "n/a",
        "soul": "n/a",
        "soul_ref": "none",
-       "notes": "Soul: the enemies.tsv record drops nothing and has no soul (n/a). Animations: ported from EnemyBelmontCreate (0x080CFAB0) / EnemyBelmontUpdate (0x080CFED0) and the state handlers sub_080D0044 (state 2 main machine), sub_080D03F8, sub_080D0AA8, sub_080D0B8C, sub_080D0334, sub_080D0E60, sub_080D10B0, sub_080D1240, sub_080D1580, sub_080D1854, sub_080D2328, sub_080D2334, sub_080CFD0C, sub_080CFDD4 — the animation record 0x08252748 through the shared play/step helpers; unit-tested in belmont_tests. Sounds: PlaySong 0xF6/0x93 (state 4), 0xFC (state 7), 0x94 (state 9), 0x80/0xF0 (state 10), 0x1E1 (lethal), 0x1E2/0x1E3 (juggle) and the death-path accents are requested and unit-tested, not listened to. Sprite: tiles 0x08119520 — a four-sheet encoding-2 container of 16x8 sub-sheets — palette 0x0820C028, animation record 0x08252748 exported natively, shared by the body and the sub_080D1BB4/sub_080D1ADC projectiles (their own tiles 0x081F82B4, palette 0x0820C04C, frames 0x08252A18 are folded into the BEL_SHOT role). Loot: the enemies.tsv record drops nothing (common/rare item 0). Divergences: the param0 == 1 cutscene variant and its sub_080CFC04 Object20 dialogue entities are not ported (the room spawns the boss variant), the state-2 wall probes, the 0x080E9644 HP-gate table and the Object20 + 0x13110 checks collapse to the shared probes, each attack state keeps its entry songs and return to state 2 while the per-case choreography collapses to a documented windup/strike/recover cycle, the projectile entities fold into BEL_SHOT children sharing the parent kind, the + 0x20 juggle counter folds into bel_juggle, the sub_08013CF0/sub_08034498/sub_0806E1B8 event calls are covered by the shared paths or not ported, and there is no emulator comparison."
+       "notes": "Soul: the enemies.tsv record drops nothing and has no soul (n/a). Animations: ported from EnemyBelmontCreate (0x080CFAB0) / EnemyBelmontUpdate (0x080CFED0) and the state handlers sub_080D0044 (state 2 main machine), sub_080D03F8, sub_080D0AA8, sub_080D0B8C, sub_080D0334, sub_080D0E60, sub_080D10B0, sub_080D1240, sub_080D1580, sub_080D1854, sub_080D2328, sub_080D2334, sub_080CFD0C, sub_080CFDD4 — the animation record 0x08252748 through the shared play/step helpers; unit-tested in belmont_tests. Sounds: PlaySong 0xF6/0x93 (state 4), 0xFC (state 7), 0x94 (state 9), 0x80/0xF0 (state 10), 0x1E1 (lethal), 0x1E2/0x1E3 (juggle) and the death-path accents are requested and unit-tested, not listened to. Sprite: tiles 0x08119520 — a four-sheet encoding-2 container of 16x8 sub-sheets — palette 0x0820C028, animation record 0x08252748 exported natively, shared by the body and the sub_080D1BB4/sub_080D1ADC projectiles (their own tiles 0x081F82B4, palette 0x0820C04C, frames 0x08252A18 are folded into the BEL_SHOT role). Loot: the enemies.tsv record drops nothing (common/rare item 0). Divergences: the param0 == 1 intro machine (sub_080CFD0C) is ported — state 1 hidden, SetPlayerInput LEFT for cases 0-3, the 0x38/0x20/0x20 countdowns and the state-3 fold of the param0 = 0 re-create — while its case-2 sub_080CFC04 Object20 dialogue spawn and record poll stay unported; the state-2 sub_080D0044 machine keeps its case order, + 0x22 settle, record-hp/3 gate, sub_0806DF40 wall probes, + 0x14 cornered latch and sub_0806C1B0 proximity picks while the sub_0806E140 walk, sub_0803F2C8 helper, sub_080212C8 action word and + 0x6E byte stay approximated; each attack state keeps its entry songs and return to state 2 while the per-case choreography collapses to a documented windup/strike/recover cycle; the projectile entities fold into BEL_SHOT children sharing the parent kind; the + 0x20 juggle counter folds into bel_juggle; the sub_08013CF0/sub_08034498/sub_0806E1B8 event calls are covered by the shared paths or not ported, and there is no emulator comparison."
       }
      },
      {

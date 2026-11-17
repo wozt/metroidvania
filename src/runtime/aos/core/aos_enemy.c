@@ -1608,15 +1608,23 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
     if (id == AOS_ENEMY_BELMONT) {
         /* EnemyBelmontCreate 0x080CFAB0: tiles 0x08119520, palette
          * 0x0820C028, frames 0x08252748 through sub_0806E0D0; the
-         * param0 == 1 cutscene variant (sub_080CFC04 Object20
-         * dialogue entities) folds into the boss path (documented);
-         * + 0x5C = 0x11, + 0x3E |= 4, the first-visit flag
-         * gEwramData + 0x42C |= 2 and the hurt/death callbacks
-         * sub_0806E1B8/sub_080D1A44 fold into the shared paths; the
-         * gEwramData + 0x8E & 0x40 flag parks state 0xC, else state
-         * 3 (the sub_080D2328 handoff into state 2). */
+         * param0 == 1 record (area_05_room_006) takes the
+         * sub_080CFD0C intro machine — no sprite object, state 1,
+         * + 0x14 |= 0x10 — which re-runs this create with param0 = 0
+         * once its Object20 dialogue record clears, folding into
+         * state 3 here (the sub_080CFC04 Object20 entities and the
+         * gEwramData + 0x4E4 poll stay unported); the param0 != 1
+         * create's sub_0800C5A8(1), escort register and + 0x42C |= 2
+         * tail writes fold into the shared paths; + 0x5C = 0x11,
+         * + 0x3E |= 4, the first-visit flag gEwramData + 0x42C |= 2
+         * and the hurt/death callbacks sub_0806E1B8/sub_080D1A44
+         * fold into the shared paths; the gEwramData + 0x8E & 0x40
+         * flag parks state 0xC, else state 3 (the sub_080D2328
+         * handoff into state 2). */
         enemy->bel_juggle = 0;
-        enemy->state = flag_8e_40 ? 0xC : 3;
+        enemy->bel_settle = 0;
+        enemy->bel_flags = param0 == 1 ? 0x10 : 0;
+        enemy->state = flag_8e_40 ? 0xC : (param0 == 1 ? 1 : 3);
         enemy->step = 0;
         enemy->substep = 0;
         enemy->timer = 0;

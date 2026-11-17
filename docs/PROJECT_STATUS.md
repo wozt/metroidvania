@@ -1,3 +1,50 @@
+## Patch 1219 - Belmont state-2 choreography and the param0-1 intro
+
+- **Scope.** `src/runtime/aos/enemies/belmont.c`,
+  `src/runtime/aos/core/aos_enemy.c/.h`,
+  `tests/test_aos_enemy.c`, the two `data/native_parity` TSVs and
+  this file. The `param0 == 1` room record was verified reachable:
+  `area_05_room_006/room.tsv` carries `E 1 110 288 175 10 1 0 1`
+  (enemy 110, param0 1); `area_07_room_015` only references id 110
+  through an Object04-style record.
+- **Intro variant.** `EnemyBelmontCreate` now parks the param0 == 1
+  record in state 1 with `bel_flags` bit 0x10 (`+ 0x14 |= 0x10`
+  natively). The state-1 case is the decoded `sub_080CFD0C` five-case
+  machine: `SetPlayerInput(1, 0x20)` (LEFT held) for cases 0-3
+  through `AosHitReport.force_input`, the 0x38/0x20/0x20 u8 countdowns
+  on `timer`/`substep`, the hidden stateless entity (`+ 0x58 |= 0x20`
+  in case 2) and the case-4 fold into the state-3 fight entry — the
+  native re-runs the create with param0 = 0 once the Object20 record
+  poll clears. The case-2 `sub_080CFC04` Object20 dialogue spawn and
+  the `gEwramData + 0x4E4` record poll stay unported (the poll's
+  absent-record path is what the fold exercises).
+- **State-2 machine.** `sub_080D0044` is ported case-for-case on the
+  new `bel_settle` (`+ 0x22` u16) and `bel_flags` (`+ 0x14`) fields:
+  the settle tick, the record-hp/3 HP gate (`0x080E9644`-style
+  record `+ 0xC` read), the `sub_0806DF40` wall probes at ±0x80
+  (shared cell read, wall bit 2, map edge as wall) driving the
+  cornered state-9 facing write, the `+ 0x14 & 8` one-shot state-8
+  latch with the `+ 0x42C |= 0x1000` report, and the `sub_0806C1B0`
+  proximity picks in native order — close 0x20x0x30 (`% 12`→9,
+  `& 7`→4, `& 3`→10), the facing tracker advancing `+ 0xB` 1→2, the
+  wide 0x80x0x40 pick behind the Soma state-1/facing/`+ 0x6E` check
+  (`& 7`→9, `% 6`→4, then unconditional `% 10`→7, `% 50`→10) and the
+  cornered 0x100x0x80 `% 30`→6 volley with the `+ 0x22 = rng & 3`
+  reload — plus the case-2 ten-frame turn.
+- **Still approximated.** The `sub_0806E140` walk/integrate and
+  `sub_0803F2C8` helper fold into the shared move/face helpers, the
+  `sub_080212C8` player `+ 0x4F4` action word keeps its two gated
+  picks (far state-4, case-2 state-4) collapsed, the player `+ 0x6E`
+  byte reads clear, and each attack state keeps its entry songs and
+  return to state 2 while the per-case choreography tables collapse
+  to the documented windup/strike/recover cycle; the
+  `sub_080D1BB4`/`sub_080D1ADC` projectiles stay `BEL_SHOT` children.
+- **Tests.** `belmont_tests` now covers the param0-1 intro
+  (force-input, countdowns, state-3 fold), the wall-cornered state-9
+  entry, the no-wall state-8 latch with `flags42c_set`, the
+  cornered state-6 volley and the settle gate. Unit coverage only —
+  no emulator comparison.
+
 ## Patch 1218 - Aria + 0x13220 escort consumers wired; + 0x4CC bit-6 audit closed
 
 - **Scope.** `src/runtime/aria_skills.c`,
@@ -1166,8 +1213,10 @@
   then the flag drops). The level-up freeze
   (`entities_frozen`) also lifts on dead Soma — native has no
   separate died flag, `hp <= 0` is the lethal signal.
-- **Still unported (documented).** Belmont's param0-1 variant
-  (`0xCFAB0`/`0xCFB08`/`0xCFD10`), Balore's `sub_080B6880`
+- **Still unported (documented).** Belmont's param0-1 Object20
+  dialogue machinery (`sub_080CFC04`, the `gEwramData + 0x4E4`
+  record poll — the intro state machine itself is ported in
+  patch 1219), Balore's `sub_080B6880`
   controller, Chronomage's `+0x4BE` arm, Graham's clone/core and
   remaining `0xD2xxx` callbacks.
 - **Verification.** `ctest -R aos_enemy` passes with the
@@ -2088,7 +2137,9 @@
 - **Item 4 — remaining enemy sites documented, not ported.**
   `sub_080BE414` (Death state-0 intro: arg-0 gated entry,
   arg-1 strike-arm), `sub_080CFAB0`/`sub_080CFB08`/`sub_080CFD10`
-  (Belmont create and unported param0-1 states), `sub_080B6880`
+  (Belmont create and the param0-1 intro's per-frame
+  `sub_0800C5A8(0)` — the state machine itself is ported in
+  patch 1219), `sub_080B6880`
   (Balore's uninstantiated 12-state sub-machine),
   `sub_080B6DEC`'s no-fade step-5 branch (Chronomage; gate
   globals unmodelled), `sub_080D243C`/`sub_080D2E1E`/

@@ -965,11 +965,16 @@ static bool cells_commit(AosPauseGraphics *graphics, unsigned tile_x,
                          unsigned *next_tile) {
     if (!graphics || !next_tile || tile_x >= 32 || tile_y >= 32)
         return false;
-    /* The window covers canvas pixels [col*6, (col+w-1)*6) x
-     * [row*12, (row+h-1)*12); cells are the 8px framebuffer grid. */
-    unsigned px_x0 = col * 6, px_x1 = (unsigned)(col + w - 1) * 6 + 6;
+    /* The window covers canvas pixels [col*6, (col+w-2)*6+6) x
+     * [row*12, (row+h-1)*12+12): sub_08040748 stores x1 = col+w-2 and
+     * y1 = row+h-1 and sub_08040FE0 iterates the home..x1 columns and
+     * home..y1 rows, so context-A commits span w-1 text columns but h
+     * text rows. Cells are the 8px framebuffer grid. */
+    unsigned px_x0 = col * 6;
+    int px_x1 = (int)(col + w - 2) * 6 + 6;
     unsigned px_y0 = row * 12, px_y1 = (unsigned)(row + h - 1) * 12 + 12;
-    unsigned cx0 = px_x0 / 8, cx1 = (px_x1 - 1) / 8;
+    if (px_x1 <= (int)px_x0) return true;
+    unsigned cx0 = px_x0 / 8, cx1 = (unsigned)(px_x1 - 1) / 8;
     unsigned cy0 = px_y0 / 8, cy1 = (px_y1 - 1) / 8;
     return cells_commit_range(graphics, tile_x, tile_y, cx0, cy0, cx1,
                               cy1, palette, next_tile);
@@ -1075,6 +1080,11 @@ bool aos_pause_graphics_render_soul_set(
                   10 + (int)(entry / 2),
                   (uint16_t)(0x3380 + entry * 0x10), 10);
 
+    /* sub_080472B0's tail sets the context-A window (0,0,0x1E,2) after
+     * filling the strip at tilemap (7,15); the description then prints
+     * through sub_0804728C -> sub_08046BC8 on that window. The cell
+     * canvas origin is the strip's top-left tile (7,15): the covered
+     * cells land exactly on tiles 7..28 x 15..17, the strip itself. */
     unsigned next_tile = 0;
     for (unsigned category = 0; category < AOS_PAUSE_SOUL_FAMILIES; ++category) {
         unsigned x = category == 0 ? 126 : category == 1 ? 0 : 126;
@@ -1140,9 +1150,12 @@ bool aos_pause_graphics_render_soul_set(
                    soul ? values->counts[values->category][soul - 1] : 0,
                    1, 0x3300, false);
     }
-    if (!place_text_id(graphics,
-                       soul_description_id(values->category, selected_soul),
-                       false, 56, 120, 174, 3, &next_tile))
+    /* Same native path as the hub tail: sub_0804728C on the
+     * (0,0,0x1E,2) context-A window sub_080472B0 configured, with the
+     * cell canvas rooted at the strip's tilemap origin (7,15). */
+    if (!place_text_cells(graphics,
+                          soul_description_id(values->category, selected_soul),
+                          false, 7, 15, 0, 0, 0x1E, 2, 3, &next_tile))
         return false;
 
     composite_on_backdrop(graphics, rgba);
@@ -1462,15 +1475,14 @@ bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
      * selected entry's description through the context-A cell engine:
      * text 0x257+cursor while SoulInventory_GetSoulTotal(3,cursor)
      * reports the ability owned, else 0x34F "---". The native window is
-     * sub_08040748(0,0,0x1F,4) set up by sub_080472B0's tail; its cell
-     * canvas lands inside the bottom frame below the name rows, with
-     * the first text row at screen y120 — the port commits the canvas
-     * cells at tile origin (6,15), the frame's left column and the
-     * shared bottom band's row. */
+     * sub_08040748(0,0,0x1F,4) set up by sub_080472B0's tail; the cell
+     * canvas is rooted at the strip's tilemap origin (6,13), so the
+     * covered cells land on tiles 6..28 x 13..18 — exactly the frame
+     * sub_080472B0(6,0xD,0x3200,0x1F,4) filled. */
     if (!place_text_cells(graphics,
                           values->owned[values->cursor]
                               ? (uint16_t)(0x257 + values->cursor) : 0x34F,
-                          false, 6, 15, 0, 0, 0x1F, 4, 3, &next_tile))
+                          false, 6, 0xD, 0, 0, 0x1F, 4, 3, &next_tile))
         return false;
     composite(graphics, rgba);
     /* sub_0804BA18's placement: column 2 or 0x10 on cursor bit 0, row

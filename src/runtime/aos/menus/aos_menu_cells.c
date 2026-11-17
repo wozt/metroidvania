@@ -278,8 +278,9 @@ static int run_text(AosMenuCells *cells, const uint8_t *script,
      * newline: it repositions the cursor with sub_0804066C to
      * (column at entry, row at entry + newline count), clamped to
      * 40x20 — not a relative wrap reset. Other control bytes end
-     * the run (10 = terminator, 11..18 = icon commands handled by
-     * the caller's jump table, not ported here). */
+     * the run (10 = terminator); bytes 11..18 are icon commands the
+     * native jump table consumes mid-string — the port skips the
+     * command byte without drawing the icon sheet. */
     const uint8_t *p = script + 2 + offset;
     uint16_t base_col = large ? cells->a_col : cells->b_col;
     uint16_t base_row = large ? cells->a_row : cells->b_row;
@@ -312,6 +313,15 @@ static int run_text(AosMenuCells *cells, const uint8_t *script,
                 cells->b_px = (uint16_t)(col * 6);
                 cells->b_py = (uint16_t)(row * 8);
             }
+            ++i;
+            continue;
+        } else if (ch >= 0x0B && ch <= 0x12) {
+            /* sub_08046BC8's dispatch sends bytes 0x0B-0x12 to the
+             * caller-side icon-command jump table, which draws a button
+             * icon and continues the run. The icon sheets are not wired
+             * into the cell port yet, so the command byte is consumed
+             * without emitting a glyph (previously it ended the run and
+             * truncated the rest of the string). */
             ++i;
             continue;
         } else {

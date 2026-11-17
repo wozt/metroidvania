@@ -553,8 +553,8 @@ int main(int argc, char **argv) {
                                                      rgba, 240 * 160 * 4));
             /* Window fill at tilemap (6,13), 23x6: cell (14,6) is
              * i=1,j=0 -> 0x3200+1*32+0 = 0x3220; (18,26) -> 0x32B4. The
-             * left column stays clear of the description canvas that
-             * sub_0804BCA0 commits at tile origin (6,15). */
+             * description canvas sub_0804BCA0 commits at tile origin
+             * (6,13) — the strip's top-left — spans rows 13-18. */
             assert(graphics.bg0_map[14 * 32 + 6] == 0x3220);
             assert(graphics.bg0_map[18 * 32 + 26] == 0x32B4);
             /* Strips: byte14>>1 = 3 iterations give rows 4,6,8 only —
@@ -578,11 +578,11 @@ int main(int argc, char **argv) {
             /* sub_0804BCA0/sub_0804BB40: cursor 0 is owned, so the
              * bottom window shows text 0x257+0 = 0x257 "Backdash by
              * pressing B." through the context-A cell path committed at
-             * tile origin (6,15) — cells land on tile rows 15-18,
-             * columns 6+, as palette-3 text tiles (index < 0x200),
-             * below the name rows 12-14 and inside the frame. */
+             * tile origin (6,13) — the strip's top-left — so cells land
+             * on tile rows 13-18, columns 6-28, exactly the filled
+             * frame, as palette-3 text tiles (index < 0x200). */
             unsigned description_cells = 0;
-            for (unsigned row = 15; row <= 18; ++row)
+            for (unsigned row = 13; row <= 18; ++row)
                 for (unsigned col = 6; col <= 28; ++col)
                     if ((graphics.bg0_map[row * 32 + col] & 0x3FF) < 0x200)
                         ++description_cells;
@@ -593,7 +593,7 @@ int main(int argc, char **argv) {
             assert(aos_pause_graphics_render_ability(&graphics, &ability,
                                                      rgba, 240 * 160 * 4));
             unsigned unowned_cells = 0;
-            for (unsigned row = 15; row <= 18; ++row)
+            for (unsigned row = 13; row <= 18; ++row)
                 for (unsigned col = 6; col <= 28; ++col)
                     if ((graphics.bg0_map[row * 32 + col] & 0x3FF) < 0x200)
                         ++unowned_cells;

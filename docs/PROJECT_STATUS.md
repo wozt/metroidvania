@@ -25833,3 +25833,41 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Tests: `tests/test_aos_soul_menu.c` now asserts the grid semantics
   (row/column moves, clamp-to-last on page-down, the post-use last-cell
   fixup, None unequip through the grid) for Equip and Item Use.
+
+## Patch 0262 - Aria START-menu bottom-window cell geometry decoded
+
+- `sub_080472B0` is now fully decoded and the port matches it: the
+  framebuffer-to-BG0 commit fills a tilemap rectangle of
+  `(dim_a*6)>>3` by `(dim_b*12)>>3` consecutive tiles at the supplied
+  map origin, then `sub_08040748` configures the context-A window
+  `(0,0,w,h)` — `x1 = col+w-2`, `y1 = row+h-1` — and `sub_08040FE0`
+  commits the cell canvas rooted at the strip's tilemap origin. Both
+  verified call sites match: Soul Set `sub_080472B0(7,0xF,0x3200,0x1E,2)`
+  and Ability `sub_080472B0(6,0xD,0x3200,0x1F,4)`.
+- The Soul Set description moved off the intro-font `place_text_id`
+  approximation onto the native cell path (`place_text_cells`) at tile
+  origin (7,15) on window (0,0,0x1E,2); the Ability description canvas
+  moved from tile (6,15) to the strip origin (6,13) on window
+  (0,0,0x1F,4). On both pages the committed cells now land exactly on
+  the filled frame tiles (Soul Set 7..28 x 15..17, Ability 6..28 x
+  13..18).
+- `cells_commit` now covers `w-1` six-pixel columns per
+  `sub_08040748`'s `x1 = col+w-2` bound instead of `w`, matching the
+  native `sub_08040FE0` iteration range.
+- Text bytes 0x0B-0x12 are `sub_08046BC8` icon commands consumed by the
+  caller-side jump table; the cell port now skips the command byte and
+  continues the run instead of truncating the string. Icon sheets remain
+  unported OBJ-layer work.
+- Enemy catalog record 0x70 ("Chaos") confirmed intentionally absent:
+  the native enemy-page init stores `0x70` as the record count at entity
+  `+0x14` (`func_0804C532`), so the navigable list is 112 records and
+  Chaos is unreachable natively too. `AOS_BESTIARY_MENU_RECORDS = 0x70`
+  is correct, not a port bug.
+- Remaining documented gaps: OBJ-layer leftovers (icon entities, button
+  icons, portrait per-enemy entity update via `sub_0804CA18`, hand
+  affine variants on non-Soul-Set pages) and per-page transition/chrome
+  approximations are unchanged and still listed in the
+  `aos.souls.equipment_menu` annotation row.
+- Tests: `tests/test_aos_pause_graphics.c` ability assertions updated
+  for the (6,13) canvas origin; `fusion_aos_pause_graphics_tests` and
+  `fusion_aos_menu_cells_tests` pass.

@@ -633,15 +633,22 @@ static void test_script_and_commit(void) {
     assert(event.waiting && event.line == 1);
     assert(event.glyph_counts[0] == 2 && event.glyph_counts[1] == 1);
     aos_opening_event_update(&event, AOS_KEY_A);
-    assert(!event.waiting && event.glyph_counts[0] == 1 &&
-           event.glyphs[0][0] == 'D');
+    /* The command-4 clear starts sub_08067A04's window slide and holds
+     * the byte loop: 0x24 -> 0 -> 0x24 at 3 units per update frame
+     * before the speaker/beat commands and 'D' are reached. */
+    assert(!event.waiting && event.slide_dir == -1 &&
+           event.glyph_counts[0] == 0);
+    for (unsigned frame = 0; frame < 40 && event.slide_dir != 0; ++frame)
+        aos_opening_event_update(&event, 0);
+    assert(event.slide_dir == 0 && event.slide_pos == 0x24);
     for (unsigned frame = 0; frame < 16 && !event.waiting; ++frame)
         aos_opening_event_update(&event, 0);
     assert(event.waiting && event.beat == 9 && event.speaker == 8);
     assert(event.beat_count == 1 && event.cue == AOS_OPENING_CUE_ENTRY_PAN);
     assert(event.glyph_counts[0] == 1 && event.glyphs[0][0] == 'D');
     aos_opening_event_update(&event, AOS_KEY_A);
-    for (unsigned frame = 0; frame < 16 && event.active; ++frame)
+    /* Command 9 repeats the same 24-frame clear slide before 'E'. */
+    for (unsigned frame = 0; frame < 48 && event.active; ++frame)
         aos_opening_event_update(&event, 0);
     assert(event.complete && !event.active && !event.malformed);
     assert(event.cue == AOS_OPENING_CUE_COMPLETE);

@@ -35,6 +35,9 @@ bool aos_opening_event_init(AosOpeningEvent *event, const uint8_t *script,
         .position = 2,
         .active = true,
         .dirty = true,
+        /* The window starts fully extended: the first clear command
+         * retracts 0x24 -> 0 before extending back. */
+        .slide_pos = 0x24,
     };
     return true;
 }
@@ -117,7 +120,13 @@ static void run_until_glyph_or_wait(AosOpeningEvent *event) {
         case 4:
         case 9:
             clear_page(event);
-            break;
+            /* sub_08067A04's clear commands start the window slide and
+             * hold the byte loop until the offset returns to 0x24:
+             * retract 0x24 -> 0, then extend 0 -> 0x24 at 3 units per
+             * update frame. */
+            event->slide_dir = -1;
+            event->dirty = true;
+            return;
         case 5:
             event->waiting = true;
             return;
@@ -160,6 +169,23 @@ void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input) {
     event->advanced = false;
     event->cue = AOS_OPENING_CUE_NONE;
     bool advance = (new_input & (AOS_KEY_A | AOS_KEY_START)) != 0;
+    /* sub_08067A04's clear-command window slide runs one 3-unit step per
+     * update frame and holds the parser until the offset returns to
+     * 0x24 (retract 0x24 -> 0, then extend 0 -> 0x24). */
+    if (event->slide_dir != 0) {
+        int pos = (int)event->slide_pos + event->slide_dir * 3;
+        if (pos < 0) {
+            event->slide_pos = 0;
+            event->slide_dir = 1;
+        } else if (pos > 0x24) {
+            event->slide_pos = 0x24;
+            event->slide_dir = 0;
+        } else {
+            event->slide_pos = (uint8_t)pos;
+        }
+        event->dirty = true;
+        return;
+    }
     if (event->waiting) {
         if (!advance) return;
         event->waiting = false;

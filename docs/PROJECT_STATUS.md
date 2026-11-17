@@ -1,3 +1,62 @@
+## Patch 1207 - opening: sub_08067A04 page-clear window slide ported; pacing gap closed
+
+- **Scope.** Closes the ~1085-frame opening pacing gap localized by
+  Patches 1203/1205/1206. `sub_0805D410`'s `+0xB`/`+0xC`/`+0xD` beat
+  machine and `sub_0805CCE4`'s camera predicates were re-decoded and
+  confirmed already faithful (all dwell constants match the port's
+  `scene_state`/`scene_step`/`scene_timer` within a frame); the real
+  missing term was inside `sub_08067A04` itself — the page-clear
+  window slide — which Patch 1206's wait-model decode had not
+  covered. `aos_opening_event.c`/`.h` and
+  `tests/test_aos_opening_event.c` only.
+- **Native decode (per-frame mGBA peeks at `0x02000414`, the
+  `sub_08067A04` state block, under the `cap_a60.txt` 60-frame A-tap
+  schedule).** The engine is a per-frame coroutine: `+0x414` low
+  nibble selects phases 0-6 (0 = byte-loop/scan+dispatch, 1 =
+  'press A' prompt blink, 4 = glyph delay countdown on `+0x415`,
+  5/6 = close/done). Script bytes 1-10 dispatch command handlers;
+  byte 2 is the Object20 beat advance, byte 5 the level-triggered
+  A wait. The clear commands run a window slide: the offset byte
+  (`+0x41A`) steps 0x24 -> 0 -> 0x24 in exact 3-unit increments,
+  12 update frames per direction, holding the byte loop (script
+  position static) for ~24-26 frames per page turn — twice per
+  beat-dense page cycle in the capture.
+- **Script census (ROM text entry 0x000C plus command-1 inserts,
+  language 1).** 1581 glyphs, 41 waits, 41 clears, 7 beats. At one
+  glyph/frame plus the slide dwell the native budget is ~1581 +
+  ~41*30 + ~41*26 + overhead ~= 4600-4700 frames, matching the
+  observed ~4685; the port previously paid zero for the 41 clears.
+- **Port change.** `AosOpeningEvent` gains `slide_dir`/`slide_pos`;
+  commands 4 and 9 now start the retract/extend sequence
+  (`slide_pos` 0x24 -> 0 -> 0x24, 3 units per `aos_opening_event_
+  update` frame) and hold the parser until the offset returns to
+  0x24, mirroring the native byte-loop hold. The window offset is
+  initialized to 0x24 (fully extended) as the first page opens
+  extended. Glyph/wait/beat behavior is unchanged.
+- **Measurement (fresh xvfb `--capture-script cap_a60.txt --capture
+  9000 0` run, `ARIA_OPENING_TRACE=1`).** Last opening-actor trace
+  frame moved from f=3601 to f=4708; native Object20 `+0xB`->0 is
+  ~4685 under the same tap schedule. The ~1085-frame gap is closed
+  to ~+23 frames, inside the two captures' frame-origin uncertainty
+  (state-load vs runtime boot). The story still completes: event
+  0x20 set, Winged Skeleton soul granted and equipped.
+- **Limitations.** The slide is modeled as a parser hold with the
+  decoded 0x24/3-unit timing; the native window geometry animation
+  (which display registers the offset drives) is not separately
+  rendered — `aria_draw.c` remains sibling-owned and the port's
+  existing window presentation is unchanged. Residual ~23f may be
+  per-clear boundary frames or capture-origin offset; not
+  further decomposed this cycle.
+- **Verification.** `ctest --test-dir build -R aos_opening_event`
+  passes (test updated to assert the 0x24->0->0x24 slide hold and
+  its frame count); `ctest -R "opening|dialogue|intro|aria_runtime|
+  room"` 23/23 pass; clean `cmake --build build -j8`.
+- **Registries.** `annotations.tsv` (`aos.events.opening_scene`) and
+  `features.tsv` (`story.aria_opening_event`) notes updated: the
+  pacing gap is closed by the `sub_08067A04` clear-command window
+  slide; the beat state machine and camera predicates are confirmed
+  faithful.
+
 ## Patch 1206 - opening: Arikado +0x48 consumer search closed, sub_08067A04 wait model decoded
 
 - **Scope.** Resolves Patch 1203 next-action (1) and retires the

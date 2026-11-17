@@ -230,6 +230,14 @@ typedef struct {
     uint8_t portrait;
     uint8_t beat;
     uint8_t beat_count;
+    /* sub_08067A04's page-clear window slide: after a clear command the
+     * native text window retracts its 0x24-unit offset to 0 and extends it
+     * back at 3 units per frame (the same 0x24 clamp and ±3 step
+     * sub_08067804 applies to its window counter), so a page turn costs
+     * 24 update frames before the next glyph. slide_dir is 0 idle,
+     * -1 retracting, +1 extending; slide_pos is the 0..0x24 offset. */
+    int8_t slide_dir;
+    uint8_t slide_pos;
     AosOpeningCue cue;
     bool active;
     bool waiting;

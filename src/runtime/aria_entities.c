@@ -2989,7 +2989,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  e->enemy.role == AOS_ROLE_BONE_PILLAR_SEGMENT) &&
                 combat->progress) {
                 int32_t gained = aos_stats_reward_enemy(
-                    combat->progress, &e->reward_flags, 0, (uint8_t)e->id,
+                    combat->progress, &e->reward_flags,
+                    aria_ewram_cine_4cc, (uint8_t)e->id,
                     combat->stats[e->id]->experience);
                 if (gained > 0) {
                     soma->max_hp = (int16_t)combat->progress->max_hp;

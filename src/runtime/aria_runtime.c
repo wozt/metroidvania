@@ -1621,6 +1621,11 @@ int aria_runtime_main(int argc, char **argv) {
         soma.max_hp = (int16_t)player_stats.max_hp;
         if (!load_weapon(DEFAULT_WEAPONS, weapon_name, &soma.weapon))
             fprintf(stderr, "Export the weapons first: ./build/fusion_rebuild --task aria_weapons\n");
+        static AriaWeaponSprite sim_weapon_sprite;
+        bool sim_weapon_loaded = soma.weapon.weapon_class <= 4 &&
+            load_weapon_sprite(weapon_name, &sim_weapon_sprite, NULL);
+        if (!sim_weapon_loaded)
+            fprintf(stderr, "No headless weapon frames for %s\n", weapon_name);
         AosPickupRecent recent_items;
         aos_pickup_recent_reset(&recent_items);
         AosRecentSouls recent_souls;
@@ -1628,7 +1633,7 @@ int aria_runtime_main(int argc, char **argv) {
         AosWeaponEntity weapon_entity = {0};
         AriaCombat combat = {
             .weapon = &weapon_entity,
-            .weapon_frames = NULL,
+            .weapon_frames = sim_weapon_loaded ? &sim_weapon_sprite.data : NULL,
             .player = &player_stats,
             .progress = &progress,
             .equipment = have_equipment ? &equipment : NULL,
@@ -1792,7 +1797,8 @@ int aria_runtime_main(int argc, char **argv) {
                                  aos_in_game_mode_locks_input(&in_game_mode))
                                     ? 0
                                     : held;
-            aos_soma_update(&soma, &layer, (uint16_t)held_eff, 0);
+            aos_soma_update(&soma, &layer, (uint16_t)held_eff,
+                            (uint16_t)(sim_new_input & held_eff));
             bool door_held = false;
             for (size_t k = 0; k < room.entity_count && !door_held; ++k)
                 door_held = room.entities[k].kind == ARIA_KIND_SPECIAL &&
@@ -1864,6 +1870,20 @@ int aria_runtime_main(int argc, char **argv) {
             }
             aos_combat_tick(&soma.combat);
             follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
+            /* The native entity order places the equipped weapon before the
+             * room enemies. Headless simulation now consumes the same input,
+             * animation and hitbox records as the interactive loop, without
+             * creating SDL textures. */
+            if (sim_weapon_loaded) {
+                aos_weapon_update(&weapon_entity, &soma,
+                                  &sim_weapon_sprite.data, &layer,
+                                  aos_random);
+                for (int k = 0; k < weapon_entity.effect_count &&
+                     room.effect_count < MAX_EFFECTS; ++k)
+                    if (combat.effects[weapon_entity.effects[k].kind])
+                        room.effects[room.effect_count++] =
+                            weapon_entity.effects[k];
+            }
             homing_room = &room;
             object10_save_ctx = NULL;
             object1c_save_ctx = NULL;
@@ -1955,6 +1975,9 @@ int aria_runtime_main(int argc, char **argv) {
         }
         printf("Aria simulate: SPECIAL %d/%d spawned, %d enemies alive\n",
                spawned_special, active_special, enemies_alive);
+        printf("Aria simulate: level %u, experience %u, next %d\n",
+               progress.level, progress.experience,
+               aos_stats_experience_to_next(&progress));
         if (getenv("AOS_SIM_DUMP_ENTS")) {
             for (size_t k = 0; k < room.entity_count; ++k) {
                 const AriaEntity *e = &room.entities[k];
@@ -1965,6 +1988,7 @@ int aria_runtime_main(int argc, char **argv) {
             }
         }
         free(sim_dirs);
+        free_weapon_sprite(&sim_weapon_sprite);
         if (sim_background) SDL_DestroyTexture(sim_background);
         aos_mp2k_engine_destroy(&mp2k);
         free_room(&room);

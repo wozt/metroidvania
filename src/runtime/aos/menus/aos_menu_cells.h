@@ -52,12 +52,24 @@ typedef struct {
     uint16_t b_y1;        /* +0x115C2 window bottom row limit */
     /* 0x03001A18: glyph staging strip written by the blitters. */
     uint32_t scratch[AOS_MENU_CELLS_LARGE_ROWS];
+    /* sub_08046B58's button lookup: the configured physical button index
+     * (0=A, 1=B, 2=R, 3=L) per action in native order attack, jump,
+     * ability, guardian — gEwramData + 0x13398 holds the GBA masks;
+     * the port keeps the 0x0852550C indices. Defaults are the shipped
+     * configuration {B, A, L, R}. */
+    uint8_t action_button[4];
 } AosMenuCells;
 
 void aos_menu_cells_init(AosMenuCells *cells);
 void aos_menu_cells_set_fb(AosMenuCells *cells, uint32_t *fb); /* sub_080412DC */
 void aos_menu_cells_set_attr(AosMenuCells *cells, uint16_t attr); /* sub_080412F0 */
 void aos_menu_cells_set_ink(AosMenuCells *cells, uint16_t ink);   /* sub_08041304 */
+/* sub_08046B58 reads gEwramData + 0x13398 (the four configured action
+ * buttons) to pick the glyph pair for icon command bytes 0x0B-0x0E.
+ * `buttons` is indexed by action (attack, jump, ability, guardian) and
+ * holds button indices 0-3; NULL restores the shipped defaults. */
+void aos_menu_cells_set_buttons(AosMenuCells *cells,
+                                const uint8_t buttons[4]);
 
 /* Primitive glyph blitters into scratch[]: sub_0803FEA4 (large, 12
  * rows) and sub_080402DC (small, 8 rows). `metrics` is the glyph record

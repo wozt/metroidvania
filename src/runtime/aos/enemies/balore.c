@@ -834,7 +834,7 @@ AosHitReport aos_enemy_balore_update(
 
     /* Lethal: the hurt callback sub_080B6AE8 enters the state-4
      * death machine directly (its case 1 plays song 0x1D6). */
-    if (!e->defeated && e->hp <= 0 && e->state != 4) {
+    if ((hit.killed || (!e->defeated && e->hp <= 0)) && e->state != 4) {
         e->defeated = true;
         e->state = 4;
         e->substep = 0;

@@ -493,7 +493,7 @@ int main(int argc, char **argv) {
             write_ppm(argv[4], rgba);
         }
         assert(aos_pause_graphics_render_sleep(
-            &graphics, false, AOS_PAUSE_SLEEP_RESULT_NONE,
+            &graphics, false, 1, AOS_PAUSE_SLEEP_RESULT_NONE,
             rgba, 240 * 160 * 4));
         /* sub_0804BD38 renders three bands, not one shared bottom window:
          * the 0x361 refusal must land in the narrow upper-left question
@@ -512,8 +512,31 @@ int main(int argc, char **argv) {
             for (unsigned col = 0; col <= 25; ++col)
                 assert(graphics.bg0_map[row * 32 + col] == 0x330D);
         assert(aos_pause_graphics_render_sleep(
-            &graphics, true, AOS_PAUSE_SLEEP_RESULT_NONE,
+            &graphics, true, 1, AOS_PAUSE_SLEEP_RESULT_NONE,
             rgba, 240 * 160 * 4));
+        /* sub_0804BE0C moves the same decoded hand between x=0x65
+         * (Yes) and x=0x95 (No), rather than leaving a fixed arrow. */
+        {
+            uint8_t *sleep_no = malloc(240 * 160 * 4);
+            assert(sleep_no);
+            memcpy(sleep_no, rgba, 240 * 160 * 4);
+            assert(aos_pause_graphics_render_sleep(
+                &graphics, true, 0, AOS_PAUSE_SLEEP_RESULT_NONE,
+                rgba, 240 * 160 * 4));
+            unsigned yes_diff = 0, no_diff = 0;
+            for (unsigned y = 128; y < 154; ++y) {
+                for (unsigned x = 84; x < 126; ++x) {
+                    size_t pixel = ((size_t)y * 240 + x) * 4;
+                    yes_diff += memcmp(rgba + pixel, sleep_no + pixel, 4) != 0;
+                }
+                for (unsigned x = 132; x < 174; ++x) {
+                    size_t pixel = ((size_t)y * 240 + x) * 4;
+                    no_diff += memcmp(rgba + pixel, sleep_no + pixel, 4) != 0;
+                }
+            }
+            assert(yes_diff > 0 && no_diff > 0);
+            free(sleep_no);
+        }
         /* The available path draws the 0x36A question in the same upper
          * band plus vertically stacked Yes/No labels in the middle
          * parallelogram frame (place_text_id at pixels y96/y104). */
@@ -532,7 +555,7 @@ int main(int argc, char **argv) {
         for (unsigned result = AOS_PAUSE_SLEEP_RESULT_SAVED;
              result <= AOS_PAUSE_SLEEP_RESULT_FAILED; ++result) {
             assert(aos_pause_graphics_render_sleep(
-                &graphics, true, result, rgba, 240 * 160 * 4));
+                &graphics, true, 1, result, rgba, 240 * 160 * 4));
             unsigned result_cells = 0;
             for (unsigned row = 15; row <= 19; ++row)
                 for (unsigned col = 0; col <= 25; ++col)
@@ -772,17 +795,17 @@ int main(int argc, char **argv) {
                 write_ppm(argv[7], rgba);
             }
             assert(aos_pause_graphics_render_sleep(
-                &graphics, true, AOS_PAUSE_SLEEP_RESULT_NONE,
+                &graphics, true, 1, AOS_PAUSE_SLEEP_RESULT_NONE,
                 rgba, 240 * 160 * 4));
             write_ppm(argv[8], rgba);
             if (argc >= 14) {
                 /* sub_0804BE0C's result lines for capture comparison. */
                 assert(aos_pause_graphics_render_sleep(
-                    &graphics, true, AOS_PAUSE_SLEEP_RESULT_SAVED,
+                    &graphics, true, 0, AOS_PAUSE_SLEEP_RESULT_SAVED,
                     rgba, 240 * 160 * 4));
                 write_ppm(argv[11], rgba);
                 assert(aos_pause_graphics_render_sleep(
-                    &graphics, true, AOS_PAUSE_SLEEP_RESULT_FAILED,
+                    &graphics, true, 1, AOS_PAUSE_SLEEP_RESULT_FAILED,
                     rgba, 240 * 160 * 4));
                 write_ppm(argv[12], rgba);
                 /* Ability page with the cursor on an unowned entry so

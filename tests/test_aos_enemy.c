@@ -1743,18 +1743,28 @@ static void balore_tests(void) {
         if (hit.children[i].role == AOS_ROLE_BALO_BLADE) blades++;
     assert(blades == 2 && a.substep == 1 && a.timer == 0x60);
 
-    /* Lethal: hp 0 -> defeated, state 4 death machine, then the
-     * case-6 delete. */
+    /* A lethal weapon collision reports the kill to update_entities and
+     * enters state 4 immediately, even though the shared collision helper
+     * has already marked the body defeated. */
     AosEnemy el;
     assert(aos_enemy_create(&el, 0x6D, 150, 120, 0, 0,
                             &soma, &layer, &kind, &bl));
     el.x = AOS_FIXED(150);
     el.y = AOS_FIXED(120);
     el.state = 2;
-    el.hp = 0;
-    aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
-                     10, 4, 0, 0, always_zero);
-    assert(el.defeated && el.state == 4);
+    el.hp = 1;
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    soma.x = el.x;
+    soma.y = el.y;
+    hit = aos_enemy_update(&el, &soma, &layer, &kind, &weapon, &blade,
+                           9999, 4, 0, 0, always_zero);
+    assert(hit.killed && el.defeated && el.state == 4);
     el.substep = 6;
     el.timer = 0;
     hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
@@ -2175,17 +2185,31 @@ static void death_tests(void) {
         if (hit.children[i].role == AOS_ROLE_DEATH_SHOT) shots++;
     assert(shots >= 1);
 
-    /* Lethal: hp 0 -> defeated, state 7, timer 0x3C, gore spawns. */
+    /* A lethal weapon collision is propagated to update_entities and
+     * enters state 7 immediately; this is the native reward call path. */
     AosEnemy el;
     assert(aos_enemy_create(&el, 0x6B, 150, 120, 0, 0,
                             &soma, &layer, &kind, &dt));
     el.x = AOS_FIXED(150);
     el.y = AOS_FIXED(120);
     el.state = 3;
-    el.hp = 0;
+    el.hp = 1;
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    soma.x = el.x;
+    soma.y = el.y;
+    hit = aos_enemy_update(&el, &soma, &layer, &kind, &weapon, &blade,
+                           9999, 4, 0, 0, always_zero);
+    assert(hit.killed && el.defeated && el.state == 7 && el.timer <= 0x3C);
+    /* The collision callback changes state at the tail of this update;
+     * the state-7 gore machine consequently starts on the next frame. */
     hit = aos_enemy_update(&el, &soma, &layer, &kind, NULL, NULL,
                            10, 4, 0, 0, always_zero);
-    assert(el.defeated && el.state == 7 && el.timer <= 0x3C);
     int gore = 0;
     for (int i = 0; i < hit.child_count; ++i)
         if (hit.children[i].role == AOS_ROLE_DEATH_GORE) gore++;
@@ -13696,15 +13720,27 @@ static void chaos_tests(void) {
     assert(e.ch_cx != cx);
 
     /* Phase 2 (param1 = 1): the 0xBB8 hp variant enters its own
-     * machine; a lethal hit runs the state-3 death cinematic. */
+     * machine; a lethal weapon collision remains reported while the
+     * body enters the state-3 death cinematic. */
     AosEnemy e2;
     assert(aos_enemy_create(&e2, 0x70, 300, 150, 0, 1,
                             &soma, &layer, &kind, &ch));
     assert(e2.state == 0 && e2.hp == 0xBB8);
-    e2.hp = 0;
-    aos_enemy_update(&e2, &soma, &layer, &kind, NULL, NULL,
-                     10, 4, 0, 0, always_zero);
-    assert(e2.defeated && e2.state == 3);
+    e2.x = AOS_FIXED(150);
+    e2.y = AOS_FIXED(120);
+    e2.hp = 1;
+    static const uint8_t blade_ticks[] = {8};
+    const AosAnimDef blade_def = {1, blade_ticks};
+    const AosAnimSet blade_set = {&blade_def, 1};
+    const AosHitbox blade_box[] = {{-16, -40, 32, 48, true}};
+    const AosWeaponFrames blade = {&blade_set, blade_box};
+    AosWeaponEntity weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0001, {0, 0, 0, 0, 0}, 15, 0, 0};
+    soma.x = e2.x;
+    soma.y = e2.y;
+    hit = aos_enemy_update(&e2, &soma, &layer, &kind, &weapon, &blade,
+                           9999, 4, 0, 0, always_zero);
+    assert(hit.killed && e2.defeated && e2.state == 3);
     /* 0x1010 >= 0x400: PlaySong routes it through AudioCommand. */
     assert(aos_audio_requested(AOS_AUDIO_COMMAND, 0x1010) >= 1);
     frames = 0;

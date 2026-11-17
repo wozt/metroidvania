@@ -224,6 +224,53 @@ static void test_run_text(void) {
     assert(fb[0] != 0);
 }
 
+static void test_text_icon_commands(void) {
+    static uint8_t char_tbl[0x70 * 4];
+    static uint8_t glyph_tbl[0x70 * 14];
+    AosMenuCells cells;
+    uint32_t fb[FB_WORDS];
+    aos_menu_cells_init(&cells);
+    aos_menu_cells_set_fb(&cells, fb);
+    aos_menu_cells_set_ink(&cells, 0x11);
+    aos_menu_cells_set_attr(&cells, 0x5);
+    cells.a_col_max = 30;
+    cells.a_row_max = 4;
+    for (unsigned ch = 0x80; ch <= 0x8D; ++ch)
+        char_tbl[(ch - 0x20) * 4 + 1] = 4;
+
+    /* sub_08046B58: action command 0x0B uses the configured physical
+     * button. Map Attack to L (index 3), make only L's 0x84 glyph
+     * visible, and prove the selected pair was printed. */
+    uint8_t buttons[4] = {3, 0, 1, 2};
+    aos_menu_cells_set_buttons(&cells, buttons);
+    glyph_tbl[(0x84 - 0x20) * 14] = 0x80;
+    const uint8_t button_script[] = {0, 0, 0x0B, 0x01};
+    memset(fb, 0, sizeof fb);
+    assert(aos_menu_cells_run_a(&cells, button_script, 0, char_tbl, 4,
+                                glyph_tbl, 14) == 1);
+    assert(fb[0] != 0);
+
+    /* 0x0F advances one pixel before drawing glyph 0x88. */
+    memset(glyph_tbl, 0, sizeof glyph_tbl);
+    glyph_tbl[(0x88 - 0x20) * 14] = 0x80;
+    const uint8_t single_script[] = {0, 0, 0x0F, 0x01};
+    memset(fb, 0, sizeof fb);
+    assert(aos_menu_cells_run_a(&cells, single_script, 0, char_tbl, 4,
+                                glyph_tbl, 14) == 1);
+    assert((fb[0] & 0xF0u) != 0);
+
+    /* 0x11 prints 0x8C/0x8D and consumes its one inline payload byte;
+     * the terminator therefore sits at consumed offset two. */
+    memset(glyph_tbl, 0, sizeof glyph_tbl);
+    glyph_tbl[(0x8C - 0x20) * 14] = 0x80;
+    glyph_tbl[(0x8D - 0x20) * 14] = 0x40;
+    const uint8_t pair_script[] = {0, 0, 0x11, 0xAA, 0x01};
+    memset(fb, 0, sizeof fb);
+    assert(aos_menu_cells_run_a(&cells, pair_script, 0, char_tbl, 4,
+                                glyph_tbl, 14) == 2);
+    assert(fb[0] != 0);
+}
+
 static void test_window_a_and_tile(void) {
     /* sub_08040748: hub call is window_a(0, 0, 26, 3) -> cols 0-24,
      * rows 0-2; cursor pixel position follows the current col/row. */
@@ -314,6 +361,7 @@ int main(void) {
     test_print_a_cursor();
     test_icon_walker();
     test_run_text();
+    test_text_icon_commands();
     test_window_a_and_tile();
     test_window_b();
     test_print_at();

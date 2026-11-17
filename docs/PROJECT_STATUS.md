@@ -25871,3 +25871,57 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Tests: `tests/test_aos_pause_graphics.c` ability assertions updated
   for the (6,13) canvas origin; `fusion_aos_pause_graphics_tests` and
   `fusion_aos_menu_cells_tests` pass.
+
+## Patch 0263 - Aria menu text icons, list windows and kill-to-level integration
+
+- `sub_08046BC8`'s text icon bytecode is now implemented rather than merely
+  skipped. Bytes 0x0B-0x0E resolve the live Attack, Jump, Ability and Guardian
+  assignments through `sub_08046B58` and print the corresponding 0x80-0x87
+  button-glyph pairs. Bytes 0x0F/0x10 apply the native one-pixel lead and
+  print 0x88/0x89; 0x11/0x12 print 0x8C/0x8D or 0x8A/0x8B and consume their
+  one inline payload byte. The disassembly confirms these are software-font
+  glyph records, not separate OBJ icon sheets. Every runtime pause-page draw
+  synchronizes the cell interpreter with the current button configuration.
+- Equip and Item Use now render from `equip_low`/`item_low`, the signed window
+  low owned by the already-ported `sub_080461BC` grid cursor, instead of
+  independently re-centering around the selection. Existing OAM placement was
+  rechecked rather than rewritten: Item Use has one selected icon at
+  (0x1C,0x94), Equip has its three equipped icons plus the selected preview,
+  and Soul Set has no native icon entity. The shared decoded hand already
+  covers every page; `sub_08048BC4` changes the item-icon overlay flag and is
+  not a missing per-page hand variant.
+- Config now has a corrected scope statement: `sub_0804C264` prints all eight
+  A/B/R/L glyphs through the context-B cell font, the assigned-button names
+  remain the native strips, and `sub_0804C3AC` supplies the decoded hand.
+  There is no additional native selection-highlight draw. Sleep now moves the
+  hand between `sub_0804BE0C`'s x=0x65 Yes and x=0x95 No anchors at y=0x89;
+  its frame is part of the decoded page/base map, not a missing OBJ panel.
+- The Enemy portrait remains honestly partial: implemented families retain a
+  real created probe and advance its visible animation at the native record
+  offset, but the host still blits exported BMP frames and does not run every
+  family-specific record +4 AI callback. No generic portrait or SDL panel was
+  introduced.
+- The enemy-reward caller now passes the live `aria_ewram_cine_4cc` byte to
+  `aos_stats_reward_enemy`. The role-owner audit keeps rewards restricted to
+  `AOS_ROLE_ENEMY` and `AOS_ROLE_BONE_PILLAR_SEGMENT`; the other main/child
+  roles have no native `sub_080683BC` reward call. Death, Balore and phase-2
+  Chaos now preserve a lethal collision's one-frame `killed` result while
+  entering their scripted death states, so the common entity pass awards them
+  once instead of losing the report or skipping the death transition.
+- The existing `--simulate` harness now handles rising attack input, decodes
+  exported weapon timing/hitboxes without creating SDL textures and updates
+  the weapon entity before enemies, matching the interactive order. The new
+  `aria_simulate_xp_levelup` test attacks room 5/1's native Cockatrice record,
+  observes its exact 120-XP reward and verifies Soma reaches level 2 with 120
+  total XP and 84 remaining to level 3. This is real-room runtime integration,
+  not a mock and not an emulator-fidelity claim.
+- Remaining documented work is comparison against emulator captures for the
+  text-command spacing, Sleep anchors, icon frame resolution and affine
+  flourishes, plus full per-family Enemy portrait updates. All affected
+  annotation and dashboard rows remain `partial` where comparison evidence is
+  absent.
+- Validation on 2026-11-17: the warning-clean build succeeded; the generated
+  checklist and dashboard were refreshed; the single full dashboard CTest run
+  passed 232/232 tests, including `aria_simulate_xp_levelup` and the
+  proprietary-file guard; `fusion_check_generated` reported every derived
+  document fresh.

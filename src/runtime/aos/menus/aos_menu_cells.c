@@ -4,7 +4,12 @@
 #include <string.h>
 
 void aos_menu_cells_init(AosMenuCells *cells) {
-    if (cells) memset(cells, 0, sizeof *cells);
+    if (!cells) return;
+    memset(cells, 0, sizeof *cells);
+    /* Shipped configuration 0x0852550C in native field order
+     * attack/jump/ability/guardian: {B, A, L, R} as button indices. */
+    static const uint8_t defaults[4] = {1, 0, 3, 2};
+    memcpy(cells->action_button, defaults, sizeof defaults);
 }
 
 void aos_menu_cells_set_fb(AosMenuCells *cells, uint32_t *fb) {
@@ -17,6 +22,16 @@ void aos_menu_cells_set_attr(AosMenuCells *cells, uint16_t attr) {
 
 void aos_menu_cells_set_ink(AosMenuCells *cells, uint16_t ink) {
     if (cells) cells->ink = ink;
+}
+
+void aos_menu_cells_set_buttons(AosMenuCells *cells,
+                                const uint8_t buttons[4]) {
+    if (!cells) return;
+    /* NULL restores the shipped defaults {B, A, L, R}; values are
+     * button indices 0=A, 1=B, 2=R, 3=L in attack/jump/ability/
+     * guardian order, matching gEwramData + 0x13398 / 0x0852550C. */
+    static const uint8_t defaults[4] = {1, 0, 3, 2};
+    memcpy(cells->action_button, buttons ? buttons : defaults, 4);
 }
 
 /* The ink template: (ink + ink * 16) & 0xFF replicated into all four
@@ -279,8 +294,7 @@ static int run_text(AosMenuCells *cells, const uint8_t *script,
      * (column at entry, row at entry + newline count), clamped to
      * 40x20 — not a relative wrap reset. Other control bytes end
      * the run (10 = terminator); bytes 11..18 are icon commands the
-     * native jump table consumes mid-string — the port skips the
-     * command byte without drawing the icon sheet. */
+     * native jump table consumes mid-string. */
     const uint8_t *p = script + 2 + offset;
     uint16_t base_col = large ? cells->a_col : cells->b_col;
     uint16_t base_row = large ? cells->a_row : cells->b_row;
@@ -317,11 +331,64 @@ static int run_text(AosMenuCells *cells, const uint8_t *script,
             continue;
         } else if (ch >= 0x0B && ch <= 0x12) {
             /* sub_08046BC8's dispatch sends bytes 0x0B-0x12 to the
-             * caller-side icon-command jump table, which draws a button
-             * icon and continues the run. The icon sheets are not wired
-             * into the cell port yet, so the command byte is consumed
-             * without emitting a glyph (previously it ended the run and
-             * truncated the rest of the string). */
+             * caller-side icon-command jump table. Bytes 0x0B-0x0E
+             * call sub_08046B58(action) with action = byte - 0x0B:
+             * it reads the configured GBA button mask at gEwramData +
+             * 0x13398 + action*2 and prints the matching glyph pair
+             * through the context-A printer sub_08040AB8 — mask 1 (A)
+             * -> 0x80/0x81, mask 2 (B) -> 0x82/0x83, mask 0x200 (L)
+             * -> 0x84/0x85, anything else (R = 0x100) -> 0x86/0x87.
+             * The port stores button indices 0=A/1=B/2=R/3=L instead
+             * of the GBA masks; index 3 is the only mask-0x200 case.
+             * Bytes 0x0F/0x10 advance the pixel cursor once and print
+             * glyph 0x88/0x89. Bytes 0x11/0x12 print the two-glyph
+             * pairs 0x8C/0x8D and 0x8A/0x8B, then consume the one
+             * payload byte that follows the command. These are text
+             * glyph records, not OBJ icon entities: the native routine
+             * calls sub_08040AB8 for all eight commands. The dispatch
+             * exists only on the context-A path; a context-B run keeps
+             * consuming the byte without drawing. */
+            if (large && ch <= 0x0E) {
+                static const uint8_t pairs[4][2] = {
+                    {0x80, 0x81}, {0x82, 0x83},
+                    {0x86, 0x87}, {0x84, 0x85},
+                };
+                unsigned button = cells->action_button[ch - 0x0B];
+                /* An out-of-range index maps to the native else
+                 * branch (the R pair, pairs[2]). */
+                if (button > 3) button = 2;
+                for (unsigned g = 0; g < 2; ++g) {
+                    uint16_t icon = pairs[button][g];
+                    const uint8_t *ci =
+                        char_tbl + (unsigned)(icon - 0x20) * char_stride;
+                    const uint8_t *gl =
+                        glyph_tbl + (unsigned)(icon - 0x20) * glyph_stride;
+                    aos_menu_cells_print_a(cells, icon, ci, gl);
+                }
+            } else if (large) {
+                static const uint8_t glyphs[4][2] = {
+                    {0x88, 0}, {0x89, 0}, {0x8C, 0x8D}, {0x8A, 0x8B},
+                };
+                unsigned command = ch - 0x0F;
+                if (command < 2) {
+                    /* _08046CB4/_08046CE0: +0x115A4 and +0x115A6
+                     * both advance by one before the single glyph. */
+                    ++cells->a_x;
+                    ++cells->a_px;
+                }
+                for (unsigned g = 0; g < 2 && glyphs[command][g]; ++g) {
+                    uint16_t icon = glyphs[command][g];
+                    const uint8_t *ci =
+                        char_tbl + (unsigned)(icon - 0x20) * char_stride;
+                    const uint8_t *gl =
+                        glyph_tbl + (unsigned)(icon - 0x20) * glyph_stride;
+                    aos_menu_cells_print_a(cells, icon, ci, gl);
+                }
+                /* _08046D0C/_08046D1C add two to the current script
+                 * index; the common tail deliberately does not add one. */
+                i += command >= 2 ? 2 : 1;
+                continue;
+            }
             ++i;
             continue;
         } else {

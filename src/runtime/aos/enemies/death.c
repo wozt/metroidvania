@@ -653,10 +653,23 @@ AosHitReport aos_enemy_death_update(AosEnemy *e, AosSoma *soma,
         AosHitReport c = aos_enemy_collide(e, soma, kind, weapon,
                                            weapon_frames, soma_atk,
                                            soma_def);
+        aos_enemy_copy_collision_result(&hit, &c);
         aos_enemy_take_effects(&hit, &c);
         for (int i = 0; i < c.child_count &&
              hit.child_count < AOS_ENEMY_MAX_CHILDREN; ++i)
             hit.children[hit.child_count++] = c.children[i];
+        /* sub_080BF4AC/sub_080BF504 call sub_080683BC on the lethal
+         * collision and immediately enter state 7. The shared collide
+         * marks `defeated`, so key this transition from its one-frame
+         * killed report rather than waiting for the next update. */
+        if (c.killed && e->state != 7 && e->state != 8) {
+            e->hit_flash = 0xFF;
+            aos_audio_play_song(0x6E);
+            e->state = 7;
+            e->step = e->substep = 0;
+            e->timer = 0x3C;
+            e->dth_atk = 0;
+        }
     }
     return hit;
 }

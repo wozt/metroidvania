@@ -1891,9 +1891,10 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
 }
 
 bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
-                                     bool can_sleep, unsigned sleep_result,
+                                     bool can_sleep, uint8_t choice,
+                                     unsigned sleep_result,
                                      uint8_t *rgba, size_t rgba_size) {
-    if (!valid_output(graphics, rgba, rgba_size)) return false;
+    if (choice > 1 || !valid_output(graphics, rgba, rgba_size)) return false;
     flourish_page(graphics, AOS_FX_SLEEP);
     reset_bg0(graphics);
     unsigned next_tile = 0;
@@ -1953,11 +1954,11 @@ bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
     }
     (void)next_tile;
     composite(graphics, rgba);
-    /* sub_0804BD38 writes the hand entity's anchor directly to
-     * (0x95, 0x89) = pixel (149, 137) — below-right of the Yes/No
-     * parallelogram, pointing up-left at the selection. draw_cursor's
-     * anchor is cell_x*8+6 / cell_y*8+3, so cell (18,17) lands at
-     * (150,139), within the native wiggle range. */
-    if (can_sleep) draw_cursor(graphics, rgba, 18, 17);
+    /* sub_0804BD38 initializes the hand at (0x95,0x89), the native
+     * default No choice. sub_0804BE0C then writes x = 0x65 for Yes or
+     * 0x95 for No while y stays 0x89. draw_cursor adds its decoded bob
+     * around the sub_08048AD8 anchor; cells (12,17)/(18,17) resolve to
+     * x 102/150 and y 139, within that native wiggle range. */
+    if (can_sleep) draw_cursor(graphics, rgba, choice ? 18 : 12, 17);
     return true;
 }

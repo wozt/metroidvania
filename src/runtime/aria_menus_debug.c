@@ -140,6 +140,14 @@ static void pause_transition_pixels(SDL_Texture *texture,
     }
 }
 
+/* sub_08046B58 reads the four configured action buttons for every text
+ * command 0x0B-0x0E. Keep the shared cell interpreter synchronized before
+ * any page can print a description containing one of those commands. */
+static void pause_text_buttons(AosPauseGraphics *graphics,
+                               const AosSoulMenu *menu) {
+    aos_menu_cells_set_buttons(&graphics->cells, menu->config_buttons);
+}
+
 bool draw_native_pause_hub(SDL_Renderer *renderer, SDL_Texture *texture,
                                   AosPauseGraphics *graphics,
                                   const AosSoulMenu *menu, const AosStats *stats,
@@ -159,6 +167,7 @@ bool draw_native_pause_hub(SDL_Renderer *renderer, SDL_Texture *texture,
         return SDL_RenderTexture(renderer, texture, NULL, &destination);
     }
     if (menu->page != AOS_SOUL_MENU_PAGE_HUB) return false;
+    pause_text_buttons(graphics, menu);
     AosPauseHubValues values = {
         .hp = soma->hp,
         .mp = stats->mp,
@@ -194,6 +203,7 @@ bool draw_native_soul_set(SDL_Renderer *renderer, SDL_Texture *texture,
         menu->page != AOS_SOUL_MENU_PAGE_SOUL_SET ||
         menu->category >= AOS_PAUSE_SOUL_FAMILIES)
         return false;
+    pause_text_buttons(graphics, menu);
     AosPauseSoulSetValues values = {
         .attack = stats->atk,
         .defence = stats->def,
@@ -231,6 +241,7 @@ bool draw_native_equip(SDL_Renderer *renderer, SDL_Texture *texture,
         menu->page != AOS_SOUL_MENU_PAGE_EQUIP ||
         menu->equip_slot >= AOS_EQUIP_SLOTS)
         return false;
+    pause_text_buttons(graphics, menu);
     AosPauseEquipValues values = {
         .current = {stats->atk, stats->def,
                     stats->current[AOS_STAT_STR], stats->current[AOS_STAT_CON],
@@ -257,18 +268,12 @@ bool draw_native_equip(SDL_Renderer *renderer, SDL_Texture *texture,
     }
 
     int choices = aos_equipment_choice_count(stats, menu->equip_slot);
-    int cursor = 0;
-    for (int ordinal = 0; ordinal < choices; ++ordinal)
-        if (aos_equipment_ordered_choice_at(stats, menu->recent_items,
-                                            menu->equip_slot, ordinal) ==
-            values.selected_item) {
-            cursor = ordinal;
-            break;
-        }
-    int top = cursor - 3;
-    if (top > choices - AOS_PAUSE_EQUIP_VISIBLE)
-        top = choices - AOS_PAUSE_EQUIP_VISIBLE;
+    /* sub_080461BC owns +0x16 as the signed window low. Navigation
+     * already updates equip_low; rendering must consume that value
+     * instead of independently re-centering around the selection. */
+    int top = menu->equip_low;
     if (top < 0) top = 0;
+    if (top > choices) top = choices;
     for (int entry = 0;
          entry < AOS_PAUSE_EQUIP_VISIBLE && top + entry < choices; ++entry) {
         uint8_t item = aos_equipment_ordered_choice_at(
@@ -298,6 +303,7 @@ bool draw_native_config(SDL_Renderer *renderer, SDL_Texture *texture,
     if (!renderer || !texture || !graphics || !menu || !menu->open ||
         menu->page != AOS_SOUL_MENU_PAGE_CONFIG)
         return false;
+    pause_text_buttons(graphics, menu);
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_config(graphics, menu->config_buttons,
                                           menu->config_cursor,
@@ -318,8 +324,10 @@ bool draw_native_sleep(SDL_Renderer *renderer, SDL_Texture *texture,
     if (!renderer || !texture || !graphics || !menu || !menu->open ||
         menu->page != AOS_SOUL_MENU_PAGE_SLEEP)
         return false;
+    pause_text_buttons(graphics, menu);
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_sleep(graphics, menu->sleep_available,
+                                         menu->sleep_choice,
                                          menu->sleep_result,
                                          pixels, sizeof pixels)) {
         if (getenv("ARIA_DEBUG_MENU_DRAW"))
@@ -338,6 +346,7 @@ bool draw_native_ability(SDL_Renderer *renderer, SDL_Texture *texture,
     if (!renderer || !texture || !graphics || !menu || !stats || !menu->open ||
         menu->page != AOS_SOUL_MENU_PAGE_ABILITY)
         return false;
+    pause_text_buttons(graphics, menu);
     AosPauseAbilityValues values = {
         .cursor = menu->cursor[AOS_SOUL_MENU_ABILITY],
     };
@@ -367,21 +376,17 @@ bool draw_native_item_use(SDL_Renderer *renderer, SDL_Texture *texture,
     if (!renderer || !texture || !graphics || !menu || !stats || !menu->open ||
         !items || menu->page != AOS_SOUL_MENU_PAGE_ITEM_USE)
         return false;
+    pause_text_buttons(graphics, menu);
     AosPauseItemUseValues values = {.selected = 0xFF};
     memcpy(values.counts, stats->item_counts, sizeof values.counts);
     for (unsigned item = 0; item < AOS_PAUSE_ITEM_USE_RECORDS; ++item)
         values.icons[item] = items[item].icon;
     int choices = aos_item_choice_count(stats);
-    int cursor = 0;
-    for (int ordinal = 0; ordinal < choices; ++ordinal)
-        if (aos_item_choice_at(stats, ordinal) == menu->item_cursor) {
-            cursor = ordinal;
-            break;
-        }
-    int top = cursor - 3;
-    if (top > choices - AOS_PAUSE_ITEM_USE_VISIBLE)
-        top = choices - AOS_PAUSE_ITEM_USE_VISIBLE;
+    /* Same +0x16 contract as Equip: item_low is the grid cursor's
+     * authoritative first visible ordinal. */
+    int top = menu->item_low;
     if (top < 0) top = 0;
+    if (top > choices) top = choices;
     values.top = (uint8_t)top;
     if (menu->item_cursor < AOS_PAUSE_ITEM_USE_RECORDS)
         values.selected = menu->item_cursor;
@@ -539,6 +544,7 @@ bool draw_native_enemy(SDL_Renderer *renderer, SDL_Texture *texture,
     if (!renderer || !texture || !graphics || !menu || !stats || !menu->open ||
         menu->page != AOS_SOUL_MENU_PAGE_ENEMY)
         return false;
+    pause_text_buttons(graphics, menu);
     AosPauseEnemyValues values = {
         .top = menu->enemy.top,
         .cursor = menu->enemy.cursor,

@@ -57,14 +57,19 @@ bool load_weapon_sprite(const char *name, AriaWeaponSprite *out, SDL_Renderer *r
         SDL_Surface *surface = SDL_LoadBMP(frame_path);
         if (!surface) break;
         AriaFrame *dst = &out->frames[frame];
-        dst->texture = SDL_CreateTextureFromSurface(renderer, surface);
+        /* --simulate uses the same exported animation/hitbox records without
+         * a renderer. Retain the decoded dimensions and timing while leaving
+         * the texture NULL; the interactive path still requires its texture. */
+        dst->texture = renderer ? SDL_CreateTextureFromSurface(renderer, surface)
+                                : NULL;
         dst->w = (float)surface->w;
         dst->h = (float)surface->h;
         dst->offset_x = ox;
         dst->offset_y = oy;
         SDL_DestroySurface(surface);
-        if (!dst->texture) break;
-        SDL_SetTextureScaleMode(dst->texture, SDL_SCALEMODE_NEAREST);
+        if (renderer && !dst->texture) break;
+        if (dst->texture)
+            SDL_SetTextureScaleMode(dst->texture, SDL_SCALEMODE_NEAREST);
         out->ticks[frame] = (uint8_t)ticks;
         out->count++;
     }

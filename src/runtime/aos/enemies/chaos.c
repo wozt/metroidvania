@@ -2064,7 +2064,7 @@ AosHitReport aos_enemy_chaos_update(
      * the ported cluster re-arms it; the port sets it so the
      * sub_080A49E0 step-0 gate opens (documented). Phase 1's 9999 hp
      * makes it unreachable in practice. */
-    if (phase2 && !enemy->defeated && enemy->hp <= 0 &&
+    if (phase2 && (hit.killed || (!enemy->defeated && enemy->hp <= 0)) &&
         enemy->state != 3) {
         enemy->defeated = true;
         enemy->state = 3;

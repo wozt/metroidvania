@@ -211,16 +211,18 @@ bool aos_pause_graphics_render_soul_set(
     AosPauseGraphics *graphics, const AosPauseSoulSetValues *values,
     uint8_t *rgba, size_t rgba_size);
 /* sub_0804A95C/sub_08049F34/sub_0804A2A4/sub_0804A00C: reconstruct the
- * Equip BG0 page and localized ROM text. Item icons and cursor OAM remain a
- * separate compositing layer. */
+ * Equip BG0 page and localized ROM text. The decoded item-icon sheet and
+ * hand entity are composited afterward at their native OAM anchors. */
 bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
                                      const AosPauseEquipValues *values,
                                      uint8_t *rgba, size_t rgba_size);
 /* sub_0804BF8C/sub_0804C264/sub_0804C3AC: the button-configuration page.
  * The four action rows reuse the baked label strips at tilemap entries
  * 0x3359+row*0x10 and the per-button name strips at 0x32A0+index*3 from
- * the language bank. Rows follow the native 0x08525510 order {0,1,3,2};
- * the cursor and button icons are OBJ sprites and remain unrendered. */
+ * the language bank. Rows follow the native 0x08525510 order {0,1,3,2}.
+ * sub_0804C264 prints the A/B/R/L glyph pairs through the context-B cell
+ * font, and sub_0804C3AC supplies the decoded selection hand; native has no
+ * additional row-highlight draw. */
 bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
                                       const uint8_t config[AOS_BUTTON_ACTIONS],
                                       uint8_t cursor,
@@ -229,8 +231,8 @@ bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
  * defeated enemies show name text 0x25D+enemy through the context-B
  * cursor, undiscovered ones 0x34E "????????". Row strips use entries
  * 0xF320+slot*0x10 and the enemy numbers use the two-row digit path.
- * The header/footer strips, button hints and the detail view remain
- * unported; the detail page keeps the diagnostic presentation. */
+ * Header/footer strips, controller hints and the decoded hand are included;
+ * the separate detail renderer reconstructs sub_0804CDF4 below. */
 bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
                                      const AosPauseEnemyValues *values,
                                      uint8_t *rgba, size_t rgba_size);
@@ -239,9 +241,11 @@ bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
  * drop names (0x34F/0xA/0x5A+item gated by the drop bitsets), the
  * name with its 0x1310 underline, the soul-type icon when the soul
  * view is active and owned, the three soul-bar strips and the owned
- * markers. The portrait, the soul name/description message window,
- * weakness labels and transitions remain unported; the drop rows are
- * pure context-B text (sub_0804090C is the pixel cursor setter). */
+ * markers and the alternating enemy/soul description window. The host
+ * portrait probe creates and animates implemented enemy families at the
+ * native record offset, but still blits exported BMP frames rather than the
+ * native menu DMA/OAM path; unimplemented families remain absent. The drop
+ * rows are pure context-B text (sub_0804090C is the pixel cursor setter). */
 bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
                                             const AosPauseEnemyValues *values,
                                             uint8_t *rgba, size_t rgba_size);
@@ -262,8 +266,9 @@ bool aos_pause_graphics_render_item_use(AosPauseGraphics *graphics,
  * 0x34F "---") and the selected entry's description are BG0. The
  * description is text 0x257+cursor while the ability is owned
  * (SoulInventory_GetSoulTotal(3,cursor) != 0), else 0x34F, printed by
- * sub_08046BC8 into window sub_08040748(0,0,0x1F,4). The selection
- * arrow and icon layers remain OBJ and are unrendered. */
+ * sub_08046BC8 into window sub_08040748(0,0,0x1F,4). The decoded hand is
+ * composited at sub_08048AD8's two-column anchor; no page-specific icon
+ * entity is spawned by the native routine. */
 bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
                                        const AosPauseAbilityValues *values,
                                        uint8_t *rgba, size_t rgba_size);
@@ -281,10 +286,12 @@ enum {
  * cannot-save message. `sleep_result` is an AOS_PAUSE_SLEEP_RESULT_*
  * value: sub_0804BE0C prints 0x36B "Game was saved" or 0x386 "Save
  * failed." into the shared bottom window after a save attempt, while
- * sub_0804BD38 leaves that band empty on entry. The selection arrow and
- * window frame are OBJ and remain unrendered. */
+ * sub_0804BD38 leaves that band empty on entry. `choice` selects the
+ * native hand anchor (0 = Yes at x 0x65, 1 = No at x 0x95); the page
+ * frame comes from the ROM-decoded base map rather than a separate OBJ. */
 bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
-                                     bool can_sleep, unsigned sleep_result,
+                                     bool can_sleep, uint8_t choice,
+                                     unsigned sleep_result,
                                      uint8_t *rgba, size_t rgba_size);
 void aos_pause_graphics_free(AosPauseGraphics *graphics);
 

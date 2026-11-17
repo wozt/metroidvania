@@ -35,7 +35,16 @@ typedef struct {
     int32_t swing;          /* + 0x14: 0 closed .. 0x4000 open */
     bool hidden;            /* + 0x58 bit 0x20 */
     bool holding;           /* 0x42C |= 0x101 and 0xA074 bit 1 cleared */
+    uint32_t palette_age;   /* sub_0803C150 entry + 8: frames since the door's
+                             * palette script was registered at spawn
+                             * (sub_0804D8F0's sub_0806E0D0 call) */
 } AosDoor;
+
+/* sub_0803C150's phase pick for a palette script instance: `ticks` are the
+ * script's per-phase frame counts and `age` the instance's elapsed frames;
+ * the phases loop, so the result is age modulo the summed ticks walked
+ * phase by phase. Returns the phase index into `ticks`. */
+int aos_door_palette_phase(uint32_t age, const uint8_t *ticks, int count);
 
 /* Object00Create; camera_x is the BG1 X used for the facing test. */
 void aos_door_create(AosDoor *door, AosCollision *layer, int32_t x, int32_t y,

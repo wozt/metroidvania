@@ -55,7 +55,7 @@ const AriaFrame *blade_frame(const __typeof__(((AriaObjects *)0)->skills[0]) *ar
 /* Doors use their native sprite (frame 0 or 5 by parameter 0) and palette
  * cycle; without the object library an outline marks the blocked area. */
 void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *objects_ptr,
-                       long frame_count, int cam_x, int cam_y) {
+                       int cam_x, int cam_y) {
     const AriaObjects *objects = objects_ptr;
     for (size_t i = 0; i < room->entity_count; ++i) {
         const AriaEntity *e = &room->entities[i];
@@ -64,12 +64,14 @@ void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *object
             continue;
         int style = e->param0 ? 1 : 0;
         if (objects && objects->counts[style]) {
-            /* sub_0803C150: the palette script loops (phase from the run start). */
-            int total = 0;
-            for (int k = 0; k < objects->counts[style]; ++k) total += objects->ticks[style][k];
-            long t = frame_count % total;
-            int k = 0;
-            while (t >= objects->ticks[style][k]) t -= objects->ticks[style][k++];
+            /* sub_0803C150: each door's palette script instance counts
+             * its own frames from the spawn registration (sub_0804D8F0's
+             * sub_0806E0D0), so the phase is the door's palette_age —
+             * the run's frame counter would desynchronise every door
+             * that spawned after the first. */
+            int k = aos_door_palette_phase(e->door.palette_age,
+                                           objects->ticks[style],
+                                           objects->counts[style]);
             const AriaFrame *frame = &objects->frames[style][k];
             /* Mirrored when facing left, like Soma's frames; the generic draw
              * (0x03004564) is not traced, this matches the room art at both

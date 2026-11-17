@@ -1,3 +1,34 @@
+## Patch 1223 - Wooden-door palette cycle runs on the door's own script instance
+
+- **Root cause.** `draw_doors` picked the exported palette-cycle phase
+  from the runtime's global `frame_count`, so a door's wood-grain
+  palette phase depended on how many frames the run had been alive —
+  arbitrary for every door that did not spawn on frame 0. Native
+  `sub_0804D794`'s draw path never reads a global frame counter: the
+  door's palette script is a per-entity instance registered at spawn by
+  `sub_0804D8F0`'s `sub_0806E0D0` call, and `sub_0803C150` advances each
+  registered entry's own counters (entry `+8` frame counter, `+0xA`
+  phase index) once per frame.
+- **Fix.** `AosDoor` gains `palette_age`, incremented once per
+  `aos_door_update` (the per-frame Object00Update cadence, hidden
+  frames included like the native entry) and zeroed at spawn by
+  `aos_door_create`. `draw_doors` now selects the palette phase through
+  the new `aos_door_palette_phase` helper — the same modulo-tick walk
+  the old code did, but over `palette_age` instead of the run counter —
+  and its `frame_count` parameter is removed. Doors in the same room
+  still cycle in phase (all spawn together); a door spawned later, or
+  any room after the first, now starts its cycle at spawn like native.
+- **Still approximated.** The drawFunc's per-state sprite-group picks
+  (`+0x65` fully open, `+0x65 + 1` swinging and as the second
+  closed-state draw, `+0x65 + 2` as the first closed-state draw) still
+  share the single exported leaf art — the frame and open-doorway
+  variants are not separately exported, so the closed door shows the
+  leaf without its surround and the fully-open doorway relies on the
+  edge-on squash disappearing.
+- **Test.** `test_aos_door` asserts `palette_age` starts at 0, counts
+  every update including hidden frames, and that
+  `aos_door_palette_phase` loops the script's per-phase ticks exactly.
+
 ## Patch 1222 - Native emulator comparison workflow recorded
 
 - **Scope.** `AGENTS.md` and this status entry; no runtime behavior or parity

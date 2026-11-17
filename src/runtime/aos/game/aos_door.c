@@ -46,9 +46,14 @@ void aos_door_create(AosDoor *door, AosCollision *layer, int32_t x, int32_t y,
     }
 }
 
-/* Object00Update (sound ids: 0x115 opening, 0x114 closing). */
+/* Object00Update (sound ids: 0x115 opening, 0x114 closing). sub_0803C150
+ * advances every registered palette script once per frame; the door's
+ * instance was registered at spawn (sub_0804D8F0's sub_0806E0D0 call),
+ * so its phase counts the door's own update frames, not the run's
+ * frame counter. */
 int aos_door_update(AosDoor *door, AosCollision *layer, const AosSoma *soma,
                     AosForcedInput *input, int32_t camera_x, int32_t camera_y) {
+    ++door->palette_age;
     /* sub_08068AD4(e, -32, 0, 0x130, 0xD0) on the screen position. */
     door->hidden = !((uint16_t)(door->x - camera_x + 0x20) <= 0x130 &&
                      (uint16_t)(door->y - camera_y) <= 0xD0);
@@ -91,6 +96,18 @@ int aos_door_update(AosDoor *door, AosCollision *layer, const AosSoma *soma,
     default:
         return 0;
     }
+}
+
+/* sub_0803C150's entry walk: the phase index whose tick span contains
+ * `age` frames, looping over the script's phases. */
+int aos_door_palette_phase(uint32_t age, const uint8_t *ticks, int count) {
+    unsigned total = 0;
+    for (int k = 0; k < count; ++k) total += ticks[k];
+    if (!total || count <= 0) return 0;
+    uint32_t t = age % total;
+    int k = 0;
+    while (k + 1 < count && t >= ticks[k]) t -= ticks[k++];
+    return k;
 }
 
 /* sub_0804D794: the swing angle feeds sub_0803E058's affine matrix —

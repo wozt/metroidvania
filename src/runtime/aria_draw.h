@@ -38,7 +38,7 @@ const AriaFrame *blade_frame(const AriaSkillArt *art, int id);
  * cycle; without the object library an outline marks the blocked area.
  * `objects_ptr` is the AriaObjects table or NULL when it failed to load. */
 void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *objects_ptr,
-                long frame_count, int cam_x, int cam_y);
+                int cam_x, int cam_y);
 /* The breakable walls: their entry's frame at their position. */
 void draw_walls(SDL_Renderer *renderer, const AriaRoom *room, const AriaObjects *objects,
                 int cam_x, int cam_y);

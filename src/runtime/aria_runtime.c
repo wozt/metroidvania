@@ -4085,7 +4085,7 @@ aria_render_frame:
         /* The save point draws through its SPECIAL id-28 entity
          * (Object1C marker child art) in draw_special_objects —
          * the old fixed-position placeholder is retired. */
-        draw_doors(renderer, &room, objects_ok ? &objects : NULL, step, cam_x, cam_y);
+        draw_doors(renderer, &room, objects_ok ? &objects : NULL, cam_x, cam_y);
         if (objects_ok) draw_walls(renderer, &room, &objects, cam_x, cam_y);
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_BLOOD, cam_x, cam_y);
         if (objects_ok) draw_enemies(renderer, &room, &objects, cam_x, cam_y, -1);

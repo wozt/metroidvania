@@ -129,11 +129,11 @@
 /* Other palette banks of a kind, exported as Enemy/<name>_bank<N>: the gold
  * Medusa head (parameter 1 bit 0) and the Ghost Dancer (parameter 0). */
 #define VARIANT_ARTS 5
-/* Object/special_NN_vP records: the export currently emits 42 distinct
- * (id, param0) pairs — ids 14/16/18/28/29/31/42 and the id-7/15 rows —
- * after the Object1F flank re-bank banks _v6/_v7 joined id 31.
- * 48 leaves headroom. */
-#define SPECIAL_VARIANTS 48
+/* Object/special_NN_vP records: the export currently emits 58 distinct
+ * (id, param0) pairs — ids 14/16/18/28/29/31/42/62 and the id-7/15
+ * rows — after the Object1F flank re-bank banks _v6/_v7 joined id 31
+ * and the kind-3 breakable variants joined id 62. 64 leaves headroom. */
+#define SPECIAL_VARIANTS 64
 
 /* metadata room_music.tsv: sub_08013960's flags per (area, room). */
 #define MUSIC_AREAS 16

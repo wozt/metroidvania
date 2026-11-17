@@ -1,3 +1,19 @@
+## Patch 1204 - raise SPECIAL_VARIANTS to 64: object library load overflow
+
+- **Bug.** Patch 1198's `special_62_v00`-`v15` breakable variant
+  exports pushed the `Object/special_NN_vP` index to 58 distinct
+  (id, param0) pairs while `SPECIAL_VARIANTS` stayed 48, so
+  `aria_load_objects` hit the variant-slot exhaustion
+  (`LOADFAIL`) and every SDL runtime/capture rendered with zero
+  object, enemy and opening sprites — found by the Patch 1203
+  capture comparison, which had to filter the index to probe.
+- **Fix.** `SPECIAL_VARIANTS` 48 -> 64 with the pair census and
+  id list updated in the header comment. No other change needed:
+  the loader already scans for a free slot per (id, param0).
+- **Verification.** Build clean; `fusion_dashboard --run-tests`
+  231 passed; `fusion_check_generated` fresh. Object sprites
+  draw again in captures (previously absent since Patch 1198).
+
 ## Patch 1203 - opening cutscene visual ground truth vs native (diagnosis only, no fixes)
 
 - **Scope.** Frame-aligned native-vs-runtime comparison of the room

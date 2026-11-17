@@ -25797,3 +25797,39 @@ No automatic reciprocal link or native engine encoder is implemented.
 - Validation on 2026-10-12: the warning-clean build succeeded, CTest passed
   28/28, the Python suite passed 418/418, `check_generated` reported fresh
   documents and the proprietary-file guard passed.
+
+## Patch 0261 - Aria START-menu list cursors decoded and wired
+
+- The Equip item list and the Item Use list no longer scroll with a
+  source-adapted +/-1 ordinal wrap. Both now run `pause_grid_move`, a port
+  of the native `sub_080461BC` cursor that `func_0804AFD4` (Equip) and
+  `func_0804B808` (Item Use) drive: a two-column grid over an 8-row window
+  (+0x14 count, +0x15 cursor ordinal, +0x16 signed window low). UP/DOWN
+  step a full row, LEFT/RIGHT toggle one column (either direction flips the
+  low bit, matching the ROM's single horizontal test), R/L page eight cells
+  with the native bottom-clamp that still moves the cursor onto the last
+  cell when the window cannot scroll, and edges clamp with no wrap.
+- Item Use now keeps the cursor as an ordinal over the OWNED records (the
+  native +0x17 resolver skips empty slots) instead of a raw item index, and
+  reapplies the `sub_0804B808` tail fixup: emptying the last visible ordinal
+  drops the cursor one cell/window rather than leaving it on an empty slot.
+  `last_item` is only recorded for real records, so an empty-inventory A
+  press can no longer push an out-of-range index at the sound picker.
+- Equip keeps the `sub_0804A2A4` recent-first order with None at ordinal
+  zero; the grid can now land on None and A unequips through the existing
+  `aos_pickup_recent_exchange` path. The three slot rows still cycle with a
+  source-adapted Up/Down wrap (the native slot cursor is not separately
+  decoded), and `aos_stats_refresh` still runs after every apply.
+- Verified against the reconstruction without changes: ability toggles map
+  to the `sub_08032AB8`/`sub_08032ADC` bit layout already used, Sleep keeps
+  the `sub_0804BD38`/`sub_0804BE0C` Yes/No, WAIT_SAVE and 97-frame fade tail,
+  Config keeps the `sub_0804BF8C` family L/R wrap, SELECT defaults and
+  unique-apply B, and the bestiary keeps the `sub_0804C404` family list,
+  detail and soul-view behavior.
+- The fuller `sub_0806688C` counter/span cursor (`aos_menu_cursor`) remains
+  a unit-tested parity reference for the renderer-coupled menu surfaces;
+  its header now records that the START-menu lists use `sub_080461BC`
+  instead.
+- Tests: `tests/test_aos_soul_menu.c` now asserts the grid semantics
+  (row/column moves, clamp-to-last on page-down, the post-use last-cell
+  fixup, None unequip through the grid) for Equip and Item Use.

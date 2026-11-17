@@ -311,6 +311,10 @@ static unsigned enter_hub_entry(AosSoulMenu *menu, const AosStats *stats,
                                 uint8_t entry) {
     if (entry == AOS_PAUSE_ITEM_USE) {
         menu->page = AOS_SOUL_MENU_PAGE_ITEM_USE;
+        /* func_0804B808's entry reset: +0x15/+0x16 start at 0 and +0x17
+         * resolves to the first owned record (0xFF when none). */
+        menu->item_ord = 0;
+        menu->item_low = 0;
         menu->item_cursor = aos_item_choice_at(stats, 0);
         return AOS_SOUL_MENU_ACCEPTED;
     }
@@ -417,13 +421,82 @@ static int equipment_ordinal(const AosStats *stats, const AosPickupRecent *recen
     return 0;
 }
 
-static void move_equipment_choice(AosSoulMenu *menu, const AosStats *stats, int direction) {
+/* sub_080461BC: the shared pause-page list cursor used by the Equip
+ * (func_0804AFD4), Item Use (func_0804B808), Ability (func_0804BB40) and
+ * other page updates. The state triple is +0x14 count, +0x15 cursor
+ * ordinal and +0x16 signed window low; the list is two columns of eight
+ * rows and R/L page by eight cells. The directional word is tested in
+ * priority order (horizontal, up, down, page down, page up) and the
+ * first matching guard wins; a failed guard blocks every lower-priority
+ * direction. There is no wrap: edges clamp and an 8-cell window scroll
+ * replaces the old +/-1 ordinal wrap. Returns 0 no move, 1 cursor move,
+ * 2 window scroll (the native PlaySong(0xF1) edge case is host audio,
+ * tracked through AOS_SOUL_MENU_MOVED instead). */
+static int pause_grid_move(int *cursor_io, int *low_io, int count,
+                           uint16_t direction) {
+    int old_low = *low_io;
+    int cursor = *cursor_io;
+    int low = *low_io;
+    int moved = 0;
+    if (direction & (AOS_KEY_LEFT | AOS_KEY_RIGHT)) {
+        if (cursor + 1 < count || (cursor & 1)) {
+            cursor ^= 1;
+            moved = 1;
+        }
+    } else if (direction & AOS_KEY_UP) {
+        if (cursor > 1) {
+            cursor -= 2;
+            if (cursor < low) low -= 2;
+            moved = 1;
+        }
+    } else if (direction & AOS_KEY_DOWN) {
+        if (cursor < count - 1) {
+            cursor += 2;
+            if (cursor >= count) cursor = count - 1;
+            if (cursor >= low + 8) low += 2;
+            moved = 1;
+        }
+    } else if (direction & AOS_KEY_R) {
+        if (old_low + 8 < count) {
+            cursor += 8;
+            low += 8;
+            if (cursor > count - 1) cursor = count - 1;
+            moved = 1;
+        } else if (cursor < count - 1) {
+            /* sub_080461BC: with the window already at the bottom a page
+             * press still commits and clamps the cursor onto the last
+             * cell instead of scrolling. */
+            cursor = count - 1;
+            moved = 1;
+        }
+    } else if (direction & AOS_KEY_L) {
+        if (low > 7) {
+            cursor -= 8;
+            low -= 8;
+        } else if (cursor != 0) {
+            cursor = cursor <= 7 ? 0 : cursor - 8;
+            low = 0;
+        }
+    }
+    if (low != old_low) moved = 2;
+    *cursor_io = cursor;
+    *low_io = low;
+    return moved;
+}
+
+static int move_equipment_choice(AosSoulMenu *menu, const AosStats *stats,
+                                 uint16_t direction) {
     int count = aos_equipment_choice_count(stats, menu->equip_slot);
     int ordinal = equipment_ordinal(stats, menu->recent_items, menu->equip_slot,
                                     menu->equip_choice);
-    ordinal = (ordinal + direction + count) % count;
+    if (menu->equip_ord < count) ordinal = menu->equip_ord;
+    int low = menu->equip_low;
+    int moved = pause_grid_move(&ordinal, &low, count, direction);
+    menu->equip_ord = (uint8_t)ordinal;
+    menu->equip_low = (int8_t)low;
     menu->equip_choice = aos_equipment_ordered_choice_at(
         stats, menu->recent_items, menu->equip_slot, ordinal);
+    return moved;
 }
 
 static unsigned update_equipment(AosSoulMenu *menu, AosStats *stats,
@@ -449,17 +522,21 @@ static unsigned update_equipment(AosSoulMenu *menu, AosStats *stats,
         menu->equip_choice = aos_equipment_current(stats, menu->equip_slot);
         if (!equipment_owned(stats, menu->equip_slot, menu->equip_choice))
             menu->equip_choice = AOS_EQUIPMENT_NONE;
+        /* func_0804AFD4 enters the item list with the cursor on the
+         * currently equipped record; the +0x16 window low starts at 0
+         * unless the selection already sits below the first window. */
+        menu->equip_ord = (uint8_t)equipment_ordinal(
+            stats, menu->recent_items, menu->equip_slot, menu->equip_choice);
+        int ord = menu->equip_ord;
+        menu->equip_low = (int8_t)(ord > 7 ? ord - 7 : 0);
         menu->equip_selecting = true;
         return AOS_SOUL_MENU_ACCEPTED;
     }
-    if (repeated_input & AOS_KEY_UP) {
-        move_equipment_choice(menu, stats, -1);
-        return AOS_SOUL_MENU_MOVED;
-    }
-    if (repeated_input & AOS_KEY_DOWN) {
-        move_equipment_choice(menu, stats, 1);
-        return AOS_SOUL_MENU_MOVED;
-    }
+    if (repeated_input & (AOS_KEY_UP | AOS_KEY_DOWN | AOS_KEY_LEFT |
+                          AOS_KEY_RIGHT | AOS_KEY_L | AOS_KEY_R))
+        return move_equipment_choice(menu, stats, repeated_input)
+                   ? AOS_SOUL_MENU_MOVED
+                   : 0;
     if (!(new_input & AOS_KEY_A)) return 0;
     uint8_t *equipped = menu->equip_slot == AOS_EQUIP_WEAPON ? &stats->weapon
                         : menu->equip_slot == AOS_EQUIP_ARMOR ? &stats->armor
@@ -474,18 +551,20 @@ static unsigned update_equipment(AosSoulMenu *menu, AosStats *stats,
     return AOS_SOUL_MENU_ACCEPTED | (changed ? AOS_SOUL_MENU_CHANGED : 0);
 }
 
-static void move_item_cursor(AosSoulMenu *menu, const AosStats *stats, int direction) {
-    int item = menu->item_cursor < AOS_ITEM_RECORDS
-                   ? menu->item_cursor
-                   : (direction > 0 ? AOS_ITEM_RECORDS - 1 : 0);
-    for (int tried = 0; tried < AOS_ITEM_RECORDS; ++tried) {
-        item = (item + direction + AOS_ITEM_RECORDS) % AOS_ITEM_RECORDS;
-        if (stats->item_counts[item]) {
-            menu->item_cursor = (uint8_t)item;
-            return;
-        }
-    }
-    menu->item_cursor = AOS_EQUIPMENT_NONE;
+/* func_0804B808 keeps +0x15 as an ordinal over the OWNED item list
+ * (empty slots are skipped by the +0x17 slot resolver), not a raw item
+ * index, so the same sub_080461BC grid cursor drives it. */
+static int move_item_cursor(AosSoulMenu *menu, const AosStats *stats,
+                            uint16_t direction) {
+    int count = aos_item_choice_count(stats);
+    int ordinal = menu->item_ord;
+    if (ordinal >= count) ordinal = 0;
+    int low = menu->item_low;
+    int moved = pause_grid_move(&ordinal, &low, count, direction);
+    menu->item_ord = (uint8_t)ordinal;
+    menu->item_low = (int8_t)low;
+    menu->item_cursor = aos_item_choice_at(stats, ordinal);
+    return moved;
 }
 
 static unsigned update_item_use(AosSoulMenu *menu, AosStats *stats,
@@ -497,21 +576,32 @@ static unsigned update_item_use(AosSoulMenu *menu, AosStats *stats,
         fade_begin_hub(menu);
         return AOS_SOUL_MENU_BACK;
     }
-    if (repeated_input & AOS_KEY_UP) {
-        move_item_cursor(menu, stats, -1);
-        return AOS_SOUL_MENU_MOVED;
-    }
-    if (repeated_input & AOS_KEY_DOWN) {
-        move_item_cursor(menu, stats, 1);
-        return AOS_SOUL_MENU_MOVED;
-    }
+    if (repeated_input & (AOS_KEY_UP | AOS_KEY_DOWN | AOS_KEY_LEFT |
+                          AOS_KEY_RIGHT | AOS_KEY_L | AOS_KEY_R))
+        return move_item_cursor(menu, stats, repeated_input)
+                   ? AOS_SOUL_MENU_MOVED
+                   : 0;
     if (!(new_input & AOS_KEY_A)) return 0;
     uint8_t used = menu->item_cursor;
     /* sub_0804B808 keeps the attempted record for the sound pick even
      * when sub_0804B36C refuses the use. */
-    menu->last_item = used;
+    if (used < AOS_ITEM_RECORDS) menu->last_item = used;
     if (!aos_item_use(stats, items, vitals, used)) return AOS_SOUL_MENU_REFUSED;
-    if (!stats->item_counts[used]) move_item_cursor(menu, stats, 1);
+    /* sub_0804B808 tail: when the use emptied the last visible cell the
+     * cursor ordinal drops one row/window instead of advancing onto an
+     * empty slot. */
+    int count = aos_item_choice_count(stats);
+    if (!stats->item_counts[used] && menu->item_ord == count) {
+        if (menu->item_low == 0) {
+            if (menu->item_ord) menu->item_ord--;
+        } else {
+            if (menu->item_ord == menu->item_low) menu->item_low -= 8;
+            menu->item_ord--;
+        }
+        menu->item_cursor = aos_item_choice_at(stats, menu->item_ord);
+    } else {
+        menu->item_cursor = aos_item_choice_at(stats, menu->item_ord);
+    }
     return AOS_SOUL_MENU_ITEM_USED;
 }
 

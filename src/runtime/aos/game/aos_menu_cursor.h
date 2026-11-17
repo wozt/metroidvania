@@ -2,7 +2,15 @@
  * parity reference. It is unit-tested but NOT linked into
  * fusion_aria_runtime; classified partial in
  * data/native_parity/annotations.tsv until a real gameplay
- * path consumes it. */
+ * path consumes it.
+ *
+ * Note: the START-menu Equip/Item Use lists do not use this
+ * routine. func_0804AFD4/func_0804B808 drive sub_080461BC, the
+ * simpler two-column grid cursor (+0x14 count, +0x15 cursor
+ * ordinal, +0x16 window low), which is ported as pause_grid_move
+ * inside aos_soul_menu.c and wired into both pages. This
+ * sub_0806688C model (counter +/- pair-table spans) belongs to
+ * the renderer-coupled menu surfaces and remains unlinked. */
 
 #ifndef FUSION_AOS_MENU_CURSOR_H
 #define FUSION_AOS_MENU_CURSOR_H

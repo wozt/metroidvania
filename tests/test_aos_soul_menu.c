@@ -200,10 +200,15 @@ int main(void) {
     aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A);
     assert(menu.equip_selecting && menu.equip_choice == 7);
     aos_soul_menu_update(&menu, &stats, &equipment, 0, AOS_KEY_UP);
-    assert(menu.equip_choice == 0);
+    /* sub_080461BC's two-column grid moves UP by a whole row: from Gram
+     * (ordinal 2) it lands on None (ordinal 0), not on Knife. */
+    assert(menu.equip_choice == AOS_EQUIPMENT_NONE);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_A, AOS_KEY_A) ==
            (AOS_SOUL_MENU_ACCEPTED | AOS_SOUL_MENU_CHANGED));
-    assert(stats.weapon == 0 && recent.item[AOS_EQUIP_WEAPON][3] == 7);
+    /* Uneequipping pushes Gram into the recent cache ahead of Knife. */
+    assert(stats.weapon == AOS_EQUIPMENT_NONE &&
+           recent.item[AOS_EQUIP_WEAPON][2] == 7 &&
+           recent.item[AOS_EQUIP_WEAPON][3] == 0);
     assert(aos_soul_menu_update(&menu, &stats, &equipment, AOS_KEY_B, AOS_KEY_B) ==
            AOS_SOUL_MENU_BACK);
     settle_fade(&menu, &stats, &equipment);
@@ -236,25 +241,71 @@ int main(void) {
                                  AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_REFUSED);
     assert(stats.item_counts[0] == 1);
 
-    aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals, 0, AOS_KEY_DOWN);
+    /* sub_080461BC drives the owned-ordinal grid: DOWN steps a full row
+     * (+2), LEFT/RIGHT toggle one column and the window never wraps. */
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 0, AOS_KEY_DOWN) == AOS_SOUL_MENU_MOVED);
+    assert(menu.item_cursor == 8);
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 0, AOS_KEY_UP) == AOS_SOUL_MENU_MOVED);
+    assert(menu.item_cursor == 0);
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 0, AOS_KEY_RIGHT) == AOS_SOUL_MENU_MOVED);
     assert(menu.item_cursor == 5);
-    aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
-                          AOS_KEY_A, AOS_KEY_A);
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_ITEM_USED);
     assert(stats.mp == 26 && !stats.item_counts[5] && menu.item_cursor == 8);
-    aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
-                          AOS_KEY_A, AOS_KEY_A);
-    assert(stats.status == 0 && stats.status_timers[0] == 0 &&
-           !stats.item_counts[8] && menu.item_cursor == 23);
-    aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
-                          AOS_KEY_A, AOS_KEY_A);
+    /* The column toggle flips the low bit (ordinal 1 -> 0); DOWN then
+     * steps a full row onto ordinal 2 = item 23. */
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 0, AOS_KEY_RIGHT) == AOS_SOUL_MENU_MOVED);
+    assert(menu.item_cursor == 0);
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 0, AOS_KEY_DOWN) == AOS_SOUL_MENU_MOVED);
+    assert(menu.item_cursor == 23);
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_ITEM_USED);
     assert(vitals.hp == 120 && !stats.item_counts[23] && menu.item_cursor == 25);
     assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
                                  AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_REFUSED);
     assert(stats.item_counts[25] == 1 && menu.last_item == 25);
+    /* item 8's status cure still applies after the cursor walked back. */
+    stats.status = 1;
+    stats.status_timers[0] = 0x258;
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 0, AOS_KEY_UP) == AOS_SOUL_MENU_MOVED);
+    assert(menu.item_cursor == 0);
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 0, AOS_KEY_RIGHT) == AOS_SOUL_MENU_MOVED);
+    assert(menu.item_cursor == 8);
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_ITEM_USED);
+    assert(stats.status == 0 && stats.status_timers[0] == 0 &&
+           !stats.item_counts[8] && menu.item_cursor == 25);
     assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
                                  AOS_KEY_B, AOS_KEY_B) == AOS_SOUL_MENU_BACK);
     settle_fade(&menu, &stats, &equipment);
     assert(menu.page == AOS_SOUL_MENU_PAGE_HUB);
+
+    /* sub_0804B808 tail: emptying the last visible ordinal drops the
+     * cursor back one cell instead of leaving it on an empty slot. */
+    memset(stats.item_counts, 0, sizeof stats.item_counts);
+    stats.item_counts[0] = stats.item_counts[8] = 1;
+    stats.status = 1;
+    menu.hub_cursor = AOS_PAUSE_ITEM_USE;
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_ACCEPTED);
+    settle_fade(&menu, &stats, &equipment);
+    assert(menu.item_cursor == 0);
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 0, AOS_KEY_RIGHT) == AOS_SOUL_MENU_MOVED);
+    assert(menu.item_cursor == 8);
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 AOS_KEY_A, AOS_KEY_A) == AOS_SOUL_MENU_ITEM_USED);
+    assert(!stats.item_counts[8] && menu.item_cursor == 0);
+    assert(aos_pause_menu_update(&menu, &stats, &equipment, items, &vitals,
+                                 AOS_KEY_B, AOS_KEY_B) == AOS_SOUL_MENU_BACK);
+    settle_fade(&menu, &stats, &equipment);
     /* With Flesh Golem's soul (0x13260 bit 0x100000) a harmful item heals
      * like kind 0 (sub_0804B36C), refused at full HP. */
     stats.item_counts[23] = 2;

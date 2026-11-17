@@ -109,7 +109,16 @@ typedef struct {
     uint8_t equip_slot;
     uint8_t equip_choice;
     bool equip_selecting;
+    /* sub_080461BC cursor triples for the Equip item list and the Item
+     * Use list: +0x14 is the choice count, +0x15 the cursor ordinal and
+     * +0x16 the signed window low (8 cells per window, 2 columns).
+     * equip_choice/item_cursor stay the resolved selections the renderer
+     * reads; the ordinals/low bytes drive native grid navigation. */
+    uint8_t equip_ord;
+    int8_t equip_low;
     uint8_t item_cursor;
+    uint8_t item_ord;
+    int8_t item_low;
     uint8_t last_item;
     uint8_t config_cursor;
     uint8_t config_buttons[AOS_BUTTON_ACTIONS];

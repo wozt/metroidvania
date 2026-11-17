@@ -134,13 +134,25 @@ int main(int argc, char **argv) {
         bytes[cursor_graphics + 3] = 0x10;
         memset(bytes + cursor_tiles, 0xFF, 0x2000);
         memset(bytes + 0x20C2E4, 0xFF, 32);  /* all sixteen palette colours */
+        /* sub_08048108's three swipe hands take OBJ palettes 10/11/12,
+         * the Soul Set init's sub_0803C7B4 rows 2/3/4 of 0x0820C2C0:
+         * solid red, blue and yellow so each sprite is identifiable. */
+        for (unsigned row = 0; row < 3; ++row) {
+            uint16_t colour = row == 0 ? 0x7C00 : row == 1 ? 0x001F : 0x7FE0;
+            for (unsigned k = 0; k < 16; ++k)
+                write_u16(bytes, 0x20C304 + row * 32 + k * 2, colour);
+        }
         const size_t descriptor = 0x256EF8;
-        write_u16(bytes, descriptor, 1);      /* one frame record */
+        write_u16(bytes, descriptor, 40);     /* enough frames for the
+                                                 * native +0x65 page and
+                                                 * swipe pose indices */
         write_u16(bytes, descriptor + 2, 1);  /* one animation */
-        write_u32(bytes, descriptor + 4, 0x0850C000);  /* records */
+        write_u32(bytes, descriptor + 4, 0x0850D000);  /* records */
         write_u32(bytes, descriptor + 12, 0x0850C200); /* animation table */
-        bytes[0x50C005] = 1;                  /* one piece in record 0 */
-        write_u32(bytes, 0x50C00C, 0x0850C100); /* components */
+        for (unsigned f = 0; f < 40; ++f) {
+            bytes[0x50D000 + f * 16 + 5] = 1; /* one piece per record */
+            write_u32(bytes, 0x50D000 + f * 16 + 12, 0x0850C100);
+        }
         bytes[0x50C106] = 16;                 /* width */
         bytes[0x50C107] = 16;                 /* height */
         write_u32(bytes, 0x50C200, 0x0850C300); /* anim data */
@@ -175,7 +187,7 @@ int main(int argc, char **argv) {
      * anchors it at pixel (14 + wiggle, 99); tick 1 gives wiggle -3 and a
      * 16 x 16 white piece at x 11..26, y 99..114. */
     assert(graphics.cursor_ready);
-    assert(graphics.cursor_sheet.frame_count == 1);
+    assert(graphics.cursor_sheet.frame_count == 40);
     assert(graphics.cursor_sheet.anim_count == 1);
     assert(graphics.cursor_sheet.anim_length[0] == 10);
     {
@@ -235,39 +247,91 @@ int main(int argc, char **argv) {
         assert(white[14] > white[2]);
         assert(white[14] > 100);
     }
-    /* The Soul Set L/R swipe stand-in: a category delta re-arms the
-     * flourish with the direction the native 0x40/0x80 input bits pass
-     * to sub_080486E0, anchored toward the new category label. */
+    /* sub_08048108's decoded three-sprite swipe (entity +0xFB8): the
+     * Soul Set page draws the hand triple every frame — the idle
+     * state-2 base pose included — and a category delta arms the
+     * 16-frame state-3 slide with the native direction sign. Sprite A
+     * takes OBJ palette 10 (row 2 of 0x0820C2C0, red), B palette 11
+     * (blue) and C palette 12 (yellow); the fixture paints those rows
+     * solid so each sprite is identifiable. */
+    {
+        /* Idle frame: red hand A anchored at (5,32), blue hand B at
+         * (11,48), both at the 0xC000 base scale; yellow C sits at
+         * y 960 & 0xFF = 192, below the screen. */
+        /* The blit writes B,G,R,A: palette 0x7C00 (the red soul tint)
+         * lands as (0,0,255) and 0x001F (blue) as (255,0,0). */
+        unsigned red = 0, blue = 0;
+        for (unsigned y = 28; y <= 62; ++y)
+            for (unsigned x = 0; x <= 28; ++x) {
+                const uint8_t *p = rgba + ((size_t)y * 240 + x) * 4;
+                if (!p[0] && !p[1] && p[2] == 255 && p[3] == 255) ++red;
+                if (p[0] == 255 && !p[1] && !p[2] && p[3] == 255) ++blue;
+            }
+        assert(red > 50);
+        assert(blue > 50);
+    }
     soul.category = 1;
     assert(aos_pause_graphics_render_soul_set(&graphics, &soul,
                                               rgba, 240 * 160 * 4));
-    assert(graphics.fx_timer == 2);
-    assert(graphics.fx_dir == 1);
+    /* The delta armed the slide: direction +1, first frame drawn,
+     * counter already advanced to 1. The entity's own +0x10 category
+     * is still 0, so the pose reads category 0's equipped soul. */
+    assert(graphics.fx_swipe_on);
+    assert(graphics.fx_swipe_dir == 1);
+    assert(graphics.fx_swipe_t == 1);
+    assert(graphics.fx_swipe_cat == 0);
+    assert(graphics.fx_swipe_pose == 1);
     for (unsigned k = 0; k < 15; ++k)
         assert(aos_pause_graphics_render_soul_set(
             &graphics, &soul, rgba, 240 * 160 * 4));
-    assert(graphics.fx_timer == 0);
-    {
-        /* Category 1's label strip sits at tile row 5 -> pixel y 40;
-         * the swipe anchor ends at (44, 44) on the final frame. */
-        unsigned count = 0;
-        for (unsigned y = 34; y <= 56; ++y)
-            for (unsigned x = 34; x <= 56; ++x) {
-                const uint8_t *p = rgba + ((size_t)y * 240 + x) * 4;
-                if (p[0] == 255 && p[1] == 255 && p[2] == 255 &&
-                    p[3] == 255)
-                    ++count;
-            }
-        assert(count > 100);
-    }
+    /* After the 16 state-3 frames the machine returns to state 2 and
+     * the +0x10 category steps +1 (clamped), matching the native
+     * slide-end tail. */
+    assert(!graphics.fx_swipe_on);
+    assert(graphics.fx_swipe_t == 0);
+    assert(graphics.fx_swipe_cat == 1);
+    /* The pose pick reads the stepped +0x10 category on the next
+     * frame: category 1 has no equipped soul in this fixture. */
+    assert(aos_pause_graphics_render_soul_set(&graphics, &soul,
+                                              rgba, 240 * 160 * 4));
+    assert(graphics.fx_swipe_pose == 0);
     soul.category = 0;
     assert(aos_pause_graphics_render_soul_set(&graphics, &soul,
                                               rgba, 240 * 160 * 4));
-    assert(graphics.fx_dir == -1);
+    assert(graphics.fx_swipe_on);
+    assert(graphics.fx_swipe_dir == -1);
+    /* Direction -1 sends sprite C (yellow) on the 0x3C00000 -
+     * 0x1C0000*t trajectory whose y wraps through the screen: it is
+     * visible around frames t = 2..6 on the right side. */
+    bool yellow_seen = false;
+    for (unsigned k = 0; k < 16 && !yellow_seen; ++k) {
+        assert(aos_pause_graphics_render_soul_set(
+            &graphics, &soul, rgba, 240 * 160 * 4));
+        for (unsigned y = 0; y < 160 && !yellow_seen; ++y)
+            for (unsigned x = 90; x < 160; ++x) {
+                const uint8_t *p = rgba + ((size_t)y * 240 + x) * 4;
+                if (!p[0] && p[1] == 255 && p[2] == 255 && p[3] == 255) {
+                    yellow_seen = true;
+                    break;
+                }
+            }
+    }
+    assert(yellow_seen);
     for (unsigned k = 0; k < 15; ++k)
         assert(aos_pause_graphics_render_soul_set(
             &graphics, &soul, rgba, 240 * 160 * 4));
-    assert(graphics.fx_timer == 0);
+    assert(!graphics.fx_swipe_on);
+    assert(graphics.fx_swipe_cat == 0);
+    /* Leaving and re-entering the page recreates entity +0xFB8: the
+     * slide state and the +0x10 category counter reset, and the pose
+     * pick reads category 0's equipped soul again. */
+    assert(aos_pause_graphics_render_hub(&graphics, &values, 0,
+                                         rgba, 240 * 160 * 4));
+    assert(aos_pause_graphics_render_soul_set(&graphics, &soul,
+                                              rgba, 240 * 160 * 4));
+    assert(!graphics.fx_swipe_on);
+    assert(graphics.fx_swipe_cat == 0);
+    assert(graphics.fx_swipe_pose == 1);
 
     AosPauseEquipValues equip = {
         .current = {15, 16, 11, 12, 13, 14},
@@ -335,6 +399,14 @@ int main(int argc, char **argv) {
         assert(graphics.cursor_sheet.anim_length[0] == 29);
         for (unsigned k = 8; k < 16; ++k)
             assert(graphics.cursor_palette[k] == 0);
+        /* The swipe hands' OBJ palettes are rows 2-4 of 0x0820C2C0 —
+         * the red, blue and yellow soul tints — decoded at init. */
+        for (unsigned row = 0; row < 3; ++row) {
+            unsigned nonzero = 0;
+            for (unsigned k = 0; k < 16; ++k)
+                nonzero += graphics.swipe_palette[row][k] != 0;
+            assert(nonzero > 8);
+        }
         {
             uint8_t *without_cursor = malloc(240 * 160 * 4);
             assert(without_cursor);

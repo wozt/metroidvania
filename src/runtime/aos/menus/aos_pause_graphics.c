@@ -146,7 +146,9 @@ bool aos_pause_graphics_init(AosPauseGraphics *graphics, const FusionRom *rom,
         };
         const uint8_t *palette = rom->data +
             (size_t)(AOS_CURSOR_PALETTE - AOS_ROM_BASE);
-        if (palette + 32 <= rom->data + rom->size &&
+        /* Rows 1-4 of the block must be present: row 1 is the cursor's
+         * own palette and rows 2-4 are the swipe hands' tints. */
+        if (palette + 4 + 4 * 32 <= rom->data + rom->size &&
             aos_obj_sheet_decode(&graphics->cursor_sheet, rom,
                                   cursor_graphics[language - 1],
                                   cursor_frames[language - 1],
@@ -155,6 +157,16 @@ bool aos_pause_graphics_init(AosPauseGraphics *graphics, const FusionRom *rom,
                 graphics->cursor_palette[k] =
                     (uint16_t)(palette[k * 2] | palette[k * 2 + 1] << 8);
             graphics->cursor_ready = true;
+            /* The Soul Set init (sub_08048D84's caller) loads rows 2, 3
+             * and 4 of the same 0x0820C2C0 block into OBJ palettes 10,
+             * 11 and 12 through sub_0803C7B4 — the red, blue and yellow
+             * tints sub_08048108 gives its three swipe hands. */
+            for (unsigned row = 0; row < 3; ++row)
+                for (unsigned k = 0; k < 16; ++k) {
+                    const uint8_t *colour = palette + 32 + row * 32 + k * 2;
+                    graphics->swipe_palette[row][k] =
+                        (uint16_t)(colour[0] | colour[1] << 8);
+                }
         }
         /* sub_0801232C's icon sheets: three graphics resources of
          * 16 tiles x 16 (8192 bytes of 4bpp) and the 16 colours of
@@ -274,6 +286,7 @@ static bool valid_output(const AosPauseGraphics *graphics, const uint8_t *rgba,
 }
 
 static void draw_flourish(AosPauseGraphics *graphics, uint8_t *rgba);
+static void draw_swipe(AosPauseGraphics *graphics, uint8_t *rgba);
 
 static void composite(AosPauseGraphics *graphics, uint8_t *rgba) {
     for (unsigned y = 0; y < AOS_PAUSE_HEIGHT; ++y)
@@ -284,6 +297,7 @@ static void composite(AosPauseGraphics *graphics, uint8_t *rgba) {
             memcpy(rgba + out, graphics->background.rgba + background, 4);
             bg0_pixel(graphics, x, y, rgba + out);
         }
+    draw_swipe(graphics, rgba);
     draw_flourish(graphics, rgba);
 }
 
@@ -296,6 +310,7 @@ static void composite_on_backdrop(AosPauseGraphics *graphics,
             rgba[out + 3] = 255;
             bg0_pixel(graphics, x, y, rgba + out);
         }
+    draw_swipe(graphics, rgba);
     draw_flourish(graphics, rgba);
 }
 
@@ -344,24 +359,36 @@ static void draw_cursor(const AosPauseGraphics *graphics, uint8_t *rgba,
     }
 }
 
-/* ---- transient affine hand flourishes (Patch 1171) ----
+/* ---- transient affine hand flourishes ----
  * sub_08048B0C arms entity +0xF34's +0x24 sub-state on every pause page
  * init that uses the press hand — Soul Set (anim arg 0x1F), Equip
  * (0x20), Item Use (0x21), Ability (0x22) and Config (0x24); hub, Sleep
  * and Enemy never call it — and sub_0804875C then runs the 16-update
  * sequence decoded in aos_affine_sprite.h: anchor pixel (0x35,9),
  * +0x0D timer 0..15, sub_0803E058(0, timer<<12, timer<<12, 0, 0, slot)
- * and the +0x59 affine bit cleared afterwards. The Soul Set L/R
- * category switch (input bits 0x40/0x80 -> sub_080486E0 direction -1/+1
- * on entity +0xFB8) runs sub_08048108's larger three-sprite slide
- * machine; this port keeps only its visible essence — a single hand
- * popping through the same scale ramp while drifting toward the newly
- * selected category label — documented as an approximation. */
-enum {
-    AOS_FX_PRESS,
-    AOS_FX_SWIPE,
-};
-
+ * and the +0x59 affine bit cleared afterwards. The same call stores
+ * the page's argument into entity +0x65, which sub_0804342C consumes
+ * as a FRAME index — the press pages therefore draw dedicated wide
+ * hand sprites (frames 0x1F-0x24 of the 0x08256EF8 descriptor), not
+ * the live cursor pose; `fx_frame` carries that index.
+ *
+ * sub_08048108 is the Soul Set L/R transition machine (entity +0xFB8,
+ * created by the page init and deleted on exit). sub_080486E0 flips
+ * its +0x20 direction sign and bumps +0xA into state 3, which runs
+ * 16 frames (+0xD = 0..15) committing the same hand frame THREE times
+ * per update — once per sprite with its own 16.16 position (+0x40/
+ * +0x44), affine scale (sub_0803E058, angle 0) and OBJ palette row
+ * (+0x5A bits -> palettes 10/11/12, the red/blue/yellow rows the page
+ * init loads from 0x0820C2C0 rows 2-4). The +0x65 pose is 1 when the
+ * entity's own +0x10 category has an equipped soul (the
+ * gEwramData+0x1325C+0xD/E/F bytes), else 0. Between slides (state 2)
+ * the same three hands still draw every frame at the decoded base
+ * pose. sub_0804933C's per-category palette/frame rewrite is native
+ * dead code: it runs after sub_08048108's commits and every field it
+ * touches (+0x40/+0x44/+0x5A/+0x65) is rewritten by the next update
+ * before any draw, so the port does not reproduce it. Retriggers
+ * mid-slide (native state 4) restart the 16-frame slide with the new
+ * direction, matching the observable result. */
 enum {
     AOS_FX_HUB,
     AOS_FX_SOUL_SET,
@@ -376,17 +403,44 @@ enum {
 static void flourish_page(AosPauseGraphics *graphics, unsigned page) {
     if (graphics->fx_page == page) return;
     graphics->fx_page = (uint8_t)page;
-    if (page == AOS_FX_SOUL_SET)
-        /* Page re-entry arms the press flourish below; re-baseline the
-         * swipe detector so the entry is not read as an L/R swipe. */
+    if (page == AOS_FX_SOUL_SET) {
+        /* sub_08048D84's page init recreates entity +0xFB8: state 2,
+         * +0xD/+0x2E zeroed, +0x20 = 0x8000 (direction +1) and the
+         * entity's own +0x10 category counter back to 0. */
         graphics->fx_category_valid = false;
+        graphics->fx_swipe_on = false;
+        graphics->fx_swipe_t = 0;
+        graphics->fx_swipe_dir = 1;
+        graphics->fx_swipe_cat = 0;
+    } else {
+        /* The swipe entity only exists on the Soul Set page. */
+        graphics->fx_swipe_on = false;
+    }
+    switch (page) {
+    case AOS_FX_SOUL_SET:
+        graphics->fx_frame = 0x1F;
+        break;
+    case AOS_FX_EQUIP:
+        graphics->fx_frame = 0x20;
+        break;
+    case AOS_FX_ITEM_USE:
+        graphics->fx_frame = 0x21;
+        break;
+    case AOS_FX_ABILITY:
+        graphics->fx_frame = 0x22;
+        break;
+    case AOS_FX_CONFIG:
+        graphics->fx_frame = 0x24;
+        break;
+    default:
+        break;
+    }
     switch (page) {
     case AOS_FX_SOUL_SET:
     case AOS_FX_EQUIP:
     case AOS_FX_ITEM_USE:
     case AOS_FX_ABILITY:
     case AOS_FX_CONFIG:
-        graphics->fx_kind = AOS_FX_PRESS;
         graphics->fx_timer = 1;
         break;
     default:
@@ -394,9 +448,9 @@ static void flourish_page(AosPauseGraphics *graphics, unsigned page) {
     }
 }
 
-/* The cursor sheet's current animation frame, shared by draw_cursor
- * and the flourishes (the native press entity reuses the same sheet;
- * its +0x65 pose selector stays approximated by the live cursor pose). */
+/* The cursor sheet's current animation frame, used by draw_cursor and
+ * as the press flourish's fallback when the native +0x65 page frame is
+ * outside the decoded descriptor. */
 static unsigned cursor_frame_index(const AosPauseGraphics *graphics) {
     const AosObjSheet *sheet = &graphics->cursor_sheet;
     unsigned total = 0;
@@ -417,7 +471,13 @@ static void draw_flourish(AosPauseGraphics *graphics, uint8_t *rgba) {
         graphics->cursor_sheet.anim_count == 0)
         return;
     const AosObjSheet *sheet = &graphics->cursor_sheet;
-    unsigned frame_index = cursor_frame_index(graphics);
+    /* sub_08048B0C stores the page argument in entity +0x65, which
+     * sub_0804342C resolves as a frame index (out-of-range falls back
+     * to frame 0 natively; the port falls back to the live cursor
+     * pose, which is frame 0's neighbour in every shipped descriptor). */
+    unsigned frame_index = graphics->fx_frame < sheet->frame_count
+                               ? graphics->fx_frame
+                               : cursor_frame_index(graphics);
     if (frame_index >= sheet->frame_count) {
         if (++graphics->fx_timer > 16) graphics->fx_timer = 0;
         return;
@@ -426,25 +486,99 @@ static void draw_flourish(AosPauseGraphics *graphics, uint8_t *rgba) {
      * hand grows from invisible to ~0.94 over the 16 updates. */
     unsigned t = (unsigned)graphics->fx_timer - 1;
     int32_t scale = (int32_t)t << 12;
-    int anchor_x, anchor_y;
-    if (graphics->fx_kind == AOS_FX_SWIPE) {
-        /* Approximation of sub_08048108's slide: the hand drifts from
-         * fx_dir * 15 px toward the selected category label's left
-         * edge (tile column 6 -> pixel 48, rows 3+2*category -> y
-         * 24+16*category) while running the same scale ramp. */
-        anchor_x = 44 + graphics->fx_dir * (int)(15 - t);
-        anchor_y = 28 + 16 * (int)graphics->fx_category;
-    } else {
-        /* sub_0804875C state 1's fixed anchor: pixel (0x35,9). */
-        anchor_x = 0x35;
-        anchor_y = 9;
-    }
+    /* sub_0804875C state 1's fixed anchor: pixel (0x35,9). */
     int16_t params[4];
     aos_affine_matrix(0, scale, scale, false, false, params);
     aos_affine_sprite_draw(sheet, &sheet->frames[frame_index],
-                           graphics->cursor_palette, anchor_x, anchor_y,
+                           graphics->cursor_palette, 0x35, 9,
                            params, rgba, AOS_PAUSE_WIDTH, AOS_PAUSE_HEIGHT);
     if (++graphics->fx_timer > 16) graphics->fx_timer = 0;
+}
+
+/* sub_08048108's three-commit slide. Each sprite i gets the decoded
+ * 16.16 position (pos40/pos44), Q16.16 scale and palette row; the
+ * anchor handed to the blit is the OAM coordinate — x wrapped into
+ * the signed 9-bit range, y into 8 bits — which is where the native
+ * engine places the sprite origin. `t` is the +0xD counter and the
+ * +0x2E ramp reaches +-0x4000 over the 16 frames; `dir` is the +0x20
+ * sign (+1 for the fall-through branch, -1 for the blt branch). */
+static void swipe_hand(const AosPauseGraphics *graphics,
+                       const AosObjFrame *frame, const uint16_t palette[16],
+                       int32_t x16, int32_t y16, int32_t scale,
+                       uint8_t *rgba) {
+    /* The native coordinate is the 16.16 sum truncated toward zero,
+     * then wrapped: x into the signed 9-bit OAM field, y into 8 bits. */
+    int xi = x16 >= 0 ? (int)(x16 >> 16) : -(int)((-x16) >> 16);
+    int yi = y16 >= 0 ? (int)(y16 >> 16) : -(int)((-y16) >> 16);
+    int anchor_x = xi & 0x1FF;
+    if (anchor_x & 0x100) anchor_x -= 0x200;
+    int anchor_y = yi & 0xFF;
+    int16_t params[4];
+    aos_affine_matrix(0, scale, scale, false, false, params);
+    aos_affine_sprite_draw(&graphics->cursor_sheet, frame, palette,
+                           anchor_x, anchor_y, params, rgba,
+                           AOS_PAUSE_WIDTH, AOS_PAUSE_HEIGHT);
+}
+
+static void draw_swipe(AosPauseGraphics *graphics, uint8_t *rgba) {
+    if (graphics->fx_page != AOS_FX_SOUL_SET || !graphics->cursor_ready ||
+        graphics->cursor_sheet.frame_count < 2)
+        return;
+    const AosObjSheet *sheet = &graphics->cursor_sheet;
+    /* +0x65: frame 1 when the entity's +0x10 category has an equipped
+     * soul, else frame 0 (fx_swipe_pose snapshots the native flag). */
+    const AosObjFrame *frame =
+        &sheet->frames[graphics->fx_swipe_pose ? 1 : 0];
+    int dir = graphics->fx_swipe_dir;
+    int32_t t = graphics->fx_swipe_on ? graphics->fx_swipe_t : 0;
+    /* +0x2E ramps +-0x400 per state-3 frame, clamped at +-0x4000 (the
+     * native 0x3FFF0000 bound); t <= 15 keeps it inside the ramp. */
+    int32_t ramp = 0;
+    if (graphics->fx_swipe_on) {
+        int32_t step = (int32_t)(t + 1) * 0x400;
+        if (step > 0x4000) step = 0x4000;
+        ramp = dir * step;
+    }
+    int32_t scale_a = !graphics->fx_swipe_on ? 0xC000
+                    : dir > 0 ? 0x10000 - 2 * ramp
+                              : 0x10000 + ramp;
+    int32_t scale_b = 0xC000 + ramp;
+    int32_t scale_c = !graphics->fx_swipe_on ? 0x8000
+                    : dir > 0 ? 0xC000 + ramp
+                              : 0x8000 - 2 * ramp;
+    int32_t ax, ay, bx, by, cx, cy;
+    if (dir > 0) {
+        ax = 0x54000 + 0xA000 * t;  ay = 0x200000 + 0x1C0000 * t;
+        bx = 0x0B0000 + 0xA000 * t; by = 0x300000 - 0x10000 * t;
+        cx = 0x7C0000 - 0x14000 * t; cy = 0x3C00000 - 0xC000 * t;
+    } else {
+        ax = 0x54000 - 0xA000 * t;  ay = 0x200000 + 0x10000 * t;
+        bx = 0x0B0000 + 0x14000 * t; by = 0x300000 + 0xC000 * t;
+        cx = 0x7C0000 - 0xA000 * t; cy = 0x3C00000 - 0x1C0000 * t;
+    }
+    /* Commit order A/B/C carries OBJ palettes 10/11/12 — the red, blue
+     * and yellow rows. */
+    swipe_hand(graphics, frame, graphics->swipe_palette[0],
+               ax, ay, scale_a, rgba);
+    swipe_hand(graphics, frame, graphics->swipe_palette[1],
+               bx, by, scale_b, rgba);
+    swipe_hand(graphics, frame, graphics->swipe_palette[2],
+               cx, cy, scale_c, rgba);
+}
+
+/* One rendered frame of the swipe machine: the +0xD counter advances
+ * after the draw and the +0x10 category steps +-1 (clamped 0..2) when
+ * the slide ends, exactly like the native state-3 tail. */
+static void swipe_advance(AosPauseGraphics *graphics) {
+    if (!graphics->fx_swipe_on) return;
+    if (++graphics->fx_swipe_t > 15) {
+        graphics->fx_swipe_on = false;
+        graphics->fx_swipe_t = 0;
+        int cat = (int)graphics->fx_swipe_cat + graphics->fx_swipe_dir;
+        if (cat < 0) cat = 0;
+        if (cat > 2) cat = 2;
+        graphics->fx_swipe_cat = (uint8_t)cat;
+    }
 }
 
 /* Pause-menu OBJ-layer audit (Patch 1165). Every sub_08048804/
@@ -483,11 +617,21 @@ static void draw_flourish(AosPauseGraphics *graphics, uint8_t *rgba) {
  *    slide machine collapses to one hand running the same scale ramp
  *    while drifting toward the newly selected category label, fired
  *    when render_soul_set observes the category delta that native
- *    input bits 0x40/0x80 feed into sub_080486E0. Remaining
- *    approximations: the flourish reuses the live cursor animation
- *    frame instead of the native +0x65 pose selector, and the swipe
- *    omits sub_08048108's two extra sprites and sub_0804933C's
- *    palette/animation swap. */
+ *    input bits 0x40/0x80 feed into sub_080486E0. Patch (this change)
+ *    replaces that stand-in with the decoded machine: all three
+ *    commits draw every Soul Set frame — idle included — with the
+ *    native 16.16 positions, per-sprite Q16.16 scales, OBJ palettes
+ *    10/11/12 and the +0x65 = 0/1 equipped-soul pose pick; the press
+ *    flourish now uses the native +0x65 page frames (0x1F-0x24)
+ *    instead of the live cursor pose. sub_0804933C's per-category
+ *    palette/animation swap is documented native dead code (every
+ *    field it writes is overwritten by the next sub_08048108 commit
+ *    before any draw). Remaining approximations: the swipe keeps only
+ *    the visible essence of the native state machine — the +0x14/
+ *    +0x18/+0x1C accumulators, the +0x38 retrigger flag and state 4's
+ *    exact re-arm timing are folded into an immediate restart — and
+ *    piece-level OAM coordinate wrap is approximated by wrapping only
+ *    the sprite anchor. */
 
 /* sub_08048804/sub_080488FC's icon entity: icon n is the 16x16 block
  * (n-1)%64 of sheet (n-1)/64 (eight icons per row of 16 px), sampled
@@ -876,17 +1020,27 @@ bool aos_pause_graphics_render_soul_set(
     flourish_page(graphics, AOS_FX_SOUL_SET);
     /* sub_080486E0 category watch: the native L/R input bits 0x40/0x80
      * pass direction -1/+1 into the Soul Set transition machine
-     * (sub_08048108, entity +0xFB8). The port observes the resulting
-     * category delta on this page's values instead of raw input, so the
-     * swipe flourish fires exactly when the selection changes. */
+     * (sub_08048108, entity +0xFB8), flipping its +0x20 sign and
+     * bumping +0xA into the 16-frame state-3 slide. The port observes
+     * the resulting category delta on this page's values instead of
+     * raw input; a mid-slide delta restarts the slide with the new
+     * direction, matching the native state-4 retrigger's observable
+     * result. */
     if (graphics->fx_category_valid &&
         values->category != graphics->fx_category) {
-        graphics->fx_kind = AOS_FX_SWIPE;
-        graphics->fx_dir = values->category > graphics->fx_category ? 1 : -1;
-        graphics->fx_timer = 1;
+        graphics->fx_swipe_dir =
+            values->category > graphics->fx_category ? 1 : -1;
+        graphics->fx_swipe_t = 0;
+        graphics->fx_swipe_on = true;
     }
     graphics->fx_category = values->category;
     graphics->fx_category_valid = true;
+    /* The +0x65 pose pick reads the entity's own +0x10 category (the
+     * native gEwramData+0x1325C+0xD/E/F equipped-soul bytes), which
+     * lags the menu category by one slide. */
+    graphics->fx_swipe_pose =
+        graphics->fx_swipe_cat < AOS_PAUSE_SOUL_FAMILIES &&
+        values->equipped[graphics->fx_swipe_cat] != 0;
     reset_bg0(graphics);
     /* sub_08041204 clears the language-bank placeholders before the small
      * font renderer rewrites their character data. */
@@ -992,6 +1146,7 @@ bool aos_pause_graphics_render_soul_set(
         return false;
 
     composite_on_backdrop(graphics, rgba);
+    swipe_advance(graphics);
     /* sub_08048EA4: column 2 or 0x10 on the flat slot's bit 0, row
      * 0xA + slot/2 where slot = selected - top in the eight-entry list. */
     draw_cursor(graphics, rgba, (selected - top) & 1 ? 0x10 : 2,

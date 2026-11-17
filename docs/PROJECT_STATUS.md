@@ -1,3 +1,66 @@
+## Patch 1209 - pause transients: full sub_08048108 three-sprite swipe and native +0x65 press frames
+
+- **Decode.** `sub_08048108` (entity +0xFB8, created by the Soul Set
+  page init and deleted on exit) is not a single flourish but a
+  three-commit machine: every update it rewrites entity +0x40/+0x44
+  (16.16 position), arms an affine slot through `sub_0803E058(0, s,
+  s, 0, 0, slot)`, sets +0x5A palette bits and +0x65 pose, then calls
+  `sub_0803AC40` once per sprite — so the same hand frame is drawn
+  three times per frame with different position, scale and OBJ
+  palette. In state 2 (idle, between slides) all three draw at the
+  decoded base pose; `sub_080486E0` flips the +0x20 direction sign
+  and bumps +0xA into state 3, which runs 16 frames (+0xD = 0..15)
+  while the +0x2E scale offset ramps +-0x400/frame to +-0x4000.
+  Per-sprite decode (t = +0xD, dir = +0x20 sign):
+  - A (palette 10): scale 0xC000 idle / 0x10000-2s (dir+) or
+    0x10000+s (dir-); pos (0x54000 +- 0xA000t, 0x200000 +
+    0x1C0000t dir+ / +0x10000t dir-).
+  - B (palette 11): scale 0xC000 idle / 0xC000+s; pos
+    (0xB0000 + 0xA000t / +0x14000t, 0x300000 - 0x10000t /
+    +0xC000t).
+  - C (palette 12): scale 0x8000 idle / 0xC000+s (dir+) or
+    0x8000-2s (dir-); pos (0x7C0000 - 0x14000t / -0xA000t,
+    0x3C00000 - 0xC000t / -0x1C0000t) — its y wraps through the
+    OAM's 8-bit field, so the yellow hand flickers across the right
+    side on direction -1.
+  The Soul Set init loads OBJ palettes 10/11/12 from rows 2/3/4 of
+  0x0820C2C0 through `sub_0803C7B4` — the red, blue and yellow soul
+  tints — and `sub_0804933C`'s per-category palette/frame rewrite is
+  native dead code: it runs after `sub_08048108`'s commits and every
+  field it touches (+0x40/+0x44/+0x5A/+0x65) is rewritten by the next
+  update before any draw.
+- **Port.** `aos_pause_graphics.c` replaces the Patch 1171 swipe
+  stand-in with the decoded machine: `draw_swipe` commits all three
+  hands every Soul Set frame (idle included) through
+  `aos_affine_sprite_draw` with the native positions (anchor wrapped
+  like the OAM's signed-9-bit x / 8-bit y fields), scales and the
+  three palette rows decoded at init; the +0x65 pose picks frame 1
+  when the entity's own +0x10 category has an equipped soul (the
+  native +0x1325C+0xD/E/F bytes), else frame 0. The entity's +0x10
+  counter starts at 0 on page entry and steps +-1 clamped 0..2 when a
+  slide ends — it is not the menu category. `sub_08048B0C`'s page
+  argument is now honored as the native +0x65 frame index, so the
+  press flourish draws the dedicated wide hand sprites (frames
+  0x1F Soul Set, 0x20 Equip, 0x21 Item Use, 0x22 Ability, 0x24
+  Config) instead of the live cursor pose. Category deltas still
+  trigger the slide through the `fx_category` watch; a mid-slide
+  delta restarts it, matching the native state-4 retrigger's
+  observable result.
+- **Remaining approximations.** The +0x14/+0x18/+0x1C accumulators,
+  the +0x38 retrigger flag and state 4's exact re-arm timing are
+  folded into the immediate restart; OAM wrap is applied to the
+  sprite anchor only, not per piece; the swipe entity reuses the
+  per-language cursor sheet (native always frames it through the
+  0x08256EF8 descriptor); nothing here is emulator-compared.
+- **Tests/docs.** `tests/test_aos_pause_graphics.c` grows the cursor
+  fixture to 40 frame records, paints the swipe palette rows solid
+  red/blue/yellow, and asserts the idle hand positions, the slide
+  state machine (+0xD counter, direction sign, +0x10 category step
+  and pose pick), the direction -1 yellow-hand screen wrap and the
+  page-entry state reset; the real-ROM block checks the decoded
+  palette rows. `annotations.tsv`/`features.tsv` notes updated;
+  derived docs regenerated.
+
 ## Patch 1208 - Chaos phase 2: real attack machines, script tables and role children
 
 - **Scope.** `src/runtime/aos/enemies/chaos.c`,

@@ -50,22 +50,41 @@ typedef struct {
     uint8_t icon_tiles[3][0x2000];
     uint16_t icon_palette[16];
     bool icons_ready;
-    /* sub_08048B0C/sub_0804875C and sub_08048108/sub_080486E0: the two
-     * transient affine hand animations. `fx_page` tracks the last page
-     * rendered so a page entry can arm the press flourish (native arms
-     * entity +0xF34's +0x24 on every sub_08048B0C page init: Soul Set
-     * 0x1F, Equip 0x20, Item Use 0x21, Ability 0x22, Config 0x24 —
-     * hub, Sleep and Enemy never call it). `fx_timer` is the native
-     * +0x0D counter (0..15 scaled frames, then the affine pass ends);
-     * `fx_kind` selects press vs the Soul Set L/R swipe stand-in and
-     * `fx_dir` its direction. `fx_category` detects category changes
-     * between render_soul_set calls for the swipe trigger. */
+    /* sub_08048B0C/sub_0804875C (press flourish, entity +0xF34) and
+     * sub_08048108/sub_080486E0 (Soul Set L/R swipe, entity +0xFB8):
+     * the two transient affine hand animations. `fx_page` tracks the
+     * last page rendered so a page entry can arm the press flourish
+     * (native arms entity +0xF34's +0x24 on every sub_08048B0C page
+     * init: Soul Set 0x1F, Equip 0x20, Item Use 0x21, Ability 0x22,
+     * Config 0x24 — hub, Sleep and Enemy never call it) and reset the
+     * swipe machine, which the native page init recreates. `fx_timer`
+     * is the press entity's +0x0D counter (0..15 scaled frames, then
+     * the affine pass ends); `fx_frame` is the native +0x65 frame the
+     * page init selected. The swipe machine's state lives in
+     * `fx_swipe_*`: `fx_swipe_t` is the +0xD frame counter (0..15),
+     * `fx_swipe_dir` the +0x20/+0x39 direction sign, `fx_swipe_cat`
+     * the entity's own +0x10 category counter (starts 0 on page entry
+     * and steps +-1, clamped 0..2, when a slide ends — it is NOT the
+     * menu category) and `fx_swipe_on` whether a slide is running;
+     * between slides the entity still draws its three hands at the
+     * decoded base pose. `fx_category` detects category changes
+     * between render_soul_set calls for the swipe trigger, and
+     * `fx_swipe_pose` snapshots whether the +0x10 category has an
+     * equipped soul (the native +0x1325C+0xD/E/F bytes) for the
+     * +0x65 = 0/1 frame pick. `swipe_palette` holds OBJ palette rows
+     * 10/11/12 — rows 2/3/4 of 0x0820C2C0 loaded by the Soul Set init
+     * through sub_0803C7B4 — the red/blue/yellow hand tints. */
     uint8_t fx_page;
     uint8_t fx_timer;
-    uint8_t fx_kind;
-    int8_t fx_dir;
+    uint8_t fx_frame;
     uint8_t fx_category;
     bool fx_category_valid;
+    uint8_t fx_swipe_t;
+    int8_t fx_swipe_dir;
+    uint8_t fx_swipe_cat;
+    uint8_t fx_swipe_pose;
+    bool fx_swipe_on;
+    uint16_t swipe_palette[3][16];
 } AosPauseGraphics;
 
 typedef struct {

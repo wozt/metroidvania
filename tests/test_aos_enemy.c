@@ -13793,6 +13793,13 @@ static void chaos_tests(void) {
     limb8.y = AOS_FIXED(100);
     limb8.ch2_lox = (uint8_t)body.ch2_box;
     limb8.ch2_loy = (uint8_t)body.ch2_oy;
+    /* The limb samples trail record 8*variant+8 = 32, which the
+     * body's 30 writes have not reached yet (it still holds the
+     * create-time fill). Seed its delta bytes so the step is
+     * observable; the +0x18/+0x19 origin delta is 0 now that
+     * ch2_box carries the real bgInfo[1] low byte. */
+    body.ch2_trail[32 * 6 + 0] = 2;
+    body.ch2_trail[32 * 6 + 1] = 1;
     int32_t lx = limb8.x, ly = limb8.y;
     for (int i = 0; i < 16; ++i)
         aos_enemy_update(&limb8, &soma, &layer, &kind, NULL, NULL,

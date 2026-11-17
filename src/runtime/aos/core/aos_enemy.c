@@ -301,6 +301,20 @@ static const AosEnemy *aim_self;
 
 void aos_enemy_set_no_target(bool none) { no_target = none; }
 
+/* gEwramData + 0xA094 (bgInfo[1]) integer scroll halves, published
+ * by the entity pass each frame; 0 until the first publish. */
+static int32_t room_origin_x, room_origin_y;
+
+void aos_enemy_set_room_origin(int32_t x, int32_t y) {
+    room_origin_x = x;
+    room_origin_y = y;
+}
+
+void aos_enemy_room_origin(int32_t *x, int32_t *y) {
+    *x = room_origin_x;
+    *y = room_origin_y;
+}
+
 int32_t aos_enemy_target_x(const AosSoma *soma) {
     if (no_target && aim_self) return aim_self->x;
     return decoy.active ? decoy.x : soma->x;

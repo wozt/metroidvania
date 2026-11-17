@@ -294,9 +294,11 @@ static void ch2_set_table(AosEnemy *e, const uint8_t *table) {
 
 /* sub_080A4CE4: one script-walk step. The frame counter + 0x1C
  * advances; on entry rollover the index + 0x18 moves and the done
- * flag + 0x20 latches at the table count. The palette channel write
- * (gEwramData + 0x3F0/0x3E0 through sub_0803C7B4) has no runtime
- * counterpart; the emitted value is kept in ch2_anim. */
+ * flag + 0x20 latches at the table count. The OAM channel write
+ * (sub_0803C7B4 through the gEwramData +0x3E0 record-pointer /
+ * +0x3F0 last-frame cache pair, channel = entity +0x2C - 0xA —
+ * decoded, visual-only) has no runtime counterpart; the emitted
+ * value is kept in ch2_anim. */
 static void ch2_script_tick(AosEnemy *e) {
     if (e->ch2_done || !e->ch2_table)
         return;
@@ -982,8 +984,11 @@ static void ch2_body_pick(AosEnemy *e, uint32_t (*random)(void)) {
  * (update sub_080A5A7C) spawned at the parent's +0x40/+0x44 plus the
  * (0,0) offsets, +0x5C = 0x1E, +0x65 = 0x0B, +0x5B = 2,
  * +0x3C = 0x55, +0x20 = 0x4000, +0x17 = 0, +0x1B = 4 and the
- * +0x18/+0x19 spawn-origin bytes off the gEwramData + 0xA094 room
- * record (approximated by the parent's pixel position — documented).
+ * +0x18/+0x19 spawn-origin bytes: sub_080A57BC runs LDRH on the
+ * gEwramData + 0xA094 +6/+0xA u16s and STRB truncates to the low
+ * byte — the room-record scroll origin's low byte, published
+ * through aos_enemy_set_room_origin (the same bgInfo[1] view the
+ * Object20 In block reads).
  * The eight sub_080A62B8 limbs are emitted by the body's first
  * update; natively they are created inside the same call (a
  * one-frame difference, documented). The affine channels
@@ -1013,9 +1018,13 @@ static void ch2_spawn_body(AosEnemy *e, const AosAnimSet *anims,
     c->boss_parts_spawned = false;
     c->ch2_bgrp = 0;                    /* +0x17 */
     c->ch2_blmb = 4;                    /* +0x1B */
-    c->ch2_box = (uint16_t)(e->x >> 16); /* +0x18/+0x19 room-record
-                                          * origin approximation */
-    c->ch2_oy = (uint16_t)(e->y >> 16);
+    /* +0x18/+0x19: the low byte of the bgInfo[1] +6/+0xA u16s
+     * (LDRH+STRB truncation in sub_080A57BC), kept <= 0xFF so the
+     * limb's +0x18 refresh delta collapses like the native one. */
+    int32_t room_ox = 0, room_oy = 0;
+    aos_enemy_room_origin(&room_ox, &room_oy);
+    c->ch2_box = (uint16_t)(uint8_t)room_ox;
+    c->ch2_oy = (uint16_t)(uint8_t)room_oy;
     c->ch2_lox = (uint8_t)c->ch2_box;
     c->ch2_loy = (uint8_t)c->ch2_oy;
     c->ch2_turn = 0;                    /* +0x14 */

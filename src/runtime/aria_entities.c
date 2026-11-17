@@ -472,6 +472,17 @@ static uint8_t object20_ewram_64;
  * channel carries. Other native +0x5A consumers (damage/
  * effect paths) are not ported. Session-scoped. */
 static uint8_t object20_player_byte5a;
+/* Player entity (gEwramData + 0x13110) +0x58 flag byte: the
+ * story/dirs/slots variants OR/AND-NOT bits 0x40/0x20/0x41/0x21
+ * into it (facing mirror, scripted facing, hide bits) and the
+ * shop family stores absolute values — one shared mutable byte
+ * natively. The runtime keeps it as a session channel: each
+ * frame the facing bit 0x40 is resampled from soma.facing_left
+ * (the native player update rewrites facing every frame the
+ * same way) while the other bits persist until a variant
+ * writes them. entityData[0].flags58 and every
+ * in->player_flags58 read see this byte. */
+static uint8_t object20_player_flags58;
 /* gEwramData +8 RNG state + +0x7864 byte for the ported
  * sub_08064518 whiteout renderer (param0 30). The RNG state
  * round-trips through the story Out; +0x7864 has no other
@@ -960,7 +971,7 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
         in->player_pos40 = soma->x;
         in->player_pos44 = soma->y;
         in->player_anim5c = soma->anim.id;
-        in->player_flags58 = soma->facing_left ? 0x40 : 0;
+        in->player_flags58 = object20_player_flags58;
     }
     /* dirs probes (param0 4-8): the flag bytes and the unmodelled
      * collision probe / uncommitted ROM table stay neutral. */
@@ -1500,7 +1511,8 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
                                AriaCombat *combat, AosForcedInput *input,
                                uint16_t new_input, int npc_pre_state,
                                AriaRoom *room, int cam_x, int cam_y,
-                               AosRoomMusic *room_music) {
+                               AosRoomMusic *room_music,
+                               AosSoma *soma) {
     /* sub_08067934/sub_08067A04/sub_08067898 triple. The npc_talk
      * families keep their window requests inside the variant state
      * structs instead of a normalized Out: the poll frames are the
@@ -2342,10 +2354,14 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
          * approximation on its own record. */
         if (out->shop.side_record_53c || out->shop.side_record_58)
             entity_data_bound(rec)->flags58 = out->shop.record58_val;
+        /* The player +0x58 stores land on the session byte (the
+         * byte entityData[0].flags58 mirrors) so the write
+         * persists like the native shared state. */
         if (out->shop.side_player_58)
-            aria_entity_data[0].flags58 = out->shop.player58_val;
+            object20_player_flags58 = out->shop.player58_val;
         if (out->shop.andnot_player58)
-            aria_entity_data[0].flags58 &= (uint8_t)~out->shop.andnot_player58;
+            object20_player_flags58 &= (uint8_t)~out->shop.andnot_player58;
+        aria_entity_data[0].flags58 = object20_player_flags58;
         if (out->shop.andnot_ent58)
             rec->flags58 &= (uint8_t)~out->shop.andnot_ent58;
     }
@@ -2407,30 +2423,77 @@ static void object20_apply_out(AriaEntity *e, const AosObject20Out *out,
                                              : out->slots.setplayerinput_arg);
     }
 
-    /* Player-entity writes (story family): +0x40/+0x44 are 16.16
-     * room pixels, +0x42 is a screen pixel. The runtime keeps no
-     * player +0x58 byte (facing_left carries only bit 0x40 and the
-     * and-not masks cannot be expressed), and the +0x40/+0x44
-     * writes arrive as absolute 16.16 values whose screen-vs-room
-     * space is ambiguous in the port — reported, not applied,
-     * until a native comparison pins the semantics down. */
-    const AosObject20StoryOut *so = &out->story;
-    if (so->player_scr42_set || so->player_pos40_set ||
-        so->player_pos44_set || so->player58_or_40 ||
-        so->player58_or_20 || so->player58_andnot_41 ||
-        so->player58_andnot_21 || so->player_w48_zero ||
-        so->player_w4c_zero || so->player_w4a_zero ||
-        so->player_w4e_zero || so->player_anim5c_inc)
-        printf("Object20 %d: player write scr42=%d pos40=0x%X "
-               "pos44=0x%X flags58 or40=%d or20=%d andnot41=%d "
-               "andnot21=%d animinc=%d\n",
-               e->id, so->player_scr42_set ? (int)so->player_scr42_val : -1,
-               so->player_pos40_set ? (unsigned)so->player_pos40_val : 0u,
-               so->player_pos44_set ? (unsigned)so->player_pos44_val : 0u,
-               so->player58_or_40 ? 1 : 0, so->player58_or_20 ? 1 : 0,
-               so->player58_andnot_41 ? 1 : 0,
-               so->player58_andnot_21 ? 1 : 0,
-               so->player_anim5c_inc ? 1 : 0);
+    /* Player-entity writes (gEwramData + 0x13110) across the
+     * dirs/story/slots families, applied to Soma in the native
+     * shared-state order (a write is visible to the entities
+     * later in this same pass, like the native slot order):
+     *  - +0x58 flag byte: the OR/AND-NOT masks land on
+     *    object20_player_flags58; bit 0x40 mirrors into
+     *    soma->facing_left and entityData[0].flags58 so the
+     *    facing consumers see it this frame. Explicit clears
+     *    apply after the sets (the ported variants emit the
+     *    masks unordered, so the clear wins like the native
+     *    last-store-wins byte).
+     *  - +0x42/+0x46 screen words (s16): converted through the
+     *    same cam_x/cam_y approximation in->player_scr42 uses —
+     *    only the integer half of soma->x/y moves, the 16.16
+     *    fraction stays, matching the native strh.
+     *  - +0x40 fine word (story player_pos40): an absolute
+     *    16.16 room position — assigned wholesale like the
+     *    native dword store.
+     *  - +0x48/+0x4C/+0x50 velocity/friction words: zeroed,
+     *    masked or clamped onto soma->vx/vy/friction; the
+     *    +0x4A/+0x4E hword writes keep only the low word.
+     *  - player_anim5c_inc is a +0x5C READ report (the +1 copy
+     *    source): no writeback — fill_in resamples the byte
+     *    from soma->anim.id each call. */
+    if (soma) {
+        const AosObject20DirsOut *dout = &out->dirs;
+        const AosObject20StoryOut *so = &out->story;
+        const AosObject20SlotsOut *slout = &out->slots;
+        uint8_t pm = object20_player_flags58;
+        if (dout->player58_or_40 || so->player58_or_40 ||
+            slout->player58_or_40)
+            pm |= 0x40;
+        if (so->player58_or_20) pm |= 0x20;
+        if (dout->player58_andnot_41 || so->player58_andnot_41 ||
+            slout->player58_andnot_41)
+            pm = (uint8_t)(pm & ~0x41u);
+        if (so->player58_andnot_21)
+            pm = (uint8_t)(pm & ~0x21u);
+        if (pm != object20_player_flags58) {
+            object20_player_flags58 = pm;
+            aria_entity_data[0].flags58 = pm;
+            soma->facing_left = (pm & 0x40) != 0;
+        }
+        /* Screen-word writes: +0x42 then +0x46 (the story
+         * "pos44" Out is the +0x46 screen Y — the ported
+         * variants only ever feed it s->scr46-derived values). */
+        int32_t scr42 = INT32_MIN, scr46 = INT32_MIN;
+        if (dout->player_scr42_set) scr42 = dout->player_scr42_val;
+        if (so->player_scr42_set) scr42 = so->player_scr42_val;
+        if (slout->player_scr42_set) scr42 = slout->player_scr42_val;
+        if (so->player_pos44_set) scr46 = so->player_pos44_val;
+        if (scr42 != INT32_MIN) {
+            int32_t room_x = (int32_t)(int16_t)scr42 + cam_x;
+            soma->x = (soma->x & 0xFFFF) |
+                      ((int32_t)((uint32_t)(uint16_t)room_x << 16));
+        }
+        if (scr46 != INT32_MIN) {
+            int32_t room_y = (int32_t)(int16_t)scr46 + cam_y;
+            soma->y = (soma->y & 0xFFFF) |
+                      ((int32_t)((uint32_t)(uint16_t)room_y << 16));
+        }
+        if (so->player_pos40_set) soma->x = so->player_pos40_val;
+        if (dout->player_vel_cleared || so->player_w48_zero ||
+            slout->player_w48_zero)
+            soma->vx = 0;
+        if (so->player_w4c_zero) soma->vy = 0;
+        if (so->player_w4a_zero) soma->vx &= 0xFFFF;
+        if (so->player_w4e_zero) soma->vy &= 0xFFFF;
+        if (slout->player_w50_zero) soma->friction = 0;
+        if (slout->player_w4c_min0 && soma->vy < 0) soma->vy = 0;
+    }
 
     /* Release/delete requests: sub_0805B66C releases the entity back
      * to the pool and EntityDelete removes it; both retire the record
@@ -2635,7 +2698,14 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     if (soma) {
         aria_entity_data[0].pos40 = soma->x + player_scroll_dx;
         aria_entity_data[0].pos44 = soma->y + player_scroll_dy;
-        aria_entity_data[0].flags58 = soma->facing_left ? 0x40 : 0;
+        /* Player +0x58: facing bit resampled each frame (the
+         * native player update rewrites it the same way), the
+         * other bits persist across the Object20 variant
+         * writes object20_apply_out lands on the session byte. */
+        object20_player_flags58 = (uint8_t)(
+            (object20_player_flags58 & ~0x40u) |
+            (soma->facing_left ? 0x40u : 0u));
+        aria_entity_data[0].flags58 = object20_player_flags58;
     }
     /* Records past the live entity list have no native slot:
      * clear them so a removed child or a shorter room's tail
@@ -2643,6 +2713,18 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     for (size_t i = room->entity_count; i < ARIA_ENTITY_DATA_RECORDS - 1; ++i)
         memset(&aria_entity_data[i + 1], 0,
                sizeof aria_entity_data[i + 1]);
+    /* gEwramData + 0xA094 (bgInfo[1]) for the enemy-side
+     * room-record readers — Chaos's sub_080A57BC copies the
+     * +6/+0xA u16 low bytes into the crawler body's +0x18/+0x19
+     * spawn-origin fields. Same view object20_fill_in feeds the
+     * Object20 In block: the bound scroll accumulator,
+     * camera-seeded until the room's first transaction. */
+    {
+        int32_t a094_x, a094_y;
+        object20_a094_view(room, cam_x, cam_y, &a094_x, &a094_y);
+        aos_enemy_set_room_origin((int32_t)(uint16_t)(a094_x >> 16),
+                                  (int32_t)(uint16_t)(a094_y >> 16));
+    }
     for (size_t i = 0; !entities_frozen && i < room->entity_count; ++i) {
         AriaEntity *e = &room->entities[i];
         entity_data_sync(e, i);
@@ -3254,8 +3336,14 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* Object03Create / Object03Update: the escort director —
              * the column is always sealed at create; state 0 waits on
              * the + 0x13220 escort pointer and the + 0x4CC bit-6
-             * cinematic flag — both live session globals now; the
-             * partner-entity probes stay approximated. */
+             * cinematic flag — both live session globals now. The
+             * + 0x13114/+ 0x13118 partner probes stay approximated:
+             * natively they are the two companion entities
+             * sub_08033EA0 creates at player init (updates
+             * sub_08033F58/sub_080344E4, outside the decompiled
+             * corpus), always non-NULL — but their + 0x42 screen
+             * words are unmodelled, and the whole gate is
+             * unreachable while + 0x4CC bit 6 stays clear. */
             if (!e->spawned) {
                 if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
@@ -3414,10 +3502,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 12) {
             /* Object0CCreate / Object0CUpdate (sUnk_084F0DF8[12] /
              * sUnk_084F0ED8[12]): the room-region trigger. The player
-             * room position is Soma's fixed-point position minus the
-             * camera; the + 0x10 bit-0x400000 gate (the slow-fall/water
-             * flag, whose writer is unported) is passed as set while
-             * Soma is active so the records still fire. */
+             * room position is Soma's fixed-point position; the
+             * + 0x10 bit-0x400000 gate is AOS_FLAG_SLOW_FALL — the
+             * same flag sub_0801938C tests — read off soma->flags
+             * instead of the earlier always-set approximation. */
             if (!e->spawned) {
                 if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
@@ -3428,7 +3516,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 aos_object0c_update(&e->object0c,
                                     (uint16_t)(soma->x >> 16),
                                     (uint16_t)(soma->y >> 16),
-                                    true,
+                                    (soma->flags & AOS_FLAG_SLOW_FALL) != 0,
                                     combat->progress &&
                                         (combat->progress->flags &
                                          0x200) != 0,
@@ -5125,7 +5213,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     object20_apply_out(e, &out,
                                        &aria_entity_data[i + 1], combat,
                                        input, new_input, -1, room,
-                                       cam_x, cam_y, room_music);
+                                       cam_x, cam_y, room_music, soma);
                 continue;
             }
             if (e->object20.deleted ||
@@ -5188,7 +5276,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (o20_py) e->y = o20_py >> 16;
             object20_apply_out(e, &out, &aria_entity_data[i + 1],
                                combat, input, new_input, npc_pre_state,
-                               room, cam_x, cam_y, room_music);
+                               room, cam_x, cam_y, room_music, soma);
             continue;
         }
         if (!door) continue;

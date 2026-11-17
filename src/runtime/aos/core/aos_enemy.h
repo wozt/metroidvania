@@ -1028,6 +1028,13 @@ typedef struct {
  * Killer Doll soul's decoy) instead of Soma; contact, knockback and the
  * routines that read Soma (0x13110) directly keep his position. */
 void aos_enemy_set_decoy(bool active, int32_t x, int32_t y);
+/* gEwramData + 0xA094 is bgInfo[1]: the room-record origin the
+ * runtime publishes once per entity pass as the two u16 integer
+ * scroll halves (+6/+0xA). Chaos's sub_080A57BC copies their low
+ * bytes into the crawler body's +0x18/+0x19 spawn-origin fields;
+ * other ported readers of the room record take the same view. */
+void aos_enemy_set_room_origin(int32_t x, int32_t y);
+void aos_enemy_room_origin(int32_t *x, int32_t *y);
 /* gEwramData + 0x13168 = 0 (the Nemesis soul): sub_0806CD38 / sub_0806CD78
  * and the helpers built on them then return the asking entity's own
  * position, so the enemies lose their target. */

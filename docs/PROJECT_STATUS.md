@@ -1,3 +1,68 @@
+## Patch 1216 - Aria entity-slot/OAM gEwramData globals: player writes, room origin, OAM channel decode
+
+- **Scope.** `src/runtime/aria_entities.c`,
+  `src/runtime/aos/core/aos_enemy.c/.h`,
+  `src/runtime/aos/enemies/chaos.c`,
+  `src/runtime/aos/enemies/balore.c`,
+  `src/runtime/aos/game/aos_object0c.c/.h` (call site),
+  `tests/test_aos_enemy.c`,
+  `data/native_parity/annotations.tsv` and this file. The
+  remaining entity-slot/OAM globals blocking the Object20
+  director objects and enemies: + 0x13110 player entity slot,
+  + 0x3E0/+ 0x3F0 OAM channel slots, + 0xA094 room record
+  origin, + 0x13114/+ 0x13118 companion entities and the
+  + 0x13194 homing list.
+- **+ 0x13110 player writes applied.** The dirs/story/slots
+  variants' player-entity writes were reported but dropped;
+  `object20_apply_out` now takes `AosSoma *` and lands them in
+  native shared-state order: + 0x58 flag masks on the new
+  `object20_player_flags58` session byte (bit 0x40 mirrored
+  into `soma->facing_left` and `entityData[0].flags58`, the
+  shop family's absolute stores rerouted through the same
+  byte), + 0x42/+ 0x46 screen-word writes converted through
+  the same cam approximation `in->player_scr42` uses (integer
+  half only, fraction kept), the story + 0x40 fine write
+  assigned wholesale, and the + 0x48/+ 0x4C/+ 0x50 velocity/
+  friction zero/clamp/mask writes onto `soma->vx/vy/friction`.
+  `in->player_flags58` and `entityData[0].flags58` now read the
+  session byte, resampled facing bit each frame.
+- **Object0C gate corrected.** The type-0/1/2 callbacks' player
+  + 0x10 bit-0x400000 gate now reads `soma->flags &
+  AOS_FLAG_SLOW_FALL` instead of the earlier always-set
+  approximation.
+- **+ 0xA094 room origin wired.** New `aos_enemy_set_room_origin`
+  session channel publishes the bgInfo[1] integer scroll halves
+  once per entity pass (the same `object20_a094_view` the
+  Object20 In block reads). Chaos's `ch2_spawn_body` now stores
+  the real `sub_080A57BC` semantics — LDRH on +0xA094+6/+0xA
+  truncated by STRB to the low byte — instead of the parent's
+  pixel position; the limb + 0x18/+ 0x19 refresh delta now
+  collapses like the native u8-vs-u8 compare (it previously
+  produced a spurious constant -256-class step). The test seeds
+  the sampled trail record directly.
+- **+ 0x3E0/+ 0x3F0 decoded, honestly unported.** The pair is
+  the engine's four-channel OAM record table: + 0x3E0..+0x3EF
+  holds the record pointers and + 0x3F0..+0x3F3 the per-channel
+  last-frame cache bytes, indexed by entity + 0x2C - 0xA; a
+  changed frame calls `sub_0803C7B4` (0x20-byte DMA from
+  gEwramData + 0x11DDC + channel*0x20, + 0x123DC slot bitmask).
+  balore.c/chaos.c comments record the decode; the runtime has
+  no OAM record model so the collapse stays.
+- **+ 0x13114/+ 0x13118 audited.** They are not escort partners:
+  `sub_08033EA0` creates the two companion entities at player
+  init (updates `sub_08033F58`/`sub_080344E4`, outside the
+  decompiled corpus), always non-NULL. `sub_080659A4`/
+  `sub_08065A5C` write neither them nor + 0x13220. Object03's
+  partner gate stays approximated and is unreachable while
+  + 0x4CC bit 6 stays clear — documented, not faked.
+- **+ 0x13194 audited.** Already wired (`homing_register` on
+  `hit.targetable`, `homing_age` per frame, `aria_skills.c`
+  consumers); no remaining scoped-object readers/writers.
+- **Tests.** `aos_enemy` (the seeded trail record keeps the
+  limb-step assertion honest), `aos_object0c`,
+  `aos_object03`, `aos_object20*` targeted runs pass; the full
+  dashboard cycle follows.
+
 ## Patch 1215 - Aria + 0x131D4 mode-3 scripted move: state 14 and the region-object snapshot bridge
 
 - **Scope.** `src/runtime/aos/core/aos_soma.c/.h`,

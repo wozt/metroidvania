@@ -20,8 +20,14 @@
  *
  * Documented approximations: the state-1 rise keeps its substep
  * order, the two sub_080B4FB0 effect spawns at screen x 0x40/0x1C0
- * and song 0x1D4 but the gEwramData + 0x3E0/+ 0x3F0 OAM slot
- * writes collapse into the FX children; the state-2 hover keeps
+ * and song 0x1D4 but the OAM channel writes collapse into the FX
+ * children — decoded: gEwramData +0x3E0..+0x3EF holds four OAM
+ * record pointers and +0x3F0..+0x3F3 the per-channel last-frame
+ * cache bytes, indexed by (entity +0x2C - 0xA); a changed frame
+ * calls sub_0803C7B4(record, frame, 1, channel), which DMAs the
+ * 0x20-byte record from gEwramData +0x11DDC + channel*0x20 and
+ * marks the +0x123DC slot bitmask — visual-only, no gameplay
+ * state; the state-2 hover keeps
  * the sine lift, the player-delta animation index and the
  * hp <= 0x7CF phase gate; the state-3 attack keeps the two-blade
  * + shot spawn order, song 0x1D5 and the hp-scaled timers; the
@@ -317,7 +323,9 @@ static void bl_fx_update(AosEnemy *e) {
 /* sub_080B569C state 1: the rise — substep 0 arms timer 0x40;
  * substep 1 fires the two sub_080B4FB0 effects at x 0x40 (flag 1)
  * and 0x1C0 (flag 0) on the 0x38/0x18 ticks, then substep 2 waits
- * 0x40 with song 0x1D4 and the wing OAM writes; the end clears
+ * 0x40 with song 0x1D4 and the wing OAM channel writes (the
+ * +0x3E0 pointer table / +0x3F0 frame-cache dedup decoded
+ * above); the end clears
  * + 0x72 bit 2 and enters state 2. */
 static void bl_state1(AosEnemy *e, AosHitReport *hit) {
     switch (e->substep) {
@@ -508,8 +516,9 @@ static void bl_state4(AosEnemy *e, AosHitReport *hit,
 
 /* sub_080B60EC: the case-4 materialize child of the intro
  * controller — a six-state sparkle that sits 0x10 frames, plays
- * song 0xD2, counts down 0x30 frames of OAM nibble writes (the
- * gEwramData + 0x3F0 slot table, collapsed), then rises 0x50
+ * song 0xD2, counts down 0x30 frames of OAM channel writes (the
+ * gEwramData +0x3E0 record-pointer / +0x3F0 frame-cache pair
+ * decoded above, collapsed), then rises 0x50
  * frames under sub_0806D460(0x80000) with song 0x101, launches
  * right at + 0x48 = 0x60000 decelerated by + 0x50 = 0xFFFF8000
  * through sub_0806D430(0x100000) and deletes on the + 0x6C & 4

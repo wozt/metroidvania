@@ -1956,6 +1956,13 @@ int aria_runtime_main(int argc, char **argv) {
     AosIntroFont opening_font = {0};
     AosOpeningEvent opening = {0};
     AosOpeningActors opening_actors = {0};
+    /* Opening-cutscene Soma pose tracking: opening_pan_age counts the
+     * frames spent in +0xB==1's entry pan for the scripted step
+     * excursion, and opening_post_stage walks the post-absorb
+     * CROUCH_DOWN -> CROUCH -> IDLE flourish the native player state
+     * machine runs after the obtained-soul window. */
+    uint16_t opening_pan_age = 0;
+    uint8_t opening_post_stage = 0;
     AosWindowFrame opening_window = {0};
     AosSoulNotice opening_soul_notice = {0};
     AosSoulNotice gameplay_soul_notice = {0};
@@ -2849,13 +2856,57 @@ int aria_runtime_main(int argc, char **argv) {
                  * requested pose differs, then run the same
                  * sub_0803F17C-style tick step the normal update
                  * uses. A failed bind keeps the old pose like the
-                 * native early-out. */
-                if (soma.anims &&
-                    soma.anim.id != opening_actors.soma_animation)
-                    (void)aos_anim_start(&soma.anim, soma.anims,
-                                         opening_actors.soma_animation,
+                 * native early-out. The requested pose now comes from
+                 * aos_opening_soma_anim — the full native beat
+                 * sequence, not just the spawn/absorb pair. */
+                uint8_t soma_pose = aos_opening_soma_anim(&opening_actors);
+                /* +0xB==1's entry pan carries a scripted ~15px step:
+                 * the native player entity's +0x40 dips left and
+                 * returns while every motion field stays zero, so the
+                 * excursion is a direct position write, not velocity.
+                 * The pan's own duration is not serialized, so the
+                 * port reproduces the observed ~75-frame window with a
+                 * ramp-hold-return envelope keyed to beat1_step==0 and
+                 * snaps back to centre the frame the pan completes. */
+                int32_t soma_world_x = (int32_t)AOS_OPENING_SOMA_X << 16;
+                if (opening_actors.scene_state == 1 &&
+                    opening_actors.beat1_step <= 1) {
+                    if (opening_pan_age < 76) ++opening_pan_age;
+                    const unsigned a = opening_pan_age;
+                    int px;
+                    if (a < 16) px = (int)a;                 /* ramp in  */
+                    else if (a < 60) px = 15;                /* hold     */
+                    else px = 75 - (int)a;                   /* ramp out */
+                    if (px < 0) px = 0;
+                    soma_world_x -= (int32_t)px << 16;
+                } else {
+                    opening_pan_age = 0;
+                }
+                soma.x = soma_world_x;
+                /* +0xB 6,7,8: the post-absorb crouch flourish. Native
+                 * runs CROUCH_DOWN -> CROUCH -> IDLE through the player
+                 * state machine; the port has no per-sub-state timer
+                 * there, so it advances on each animation's natural
+                 * end — the same +0x59 finished flag sub_0803F17C
+                 * raises. */
+                bool post_absorb = soma_pose == AOS_OPENING_SOMA_ANIM_POST;
+                if (post_absorb) {
+                    if (opening_post_stage == 0) opening_post_stage = 1;
+                    soma_pose = opening_post_stage == 1
+                        ? AOS_SOMA_ANIM_CROUCH_DOWN
+                        : opening_post_stage == 2 ? AOS_SOMA_ANIM_CROUCH
+                                                  : AOS_SOMA_ANIM_IDLE;
+                } else {
+                    opening_post_stage = 0;
+                }
+                if (soma.anims && soma.anim.id != soma_pose)
+                    (void)aos_anim_start(&soma.anim, soma.anims, soma_pose,
                                          false);
-                if (soma.anims) aos_anim_step(&soma.anim, soma.anims);
+                int soma_anim_step = soma.anims
+                    ? aos_anim_step(&soma.anim, soma.anims) : 0;
+                if (post_absorb && soma_anim_step == 3 &&
+                    opening_post_stage < 3)
+                    ++opening_post_stage;
                 for (unsigned actor = 0;
                      actor < opening_actors.emitted_count; ++actor)
                     if (opening_actors.emitted[actor].events &

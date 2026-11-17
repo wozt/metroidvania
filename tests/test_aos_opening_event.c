@@ -691,6 +691,50 @@ static void test_insert_and_malformed(void) {
     assert(!aos_opening_event_init(&event, insert_command, 2));
 }
 
+/* The host-side beat -> player +0x6D map (aos_opening_soma_anim):
+ * the native sequence 0x51 -> 0x0D -> 0x00 -> 0x04 -> 0x05 -> 0x52 ->
+ * post window, read back out of the serialized +0xB/+0xC/+0xD beat
+ * state. */
+static void test_soma_anim_map(void) {
+    AosOpeningActors actors;
+    aos_opening_actors_init(&actors);
+    /* +0xB==0 reveal/MOSAIC keeps the unconscious floor pose. */
+    assert(aos_opening_soma_anim(&actors) == 0x51);
+    /* +0xB==1's entry pan plays LAND (0x0D); the released idle
+     * sub-state and the +0xB==2,3,4 dialogue beats play idle. */
+    actors.scene_state = 1;
+    actors.beat1_step = 0;
+    assert(aos_opening_soma_anim(&actors) == 0x0D);
+    actors.beat1_step = 1;
+    assert(aos_opening_soma_anim(&actors) == 0x00);
+    actors.beat1_step = 2;
+    assert(aos_opening_soma_anim(&actors) == 0x00);
+    actors.scene_state = 2;
+    assert(aos_opening_soma_anim(&actors) == 0x00);
+    actors.scene_state = 4;
+    assert(aos_opening_soma_anim(&actors) == 0x00);
+    /* +0xB==5's absorb wind-up: sub-state 0 -> 0x04, sub-state 1 ->
+     * 0x05, and the obtained-soul window (+0xC==2 tail / soul_notice)
+     * binds 0x52 like sub_0805D410's sub_0801D028 calls. */
+    actors.scene_state = 5;
+    actors.scene_step = 0;
+    assert(aos_opening_soma_anim(&actors) == 0x04);
+    actors.scene_step = 1;
+    assert(aos_opening_soma_anim(&actors) == 0x05);
+    actors.scene_step = 2;
+    assert(aos_opening_soma_anim(&actors) == 0x52);
+    actors.scene_step = 1;
+    actors.soul_notice = 1;
+    assert(aos_opening_soma_anim(&actors) == 0x52);
+    actors.soul_notice = 0;
+    /* +0xB 6,7,8 hand the post-absorb crouch flourish to the host. */
+    actors.scene_state = 6;
+    assert(aos_opening_soma_anim(&actors) == AOS_OPENING_SOMA_ANIM_POST);
+    actors.scene_state = 8;
+    assert(aos_opening_soma_anim(&actors) == AOS_OPENING_SOMA_ANIM_POST);
+    assert(aos_opening_soma_anim(NULL) == 0x00);
+}
+
 static void test_actor_anim_ticks(void) {
     AosOpeningActors actors;
     aos_opening_actors_init(&actors);
@@ -933,6 +977,7 @@ int main(int argc, char **argv) {
     test_actor_anim_ticks();
     test_emitted_anim_ticks();
     test_opening_sparks();
+    test_soma_anim_map();
     test_trigger();
     test_intro_transition();
     test_script_and_commit();

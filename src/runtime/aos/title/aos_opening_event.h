@@ -481,4 +481,46 @@ size_t aos_opening_emission_spawns(AosOpeningEmission emission,
 bool aos_opening_event_commit(AosOpeningEvent *event, uint32_t events[8],
                               AosStats *stats);
 
+/* The player +0x6D animation id the Object20 story beats request for Soma,
+ * read back out of the serialized +0xB/+0xC/+0xD beat state. The story
+ * machine drives Soma through the normal player pose path — sub_0801D028
+ * binds +0x6D and sub_0803F17C steps it — so the host feeds this id into the
+ * same guarded bind+step the gameplay update uses. The mapping follows the
+ * native sequence 0x51 -> 0x0D -> 0x00 -> 0x04 -> 0x05 -> 0x52 -> 0x09 ->
+ * 0x02 -> 0x00 observed on a real ROM:
+ *   +0xB==0 (reveal/MOSAIC):              the unconscious floor pose 0x51.
+ *   +0xB==1 pan (beat1_step 0):           0x0D LAND — the entry step.
+ *   +0xB==1 dialogue / +0xB 2,3,4:        0x00 idle.
+ *   +0xB==5 pre-notice sub-states:        0x04 then 0x05 absorb wind-up.
+ *   +0xB==5 obtained-soul window:         0x52 — sub_0805D410 calls
+ *       sub_0801D028(0x52,0,0,0) every frame while +0xC==2's +0xD<=0x8F
+ *       tail and sub-states 3-5 run, which the port serializes as
+ *       scene_step==2 plus the soul_notice modal window.
+ *   +0xB 6,7,8 (post-absorb):             the host sequences the
+ *       CROUCH_DOWN -> CROUCH -> IDLE flourish itself; AOS_OPENING_SOMA_
+ *       ANIM_POST marks that window. */
+#define AOS_OPENING_SOMA_ANIM_POST 0xFFu
+static inline uint8_t aos_opening_soma_anim(const AosOpeningActors *actors) {
+    if (!actors) return 0x00;
+    if (actors->scene_state == 5 &&
+        (actors->scene_step == 2 || actors->soul_notice == 1 ||
+         actors->soul_notice == 2))
+        return 0x52;
+    switch (actors->scene_state) {
+    case 0: return 0x51;
+    case 1: return actors->beat1_step == 0 ? 0x0D : 0x00;
+    case 5:
+        if (actors->scene_step == 0) return 0x04;
+        if (actors->scene_step == 1) return 0x05;
+        return 0x52;
+    case 2:
+    case 3:
+    case 4: return 0x00;
+    case 6:
+    case 7:
+    case 8: return (uint8_t)AOS_OPENING_SOMA_ANIM_POST;
+    default: return 0x00;
+    }
+}
+
 #endif

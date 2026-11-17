@@ -1,3 +1,60 @@
+## Patch 1205 - opening: full Soma beat-animation chain and entry-pan step excursion
+
+- **Scope.** Closes Patch 1203 next-action (2): the runtime sampled only
+  Soma anims 81->82 and froze, versus the native `+0x6D` chain
+  81->13->0->4->5->82->9->2->0 plus a real ~15 px world-x excursion
+  (168->153->168) during the entry pan. Draw/animation side only —
+  `aos_opening_event.c`'s story state machine is untouched (sibling
+  ownership); the pose is derived read-only from its serialized beat
+  state.
+- **Native mechanism confirmed.** Soma stays a normal player entity:
+  Object20 never writes `+0x6D`/`+0x40`/`+0x48` directly for the pose
+  beats. It calls `sub_0801D028` (the generic pose setter — binds
+  `+0x6D` through `sub_0803F2C8`, resets frame/tick, writes `+0x48`/
+  `+0x4C` velocity from its args, all zero here) at story points, and
+  the normal player update `sub_0801B0D8`/`sub_0803F17C` steps the
+  sequence. `sub_0805D198` spawns him at `sub_0801D028(0x51)` with
+  screen-space positions computed from the `0x0200A094` scroll words;
+  `sub_0805CED0` re-poses `0x51` (loop) at the reveal boundary;
+  `sub_0805D410` `+0xB==5` binds `0x52` every frame through sub-state
+  +0xC==2's `+0xD<=0x8F` tail and sub-states 3-5 (verified in
+  `code_08050A3C.s` `_0805D8CE`/`_0805D960`/`_0805D97E`).
+- **Beat -> anim map.** New `static inline aos_opening_soma_anim()` in
+  `aos_opening_event.h` reads the serialized `+0xB`/`+0xC`/`+0xD` state
+  (`scene_state`/`scene_step`/`beat1_step`/`soul_notice`) and returns
+  the player `+0x6D` id: `+0xB==0` -> 0x51; `+0xB==1` pan -> 0x0D
+  (LAND, the entry step) then 0x00 idle; `+0xB==2,3,4` -> 0x00;
+  `+0xB==5` pre-notice -> 0x04 then 0x05 wind-up, obtained-soul window
+  -> 0x52; `+0xB==6,7,8` -> `AOS_OPENING_SOMA_ANIM_POST` sentinel.
+  `aria_runtime.c` feeds the result through the existing guarded
+  `aos_anim_start` + `aos_anim_step` path (no second animation owner).
+- **Excursion.** The native `+0x40` dips 168->153->168 across the
+  `+0xB==1` pan while `+0x48`/`+0x4C` stay zero — a direct position
+  write, not velocity (the writing routine was not isolated in the
+  dump). The port reproduces it as a world-x offset on `soma.x`:
+  ramp-hold-return to -15 px over ~76 frames keyed to `beat1_step`,
+  snapping to centre the frame the pan completes. Documented
+  approximation — the exact per-frame profile and writer are
+  unrecovered (native sampling was 10-60f sparse).
+- **Post-absorb flourish.** `+0xB==6,7,8` sequences CROUCH_DOWN(0x09)
+  -> CROUCH(0x02) -> IDLE(0x00), advancing on each animation's natural
+  end (the `+0x59` finished flag `sub_0803F17C` raises). Timing is
+  approximate: native runs it through the player state machine, which
+  the cutscene does not fully model.
+- **Honest limits.** The 0x04/0x05 wind-up boundaries are mapped onto
+  `+0xB==5` sub-states 0/1 by position in the sequence, not by a
+  recovered native trigger; the excursion envelope and crouch timing
+  are approximations pending finer native sampling. No new
+  native-vs-runtime capture was taken this cycle — evidence is
+  disassembly plus the Patch 1203 WRAM trace. `soma_animation` is now
+  write-only (kept for the sibling's diagnostics); the runtime derives
+  the pose from beat state instead. Actor draw positions were
+  re-verified: `actors->x[]`/`soma.x` are world coordinates and the
+  draw subtracts `cam_x`/`cam_y` (the scroll), equivalent to native
+  screen + scroll.
+- **Verification.** `test_soma_anim_map` asserts the full beat->anim
+  map; `fusion_aos_opening_event_tests` passes; build clean.
+
 ## Patch 1204 - raise SPECIAL_VARIANTS to 64: object library load overflow
 
 - **Bug.** Patch 1198's `special_62_v00`-`v15` breakable variant

@@ -21,15 +21,23 @@
  * rng & 0xF picks the parallax layer +0x1C {3,0,1,2} and palette
  * hint +0x5C {0x1D,0x19,0x1A,0x1D}; non-layer-3 children get screen
  * anchors (+0x42 = (rng & 0x3F) << 2 - 0x20, +0x46 = (rng & 0x7F) +
- * 1) and velocities +0x50/+0x54 = ((rng & mask) + bias) >> layer with
- * +0x50 negated when +0x58 bit 0x40 holds; layer-3 children anchor
- * relative to the camera ((rng & 0x3F) + 0x8C - cam_x / 4,
- * (rng & 0x3F) + 0x21) with +0x18 = (rng & 0x1F) << 0xC. Update
- * state 1 integrates the fixed-point position (+0x40/+0x44 +=
- * +0x48/+0x4C derived from +0x50/+0x54 through sub_080009E4),
- * compensates the BG scroll by the parallax factor
- * 0x0852559C[layer] * scroll >> 8, then wraps the screen anchor into
- * the visible window re-randomizing on each edge.
+ * 1) and velocities +0x50/+0x54 = ((rng & mask) + bias) >> layer;
+ * layer-3 children anchor relative to the camera ((rng & 0x3F) +
+ * 0x8C - cam_x / 4, (rng & 0x3F) + 0x21) with +0x18 = (rng & 0x1F)
+ * << 0xC. Every child also gets +0x14 = (rng & 0x1F) << 0xC. The
+ * native +0x58 bit-0x40 negate of +0x50 is dead code — the entity
+ * is zeroed by EntityCreateInRange and nothing sets +0x58 before
+ * the check. Update state 1 advances +0x14 += 0x800 (+0x18 +=
+ * 0xA00 for layer 3) and derives +0x48/+0x4C through the shared
+ * sub_080009E4 sine: non-layer-3 keeps +0x48 = +0x50 and computes
+ * +0x4C = trunc16(sine(+0x14) * +0x54), layer 3 runs both axes at
+ * >> 0xC (x on the +0x14 phase + 0x4000, y on +0x18). It then
+ * integrates +0x40/+0x44 += +0x48/+0x4C, compensates the BG scroll
+ * by the parallax factor 0x0852559C[layer] * scroll >> 8, and wraps
+ * the screen anchor (the s16 integer halves +0x42/+0x46 of
+ * +0x40/+0x44): x > 0x110 or x < -0x20 reseeds +0x46 and teleports
+ * +0x42 to the opposite edge, and only when x is in range does a
+ * y > 0xC0 / y < -0x20 wrap reseed +0x42 = rng & 0xBF.
  *
  * Anchored children (sub_0804F5C4 spawn, sub_0804F504 update): four
  * children at the 0x085255DC record offsets minus the camera-scaled
@@ -56,7 +64,8 @@ typedef struct {
     int32_t vx, vy;         /* +0x48/+0x4C */
     int32_t speed_x, speed_y; /* +0x50/+0x54 */
     int32_t sx, sy;         /* +0x42/+0x46 screen-pixel anchor */
-    uint32_t timer;         /* +0x14: (rng & 0x1F) << 0xC phase */
+    uint32_t timer;         /* +0x14: (rng & 0x1F) << 0xC phase, += 0x800/frame */
+    uint32_t phase2;        /* +0x18: layer-3 only, (rng & 0x1F) << 0xC, += 0xA00/frame */
     uint8_t kind3;          /* +0x1C == 3: camera-relative anchor mode */
 } AosObject07Mote;
 

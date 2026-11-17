@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-17T22:46:34+00:00",
+ "generated_at": "2026-11-17T23:18:38+00:00",
  "git": {
-  "commit": "c7c34c39",
+  "commit": "0c9c3b11",
   "branch": "main",
   "dirty": true
  },
@@ -21971,8 +21971,8 @@
     "sub_0804F504",
     "EntityCreateInRange"
    ],
-   "limitations": "The child art is exported as special_07_v100 (0x081CBE5C/0x08209EE8/0x0820FE44) and special_07_v101 (the param0 == 2 alternate 0x081CBEB4/0x0820A100/0x08210DB0); the OBJ palette rows + 0x5C collapse to bank 0, and each child animates through animation 0 of the exported frames table rather than the native + 0x1C layer pick; the sub_080009E4 sine velocity split, the sub_0803C918 tile DMA behind the param0 == 1 cycler, the + 0xA094 factor bytes (approximated 0x40/1:1), sub_08013EEC and sub_0803C674 are reduced to flags; EntityCreateInRange slot allocation is replaced by fixed module arrays. Object07Create (0x0804F6E4) dispatches param0: 0 spawns the param1-count ambient motes plus four anchored children, 1 arms the BG-anim cycler, 2 motes only, 3 clears + 0x4C4 and sets + 0x42C bit 0x800 (the + 0x42C write now lands on aria_pickup_state.global_flags; the + 0x4C4 = 0 half stays unmodelled), 4 calls sub_08013EEC when param1 != 0. Object07Update (0x0804F770) runs the frame cycler for param0 1 and the + 0x48 = 0xE40 window write otherwise; the mote drift integrates fixed-point positions with the 0x0852559C parallax factors and screen-anchor wrap, the anchored children drift at + 0x50 = 0x80 minus scroll / 0xC. Unit-tested in aos_object07.",
-   "next_action": "Audit the native child animation selection (+ 0x1C layer to sequence map) and port the sub_0803C918 tile DMA behind the param0 == 1 cycler.",
+   "limitations": "The child art is exported as special_07_v100 (0x081CBE5C/0x08209EE8/0x0820FE44) and special_07_v101 (the param0 == 2 alternate 0x081CBEB4/0x0820A100/0x08210DB0); the OBJ palette rows + 0x5C collapse to bank 0, and each child animates through animation 0 of the exported frames table rather than the native + 0x1C layer pick; the sub_0803C918 tile DMA behind the param0 == 1 cycler, the + 0xA094 factor bytes (approximated 0x40/1:1 for the anchored children and cam_x >> 2 for the layer-3 anchor), sub_08013EEC and sub_0803C674 are reduced to flags; the gEwramData + 0x4BE motion-freeze gate and the sub_0803F17C sprite-script/animation step are not modelled; the sub_080009E4 sine is ported locally inside aos_object07.c (table identical to aos_math.c's verified sSineTable) because the standalone test target links only this file; EntityCreateInRange slot allocation is replaced by fixed module arrays. Object07Create (0x0804F6E4) dispatches param0: 0 spawns the param1-count ambient motes plus four anchored children, 1 arms the BG-anim cycler, 2 motes only, 3 clears + 0x4C4 and sets + 0x42C bit 0x800 (the + 0x42C write now lands on aria_pickup_state.global_flags; the + 0x4C4 = 0 half stays unmodelled), 4 calls sub_08013EEC when param1 != 0. Object07Update (0x0804F770) runs the frame cycler for param0 1 and the + 0x48 = 0xE40 window write otherwise; the mote drift (sub_0804F160 state 1) advances +0x14 += 0x800 (+0x18 += 0xA00 for layer 3), derives +0x48/+0x4C through the sub_080009E4 sine — non-layer-3 keeps +0x48 = +0x50 with +0x4C = trunc16(sine(+0x14) * +0x54), layer 3 runs both axes at >> 0xC on the +0x14+0x4000 and +0x18 phases — integrates +0x40/+0x44, applies the 0x0852559C parallax factors to the +0xA094 scroll words, and wraps the +0x42/+0x46 screen anchors on all four edges (x > 0x110 -> -0x20, x < -0x20 -> 0x110, each reseeding +0x46 = (rng & 0x7F) + 1; y > 0xC0 -> -0x10, y < -0x20 -> 0xB0, each reseeding +0x42 = rng & 0xBF, x checked first and y only when x is in range); the anchored children (sub_0804F504 verified: +0x48 = +0x50 = 0x80, +0x44 += +0x4C = 0) drift at +0x50 minus scroll / 0xC. Unit-tested in aos_object07.",
+   "next_action": "Audit the native child animation selection (+ 0x1C layer to sequence map) and port the sub_0803C918 tile DMA behind the param0 == 1 cycler; compare the mote drift, sine velocities and four-edge anchor wrap against an emulator capture.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_object07.c"
@@ -33477,6 +33477,12 @@
  },
  "timeline": [
   {
+   "commit": "0c9c3b11",
+   "date": "2026-11-17",
+   "subject": "aos: native area-banner band geometry, load-latency arm timing and full freeze",
+   "scope": "project"
+  },
+  {
    "commit": "c7c34c39",
    "date": "2026-11-17",
    "subject": "aos: run the wooden-door palette cycle on the door's own script instance",
@@ -33948,12 +33954,6 @@
    "commit": "7c0fe9a4",
    "date": "2026-11-15",
    "subject": "aos pause: render Ability description and Sleep save-result band",
-   "scope": "project"
-  },
-  {
-   "commit": "15d39aaa",
-   "date": "2026-11-15",
-   "subject": "aos: draw BG1-BG3 layers at their own bgOfs from the bound ROM",
    "scope": "project"
   }
  ],

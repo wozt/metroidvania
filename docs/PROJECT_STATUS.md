@@ -26088,3 +26088,53 @@ No automatic reciprocal link or native engine encoder is implemented.
   passed 232/232 tests, including `aria_simulate_xp_levelup` and the
   proprietary-file guard; `fusion_check_generated` reported every derived
   document fresh.
+
+## Patch 0264 - Aria Object07 ambient motes: native sine drift and all four wrap edges
+
+- **Screen-anchor wrap corrected (the reported divergence).** Re-reading
+  `sub_0804F160` state 1 (`code_08040A38.s` _0804F2BA tail) shows the wrap
+  tests the s16 integer halves +0x42/+0x46 of the 16.16 positions and runs
+  x first: +0x42 > 0x110 reseeds +0x46 = (rng & 0x7F) + 1 and teleports
+  +0x42 to -0x20 (the port pinned it at 0x110), +0x42 < -0x20 does the same
+  reseed with +0x42 = 0x110 (previously unhandled — those motes escaped
+  left forever), and only when x is in range does y wrap (+0x46 > 0xC0 ->
+  -0x10, +0x46 < -0x20 -> 0xB0, each reseeding +0x42 = rng & 0xBF). The
+  comparisons are inclusive at the boundaries and at most one wrap runs
+  per frame; the strh writes keep the 16.16 fraction, mirrored by masking
+  the low word back in.
+- **Sinusoidal velocities ported.** The update now advances +0x14 += 0x800
+  every state-1 frame (+0x18 += 0xA00 for layer-3 children, whose spawn
+  also draws the second phase) and derives +0x48/+0x4C through the shared
+  `sub_080009E4` sine: non-layer-3 motes keep +0x48 = +0x50 constant with
+  +0x4C = trunc16(sine(+0x14) * +0x54); layer-3 motes run both axes at
+  >> 0xC (x on the +0x14 + 0x4000 phase, y on +0x18). The ROM's
+  negative-product +0xFFFF/+0xFFF adjust before the arithmetic shift is
+  truncation toward zero, expressed as C division; the 32-bit `muls`
+  wrap is preserved through u32 products. The sine is ported locally in
+  `aos_object07.c` (table identical to the verified `aos_math.c`
+  sSineTable) because the standalone `fusion_aos_object07_tests` target
+  links only this file — `aos_intro_entities.c` uses the same
+  self-contained pattern. `sub_0803F17C`, called between integration and
+  parallax, is the sprite-script/animation step (dispatch on +0x5B) and
+  does not touch +0x40..+0x4C, so no position recompute was missing; the
+  parallax product now wraps mod 2^32 like `muls` instead of using int64.
+- **Spawn audit.** `sub_0804F374` confirmed: the +0x58 bit-0x40 negate of
+  +0x50 is dead code natively (EntityCreateInRange zeroes the entity and
+  nothing sets +0x58 before the check), the +0x14 phase draw is a common
+  tail after the layer split, and layer-3 children draw +0x18 before it.
+  `sub_0804F504`/`sub_0804F5C4` re-verified the anchored children: four
+  spawns, +0x48 = +0x50 = 0x80, +0x44 += +0x4C = 0 (never written), then
+  scroll / 0xC through `__divsi3` — the existing port was already exact.
+- **Tests.** `tests/test_aos_object07.c` now covers the sine y-velocity
+  swinging both signs with constant x on non-layer-3 motes, both layer-3
+  axes varying with the +0x18 phase advance, all four wrap edges with
+  exact rng reseed values and 16.16-fraction preservation, the inclusive
+  boundaries consuming no rng, and x-wrap precedence over y. Honest
+  gaps remain: the gEwramData +0x4BE motion-freeze gate, the sprite-script
+  step, the +0xA094 factor bytes and the layer-3 camera term are
+  approximations, and there is no emulator comparison.
+- **Checks.** `fusion_aos_object07_tests` and the `aos_object*` CTest
+  selection pass; the warning-clean build succeeded, the generated
+  checklist and dashboard were refreshed, the single full dashboard
+  CTest run passed 232/232 tests and `fusion_check_generated` reported
+  every derived document fresh.

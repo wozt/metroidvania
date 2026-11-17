@@ -1,7 +1,40 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "aos_object07.h"
 
+#include <math.h>
 #include <string.h>
+
+/* sub_080009E4 / sSineTable: sine of a 16-bit angle (0x10000 per
+ * turn) returned as 16.16. Kept local to this file — the shared
+ * port lives in aos_math.c but the standalone fusion_aos_object07_
+ * tests target links only this translation unit, the same
+ * self-contained pattern aos_intro_entities.c uses. The generated
+ * entries are identical to sSineTable (floor(sin(i*pi/2048) *
+ * 65536), verified against all 1024 ROM entries in aos_math.c). */
+static uint16_t sine_table[0x400];
+
+static void build_sine(void) {
+    if (sine_table[1]) return;
+    for (int i = 0; i < 0x400; ++i)
+        sine_table[i] = (uint16_t)floor(
+            sin(i * 3.14159265358979323846 / 2048.0) * 65536.0);
+}
+
+static int32_t object07_sine(uint32_t angle) {
+    build_sine();
+    uint32_t a = (angle + (0x80 >> 4)) & 0xFFFF;
+    int32_t sign = 1;
+    if (a & 0x8000) {
+        a -= 0x8000;
+        sign = -1;
+    }
+    if (a & 0x4000) {
+        if (a & 0xFFFFBFF0u)
+            return sign * (int32_t)sine_table[(0x800F - a) >> 4];
+        return sign * 0x10000;
+    }
+    return sign * (int32_t)sine_table[a >> 4];
+}
 
 /* 0x085255AC[param1]: ambient child counts. */
 static const uint16_t ambient_counts[] = {12, 15, 12, 12, 12, 2};
@@ -42,20 +75,22 @@ static void spawn_ambient(AosObject07 *o, uint32_t (*rng)(void),
                                    m->layer);
             m->speed_y = (int32_t)(((rnd(rng) & 0x1FFF) + 0x8000) >>
                                    m->layer);
-            /* + 0x58 bit 0x40 negates + 0x50: approximated by the
-             * parent's screen-half flag passed through cam_x. */
-            m->timer = (rnd(rng) & 0x1F) << 0xC;
+            /* The native + 0x58 bit-0x40 negate of + 0x50 is dead
+             * code here: EntityCreateInRange zeroes the entity and
+             * nothing sets + 0x58 before sub_0804F374 reads it. */
         } else {
             m->sx = (int16_t)((rnd(rng) & 0x3F) + 0x8C - (cam_x >> 2));
             m->sy = (int16_t)((rnd(rng) & 0x3F) + 0x21);
             m->speed_x = (int32_t)(((rnd(rng) & 0x7F) << 4) + 0x800);
             m->speed_y = (int32_t)(((rnd(rng) & 0x7F) << 4) + 0x800);
-            m->timer = (rnd(rng) & 0x1F) << 0xC;
+            m->phase2 = (uint32_t)(rnd(rng) & 0x1F) << 0xC;   /* + 0x18 */
         }
+        /* Common spawn tail: + 0x14 = (rng & 0x1F) << 0xC. + 0x48/
+         * + 0x4C stay zero until the first state-1 update derives
+         * them from + 0x50/+ 0x54 through the sine. */
+        m->timer = (uint32_t)(rnd(rng) & 0x1F) << 0xC;
         m->fx = (int64_t)m->sx << 16;
         m->fy = (int64_t)m->sy << 16;
-        m->vx = m->speed_x;
-        m->vy = m->speed_y;
     }
 }
 
@@ -146,42 +181,84 @@ void aos_object07_update(AosObject07 *o, int32_t cam_x, int32_t cam_y,
         AosObject07Mote *m = &o->motes[i];
         if (!m->alive) continue;
         if (m->state == 0) { m->state = 1; continue; }
-        /* sub_0804F160 tail: + 0x40 += + 0x48, + 0x44 += + 0x4C —
-         * the velocities are already 16.16, so the position words
-         * take them verbatim (no extra << 16; the old shift threw
-         * every mote ~16k pixels off-screen on its second frame).
-         * The + 0x48 = + 0x50 / + 0x4C = f(+ 0x54, + 0x14) split is
-         * approximated by the raw speeds (the sine lookup
-         * sub_080009E4 is not modelled). */
+        /* sub_0804F160 state 1 (_0804F224). The native gate
+         * gEwramData + 0x4BE != 0 skips only the integrate/anim step
+         * below; the parallax and wrap still run — the port has no
+         * + 0x4BE input and always integrates. sub_0803F17C between
+         * them is the sprite-script/animation step (dispatch on
+         * + 0x5B) and does not touch + 0x40..+ 0x4C. */
+        uint32_t phase = m->timer + 0x800;    /* + 0x14 += 0x800 */
+        m->timer = phase;
+        if (!m->kind3) {
+            /* layer != 3: + 0x48 = + 0x50 verbatim, + 0x4C =
+             * (sine(+ 0x14) * + 0x54) >> 16. The ROM adds 0xFFFF to
+             * a negative product before the arithmetic shift —
+             * i.e. truncation toward zero, which C division gives. */
+            m->vx = m->speed_x;
+            /* muls wraps mod 2^32 — sine(±0x10000) * speed_y can
+             * exceed s32, so multiply through u32. */
+            m->vy = (int32_t)((uint32_t)object07_sine(phase) *
+                              (uint32_t)m->speed_y) / 0x10000;
+        } else {
+            /* layer 3: + 0x18 += 0xA00; + 0x48 = (sine(+ 0x14 old +
+             * 0x4800) * + 0x50) >> 0xC = sine(phase + 0x4000), and
+             * + 0x4C = (sine(+ 0x18) * + 0x54) >> 0xC, both with the
+             * 0xFFF negative-product adjust (truncation toward
+             * zero). */
+            m->phase2 += 0xA00;
+            m->vx = (int32_t)((uint32_t)object07_sine(phase + 0x4000) *
+                              (uint32_t)m->speed_x) / 0x1000;
+            m->vy = (int32_t)((uint32_t)object07_sine(m->phase2) *
+                              (uint32_t)m->speed_y) / 0x1000;
+        }
+        /* + 0x40 += + 0x48, + 0x44 += + 0x4C — velocities are
+         * already 16.16, so the position words take them verbatim. */
         m->fx += m->vx;
         m->fy += m->vy;
-        /* Parallax: fixed pos -= scroll * factor[layer] >> 8. */
-        m->fx -= ((int64_t)scroll_x * parallax[m->layer]) >> 8;
-        m->fy -= ((int64_t)scroll_y * parallax[m->layer]) >> 8;
-        /* Screen-anchor wrap on the + 0x42/+ 0x46 integer words
-         * (sub_0804F160 tail): x > 0x110 reseeds y and pins x at
-         * 0x110; a y wrap reseeds x. The strh writes keep the 16.16
+        /* Parallax (_0804F2BA): + 0x40 -= (scroll * factor[layer])
+         * >> 8 with the ROM's 32-bit muls wrap and the + 0xFF
+         * negative-product adjust — again truncation toward zero. */
+        int32_t prod = (int32_t)((uint32_t)scroll_x *
+                                 (uint32_t)parallax[m->layer]);
+        m->fx -= prod / 0x100;
+        prod = (int32_t)((uint32_t)scroll_y *
+                         (uint32_t)parallax[m->layer]);
+        m->fy -= prod / 0x100;
+        /* Screen-anchor wrap on the s16 integer halves + 0x42/+ 0x46
+         * of + 0x40/+ 0x44 (_0804F2BA tail): x > 0x110 reseeds
+         * + 0x46 = (rng & 0x7F) + 1 and teleports + 0x42 to -0x20;
+         * x < -0x20 does the same reseed with + 0x42 = 0x110. Only
+         * when x is in range is y tested: y > 0xC0 -> -0x10 and
+         * y < -0x20 -> 0xB0, each reseeding + 0x42 = rng & 0xBF.
+         * One wrap per frame; the strh writes keep the 16.16
          * fraction, mirrored by masking the low word back in. */
-        int px = (int)(m->fx >> 16), py = (int)(m->fy >> 16);
+        int32_t px = (int16_t)(m->fx >> 16), py = (int16_t)(m->fy >> 16);
         if (px > 0x110) {
-            py = (int)((rnd(rng) & 0x7F) + 1);
+            py = (int32_t)(rnd(rng) & 0x7F) + 1;
+            px = -0x20;
+        } else if (px < -0x20) {
+            py = (int32_t)(rnd(rng) & 0x7F) + 1;
             px = 0x110;
         } else if (py > 0xC0) {
             py = -0x10;
-            px = (int)(rnd(rng) & 0xBF);
+            px = (int32_t)(rnd(rng) & 0xBF);
         } else if (py < -0x20) {
             py = 0xB0;
-            px = (int)(rnd(rng) & 0xBF);
+            px = (int32_t)(rnd(rng) & 0xBF);
         } else {
             continue;
         }
-        m->fx = (m->fx & 0xFFFF) | ((int32_t)px << 16);
-        m->fy = (m->fy & 0xFFFF) | ((int32_t)py << 16);
+        m->fx = (m->fx & 0xFFFF) |
+                (int32_t)((uint32_t)(uint16_t)px << 16);
+        m->fy = (m->fy & 0xFFFF) |
+                (int32_t)((uint32_t)(uint16_t)py << 16);
         m->sx = (int16_t)px;
         m->sy = (int16_t)py;
     }
-    /* Anchored children (sub_0804F504): + 0x40 += + 0x48 verbatim,
-     * then scroll / 0xC subtracted — same 16.16 scale fix. */
+    /* Anchored children (sub_0804F504 state 1): + 0x48 = + 0x50
+     * (= 0x80), + 0x40 += + 0x50, + 0x44 += + 0x4C (= 0 — the field
+     * is never written after the zeroed create), then scroll / 0xC
+     * subtracted per axis through __divsi3 (truncating, like C /). */
     for (int i = 0; i < o->anchor_count; ++i) {
         AosObject07Anchor *a = &o->anchors[i];
         if (!a->alive || a->state == 0) { a->state = 1; continue; }

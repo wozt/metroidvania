@@ -37,10 +37,18 @@
  * 0x0825EB0C/0x08266E78 sheet is not exported), the + 0x5A/+ 0x5C
  * palette and priority merges, the parent + 0x22 per-part attack
  * bitfield and the + 0x72 flag writes, the sub_08042848/428B4/
- * 429D0 palette flashes, the sub_080009E4 trig lookups, the
- * sub_0803E058/sub_0803E6BC affine rotation setup (the renderer
- * has no BG rotation entry) and the sub_080AC468 record arming
- * with its undecoded stepper are not modeled; the sub_0806D518
+ * 429D0 palette flashes and the sub_0803E058/sub_0803E6BC affine
+ * rotation setup (the renderer has no BG rotation entry) are not
+ * modeled.  The sub_080AC014 record stepper, the sub_080AC468/
+ * sub_080AC314 armers, the sub_080ACFA0/sub_080ACF6C wrappers and
+ * the sub_080ACEC4/sub_080ACF00/sub_080ACF10/sub_080ACF30/
+ * sub_080ACF58/sub_080ACFD4/sub_080ACFF0/sub_080AC298 helpers are
+ * ported below as aos_enemy_bg_*; the state-0/state-1 case
+ * machines that drive them stay collapsed, so the stepper is not
+ * wired into the per-frame update yet (the native machines only
+ * step records they armed, and the collapsed cycles arm none — an
+ * unarmed record's + 0x28 counter would drive the idle ease
+ * unstable).  The sub_0806D518
  * blink folds into kind->blink and the sub_0806D5C0 shot spawn
  * into spawn_flame_at. */
 
@@ -52,12 +60,12 @@ static const uint8_t bg_tgt_tab[BG_PARTS] = {
  * byte — the high values are long flights). */
 static const int8_t bg_timer_tab[BG_PARTS] = {
     -52, -78, -66, -84, -106, 68, -56, -76,
-    -64, -122, -116, -108, 80, 90,
+    -64, -122, 124, 108, 80, 90,
 };
 /* 0x08119360: the int16 launch-release distance offsets added to
  * the parent y pixel plus the bgInfo[1] scroll y. */
 static const int16_t bg_dist_tab[BG_PARTS] = {
-    -12, -32, -48, -24, -4, -4, -12, -32, -48, -44, -8, -8, -16, -16,
+    -12, -32, -48, -24, -4, -4, -12, -32, -48, -24, -4, -4, -12, -32,
 };
 /* 0x08528414: the fourteen home (x, y) pixel pairs stored << 16;
  * the 0x0852844C pointer table selects this one table for every
@@ -87,6 +95,250 @@ static const int32_t bg_ang_tab[30][2] = {
 /* The ROM's sign-fix >> 16 on the record deltas: truncation toward
  * zero, like C division (the cs_px convention). */
 static int32_t bg_px(int32_t v) { return v / 0x10000; }
+
+/* ---- the + 0x1C record engine ----
+ *
+ * sub_080AC014 steps one record per frame: an unarmed record
+ * (+ 0x0C/+ 0x10 both zero) eases x/y toward its 0x08528414 home
+ * pair — x negated while the body + 0x58 bit 0x40 mirror is set —
+ * over the + 0x28 counter (a zero counter divides by one, then the
+ * field keeps decrementing, exactly like the ROM); records 5 and
+ * 0x0C also ease their + 8 angle toward the 0x0852858C variant
+ * pair.  An armed record interpolates + 0x10 toward + 0x0C over the
+ * same divisor, then places x/y on the sine/cosine of the new angle
+ * at the + 0x24 radius around either the + 0x14/+ 0x18 fixed point
+ * or the + 0x18 record's position when + 0x14 is 0x80000000.  The
+ * + 0x34 phase walks 0 (drift) -> 1 (attack arc: + 0x28 counted
+ * down to half of + 0x2C) -> 2 (+ 0x28 held while + 0x2C climbs to
+ * + 0x30) -> 3 (held).  Only records 5 and 0x0C update + 8. */
+static int32_t bg_div(int32_t v, int32_t d) {
+    /* __divsi3 by zero is not reachable in the native choreography
+     * (the counters stay positive while a record is stepped); the
+     * guard keeps the port defined if a caller steps a record whose
+     * counter already ran out. */
+    return d ? v / d : 0;
+}
+
+void aos_enemy_bg_step_record(AosEnemy *e, unsigned idx) {
+    if (idx >= BG_PARTS)
+        return;
+    AosBgRec *r = &e->bg_rec[idx];
+    int32_t var = (int8_t)e->bg_var;
+    const int32_t *angp = bg_ang_tab[var >= 0 && var < 30 ? var : 0];
+    int32_t sl = r->cnt ? r->cnt : 1;
+    r->cnt -= 1;
+    bool mir = e->mirrored;
+    if (r->a_lo == 0 && r->a_hi == 0) {
+        int32_t hx = (int32_t)bg_home[idx][0] << 16;
+        int32_t hy = (int32_t)bg_home[idx][1] << 16;
+        if (mir)
+            hx = -hx;
+        r->x += bg_div(hx - r->x, sl);
+        r->y += bg_div(hy - r->y, sl);
+        if (idx != 5 && idx != 0x0C)
+            return;
+        int32_t tgt = idx == 5 ? angp[0] : angp[1];
+        if (mir)
+            tgt = 0x20000 - tgt;
+        r->ang += bg_div(tgt - r->ang, sl);
+        return;
+    }
+    if (r->phase == 1) {
+        if (r->cnt <= r->cnt2 / 2)
+            r->phase = 2;
+    } else if (r->phase == 2) {
+        r->cnt += 1;
+        r->cnt2 += 1;
+        sl = r->cnt;
+        if (r->cnt2 >= r->lim)
+            r->phase = 3;
+    }
+    r->a_hi += bg_div(r->a_lo - r->a_hi, sl);
+    int32_t ox = aos_fixed_mul(aos_sine((uint32_t)(r->a_hi + 0x4000)),
+                               r->dist);
+    int32_t oy = aos_fixed_mul(aos_sine((uint32_t)r->a_hi), r->dist);
+    if (r->anchor == (int32_t)0x80000000) {
+        AosBgRec *a = &e->bg_rec[r->anchor2];
+        r->x = a->x + ox;
+        r->y = a->y + oy;
+    } else {
+        r->x = r->anchor + ox;
+        r->y = r->anchor2 + oy;
+    }
+    if (idx != 5 && idx != 0x0C)
+        return;
+    int32_t tgt = idx == 5 ? angp[0] : angp[1];
+    if (mir)
+        tgt = 0x20000 - tgt;
+    r->ang += bg_div(tgt - r->ang, sl);
+}
+
+/* sub_080ACF30: step the fourteen records in the caller's signed
+ * byte order, only while the + 0x0D timer byte is nonzero. */
+void aos_enemy_bg_step_order(AosEnemy *e, const int8_t *order) {
+    if (e->timer == 0)
+        return;
+    for (unsigned i = 0; i < BG_PARTS; ++i)
+        aos_enemy_bg_step_record(e, (unsigned)(int8_t)order[i]);
+}
+
+/* sub_080ACF10: same gate, natural index order. */
+void aos_enemy_bg_step_all(AosEnemy *e) {
+    if (e->timer == 0)
+        return;
+    for (unsigned i = 0; i < BG_PARTS; ++i)
+        aos_enemy_bg_step_record(e, i);
+}
+
+/* sub_080AC468 (and sub_080AC314 with rel): arm record idx toward
+ * record other — + 0x34 phase 0, + 0x28/+ 0x2C the duration, + 0x14
+ * the record-index anchor flag, + 0x18 the target record, + 0x24 the
+ * orbit radius (computed from the record delta through
+ * sub_0803E86C/Sqrt when dist is zero), + 0x10 the ArcTan2 bearing
+ * plus 0x10000 and + 0x0C the mirrored/unmirrored angle bound.
+ * sub_080AC314 additionally copies + 0x0C into + 0x10 of the slot
+ * at byte offset (other*8 - idx)*8 — with a computed distance that
+ * is record idx itself (a no-op copy), with an explicit distance it
+ * is record other's — ported literally. */
+static void bg_arm_rec(AosEnemy *e, unsigned idx, unsigned other,
+                       int32_t da, int32_t dist, int32_t dur,
+                       bool rel) {
+    if (idx >= BG_PARTS || other >= BG_PARTS)
+        return;
+    AosBgRec *r = &e->bg_rec[idx];
+    AosBgRec *t = &e->bg_rec[other];
+    r->phase = 0;
+    r->cnt = dur;
+    r->cnt2 = dur;
+    r->anchor = (int32_t)0x80000000;
+    r->anchor2 = (int32_t)other;
+    if (dist)
+        r->dist = dist;
+    else {
+        int32_t dx = t->x - r->x;
+        int32_t dy = t->y - r->y;
+        int32_t sq = aos_fixed_mul(dx, dx) + aos_fixed_mul(dy, dy);
+        r->dist = (int32_t)(aos_isqrt((uint32_t)sq) << 8);
+    }
+    int32_t dx = t->x - r->x;
+    int32_t dy = t->y - r->y;
+    uint16_t ang = aos_arctan2((int16_t)bg_px(dx), (int16_t)bg_px(dy));
+    int32_t base = (int32_t)ang + 0x10000;
+    r->a_hi = base;
+    int32_t a = da < 0 ? -da : da;
+    if (a <= 0xFFFF) {
+        r->a_lo = e->mirrored ? base - da : base + da;
+    } else if (e->mirrored) {
+        r->a_lo = da > 0x18000 ? 0x38000 - da : 0x28000 - da;
+    } else {
+        r->a_lo = da;
+    }
+    if (rel) {
+        int32_t off = ((dist ? (int32_t)idx : (int32_t)other) * 8 -
+                       (int32_t)idx) * 8;
+        int32_t *p = (int32_t *)((char *)e->bg_rec + off);
+        p[4] = p[3];
+    }
+}
+
+void aos_enemy_bg_arm(AosEnemy *e, unsigned idx, unsigned other,
+                      int32_t da, int32_t dist, int32_t dur) {
+    bg_arm_rec(e, idx, other, da, dist, dur, false);
+}
+
+void aos_enemy_bg_arm_rel(AosEnemy *e, unsigned idx, unsigned other,
+                          int32_t da, int32_t dist, int32_t dur) {
+    bg_arm_rec(e, idx, other, da, dist, dur, true);
+}
+
+/* sub_080ACFA0 / sub_080ACF6C: the attack wrappers — arm with half
+ * the duration as the + 0x28/+ 0x2C seed, then + 0x34 phase 1 and
+ * + 0x30 the full duration (sub_080ACFA0 uses sub_080AC468,
+ * sub_080ACF6C sub_080AC314). */
+static void bg_arm_attack(AosEnemy *e, unsigned idx, unsigned other,
+                          int32_t da, int32_t dist, int32_t dur,
+                          bool rel) {
+    bg_arm_rec(e, idx, other, da, dist, dur / 2, rel);
+    if (idx < BG_PARTS) {
+        e->bg_rec[idx].phase = 1;
+        e->bg_rec[idx].lim = dur;
+    }
+}
+
+void aos_enemy_bg_arm_attack(AosEnemy *e, unsigned idx, unsigned other,
+                             int32_t da, int32_t dist, int32_t dur) {
+    bg_arm_attack(e, idx, other, da, dist, dur, false);
+}
+
+void aos_enemy_bg_arm_attack_rel(AosEnemy *e, unsigned idx,
+                                 unsigned other, int32_t da,
+                                 int32_t dist, int32_t dur) {
+    bg_arm_attack(e, idx, other, da, dist, dur, true);
+}
+
+/* sub_080ACF58: clear the + 0x0C/+ 0x10 angle pair (disarm). */
+void aos_enemy_bg_disarm(AosEnemy *e, unsigned idx) {
+    if (idx >= BG_PARTS)
+        return;
+    e->bg_rec[idx].a_lo = 0;
+    e->bg_rec[idx].a_hi = 0;
+}
+
+/* sub_080ACEC4: shift the body x by half the sum of two records and
+ * pull every record x back by the same amount (re-centre the limb
+ * layout on records i/j). */
+void aos_enemy_bg_centroid(AosEnemy *e, unsigned i, unsigned j) {
+    if (i >= BG_PARTS || j >= BG_PARTS)
+        return;
+    int32_t d = (e->bg_rec[i].x + e->bg_rec[j].x) / 2;
+    e->x += d;
+    for (unsigned k = 0; k < BG_PARTS; ++k)
+        e->bg_rec[k].x -= d;
+}
+
+/* sub_080ACF00: write a record's y. */
+void aos_enemy_bg_set_y(AosEnemy *e, unsigned idx, int32_t y) {
+    if (idx < BG_PARTS)
+        e->bg_rec[idx].y = y;
+}
+
+/* sub_080ACFD4 / sub_080ACFF0: save and restore every record's
+ * position through + 0x1C/+ 0x20. */
+void aos_enemy_bg_store_pos(AosEnemy *e) {
+    for (unsigned i = 0; i < BG_PARTS; ++i) {
+        e->bg_rec[i].px = e->bg_rec[i].x;
+        e->bg_rec[i].py = e->bg_rec[i].y;
+    }
+}
+
+void aos_enemy_bg_load_pos(AosEnemy *e) {
+    for (unsigned i = 0; i < BG_PARTS; ++i) {
+        e->bg_rec[i].x = e->bg_rec[i].px;
+        e->bg_rec[i].y = e->bg_rec[i].py;
+    }
+}
+
+/* sub_080AC298 (with sub_0806CF2C): flip the + 0x58 bit-0x40 mirror
+ * when the body's pixel x sits on the wrong side of the player's —
+ * negate every record x and mirror the + 8 angle of records
+ * {2,4,5,8,0x0C,0x0D} as 0x20000 - ang.  Called once by
+ * EnemyBigGolemCreate; the port runs it when the part records are
+ * first baked. */
+void aos_enemy_bg_face_flip(AosEnemy *e, const AosSoma *soma) {
+    if (!soma)
+        return;
+    int want = (int32_t)(int16_t)(e->x >> 16) -
+               (int32_t)(int16_t)(soma->x >> 16) < 0;
+    if (want == (e->mirrored ? 1 : 0))
+        return;
+    e->mirrored = !e->mirrored;
+    for (unsigned i = 0; i < BG_PARTS; ++i)
+        e->bg_rec[i].x = -e->bg_rec[i].x;
+    static const uint8_t flip_idx[] = {2, 4, 5, 8, 0x0C, 0x0D};
+    for (unsigned i = 0; i < sizeof flip_idx; ++i)
+        e->bg_rec[flip_idx[i]].ang = 0x20000 - e->bg_rec[flip_idx[i]].ang;
+}
+
 
 /* Emit the fourteen part children over the first updates under the
  * room child cap, like the Creaking Skull bones and the Great Armor
@@ -414,8 +666,12 @@ AosHitReport aos_enemy_big_golem_update(
     }
     if (!enemy->boss_parts_spawned) {
         bg_emit_parts(enemy, &report);
-        if (enemy->spawned_count >= BG_PARTS)
+        if (enemy->spawned_count >= BG_PARTS) {
             enemy->boss_parts_spawned = true;
+            /* EnemyBigGolemCreate's sub_080AC298 tail: face the
+             * records once the bake is complete. */
+            aos_enemy_bg_face_flip(enemy, soma);
+        }
     }
     if (enemy->state == 2) {
         AosHitReport hit = bg_death(enemy, random);

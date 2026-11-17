@@ -4,6 +4,8 @@
 #include "aos/core/aos_enemy.h"
 #include "aos/core/aos_effect.h"
 #include "aos/core/aos_audio.h"
+#include "aos/core/aos_enemy_internal.h"
+#include "aos/math/aos_math.h"
 
 void aos_enemy_disc_glow_update(AosEnemy *enemy,
                                 const AosEnemyKind *kind);
@@ -13164,6 +13166,82 @@ static void big_golem_tests(void) {
     }
     assert(ch.removed && flew > 100);
     e.state = 1;
+
+    /* The + 0x1C record engine: sub_080AC468 arming, the sub_080AC014
+     * stepper's phase walk, the sub_080ACFA0 attack wrapper, the
+     * sub_080ACF58 disarm and the sub_080ACEC4/ACF00/ACF10/ACFD4/
+     * ACFF0/AC298 helpers, exercised directly on the baked records. */
+    memset(e.bg_rec, 0, sizeof e.bg_rec);
+    e.bg_rec[1].x = 0x10000;
+    e.bg_rec[3].x = 0;
+    e.bg_rec[3].y = 0;
+    aos_enemy_bg_arm(&e, 1, 3, 0, 0, 0x10);
+    assert(e.bg_rec[1].phase == 0 && e.bg_rec[1].cnt == 0x10 &&
+           e.bg_rec[1].cnt2 == 0x10 &&
+           e.bg_rec[1].anchor == (int32_t)0x80000000 &&
+           e.bg_rec[1].anchor2 == 3 && e.bg_rec[1].dist == 0x10000);
+    /* + 0x10 is the ArcTan2 bearing of the record delta + 0x10000. */
+    int32_t ahi = (int32_t)(aos_arctan2(-1, 0) & 0xFFFF) + 0x10000;
+    assert(e.bg_rec[1].a_hi == ahi && e.bg_rec[1].a_lo == ahi);
+    /* One step: a_hi already at a_lo; position = record 3's (0, 0)
+     * plus the sine pair at the computed radius. */
+    aos_enemy_bg_step_record(&e, 1);
+    int32_t ex = aos_fixed_mul(aos_sine((uint32_t)(ahi + 0x4000)),
+                               e.bg_rec[1].dist);
+    int32_t ey = aos_fixed_mul(aos_sine((uint32_t)ahi),
+                               e.bg_rec[1].dist);
+    assert(e.bg_rec[1].cnt == 0xF && e.bg_rec[1].x == ex &&
+           e.bg_rec[1].y == ey);
+    /* The attack wrapper seeds half the duration and phase 1 with
+     * the full limit; enough steps walk it to phase 3. */
+    aos_enemy_bg_arm_attack(&e, 2, 3, 0x8000, 0x8000, 0x20);
+    assert(e.bg_rec[2].phase == 1 && e.bg_rec[2].cnt == 0x10 &&
+           e.bg_rec[2].cnt2 == 0x10 && e.bg_rec[2].lim == 0x20);
+    for (int i = 0; i < 0x30; ++i)
+        aos_enemy_bg_step_record(&e, 2);
+    assert(e.bg_rec[2].phase == 3);
+    /* Disarm returns the record to the idle home ease. */
+    aos_enemy_bg_disarm(&e, 1);
+    assert(e.bg_rec[1].a_lo == 0 && e.bg_rec[1].a_hi == 0);
+    e.bg_rec[1].x = 0;
+    e.bg_rec[1].y = 0;
+    e.bg_rec[1].cnt = 4;
+    aos_enemy_bg_step_record(&e, 1);
+    /* home[1] = {6,-74}: x += (6<<16 - 0)/4, y += (-74<<16)/4. */
+    assert(e.bg_rec[1].x == (6 * 0x10000) / 4 &&
+           e.bg_rec[1].y == (-74 * 0x10000) / 4);
+    /* sub_080ACEC4 re-centres on records 0/6, ACF00 writes y and the
+     * ACFD4/ACFF0 pair round-trips the position. */
+    memset(e.bg_rec, 0, sizeof e.bg_rec);
+    e.bg_rec[0].x = 0x10000;
+    e.bg_rec[6].x = 0x30000;
+    int32_t ex0 = e.x;
+    aos_enemy_bg_centroid(&e, 0, 6);
+    assert(e.x == ex0 + 0x20000 && e.bg_rec[0].x == -0x10000 &&
+           e.bg_rec[6].x == 0x10000);
+    aos_enemy_bg_set_y(&e, 4, -0x20000);
+    assert(e.bg_rec[4].y == -0x20000);
+    e.bg_rec[2].x = 0x12345;
+    e.bg_rec[2].y = -0x54321;
+    aos_enemy_bg_store_pos(&e);
+    e.bg_rec[2].x = 0;
+    e.bg_rec[2].y = 0;
+    aos_enemy_bg_load_pos(&e);
+    assert(e.bg_rec[2].x == 0x12345 && e.bg_rec[2].y == -0x54321);
+    /* sub_080AC298: player right of the body mirrors the records. */
+    memset(e.bg_rec, 0, sizeof e.bg_rec);
+    e.bg_rec[2].x = 0x10000;
+    e.bg_rec[2].ang = 0x8000;
+    e.x = 0;
+    e.mirrored = false;
+    AosSoma s2 = soma;
+    s2.x = AOS_FIXED(50);
+    aos_enemy_bg_face_flip(&e, &s2);
+    assert(e.mirrored && e.bg_rec[2].x == -0x10000 &&
+           e.bg_rec[2].ang == 0x20000 - 0x8000);
+    /* A second call with the player still right is a no-op. */
+    aos_enemy_bg_face_flip(&e, &s2);
+    assert(e.mirrored);
 
     /* Lethal: hp 0 -> defeated -> state 2 death machine with the
      * decoded timer; the cycle-gated flag deletes it. */

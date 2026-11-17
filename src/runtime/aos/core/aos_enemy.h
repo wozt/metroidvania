@@ -343,13 +343,23 @@ typedef struct {
  * words): x/y the 16.16 offset from the body the sub_080AC6E8
  * child brain adds to the parent's + 0x40/+ 0x44, ang the + 8 held
  * aim angle it writes for records {2,4,8,0xD} and reads back for
- * {5,0xC}.  The remaining native fields (+ 0xC/+ 0x10 angle pair,
- * + 0x14 flag, + 0x18 parameter, + 0x24 orbit radius, + 0x28/+ 0x2C
- * and + 0x34) belong to the sub_080AC468 arming and its record
- * stepper inside the undecoded state-0/state-1 choreographies and
- * are not modeled. */
+ * {5,0xC}.  The + 0x0C/+ 0x10 angle pair, + 0x14/+ 0x18 anchor,
+ * + 0x1C/+ 0x20 saved position, + 0x24 orbit radius, + 0x28/+ 0x2C
+ * counters, + 0x30 limit and + 0x34 phase are the sub_080AC468
+ * arming fields stepped by sub_080AC014 inside the state-0/state-1
+ * choreographies (ported as aos_enemy_bg_* in big_golem.c). */
 typedef struct {
-    int32_t x, y, ang;
+    int32_t x, y, ang;      /* + 0x00/+ 0x04/+ 0x08 */
+    int32_t a_lo, a_hi;     /* + 0x0C/+ 0x10 angle pair */
+    int32_t anchor;         /* + 0x14: INT32_MIN selects the record
+                             * index in anchor2, else fixed x */
+    int32_t anchor2;        /* + 0x18: record index or fixed y */
+    int32_t px, py;         /* + 0x1C/+ 0x20 saved position */
+    int32_t dist;           /* + 0x24 orbit radius (16.16) */
+    int32_t cnt, cnt2;      /* + 0x28/+ 0x2C step counters */
+    int32_t lim;            /* + 0x30 phase-2 -> 3 limit */
+    int32_t phase;          /* + 0x34: 0 drift, 1 attack arc,
+                             * 2 counted, 3 held */
 } AosBgRec;
 
 typedef struct AosEnemy {

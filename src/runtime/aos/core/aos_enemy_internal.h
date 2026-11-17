@@ -957,4 +957,30 @@ void aos_enemy_bat_swoop(AosEnemy *enemy, const AosSoma *soma,
 void aos_enemy_bat_die(AosEnemy *enemy, const AosEnemyKind *kind,
                        uint32_t (*random)(void), AosHitReport *report);
 
+
+/* Big Golem's + 0x1C record engine (big_golem.c): the sub_080AC014
+ * per-record stepper, the sub_080AC468/sub_080AC314 armers behind
+ * the sub_080ACFA0/sub_080ACF6C wrappers, and the sub_080ACEC4,
+ * sub_080ACF00, sub_080ACF10, sub_080ACF30, sub_080ACF58,
+ * sub_080ACFD4, sub_080ACFF0 and sub_080AC298 helpers the
+ * state-0/state-1 choreographies call. */
+void aos_enemy_bg_step_record(AosEnemy *e, unsigned idx);
+void aos_enemy_bg_step_order(AosEnemy *e, const int8_t *order);
+void aos_enemy_bg_step_all(AosEnemy *e);
+void aos_enemy_bg_arm(AosEnemy *e, unsigned idx, unsigned other,
+                      int32_t da, int32_t dist, int32_t dur);
+void aos_enemy_bg_arm_rel(AosEnemy *e, unsigned idx, unsigned other,
+                          int32_t da, int32_t dist, int32_t dur);
+void aos_enemy_bg_arm_attack(AosEnemy *e, unsigned idx, unsigned other,
+                             int32_t da, int32_t dist, int32_t dur);
+void aos_enemy_bg_arm_attack_rel(AosEnemy *e, unsigned idx,
+                                 unsigned other, int32_t da,
+                                 int32_t dist, int32_t dur);
+void aos_enemy_bg_disarm(AosEnemy *e, unsigned idx);
+void aos_enemy_bg_centroid(AosEnemy *e, unsigned i, unsigned j);
+void aos_enemy_bg_set_y(AosEnemy *e, unsigned idx, int32_t y);
+void aos_enemy_bg_store_pos(AosEnemy *e);
+void aos_enemy_bg_load_pos(AosEnemy *e);
+void aos_enemy_bg_face_flip(AosEnemy *e, const AosSoma *soma);
+
 #endif

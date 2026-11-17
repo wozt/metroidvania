@@ -1864,6 +1864,76 @@
   undocumented. `creaking_skull_tests` covers the alert/entry/
   windup/volley/reset arms and the + 0xD countdown.
 
+## Patch 1183 - Big Golem record engine ported: sub_080AC014 stepper, sub_080AC468/sub_080AC314 armers and the record helpers
+
+- **Decode.** The + 0x1C record container's full 0x38-byte layout
+  is now mapped (`third_party/cvaos/asm/code/code_080A0A8C.s`):
+  sub_080AC014 steps one record per call — + 0x28 counter snapshot
+  (zero reads as one, then the field keeps decrementing), unarmed
+  records (+ 0x0C/+ 0x10 zero) ease x/y toward the 0x08528414 home
+  pair (x negated under the + 0x58 bit-0x40 mirror) and records
+  {5,0x0C} ease + 8 toward the 0x0852858C variant angle pair
+  (0x20000 - ang mirrored); armed records interpolate + 0x10 toward
+  + 0x0C and place x/y on the sine pair at the + 0x24 radius around
+  the + 0x14/+ 0x18 anchor (0x80000000 selects the + 0x18 record
+  index). The + 0x34 phase walks 0 drift -> 1 attack arc (+ 0x28
+  counted to half of + 0x2C) -> 2 (+ 0x28 held, + 0x2C climbing to
+  + 0x30) -> 3 held. sub_080AC468 arms a record (phase 0, duration
+  into + 0x28/+ 0x2C, record-index anchor, ArcTan2 bearing +
+  0x10000 into + 0x10, mirrored angle bound into + 0x0C, explicit
+  or Sqrt-computed + 0x24 radius); sub_080AC314 is the same armer
+  plus a literal + 0x0C -> + 0x10 copy at the (other*8 - idx)*8
+  byte-offset slot. sub_080ACFA0/sub_080ACF6C wrap the armers with
+  half duration and + 0x34 = 1, + 0x30 = full duration.
+  sub_080ACEC4 re-centres the body x on two records, sub_080ACF00
+  writes a record y, sub_080ACF10/sub_080ACF30 step all fourteen
+  gated on the + 0x0D timer (natural order vs the signed-byte
+  tables 0x0811931A/0x08119328/0x08119336/0x08119344),
+  sub_080ACF58 disarms, sub_080ACFD4/sub_080ACFF0 save/restore
+  through + 0x1C/+ 0x20 and sub_080AC298 (with sub_0806CF2C)
+  mirrors the records when the body pixel x crosses the player's.
+  EnemyBigGolemCreate's tail was also decoded: a ten-call
+  sub_080AC468 burst (records 0-3,6-8,0x0A-0x0D chained
+  3<-1<-2<-0 and 9<-0xA<-0xB<-0xD<-0xC), one sub_080ACF30 step in
+  the 0x0811931A order, sub_080ACF58 x14, the sub_0804277C limb
+  callbacks, sub_080AC298 and the + 0x22 = 0x312C attack bitfield.
+- **Port.** `AosBgRec` now carries the full 0x38 layout
+  (`aos_enemy.h`); `big_golem.c` implements the engine as
+  `aos_enemy_bg_*` (step_record/step_order/step_all, arm/arm_rel,
+  arm_attack/arm_attack_rel, disarm, centroid, set_y,
+  store/load_pos, face_flip) exported through
+  `aos_enemy_internal.h`. `aos_enemy_bg_face_flip` runs once when
+  the fourteen parts finish emitting (the create-tail
+  sub_080AC298). Two table transcription bugs were fixed against
+  the ROM: `bg_timer_tab` indices 10/11 are +124/+108 (bytes
+  0x7C/0x6C, not negative) and `bg_dist_tab` indices 9-13 are
+  {-24,-4,-4,-12,-32}. `big_golem_tests` exercises the armer
+  fields, the phase walk to 3, the disarm idle ease, centroid,
+  set_y, the position round-trip and the mirror flip directly.
+- **Still collapsed.** The sub_080A89F8 thirteen state-0 cases and
+  the sub_080AA7A8 forty state-1 cases remain collapsed to the
+  documented chase/attack-pose/settle and windup/volley/recover
+  cycles, so the stepper is deliberately not wired into the
+  per-frame update: the native machines only step records they
+  armed, and the collapsed cycles arm none — an unarmed record's
+  + 0x28 counter would drive the idle ease unstable. The record
+  engine is therefore translated and unit-tested but not yet
+  connected to live choreography. The + 0x22 = 0x312C attack
+  bitfield, the sub_0804277C limb draw callbacks, the palette
+  flashes and the affine rotation setup stay unported, and there
+  is no emulator comparison.
+- **Child cap finding.** `AOS_ENEMY_MAX_CHILDREN` (8) limits the
+  per-update `AosHitReport` child array, not the boss's parts:
+  `bg_emit_parts` emits up to eight `AOS_ROLE_BG_PART` children per
+  update and `spawned_count` reaches all fourteen over two
+  updates, so no part is lost — the cap only paces emission like
+  the other part-bosses. No raise needed.
+- **Registries.** `annotations.tsv` (`aos.enemies.big_golem`)
+  notes/next action and `aos_monster_aspects.tsv` (big_golem)
+  divergences updated; statuses unchanged (the case machines are
+  still collapsed, so `functional` stands on the existing evidence
+  only).
+
 ## Patch 1182 - Big Golem part brain decoded: sub_080AC6E8's fourteen children, record bake, aim and death launch
 
 - **Decode.** `sub_080AC6E8` (~890 asm lines,

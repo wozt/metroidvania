@@ -1,3 +1,29 @@
+## Patch 1221 - Pause-menu proportional text cursor corrected
+
+- **Scope.** `src/runtime/aos/menus/aos_menu_cells.c`,
+  `src/runtime/aos/menus/aos_pause_graphics.c`,
+  `tests/test_aos_menu_cells.c`, the pause-menu registry notes and this file.
+- **Root cause and native port.** The ROM string for hub entry `0x362`
+  already contains `Change spirit's equipment.`; the visible corruption was
+  caused by the host resetting the absolute context-A pixel cursor to
+  `column * 6` whenever a proportional glyph crossed a six-pixel cell. Native
+  `sub_08040AB8` instead subtracts six from the sub-column remainder and
+  advances the absolute cursor by the glyph's full width, resetting it only
+  on a real row wrap. The cell engine now follows that behavior, and applies
+  the matching remainder carry from `sub_08040C60` to context B. The pause
+  description path also retains context A's native pixel attribute 1; palette
+  bank 3 remains solely in the BG0 tilemap entry.
+- **Tests and emulator evidence.** Cursor regressions cover both cell
+  contexts, and the verified-ROM pause-graphics test passes. A private mGBA
+  save state loaded through `aos_mgba_lab --state-in` was used to compare the
+  native hub line with a fresh runtime capture: both masks contain 353 text
+  pixels and differ at zero pixels. The state and captures remain local and
+  are not tracked.
+- **Still partial.** This comparison validates the selected hub description,
+  not every localized string or remaining page residual. Enemy portrait AI
+  and the documented affine-transition approximations remain open, so no
+  parity status is raised.
+
 ## Patch 1220 - Pause pages rebuilt from native planes; selection hand frame corrected
 
 - **Scope.** `src/runtime/aos/menus/aos_pause_graphics.c/.h`,

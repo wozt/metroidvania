@@ -237,16 +237,24 @@ int aos_menu_cells_print_a(AosMenuCells *cells, uint16_t ch,
         aos_menu_cells_merge_large_dual(cells, width);
     cells->a_x = (uint16_t)(cells->a_x + width);
     if (cells->a_x > 5) {
+        /* sub_08040AB8 carries the sub-column remainder across the
+         * six-pixel boundary. Only a real window wrap clears it and
+         * recomputes a_px from the home column. Re-anchoring on every
+         * boundary makes the next glyph move backwards and overwrite
+         * the preceding one. */
+        cells->a_x = (uint16_t)(cells->a_x - 6);
         cells->a_col += 1;
         if (cells->a_col > cells->a_col_max) {
             cells->a_col = cells->a_col_home;
             cells->a_row += 1;
             if (cells->a_row > cells->a_row_max)
                 cells->a_row = cells->a_row_stop;
+            cells->a_y = (uint16_t)(cells->a_row * 12);
+            cells->a_x = 0;
+            cells->a_px = (uint16_t)(cells->a_col * 6);
+        } else {
+            cells->a_px = (uint16_t)(cells->a_px + width);
         }
-        cells->a_y = (uint16_t)(cells->a_row * 12);
-        cells->a_x = 0;
-        cells->a_px = (uint16_t)(cells->a_col * 6);
     } else {
         cells->a_px = (uint16_t)(cells->a_px + width);
     }
@@ -266,6 +274,9 @@ int aos_menu_cells_print_b(AosMenuCells *cells, uint16_t ch,
         aos_menu_cells_merge_small_dual(cells, width);
     cells->b_sx = (uint16_t)(cells->b_sx + width);
     if (cells->b_sx > 5) {
+        /* sub_08040C60 mirrors context A: preserve the modulo-six
+         * remainder while advancing within the row. */
+        cells->b_sx = (uint16_t)(cells->b_sx - 6);
         cells->b_col += 1;
         if (cells->b_col > cells->b_x1) {
             cells->b_col = cells->b_x0;

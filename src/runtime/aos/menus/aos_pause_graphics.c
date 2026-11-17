@@ -1080,7 +1080,9 @@ static bool place_text_cells(AosPauseGraphics *graphics, uint16_t id,
                              uint16_t h, unsigned palette,
                              unsigned *next_tile) {
     if (!cells_begin(graphics, small, col, row, w, h)) return false;
-    aos_menu_cells_set_attr(&graphics->cells, (uint16_t)palette);
+    /* Context-A page descriptions keep sub_08047520's native pixel
+     * attribute 1. `palette` belongs to the BG0 tilemap entries already
+     * installed by window_fill; it is not the glyph's 4bpp pixel value. */
     return cells_print_id(graphics, id, small, col, row) &&
            cells_commit(graphics, tile_x, tile_y, col, row, w, h,
                         palette, next_tile);

@@ -146,23 +146,42 @@ static void test_print_a_cursor(void) {
     cells.a_row_stop = 2;
     cells.a_col_max = 3;
     cells.a_row_max = 5;
-    /* a_x accumulates inside a column: two 4px chars overflow the 6px
-     * slot (4 + 4 > 5), so each column holds one glyph advance pair —
-     * px 0,4 -> col1 px6 -> px10 -> col2 px12 -> px16 -> col3 px18 -> px22. */
+    /* a_x is the modulo-six remainder. sub_08040AB8 subtracts six on
+     * each column crossing while the absolute pixel cursor advances by
+     * the full glyph width: px 0,4,8,12,16 with columns 0,1,2,2,3. */
     for (int i = 0; i < 5; ++i) {
         assert(aos_menu_cells_print_a(&cells, 'A', char_info, glyph) == -1);
     }
-    assert(cells.a_col == 2 && cells.a_px == 16);
-    /* Columns 3 then overflow to row 1 column 0 with a_y = 12. */
-    assert(aos_menu_cells_print_a(&cells, 'A', char_info, glyph) == -1);
-    assert(cells.a_col == 3 && cells.a_px == 18);
-    assert(aos_menu_cells_print_a(&cells, 'A', char_info, glyph) == -1);
-    assert(cells.a_col == 3 && cells.a_px == 22);
+    assert(cells.a_col == 3 && cells.a_x == 2 && cells.a_px == 20);
+    /* The sixth glyph is drawn at x=20, then crossing column 3 wraps to
+     * row 1 column 0 and clears the remainder. */
     assert(aos_menu_cells_print_a(&cells, 'A', char_info, glyph) == -1);
     assert(cells.a_col == 0 && cells.a_row == 1);
     assert(cells.a_y == 12 && cells.a_px == 0 && cells.a_x == 0);
-    /* The wrapped glyph landed in cell row 1 (a_y >> 3 = 1). */
+    /* The next glyph lands in cell row 1 at x=0. */
+    assert(aos_menu_cells_print_a(&cells, 'A', char_info, glyph) == -1);
+    assert(cells.a_col == 0 && cells.a_x == 4 && cells.a_px == 4);
     assert(fb[AOS_MENU_CELLS_ROW_WORDS] != 0);
+}
+
+static void test_print_b_cursor(void) {
+    AosMenuCells cells;
+    uint32_t fb[FB_WORDS];
+    uint8_t char_info[4] = {0, 4, 0, 0};
+    uint8_t glyph[10] = {0x80};
+    aos_menu_cells_init(&cells);
+    aos_menu_cells_set_fb(&cells, fb);
+    memset(fb, 0, sizeof fb);
+    cells.b_x0 = 0;
+    cells.b_x1 = 3;
+    cells.b_y0 = 0;
+    cells.b_y1 = 2;
+    for (int i = 0; i < 5; ++i)
+        assert(aos_menu_cells_print_b(&cells, 'A', char_info, glyph) == -1);
+    assert(cells.b_col == 3 && cells.b_sx == 2 && cells.b_px == 20);
+    assert(aos_menu_cells_print_b(&cells, 'A', char_info, glyph) == -1);
+    assert(cells.b_col == 0 && cells.b_row == 1);
+    assert(cells.b_sx == 0 && cells.b_px == 0 && cells.b_py == 8);
 }
 
 static void test_icon_walker(void) {
@@ -359,6 +378,7 @@ int main(void) {
     test_merge_large_dual();
     test_merge_small_and_clear();
     test_print_a_cursor();
+    test_print_b_cursor();
     test_icon_walker();
     test_run_text();
     test_text_icon_commands();

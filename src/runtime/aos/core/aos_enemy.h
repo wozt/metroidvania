@@ -295,7 +295,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_BG_CHILD2 = 169, AOS_ROLE_BG_CHILD3 = 170,
        AOS_ROLE_GA_PART = 171, AOS_ROLE_GRAHAM_CLONE = 172,
        AOS_ROLE_GRAHAM_CORE = 173, AOS_ROLE_CHAOS_PART = 174,
-       AOS_ROLE_BG_PART = 175 };
+       AOS_ROLE_BG_PART = 175,
+       AOS_ROLE_HH_WAVE = 176, AOS_ROLE_HH_WAVE_TRAIL = 177 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot

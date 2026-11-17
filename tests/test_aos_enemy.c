@@ -307,6 +307,94 @@ static void headhunter_death_tests(void) {
            aimed.children[0].vx == -0x28000 &&
            aimed.children[0].vy == 0 &&
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x67) == 1);
+    /* Case 24's + 0x6E > 1 gate fires the sub_08085A48 sine-wave shot
+     * (song 0x130) and advances + 0xB twice; frame 1 keeps the
+     * documented cycle_done fallback. */
+    body.state = 1;
+    body.step = 24;
+    body.timer = 0;
+    body.mirrored = false;
+    body.x = AOS_FIXED(200);
+    body.y = AOS_FIXED(100);
+    body.anim.frame = 1;
+    body.cycle_done = true;
+    aos_audio_clear();
+    AosHitReport held = aos_enemy_update(&body, &soma, &layer, &kind,
+                                         NULL, NULL, 10, 4, 10, 20,
+                                         never_zero);
+    assert(body.step == 25 && held.child_count == 0);
+    body.step = 24;
+    body.cycle_done = false;
+    body.anim.frame = 2;
+    soma.x = body.x + AOS_FIXED(0x18);
+    soma.y = body.y - AOS_FIXED(0x10);
+    aos_audio_clear();
+    AosHitReport wavefire = aos_enemy_update(&body, &soma, &layer, &kind,
+                                             NULL, NULL, 10, 4, 10, 20,
+                                             never_zero);
+    assert(body.step == 26 && body.timer == 0 && wavefire.child_count == 1 &&
+           wavefire.children[0].role == AOS_ROLE_HH_WAVE &&
+           wavefire.children[0].parent == &body &&
+           wavefire.children[0].x == body.x + AOS_FIXED(0x18) &&
+           wavefire.children[0].y == body.y - AOS_FIXED(0x20) &&
+           wavefire.children[0].angle == 0 &&
+           wavefire.children[0].spin == 0x40000 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x130) == 1);
+    /* sub_08085BF0: phase 0 holds the anchor sixteen + 0xD ticks,
+     * then phase 1 accumulates the sine deltas for sixteen more
+     * before song 0x85 and the phase-2 scale sweep. */
+    AosEnemy wave = wavefire.children[0];
+    int32_t anchor_x = wave.x, anchor_y = wave.y;
+    for (int i = 0; i < 15; ++i) {
+        AosHitReport w = aos_enemy_update(&wave, &soma, &layer, &kind,
+                                          NULL, NULL, 10, 4, 10, 20,
+                                          never_zero);
+        if (i == 0) assert(w.child_count == 8);
+        if (i == 1) assert(w.child_count == 2);
+        assert(wave.step == 0 && wave.x == anchor_x && wave.y == anchor_y);
+    }
+    /* The sixteenth tick crosses the OLD + 0xD > 0xE gate into
+     * phase 1 with song 0x85. */
+    aos_enemy_update(&wave, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 10, 20, never_zero);
+    assert(wave.step == 1 && wave.timer == 0 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) == 1);
+    /* Angle 0 gives sine(0x4000) = 0x10000 and sine(0) = 0: the x
+     * accumulator gains the + 0x50 scale (0x40000) a frame. */
+    for (int i = 0; i < 16; ++i)
+        aos_enemy_update(&wave, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, never_zero);
+    assert(wave.step == 2 && wave.vx == 16 * 0x40000 && wave.vy == 0 &&
+           wave.x == anchor_x + wave.vx);
+    /* Phase 2 sweeps + 0x50 down to -0x40000, phase 3 decays the
+     * accumulators, phase 4 bumps the body's + 0xB once more and the
+     * wave deletes on the next tick; the ten trail dots follow. */
+    for (int i = 0; i < 400 && !wave.removed; ++i)
+        aos_enemy_update(&wave, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, never_zero);
+    assert(wave.removed && body.step == 27);
+    /* A trail dot sits index/10 along the wave displacement and dies
+     * with the wave. */
+    {
+        AosEnemy live_wave = wavefire.children[0];
+        live_wave.step = 3;
+        live_wave.target_x = AOS_FIXED(100);
+        live_wave.target_y = AOS_FIXED(50);
+        live_wave.vx = AOS_FIXED(10);
+        live_wave.vy = -AOS_FIXED(4);
+        AosEnemy dot = {.id = AOS_BOSS_HEADHUNTER,
+                        .role = AOS_ROLE_HH_WAVE_TRAIL, .variant = 5,
+                        .parent = &live_wave, .hp = 1, .static_frame = -1};
+        aos_enemy_update(&dot, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, never_zero);
+        assert(!dot.removed &&
+               dot.x == AOS_FIXED(100) + AOS_FIXED(10) * 5 / 10 &&
+               dot.y == AOS_FIXED(50) - AOS_FIXED(4) * 5 / 10);
+        live_wave.step = 5;
+        aos_enemy_update(&dot, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 10, 20, never_zero);
+        assert(dot.removed);
+    }
     /* Cases 37 and 47 hand control back to state 0 with their decoded
      * step writes (0x1E flee / 0x32 exit). */
     body.step = 37;

@@ -4667,7 +4667,9 @@ static AosHitReport enemy_update(AosEnemy *enemy, AosSoma *soma, const AosCollis
         return aos_enemy_headhunter_head_update(enemy, kind, random);
     }
     if ((enemy->role == AOS_ROLE_HH_ACTOR ||
-         enemy->role == AOS_ROLE_HH_SHOT) &&
+         enemy->role == AOS_ROLE_HH_SHOT ||
+         enemy->role == AOS_ROLE_HH_WAVE ||
+         enemy->role == AOS_ROLE_HH_WAVE_TRAIL) &&
         enemy->id == AOS_BOSS_HEADHUNTER)
         return aos_enemy_headhunter_update(enemy, soma, kind, weapon,
                                  weapon_frames, soma_atk, soma_def,

@@ -33,6 +33,22 @@ static AosHitReport hh_shot_update(AosEnemy *enemy, AosSoma *soma,
                                    const AosWeaponFrames *weapon_frames,
                                    int soma_atk, int soma_def, int cam_x,
                                    int cam_y);
+static void hh_fire_wave(AosEnemy *enemy, AosHitReport *report,
+                         int32_t dx, int32_t dy, uint16_t angle);
+static uint16_t hh_wave_angle(const AosEnemy *enemy, const AosSoma *soma,
+                              int32_t anchor_x, int32_t anchor_y);
+static AosHitReport hh_wave_update(AosEnemy *enemy, AosSoma *soma,
+                                   const AosEnemyKind *kind,
+                                   const AosWeaponEntity *weapon,
+                                   const AosWeaponFrames *weapon_frames,
+                                   int soma_atk, int soma_def, int cam_x,
+                                   int cam_y);
+static AosHitReport hh_wave_trail_update(AosEnemy *enemy, AosSoma *soma,
+                                         const AosEnemyKind *kind,
+                                         const AosWeaponEntity *weapon,
+                                         const AosWeaponFrames *weapon_frames,
+                                         int soma_atk, int soma_def,
+                                         int cam_x, int cam_y);
 
 /* sub_08083860: Headhunter's four-case death machine (+ 0xB). Case 0
  * sets the + 0x1A/+ 0x1B flags, clears the velocities and applies the
@@ -125,8 +141,10 @@ static AosEnemy headhunter_head(AosEnemy *body, unsigned index, int cam_x, int c
  * + 0x4000 lead angle and the sub_0803E86C 0x28000 scale feeding
  * sub_080009E4 sine lookups — plus the +/-0x8000 random spread on
  * both axes. The spawn folds into spawn_flame_at's child record.
- * Cases 12/14 and 37/43/44/47 hand control back to state 0 with
- * their decoded step writes. */
+ * Case 24's + 0x6E > 1 gate fires the sub_08085A48 sine-wave shot
+ * (AOS_ROLE_HH_WAVE with its AOS_ROLE_HH_WAVE_TRAIL dots, song
+ * 0x130) and advances + 0xB twice. Cases 12/14 and 37/43/44/47 hand
+ * control back to state 0 with their decoded step writes. */
 static void headhunter_attack(AosEnemy *enemy, const AosEnemyKind *kind,
                               const AosSoma *soma, AosHitReport *report,
                               uint32_t (*random)(void)) {
@@ -244,11 +262,23 @@ static void headhunter_attack(AosEnemy *enemy, const AosEnemyKind *kind,
         }
         break;
     case 24:
-        /* Native sub_080833D4 also advances + 0xB twice and fires
-         * sub_08085A48 (the sub_08085BF0 sine-wave shot, song 0x130)
-         * on the same + 0x6E > 1 gate; that projectile's brain is not
-         * ported yet, so this case keeps only the frame advance. */
-        if (enemy->anim.frame > 1 && enemy->cycle_done) {
+        /* sub_080833D4 _08083794: the + 0x6E > 1 gate fires
+         * sub_08085A48 (the sub_08085BF0 sine-wave shot with its ten
+         * sub_08085E48/sub_08085F8C trail dots, song 0x130) and
+         * advances + 0xB twice with + 0xD cleared; the ArcTan2 aim
+         * runs from the (sb = mirrored ? -0x180000 : +0x180000,
+         * -0x100000) anchor while the spawn offset is
+         * (sb, -0x200000). The frame advance below is the documented
+         * fallback for an animation that never passes frame 1. */
+        if (enemy->anim.frame > 1) {
+            enemy->step++;
+            enemy->timer = 0;
+            int32_t anchor = enemy->mirrored ? -0x180000 : 0x180000;
+            uint16_t angle = hh_wave_angle(enemy, soma, anchor, -0x100000);
+            hh_fire_wave(enemy, report, anchor, -0x200000, angle);
+            aos_audio_play_song(0x130);
+            enemy->step++;
+        } else if (enemy->cycle_done) {
             enemy->cycle_done = false;
             enemy->step++;
         }
@@ -379,6 +409,14 @@ AosHitReport aos_enemy_headhunter_update(AosEnemy *enemy, AosSoma *soma,
         return hh_shot_update(enemy, soma, kind, weapon,
                               weapon_frames, soma_atk, soma_def, cam_x,
                               cam_y);
+    if (enemy->role == AOS_ROLE_HH_WAVE)
+        return hh_wave_update(enemy, soma, kind, weapon,
+                              weapon_frames, soma_atk, soma_def, cam_x,
+                              cam_y);
+    if (enemy->role == AOS_ROLE_HH_WAVE_TRAIL)
+        return hh_wave_trail_update(enemy, soma, kind, weapon,
+                                    weapon_frames, soma_atk, soma_def,
+                                    cam_x, cam_y);
     if (!enemy->boss_parts_spawned) {
         for (unsigned i = 0; i < 3; ++i)
             report.children[report.child_count++] =
@@ -815,6 +853,219 @@ static AosHitReport hh_shot_update(AosEnemy *enemy, AosSoma *soma,
     skeleton_merge(&report, &hit);
     if (hit.soma_hit)
         enemy->removed = true;
+    aos_combat_tick(&enemy->combat);
+    return report;
+}
+
+/* sub_080833D4 _08083794's ArcTan2 for the case-24 wave: the s16
+ * pixel deltas from the body plus the (anchor_x, anchor_y) offset to
+ * the player, truncated toward zero exactly like hh_dash_velocity. */
+static uint16_t hh_wave_angle(const AosEnemy *enemy, const AosSoma *soma,
+                              int32_t anchor_x, int32_t anchor_y) {
+    int32_t dx = soma->x - (enemy->x + anchor_x);
+    int32_t dy = soma->y - (enemy->y + anchor_y);
+    int16_t dx16 = (int16_t)(dx / 0x10000);
+    int16_t dy16 = (int16_t)(dy / 0x10000);
+    return aos_arctan2(dx16, dy16);
+}
+
+/* sub_08085A48: spawns the sub_08085BF0 sine-wave shot at the body
+ * plus the caller's offset with the ArcTan2 aim angle. The native
+ * + 0x18/+ 0x1C world anchor is the body screen position plus the
+ * gEwramData + 0xA094 camera origin, which cancels to the body room
+ * position here; it lands in target_x/target_y while vx/vy carry the
+ * + 0x20/+ 0x10 sine accumulators, spin the + 0x50 scale (0x40000),
+ * angle the + 0x48 aim and step/timer the + 0xB/+ 0xD phase pair.
+ * The + 0x5C/+ 0x2C/+ 0x3C byte copies, the OAM/affine setup and the
+ * sub_0803E654 slot check fold into the shared child record; the
+ * sub_080862E0/sub_08086310 contact pair maps to collide() with the
+ * weapon damage forwarded to the body (sub_0806B7D8 + sub_08083AC4),
+ * so the shot itself is given a damage pool that cannot run out. */
+static void hh_fire_wave(AosEnemy *enemy, AosHitReport *report,
+                         int32_t dx, int32_t dy, uint16_t angle) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN)
+        return;
+    AosEnemy c;
+    memset(&c, 0, sizeof c);
+    c.id = enemy->id;
+    c.role = AOS_ROLE_HH_WAVE;
+    c.parent = enemy;
+    c.x = enemy->x + dx;
+    c.y = enemy->y + dy;
+    c.target_x = c.x;
+    c.target_y = c.y;
+    c.angle = angle;
+    c.spin = 0x40000;
+    c.hp = 0x4000;
+    c.stats = enemy->stats;
+    c.combat.type = AOS_TYPE_ENEMY;
+    c.static_frame = -1;
+    report->children[report->child_count++] = c;
+}
+
+/* The phases 1-3 shared block of sub_08085BF0: the sub_080009E4
+ * sine lookups of + 0x48 + 0x4000 and + 0x48 scaled by sub_0803E86C
+ * through + 0x50 accumulate into + 0x20/+ 0x10 and re-place the
+ * entity at the + 0x18/+ 0x1C anchor plus the accumulators (the
+ * native subtracts the camera for its screen-space + 0x40/+ 0x44;
+ * the port keeps room pixels). */
+static void hh_wave_accel(AosEnemy *enemy) {
+    enemy->vx += aos_fixed_mul(aos_sine(enemy->angle + 0x4000), enemy->spin);
+    enemy->vy += aos_fixed_mul(aos_sine(enemy->angle), enemy->spin);
+    enemy->x = enemy->target_x + enemy->vx;
+    enemy->y = enemy->target_y + enemy->vy;
+}
+
+/* sub_08085E48: one of the ten sub_08085F8C trail dots. The native
+ * spawns all ten synchronously inside sub_08085A48; the port emits
+ * them from the wave's own updates because a report carries at most
+ * AOS_ENEMY_MAX_CHILDREN, so the last two appear one frame late — a
+ * documented approximation. */
+static void hh_wave_trail(AosEnemy *wave, AosHitReport *report,
+                          unsigned index) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN)
+        return;
+    AosEnemy c;
+    memset(&c, 0, sizeof c);
+    c.id = wave->id;
+    c.role = AOS_ROLE_HH_WAVE_TRAIL;
+    c.parent = wave;
+    c.variant = (uint8_t)index;
+    c.x = wave->target_x + (int32_t)index * wave->vx / 10;
+    c.y = wave->target_y + (int32_t)index * wave->vy / 10;
+    c.hp = 0x4000;
+    c.stats = wave->stats;
+    c.combat.type = AOS_TYPE_ENEMY;
+    c.static_frame = -1;
+    report->children[report->child_count++] = c;
+}
+
+/* sub_08085BF0: the sine-wave projectile's six-phase machine (+ 0xB).
+ * Phase 0 holds the anchor for sixteen + 0xD ticks then plays song
+ * 0x85; phase 1 accumulates for sixteen more; phase 2 sweeps + 0x50
+ * down by 0x8000 a frame to -0x40000; phase 3 accumulates until both
+ * accumulators drop to 0x3FFFF; phase 4 bumps the body's + 0xB once
+ * more, hides and deletes next tick; phase 5 deletes. A parent in
+ * state 2 (the death machine) deletes it early. */
+static AosHitReport hh_wave_update(AosEnemy *enemy, AosSoma *soma,
+                                   const AosEnemyKind *kind,
+                                   const AosWeaponEntity *weapon,
+                                   const AosWeaponFrames *weapon_frames,
+                                   int soma_atk, int soma_def, int cam_x,
+                                   int cam_y) {
+    (void)cam_x;
+    (void)cam_y;
+    AosHitReport report = {0};
+    AosEnemy *body = enemy->parent;
+    if (!body || body->removed || body->id != AOS_BOSS_HEADHUNTER ||
+        body->state == 2) {
+        enemy->removed = true;
+        return report;
+    }
+    while (enemy->substep < 10 &&
+           report.child_count < AOS_ENEMY_MAX_CHILDREN)
+        hh_wave_trail(enemy, &report, enemy->substep++);
+    switch (enemy->step) {
+    case 0:
+        enemy->x = enemy->target_x + enemy->vx;
+        enemy->y = enemy->target_y + enemy->vy;
+        if (enemy->timer > 0xE) {
+            enemy->step = 1;
+            enemy->timer = 0;
+            aos_audio_play_song(0x85);
+        } else {
+            enemy->timer++;
+        }
+        break;
+    case 1:
+        hh_wave_accel(enemy);
+        if (enemy->timer > 0xE) {
+            enemy->step = 2;
+            enemy->timer = 0;
+        } else {
+            enemy->timer++;
+        }
+        break;
+    case 2:
+        enemy->spin -= 0x8000;
+        hh_wave_accel(enemy);
+        if (enemy->spin <= -0x40000) enemy->step = 3;
+        break;
+    case 3: {
+        hh_wave_accel(enemy);
+        int32_t ax = enemy->vx < 0 ? -enemy->vx : enemy->vx;
+        int32_t ay = enemy->vy < 0 ? -enemy->vy : enemy->vy;
+        if (ax <= 0x3FFFF && ay <= 0x3FFFF) enemy->step = 4;
+        break;
+    }
+    case 4:
+        enemy->step = 5;
+        body->step++;
+        enemy->hidden = true;
+        break;
+    default:
+        enemy->removed = true;
+        return report;
+    }
+    AosHitReport hit =
+        collide(enemy, soma, kind, weapon, weapon_frames, soma_atk,
+                soma_def);
+    skeleton_merge(&report, &hit);
+    /* sub_08086310: a weapon hit on the shot or a dot is forwarded to
+     * the body through sub_0806B7D8/sub_08083AC4 — the projectile
+     * itself takes no damage. */
+    if (hit.enemy_hit && hit.enemy_damage > 0) {
+        body->hp = (int16_t)(body->hp - hit.enemy_damage);
+        if (body->hp <= 0) {
+            body->defeated = true;
+            body->state = 2;
+            body->step = body->substep = 0;
+            body->timer = 0;
+            aos_audio_play_song(0x1C0);
+        }
+    }
+    aos_combat_tick(&enemy->combat);
+    return report;
+}
+
+/* sub_08085F8C: a trail dot holds at the wave's + 0x18/+ 0x1C anchor
+ * plus index/10 of its + 0x20/+ 0x10 displacement (the native s8
+ * index times the accumulator through __divsi3). It dies when the
+ * body enters state 2 or the wave reaches + 0xB 5, and forwards
+ * weapon damage to the body like the wave. */
+static AosHitReport hh_wave_trail_update(AosEnemy *enemy, AosSoma *soma,
+                                         const AosEnemyKind *kind,
+                                         const AosWeaponEntity *weapon,
+                                         const AosWeaponFrames *weapon_frames,
+                                         int soma_atk, int soma_def,
+                                         int cam_x, int cam_y) {
+    (void)cam_x;
+    (void)cam_y;
+    AosHitReport report = {0};
+    AosEnemy *wave = enemy->parent;
+    AosEnemy *body = wave ? wave->parent : NULL;
+    if (!wave || wave->removed || wave->step >= 5 || !body ||
+        body->removed || body->id != AOS_BOSS_HEADHUNTER ||
+        body->state == 2) {
+        enemy->removed = true;
+        return report;
+    }
+    enemy->x = wave->target_x + (int32_t)enemy->variant * wave->vx / 10;
+    enemy->y = wave->target_y + (int32_t)enemy->variant * wave->vy / 10;
+    AosHitReport hit =
+        collide(enemy, soma, kind, weapon, weapon_frames, soma_atk,
+                soma_def);
+    skeleton_merge(&report, &hit);
+    if (hit.enemy_hit && hit.enemy_damage > 0) {
+        body->hp = (int16_t)(body->hp - hit.enemy_damage);
+        if (body->hp <= 0) {
+            body->defeated = true;
+            body->state = 2;
+            body->step = body->substep = 0;
+            body->timer = 0;
+            aos_audio_play_song(0x1C0);
+        }
+    }
     aos_combat_tick(&enemy->combat);
     return report;
 }

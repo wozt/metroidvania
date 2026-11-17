@@ -1,3 +1,59 @@
+## Patch 1201 - Headhunter case-24 sine-wave projectile (sub_08085A48/85BF0/85E48/85F8C)
+
+- **Scope.** The last documented state-1 (`sub_08082FFC`) gap is
+  ported: case 24's `+ 0x6E > 1` gate fires `sub_08085A48` and
+  advances `+ 0xB` twice with `+ 0xD` cleared, then plays song
+  0x130. The ArcTan2 aim runs from the `(sb = mirrored ?
+  -0x180000 : +0x180000, -0x100000)` anchor to the player while the
+  spawn offset is `(sb, -0x200000)` — the same aim-vs-spawn split as
+  case 32.
+- **Projectile.** `sub_08085A48` creates the `sub_08085BF0` entity
+  (slot range 0x49-0xCF) at the body plus the offset with the aim
+  angle in `+ 0x48` and the `+ 0x50` scale at 0x40000; its `+ 0x18`/
+  `+ 0x1C` world anchor is the body screen position plus the
+  `gEwramData + 0xA094` camera origin, which cancels to room pixels
+  in the port. `sub_08085BF0` is a six-phase machine on `+ 0xB`:
+  phase 0 holds the anchor sixteen `+ 0xD` ticks then plays song
+  0x85; phase 1 accumulates `sub_080009E4` sine lookups of
+  `+ 0x48 + 0x4000`/`+ 0x48` scaled by `sub_0803E86C` through `+ 0x50`
+  into the `+ 0x20`/`+ 0x10` displacement for sixteen more; phase 2
+  sweeps `+ 0x50` down by 0x8000 a frame to -0x40000; phase 3
+  accumulates until both displacements drop to 0x3FFFF; phase 4
+  bumps the body's `+ 0xB` once more, sets `+ 0x58` bit 0x20 and the
+  entity deletes on the next tick (phase 5), or early when the body
+  enters state 2. Ported as `AOS_ROLE_HH_WAVE` (`step`/`timer` =
+  `+ 0xB`/`+ 0xD`, `angle` = `+ 0x48`, `spin` = `+ 0x50`, `vx`/`vy` =
+  the `+ 0x20`/`+ 0x10` accumulators, `target_x`/`target_y` = the
+  `+ 0x18`/`+ 0x1C` anchor).
+- **Trail dots.** The same spawn runs the `sub_08085E48` loop: up
+  to ten `sub_08085F8C` entities (slot range 0x49-0xCF) that sit
+  index/10 along the wave's anchor-plus-displacement each frame and
+  die when the wave reaches `+ 0xB` 5 or the body enters state 2.
+  Ported as `AOS_ROLE_HH_WAVE_TRAIL` (`variant` = the `+ 0x20` index
+  byte, `parent` = the wave, the body reached through
+  `parent->parent`). The native OAM-slot failure path (delete the
+  wave, extra `+ 0xB` bump) is approximated by the
+  `AOS_ENEMY_MAX_CHILDREN` cap: the port emits the ten dots over the
+  wave's first two updates instead of synchronously, so two appear
+  one frame late.
+- **Combat.** The `sub_080862E0`/`sub_08086310` and
+  `sub_0808637C`/`sub_080863AC` contact pairs map to `collide()`;
+  natively a weapon hit is forwarded to the body through
+  `sub_0806B7D8`/`sub_08083AC4` (damage plus the hurt reaction), so
+  the projectile takes no damage itself — the port gives it a large
+  pool, copies the body stats and applies `enemy_damage` to
+  `body->hp`, entering the port's state-2 death on a lethal forward.
+  The `+ 0x5C`/`+ 0x2C`/`+ 0x3C` byte copies, palette/sprite setup,
+  affine rotation and OAM bookkeeping are visual and not ported.
+- **Verification.** `headhunter_tests` covers the frame gate (frame
+  1 keeps the fallback, frame 2 fires), the spawn fields and angle,
+  song 0x130, the sixteen-tick phase holds, the 0x85 phase song, the
+  accumulator math at angle 0, the phase-4 body `+ 0xB` bump and the
+  trail dot position/lifetime. No emulator comparison.
+- **Registries.** `annotations.tsv` (`aos.enemies.headhunter`) and
+  `aos_monster_aspects.tsv` (headhunter) notes updated;
+  `aos_unassigned_routines.tsv` drops the four ported routines.
+
 ## Patch 1200 - Manticore sub_08073568 child brain ported; container folded
 
 - **Scope.** The 797-line `sub_08073568` update shared by the
@@ -1319,8 +1375,10 @@
   the largest remaining approximations are Creaking Skull's two
   ~2000-line choreography machines (its container records and bone
   ride are now ported — Patch 1179), Big Golem's sub_080AC6E8
-  (~1000 lines undecoded), the sub_08085A48/sub_08085BF0 Headhunter
-  case-24 projectile and the sub_08073568 Manticore child brain.
+  (~1000 lines undecoded) remain the largest approximations; the
+  sub_08085A48/sub_08085BF0 Headhunter case-24 projectile and the
+  sub_08073568 Manticore child brain were ported in Patches
+  1200-1201.
 - **Evidence and limits.** Source-derived from sub_080733D4 /
   sub_08073308 in code_080709D8.s; unit-tested in
   `tests/test_aos_enemy.c` (manticore_tests). Not emulator-compared.

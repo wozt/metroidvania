@@ -295,8 +295,10 @@ AosHitReport aos_enemy_man_eater_update(
         e->ax = 0x40000;
         aos_audio_play_song(0x6B);
         if (e->param0) {
-            /* sub_08034498(0) event + sub_080D6450/sub_080D6EF8 room
-             * bookkeeping — approximated (documented). */
+            /* sub_08034498(0): release the escort pointer once the
+             * death transition arms; the sub_080D6450/sub_080D6EF8
+             * room bookkeeping is not ported (documented). */
+            report.escort_op = 2;
         }
     }
 

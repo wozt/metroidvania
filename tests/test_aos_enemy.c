@@ -13924,6 +13924,225 @@ static void chaos_tests(void) {
     aos_enemy_set_flag_8e_40(false);
 }
 
+
+/* gEwramData + 0x13220 escort channel: the EnemyXxxCreate tails report
+ * through aos_enemy_create_events (register = sub_08034498(self),
+ * flags42c_set = the + 0x42C OR) and the update machines through
+ * AosHitReport.escort_op (1 register self, 2 release NULL, 3 register
+ * children[escort_child]). The host stores the persistent AosEnemy
+ * record; the tests assert the report contents at the ported
+ * lifecycle points. */
+static void escort_tests(void) {
+    aos_audio_clear();
+    aos_enemy_set_flag_8e_40(false);
+    for (int i = 0; i < W * H; ++i) cells[i] = 0;
+    for (int x = 0; x < W; ++x) cells[20 * W + x] = 0x03;      /* floor top 160 */
+    enum { ESC_ANIMS = 16 };
+    static const uint8_t ticks1[1] = {4};
+    static AosAnimDef defs[ESC_ANIMS];
+    for (int a = 0; a < ESC_ANIMS; ++a) defs[a] = (AosAnimDef){1, ticks1};
+    static AosAnimSet anims;
+    anims.anims = defs;
+    anims.count = ESC_ANIMS;
+    static AosEnemyKind kind;
+    memset(&kind, 0, sizeof kind);
+    kind.anims = &anims;
+    for (int a = 0; a < ESC_ANIMS; ++a)
+        for (int f = 0; f < 4; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-32, -64, 64, 72};
+        }
+    for (int n = 0; n < 7; ++n) kind.margins[n][0] = kind.margins[n][1] = 48;
+    const AosEnemyStats stats = {.hp = 500};
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
+    AosEnemyCreateEvents ev;
+    AosEnemy e;
+
+    /* Manticore create (param0 = the + 0x30 gate): register + 42C|=2
+     * only when param0 != 0 and the 0x8E & 0x40 flag is clear. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_MANTICORE, 100, 100, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(ev.escort_register && (ev.flags42c_set & 2) == 2);
+    assert(aos_enemy_create(&e, AOS_ENEMY_MANTICORE, 100, 100, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(!ev.escort_register && ev.flags42c_set == 0);
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&e, AOS_ENEMY_MANTICORE, 100, 100, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(!ev.escort_register && ev.flags42c_set == 0);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* Headhunter: unconditional register + 42C|=2 on the flag-clear
+     * path (the dormant flag variant registers nothing). */
+    assert(aos_enemy_create(&e, AOS_BOSS_HEADHUNTER, 100, 100, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(ev.escort_register && (ev.flags42c_set & 2) == 2);
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&e, AOS_BOSS_HEADHUNTER, 100, 100, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(!ev.escort_register && ev.flags42c_set == 0);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* GreatArmor/FinalGuard shared create: same +0x30 gate as
+     * Manticore. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_GREAT_ARMOR, 100, 100, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(ev.escort_register && (ev.flags42c_set & 2) == 2);
+    assert(aos_enemy_create(&e, AOS_ENEMY_GREAT_ARMOR, 100, 100, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(!ev.escort_register && ev.flags42c_set == 0);
+
+    /* CreakingSkull/GiantSkeleton shared create: +0x30 gate. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_CREAKING_SKULL, 100, 100, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(ev.escort_register && (ev.flags42c_set & 2) == 2);
+
+    /* Legion: 42C|=2 always on the flag-clear path; the register
+     * only on the param0 == 0 branch. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_LEGION, 100, 100, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(ev.escort_register && (ev.flags42c_set & 2) == 2);
+    assert(aos_enemy_create(&e, AOS_ENEMY_LEGION, 100, 100, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(!ev.escort_register && (ev.flags42c_set & 2) == 2);
+
+    /* Chaos: the param1 phase-2 form and the flag-clear path both
+     * register with +0x42C |= 0xA00003; the flag-parked state 4
+     * registers nothing. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_CHAOS, 100, 100, 0, 1,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(ev.escort_register &&
+           (ev.flags42c_set & 0xA00003) == 0xA00003);
+    assert(aos_enemy_create(&e, AOS_ENEMY_CHAOS, 100, 100, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(ev.escort_register &&
+           (ev.flags42c_set & 0xA00003) == 0xA00003);
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&e, AOS_ENEMY_CHAOS, 100, 100, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(!ev.escort_register && ev.flags42c_set == 0);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* BigGolem: +0x30 gate like Manticore. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_BIG_GOLEM, 100, 100, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(ev.escort_register && (ev.flags42c_set & 2) == 2);
+    assert(aos_enemy_create(&e, AOS_ENEMY_BIG_GOLEM, 100, 100, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(!ev.escort_register && ev.flags42c_set == 0);
+
+    /* Minotaur family: register on param0 != 0, no +0x42C write. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_MINOTAUR, 100, 140, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(ev.escort_register && ev.flags42c_set == 0);
+    assert(aos_enemy_create(&e, AOS_ENEMY_RED_MINOTAUR, 100, 140, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(!ev.escort_register);
+
+    /* Balore: the param0 == 0 intro path registers + 42C|=2; the
+     * param0 != 0 bl_intro variant and the flag-parked state 5 do
+     * not. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_BALORE, 100, 100, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(ev.escort_register && (ev.flags42c_set & 2) == 2);
+    assert(aos_enemy_create(&e, AOS_ENEMY_BALORE, 100, 100, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(!ev.escort_register);
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&e, AOS_ENEMY_BALORE, 100, 100, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(!ev.escort_register && ev.flags42c_set == 0);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* ManEater: register on param0 != 0, no +0x42C write. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_MAN_EATER, 100, 100, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(ev.escort_register && ev.flags42c_set == 0);
+    assert(aos_enemy_create(&e, AOS_ENEMY_MAN_EATER, 100, 100, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(!ev.escort_register);
+
+    /* Death: the flag-clear path registers + 42C|=2 after the child
+     * spawn; the flag-parked state 8 does not. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_DEATH, 100, 100, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(ev.escort_register && (ev.flags42c_set & 2) == 2);
+    aos_enemy_set_flag_8e_40(true);
+    assert(aos_enemy_create(&e, AOS_ENEMY_DEATH, 100, 100, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(!ev.escort_register && ev.flags42c_set == 0);
+    aos_enemy_set_flag_8e_40(false);
+
+    /* Graham: the fight path (param0 != 1) registers + 42C|=2; the
+     * flag-parked state 0xD0 does not. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_GRAHAM, 100, 100, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(ev.escort_register && (ev.flags42c_set & 2) == 2);
+    assert(aos_enemy_create(&e, AOS_ENEMY_GRAHAM, 100, 100, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    aos_enemy_create_events(&ev);
+    assert(!ev.escort_register && ev.flags42c_set == 0);
+
+    /* Update-side: Legion's state-0 arming registers once (+ 0x42C
+     * |= 3) and the state-2 defeat entry releases once. */
+    assert(aos_enemy_create(&e, AOS_ENEMY_LEGION, 150, 150, 0, 0,
+                            &soma, &layer, &kind, &stats));
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(150);
+    soma.x = AOS_FIXED(150);
+    soma.y = AOS_FIXED(150);
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
+                                        NULL, NULL, 10, 4, 0, 0,
+                                        always_zero);
+    assert(hit.escort_op == 1 && (hit.flags42c_set & 3) == 3 &&
+           e.lg_escorted);
+    e.hp = 0;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(hit.escort_op == 2 && e.state == 2 && e.lg_released);
+    /* The release latches: further updates do not re-emit. */
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(hit.escort_op == 0);
+
+    /* ManEater's lethal transition releases the escort when the
+     * create registered it (param0). */
+    assert(aos_enemy_create(&e, AOS_ENEMY_MAN_EATER, 150, 150, 1, 0,
+                            &soma, &layer, &kind, &stats));
+    e.x = AOS_FIXED(150);
+    e.y = AOS_FIXED(150);
+    e.hp = 0;
+    hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(hit.escort_op == 2 && e.state == 3);
+}
+
 int main(void) {
     great_armor_tests();
     big_golem_tests();
@@ -14207,6 +14426,7 @@ int main(void) {
     biphron_tests();
     medusa_tests();
     headhunter_death_tests();
+    escort_tests();
     puts("aos_enemy: ok");
     return 0;
 }

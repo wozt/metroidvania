@@ -237,6 +237,12 @@ static AosRoomDialogueHost room_dialogue_host;
  * read by room_transition_tick below. */
 static int room_transition_settle_frames = 1;
 
+/* gEwramData session globals defined with the other EWRAM channels
+ * below; declared here because take_exit/room_transition_begin run
+ * the native transition clears before those definitions. */
+extern AosPickupCollectionState aria_pickup_state;
+extern void *aria_ewram_escort_13220;
+
 static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **background,
                      AosSoma *soma, int cam_x, int cam_y, const AosProjectDoor *forced) {
     int32_t x = soma->x >> 16, y = soma->y >> 16;
@@ -308,6 +314,13 @@ static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **backg
     } else {
         room_transition_settle_frames = 1;
     }
+    /* sub_0806C354's transition teardown (code_08060B98.s): the
+     * escort partner releases with sub_08034498(NULL) and
+     * gEwramData + 0x42C is ANDed with 0xFFBBF7FF (bits 0x440800
+     * clear) alongside the audio/entity cleanup the port folds
+     * into free_room. */
+    aria_ewram_escort_13220 = NULL;
+    aria_pickup_state.global_flags &= ~0x440800u;
     /* A room dialogue window belongs to the room that opened it;
      * native room loads retire the text state with the entities. */
     aos_room_dialogue_close(&room_dialogue);
@@ -512,9 +525,14 @@ static void room_transition_begin(AriaRoomTransition *t,
     /* sub_08010244's prologue: an armed area banner is aborted
      * through sub_08010144 before unk_64 = 3 latches. */
     aos_in_game_mode_area_banner_cancel(&in_game_mode);
-    /* sub_08010244 latches unk_64 = 3, unk_65 = 0. */
+    /* sub_08010244 latches unk_64 = 3, unk_65 = 0; the same native
+     * case-1 block then runs sub_08034498(NULL), releasing the
+     * escort partner as the room transition arms (code_0800B700.c
+     * GameModeInGameUpdate case 1, gated on sub_08011A44(player)
+     * == 0 — the off-map check the ported exit detection replaces). */
     aos_in_game_mode_enter(&in_game_mode, AOS_INGAME_ROOM_TRANSITION,
                            false);
+    aria_ewram_escort_13220 = NULL;
     if (door) {
         t->has_door = true;
         t->door = *door;
@@ -866,9 +884,18 @@ AosPickupCollectionState aria_pickup_state;
  *    module's bool view of the same bit; both stay clear until a
  *    writer is ported.
  *  - + 0x13220: the escort partner entity pointer written only by
- *    sub_08034498(arg) (~190 story/boss-intro call sites, all
- *    unported). Object03's state 0 skips while it is non-zero; NULL
- *    here until a ported caller exists. */
+ *    sub_08034498(arg). The ported writers are the reachable boss
+ *    lifecycle sites: the EnemyXxxCreate tails report through
+ *    aos_enemy_create_events (drained per create in
+ *    apply_enemy_create_events) and the ported update machines
+ *    through AosHitReport.escort_op, applied in the entity pass;
+ *    the identity stored is the persistent AosEnemy record of the
+ *    room slot (the port's entity identity — a tagged pointer,
+ *    NULL releases). The GameModeInGameUpdate case-1 arm and the
+ *    sub_0806C354 transition teardown clear it in
+ *    room_transition_begin/take_exit. Object03's state 0 skips
+ *    while it is non-NULL; the remaining ~180 native call sites
+ *    sit in unported sub-machines (deferred). */
 int16_t aria_ewram_pause_4be;
 uint8_t aria_ewram_cine_4cc;
 void *aria_ewram_escort_13220;

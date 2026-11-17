@@ -27,8 +27,9 @@
  * songs but its sub-children and projectile helpers collapse into
  * the shared SHOT/GORE roles; the sub_08021654 ring emits, the
  * sub_080427B8/sub_0804277C box registrations, the + 0x5A palette
- * merge and the sub_08013CF0/sub_08034498 event calls are not
- * ported (the sub_0800C5A8 intro writes report through
+ * merge and the sub_08013CF0 event call are not
+ * ported; the create-tail sub_08034498 register rides
+ * create_events.escort_register (the sub_0800C5A8 intro writes report through
  * aria_entities.c's entity-state inspection instead); and there
  * is no emulator comparison. */
 

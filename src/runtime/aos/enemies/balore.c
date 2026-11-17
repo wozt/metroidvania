@@ -35,8 +35,9 @@
  * sub_08045CEC gore and the delete; the blade/shot flight
  * machines and the sub_080B67A8 spawn side-effects, the
  * sub_08021654/sub_08021530 emits, the sub_080428F0 box presets,
- * the + 0x5A palette merge and the sub_08013CF0/sub_08034498
- * event calls are approximated or not ported.
+ * the + 0x5A palette merge and the sub_08013CF0
+ * event call are approximated or not ported; the create-tail
+ * sub_08034498 register rides create_events.escort_register.
  *
  * The param0 != 0 variant (sub_080B67A8 -> sub_080B6880) is now
  * ported as the bl_intro machine: its twelve + 0x0A states keep

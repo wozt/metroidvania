@@ -999,9 +999,16 @@ static void ch2_spawn_body(AosEnemy *e, const AosAnimSet *anims,
                            AosHitReport *report) {
     if (report->child_count >= AOS_ENEMY_MAX_CHILDREN)
         return;
+    uint8_t body_slot = report->child_count;
     AosEnemy *c = &report->children[report->child_count++];
     *c = *e;
     c->role = AOS_ROLE_CHAOS_BODY;
+    /* sub_080A4408's tail registers the new body entity itself
+     * through sub_08034498 (then the + 0x42C story writes, which
+     * have no modeled owner); the report resolves the child index
+     * to the appended room record in the host. */
+    report->escort_op = 3;
+    report->escort_child = body_slot;
     c->parent = e;
     c->state = c->step = c->substep = 0;
     c->variant = 0;

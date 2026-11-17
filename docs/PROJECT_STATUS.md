@@ -1,3 +1,61 @@
+## Patch 1217 - Aria + 0x13220 escort channel write side: boss lifecycle sites ported
+
+- **Scope.** `src/runtime/aos/core/aos_enemy.c/.h`,
+  `src/runtime/aos/enemies/legion.c`,
+  `src/runtime/aos/enemies/maneater.c`,
+  `src/runtime/aos/enemies/chaos.c`,
+  `src/runtime/aos/enemies/balore.c`,
+  `src/runtime/aos/enemies/death.c`,
+  `src/runtime/aria_entities.c`,
+  `src/runtime/aria_runtime.c`,
+  `tests/test_aos_enemy.c`,
+  `data/native_parity/annotations.tsv` and this file. The
+  `sub_08034498` escort-pointer writes (`gEwramData + 0x13220`)
+  at the reachable lifecycle points of the already-ported boss
+  enemies, per the completed call-site catalog.
+- **Channel API.** Two report channels carry the writes, matching
+  the established hit-report pattern: `AosEnemyCreateEvents`
+  (drained once per `aos_enemy_create` through
+  `aos_enemy_create_events`) for the create tails, and
+  `AosHitReport.escort_op`/`escort_child`/`flags42c_set` for the
+  update machines. `apply_enemy_create_events` in
+  `aria_entities.c` and the post-update apply store the
+  **persistent `AosEnemy` record of the room slot** as the
+  escort identity — the port's stable entity identity, replacing
+  the native entity pointer; `escort_op` 1 registers self, 2
+  releases (NULL), 3 registers `children[escort_child]` (Chaos's
+  phase-2 body spawn, resolved to the appended room record).
+  Companion `+ 0x42C` OR-writes land on
+  `aria_pickup_state.global_flags`, the existing owner; native
+  `+ 0xA074`/`+ 0x37E` writes with no modeled owner stay
+  documented, not faked.
+- **Sites wired.** Create tails: Headhunter (secondary folded
+  onto the body), Manticore, GreatArmor/FinalGuard/ShadowKnight,
+  CreakingSkull/GiantSkeleton, Legion (param0 == 0 branch),
+  Chaos (param1 or flag-clear, `+0x42C |= 0xA00003`), BigGolem,
+  Minotaur/RedMinotaur, Balore intro, ManEater, Death, Graham —
+  each gated exactly like the native `+ 0x30`/`+ 0x8E & 0x40`
+  checks. Update machines: Legion's state-0 arming registers
+  once (+ 0x42C |= 3, `lg_escorted` latch) and its state-2
+  defeat entry releases once (`lg_released`); ManEater's lethal
+  transition releases under param0; Chaos's `ch2_spawn_body`
+  registers the spawned phase-2 body (`escort_op` 3). Host
+  clears: `room_transition_begin` runs the
+  GameModeInGameUpdate case-1 `sub_08034498(NULL)` beside the
+  `sub_08010244` arm, and `take_exit` runs the `sub_0806C354`
+  teardown's `sub_08034498(NULL)` plus the `+ 0x42C &=
+  0xFFBBF7FF` mask.
+- **Deferred.** Catalog sites #4, #6, #8, #10, #12, #16, #18,
+  #19, #22, #25, #27, #28, #30, #31 sit in unported
+  sub-machines/story paths and stay documented.
+- **Tests.** `escort_tests` in `tests/test_aos_enemy.c` pins the
+  create register/gate matrix for all twelve families and the
+  Legion register/release latches plus the ManEater lethal
+  release.
+- **Remaining.** Object03 still reads only `!= NULL`; the real
+  escort readers are sibling work. No emulator comparison; the
+  affected rows keep `functional`/`partial` as before.
+
 ## Patch 1216 - Aria entity-slot/OAM gEwramData globals: player writes, room origin, OAM channel decode
 
 - **Scope.** `src/runtime/aria_entities.c`,

@@ -260,6 +260,20 @@ static int c5a8_dbg_line;
     c5a8_pending = (int8_t)(val); \
     c5a8_dbg_ent = (ent); c5a8_dbg_line = __LINE__; \
 } while (0)
+/* Applies the gEwramData session events an aos_enemy_create emitted
+ * (sub_08034498 escort register and the + 0x42C tail writes), drained
+ * once per create through aos_enemy_create_events. The escort
+ * pointer's identity is the persistent AosEnemy record the host
+ * passed in — the port's entity identity, stable for the room
+ * slot's lifetime; NULL releases, matching sub_08034498's NULL
+ * argument. The + 0x42C bits land on aria_pickup_state.global_flags
+ * like every other + 0x42C writer. */
+static void apply_enemy_create_events(const AosEnemy *enemy) {
+    AosEnemyCreateEvents events;
+    aos_enemy_create_events(&events);
+    if (events.escort_register) aria_ewram_escort_13220 = (void *)enemy;
+    aria_pickup_state.global_flags |= events.flags42c_set;
+}
 /* gEwramData bgInfo[4] scroll state (+0xA078): the ported
  * sub_0803FBBC/sub_08000F60/sub_0800D288 behind every
  * sub_0800ED24 call (aos/core/aos_scroll). The Object20 shop sell
@@ -2794,6 +2808,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 e->spawned = aos_enemy_create(&e->enemy, (uint8_t)e->id, e->x, e->y,
                                               (int16_t)e->param0, (int16_t)e->param1, soma, layer,
                                               kind, combat->stats[e->id]);
+                apply_enemy_create_events(&e->enemy);
                 e->spawner = -1;
                 /* The record's +0x5C draw band: the kind's
                  * create-time band (the draw path overrides it
@@ -2867,6 +2882,18 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             AosHitReport hit = aos_enemy_update(&e->enemy, soma, layer, kind, combat->weapon,
                                                 combat->weapon_frames, combat->player->atk,
                                                 combat->player->def, cam_x, cam_y, aos_random);
+            /* sub_08034498 / + 0x42C writes the ported update ran:
+             * the escort pointer stores the persistent AosEnemy
+             * record — the port's entity identity — or releases
+             * with NULL; the flag bits land on
+             * aria_pickup_state.global_flags like every other
+             * + 0x42C writer. escort_op 3 (Chaos's phase-2 body
+             * spawn) resolves to an appended child below. */
+            if (hit.escort_op == 1)
+                aria_ewram_escort_13220 = &e->enemy;
+            else if (hit.escort_op == 2)
+                aria_ewram_escort_13220 = NULL;
+            aria_pickup_state.global_flags |= hit.flags42c_set;
             /* sub_080BE414 (Death's state-0 intro, the + 0xB
              * substep machine): + 0xB == 1 writes sub_0800C5A8(0)
              * every frame — the + 0x42C-bit-0 gate frame and the
@@ -3063,7 +3090,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (hit.has_damage_popup && room->damage_popup_count < MAX_DAMAGE_POPUPS)
                 room->damage_popups[room->damage_popup_count++] = hit.damage_popup;
             /* Child entities of this kind (grenades, axes, arrows, debris). */
-            for (int c = 0; c < hit.child_count && room->entity_count < MAX_ENTITIES; ++c)
+            AosEnemy *escort_child = NULL;
+            for (int c = 0; c < hit.child_count && room->entity_count < MAX_ENTITIES; ++c) {
                 room->entities[room->entity_count++] = (AriaEntity){
                     .kind = ARIA_KIND_ENEMY, .id = e->id, .x = hit.children[c].x >> 16,
                     .y = hit.children[c].y >> 16, .spawned = true,
@@ -3130,6 +3158,14 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                      * parent's value for the three dynamic kinds. */
                     .band5c = e->band5c,
                     .enemy = hit.children[c]};
+                if (hit.escort_op == 3 && c == hit.escort_child)
+                    escort_child = &room->entities[room->entity_count - 1].enemy;
+            }
+            /* sub_080A4408's sub_08034498 registers the new phase-2
+             * body entity itself; escort_op 3 lands it on the
+             * appended room record (a full entity table drops the
+             * write like the native spawn would). */
+            if (escort_child) aria_ewram_escort_13220 = escort_child;
             if (hit.wake_spawner && e->spawner >= 0) {
                 /* sub_080993EC: a waiting Mimic (state 0, step 0) wakes. */
                 AosEnemy *mimic = &room->entities[e->spawner].enemy;
@@ -3152,6 +3188,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                      hit.spawn_param1,
                                      soma, layer, kind, combat->stats[e->id]))
                     room->entity_count++;
+                apply_enemy_create_events(&child->enemy);
             }
             if (hit.enemy_hit)
                 printf("%s hit: %d damage%s\n", enemy_names[e->id], hit.enemy_damage,
@@ -3308,6 +3345,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                         &child->enemy, (uint8_t)e->param0, e->x, e->y, 0, 0,
                         soma, layer, combat->kinds[e->param0],
                         combat->stats[e->param0]);
+                    apply_enemy_create_events(&child->enemy);
                     if (child->spawned)
                         printf("Object%02X spawned enemy %d at %d,%d\n", e->id,
                                e->param0, e->x, e->y);

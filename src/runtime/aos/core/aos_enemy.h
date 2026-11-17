@@ -931,6 +931,11 @@ typedef struct AosEnemy {
      * the parent state-0 coordination counter the container +0x10
      * folds into. */
     uint8_t lg_slot, lg_seq, lg_wait;
+    /* The sub_0809DB00 case-1 escort arm's + 0x42C bit-0 latch and
+     * the sub_0809D51C cases-6/11 defeat tail's + 0x59 bit-3 mark
+     * the port folds into one-shot flags (lg_escorted /
+     * lg_released). */
+    uint8_t lg_escorted, lg_released;
     /* Julius Belmont (EnemyBelmontCreate 0x080CFAB0, update
      * 0x080CFED0, hurt callback sub_080D1A44): `bel_juggle` is the
      * + 0x20 hit counter the stun gate reads (> 2 enters state 0xB)
@@ -995,7 +1000,34 @@ typedef struct {
     /* sub_0806CC20's sub_08021924: an active, unrewarded enemy within the
      * screen box (-16, 0, 0x110, 0xB0) enters the homing list this frame. */
     bool targetable;
+    /* gEwramData session writes this update ran, applied by the host
+     * after the update like the other report channels:
+     *  - escort_op: sub_08034498 — 0 none, 1 register the updating
+     *    entity (the host stores its persistent AosEnemy record into
+     *    gEwramData + 0x13220), 2 release (NULL). Every reachable
+     *    site registers or releases the caller itself; a child-target
+     *    site would need an index (none is ported).
+     *  - flags42c_set: gEwramData + 0x42C bits the same native block
+     *    ORs (aria_pickup_state.global_flags). */
+    uint8_t escort_op;
+    /* escort_op == 3 registers children[escort_child] instead of the
+     * updating entity (Chaos's sub_080A4408 phase-2 body spawn): the
+     * host resolves the index to the appended room record. */
+    uint8_t escort_child;
+    uint32_t flags42c_set;
 } AosHitReport;
+
+/* Events a ported EnemyXxxCreate emitted for the host to apply to the
+ * gEwramData session channels, drained once per aos_enemy_create call
+ * through aos_enemy_create_events (the slot clears at each create's
+ * entry, so an undrained create cannot leak into the next one):
+ *  - escort_register: sub_08034498(self) — the host stores the
+ *    persistent AosEnemy record it passed in into + 0x13220.
+ *  - flags42c_set: + 0x42C bits the create tail ORs. */
+typedef struct {
+    bool escort_register;
+    uint32_t flags42c_set;
+} AosEnemyCreateEvents;
 
 /* RandomNumberGenerator: r = (r >> 8) * 0x3243F6AD + 0x1B0CB175. The seed
  * the game starts from is not traced; aos_random_seed sets it. */
@@ -1055,6 +1087,10 @@ int aos_enemy_probe_walk(AosEnemy *e, const AosCollision *layer, const AosProbes
 bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,
                       const AosEnemyKind *kind, const AosEnemyStats *stats);
+/* Drains the gEwramData session events the last aos_enemy_create
+ * emitted (the sub_08034498 escort register and the + 0x42C tail
+ * writes); call once after every create. */
+void aos_enemy_create_events(AosEnemyCreateEvents *out);
 /* One update; cam_x / cam_y place the activity window. random() returns
  * the next RandomNumberGenerator value. The collision pass runs inside, as
  * in the game: soma_atk / soma_def are the player's current ATK and DEF

@@ -11,6 +11,12 @@
 
 bool aos_enemy_flag_8e_40;
 #define flag_8e_40 aos_enemy_flag_8e_40
+
+/* gEwramData session events the ported EnemyXxxCreate tails emit
+ * (sub_08034498 escort register, + 0x42C writes); the per-call
+ * slot below is cleared in aos_enemy_create and drained by the
+ * host through aos_enemy_create_events. */
+static AosEnemyCreateEvents create_events;
 #define no_target aos_enemy_no_target
 #define random_direction aos_enemy_random_direction
 #define spawn_particle aos_enemy_spawn_particle
@@ -387,11 +393,18 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
 bool aos_enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                       int16_t param1, const AosSoma *soma, const AosCollision *layer,
                       const AosEnemyKind *kind, const AosEnemyStats *stats) {
+    /* gEwramData session events the ported create tails emit
+     * (sub_08034498 escort register, + 0x42C writes): cleared per
+     * call and drained by the host through aos_enemy_create_events.
+     * The slot is file-local; enemy_create's per-id branches fill it. */
+    create_events = (AosEnemyCreateEvents){0};
     aim_self = enemy;
     bool created = enemy_create(enemy, id, x, y, param0, param1, soma, layer, kind, stats);
     aim_self = NULL;
     return created;
 }
+
+void aos_enemy_create_events(AosEnemyCreateEvents *out) { *out = create_events; }
 
 static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int16_t param0,
                          int16_t param1, const AosSoma *soma, const AosCollision *layer,
@@ -463,10 +476,19 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
     if (id == AOS_BOSS_HEADHUNTER) {
         /* EnemyHeadhunterCreate: the main body starts on sequence 23. The
          * three sub_08083FD0 actors are emitted by its first host update so
-         * they can use the current camera origin. */
+         * they can use the current camera origin. The native tail
+         * registers the secondary entity it just built (r6) through
+         * sub_08034498 and writes + 0x42C |= 2 then sub_08013CF0(0x10);
+         * the port folds the secondary onto the body record and skips
+         * the register under the gEwramData + 0x8E & 0x40 flag (the
+         * native flag path runs the dormant state-9 variant). */
         play(enemy, anims, 0x17);
         step_anim(enemy, anims);
         enemy->state = 0;
+        if (!flag_8e_40) {
+            create_events.escort_register = true;
+            create_events.flags42c_set |= 2;
+        }
         return true;
     }
     if (is_early_enemy(id)) {
@@ -1260,10 +1282,12 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
          * 0x12, + 0x1C = 3, + 0x59 bit 0x10, the rng variant into
          * + 0x58 & 0x1F; the three level children of sub_080BAAC0 emit
          * on the first update via boss_parts_spawned; the 0x8E & 0x40
-         * flag parks state 4; param0's gEwramData + 0x4CC/+ 0x37E gate
-         * and the sub_08013CF0/sub_08034498 event are not ported
-         * (documented). The hurt sub_080BB04C clears + 0x34 — the
-         * shared lethal pass covers it. */
+         * flag parks state 4; param0's gEwramData + 0x4CC/+ 0x37E
+         * gate and the sub_08013CF0 event are not ported
+         * (documented); the sub_08034498(self) register on the
+         * param0-passing tail is reported through
+         * create_events.escort_register. The hurt sub_080BB04C
+         * clears + 0x34 — the shared lethal pass covers it. */
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
         enemy->static_frame = 0x12;
@@ -1280,6 +1304,10 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         }
         enemy->state = 0;
         enemy->step = 0;
+        /* EnemyManEaterCreate 0x080BAC3C tail: the flag-clear path
+         * ends with sub_08034498(self) when the + 0x30 gate
+         * (param0) passes, after the level-child setup. */
+        if (enemy->param0 != 0) create_events.escort_register = true;
         return true;
     }
     if (id == AOS_ENEMY_GLADIATOR) {
@@ -1409,6 +1437,14 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->spawned_count = 0;
         play_loop(enemy, anims, 1, true);
         step_anim(enemy, anims);
+        /* code_080B0AD4.s EnemyDeathCreate tail: the flag-clear path
+         * ends with sub_08034498(self) after the sub_0806DFF8 child
+         * spawn and the + 0x42C |= 2 write (the flag-parked state 8
+         * exits before it). */
+        if (!flag_8e_40) {
+            create_events.escort_register = true;
+            create_events.flags42c_set |= 2;
+        }
         return true;
     }
     if (id == AOS_ENEMY_MANTICORE) {
@@ -1444,6 +1480,13 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->spawned_count = 0;
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
+        if (!flag_8e_40 && enemy->param0 != 0) {
+        /* sub_08034498(self) + the + 0x42C |= 2 write of the
+         * EnemyXxxCreate tail (code site in the block comment);
+         * drained by the host through aos_enemy_create_events. */
+        create_events.escort_register = true;
+        create_events.flags42c_set |= 2;
+        }
         return true;
     }
     if (id == AOS_ENEMY_CREAKING_SKULL || id == AOS_ENEMY_GIANT_SKELETON) {
@@ -1466,6 +1509,13 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->spawned_count = 0;
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
+        if (!flag_8e_40 && enemy->param0 != 0) {
+        /* sub_08034498(self) + the + 0x42C |= 2 write of the
+         * EnemyXxxCreate tail (code site in the block comment);
+         * drained by the host through aos_enemy_create_events. */
+        create_events.escort_register = true;
+        create_events.flags42c_set |= 2;
+        }
         return true;
     }
     if (id == AOS_ENEMY_LEGION) {
@@ -1478,6 +1528,7 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
          * flag parks state 3. */
         enemy->lg_slot = enemy->lg_seq = 0;
         enemy->lg_wait = 0;
+        enemy->lg_escorted = enemy->lg_released = 0;
         enemy->state = flag_8e_40 ? 3 : 0;
         enemy->step = 0;
         enemy->substep = 0;
@@ -1486,6 +1537,13 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->spawned_count = 0;
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
+        /* EnemyLegionCreate 0x0809C6BC tail: the flag-clear path
+         * writes + 0x42C |= 2 and, on the param0 == 0 branch, ends
+         * with sub_08034498(self) after the five soldier spawns. */
+        if (!flag_8e_40) {
+            create_events.flags42c_set |= 2;
+            if (enemy->param0 == 0) create_events.escort_register = true;
+        }
         return true;
     }
     if (id == AOS_ENEMY_BALORE) {
@@ -1537,6 +1595,14 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->spawned_count = 0;
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
+        /* EnemyBaloreCreate 0x080B5C38 intro tail: after the
+         * animation/hitbox setup the flag-clear path ends with
+         * sub_08034498(self) and + 0x42C |= 2; the flag-parked state
+         * 5 exits before it. */
+        if (!flag_8e_40) {
+            create_events.escort_register = true;
+            create_events.flags42c_set |= 2;
+        }
         return true;
     }
     if (id == AOS_ENEMY_BELMONT) {
@@ -1577,6 +1643,13 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->spawned_count = 0;
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
+        if (!flag_8e_40 && enemy->param0 != 0) {
+        /* sub_08034498(self) + the + 0x42C |= 2 write of the
+         * EnemyXxxCreate tail (code site in the block comment);
+         * drained by the host through aos_enemy_create_events. */
+        create_events.escort_register = true;
+        create_events.flags42c_set |= 2;
+        }
         return true;
     }
     if (id == AOS_ENEMY_GREAT_ARMOR || id == AOS_ENEMY_FINAL_GUARD ||
@@ -1606,6 +1679,13 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->spawned_count = 0;
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
+        if (!flag_8e_40 && enemy->param0 != 0) {
+        /* sub_08034498(self) + the + 0x42C |= 2 write of the
+         * EnemyXxxCreate tail (code site in the block comment);
+         * drained by the host through aos_enemy_create_events. */
+        create_events.escort_register = true;
+        create_events.flags42c_set |= 2;
+        }
         return true;
     }
     if (id == AOS_ENEMY_CHAOS) {
@@ -1629,6 +1709,15 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         if (param1) enemy->hp = 0xBB8;
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
+        /* EnemyChaosCreate 0x080A1E38 tail: sub_08034498(self),
+         * + 0xA074 &= ~3 and + 0x42C |= 0x200003 | 0x800000 on the
+         * flag-clear (or param1 phase-2) path; state 4 exits before
+         * it. The + 0xA074 clear has no modeled owner and stays
+         * unported. */
+        if (!flag_8e_40 || param1) {
+            create_events.escort_register = true;
+            create_events.flags42c_set |= 0x200003 | 0x800000;
+        }
         return true;
     }
     if (id == AOS_ENEMY_GRAHAM) {
@@ -1648,6 +1737,15 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->spawned_count = 0;
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
+        /* EnemyGrahamCreate 0x080D2424 tail: the fight path
+         * (param0 != 1) ends with sub_0800C5A8(1),
+         * sub_08034498(self) and + 0x42C |= 2 under the + 0x8E & 0x40
+         * clear; state 0xD0 exits before it. The param0 == 1
+         * sub_080D31D0/unk_13266 variant is not modelled. */
+        if (!flag_8e_40 && enemy->param0 != 1) {
+            create_events.escort_register = true;
+            create_events.flags42c_set |= 2;
+        }
         return true;
     }
     if (id == AOS_ENEMY_WEREJAGUAR || id == AOS_ENEMY_WERETIGER) {
@@ -2505,8 +2603,9 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
          * 1 looping and one step, + 0x18 |= 3, + 0x59 bit 1, state 0;
          * state 4 (animation only) under the global 0x8E & 0x40. The two
          * sub_0806DFF8 helpers (sub_080B02E0 / sub_080B0064), the
-         * param0 call sub_08034498 and the hit callbacks sub_080B0CCC /
-         * sub_080AFF98 are not ported. */
+         * param0 call sub_08034498 reports through
+         * create_events.escort_register and the hit callbacks
+         * sub_080B0CCC / sub_080AFF98 are not ported. */
         play(enemy, anims, 1);
         step_anim(enemy, anims);
         enemy->mino_flags = 3;
@@ -2517,6 +2616,9 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
             /* sub_0806AF98: the feet onto the floor. */
             snap_to_floor(enemy, layer);
             enemy->state = 0;
+            /* sub_080B0AD4 tail: the + 0x30 (param0) gate passes
+             * sub_08034498(self); no + 0x42C write on this path. */
+            if (enemy->param0 != 0) create_events.escort_register = true;
         }
         enemy->step = enemy->substep = 0;
         return true;

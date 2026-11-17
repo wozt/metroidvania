@@ -24,8 +24,10 @@
  * the sub_0809E0C0 soldier brain keeps its parent/variant gate,
  * player tracking and contact while its full case tables are
  * approximated; the sub_0809DE80 palette merge, the +0x5A byte
- * and the sub_08013CF0/sub_08034498 event calls are covered by the
- * shared spawn/collide paths or not ported. */
+ * and the sub_08013CF0 calls are covered by the shared spawn path;
+ * the sub_08034498 register/release pair rides hit.escort_op
+ * (register once at the state-0 arming, release once at the
+ * state-2 defeat entry). */
 
 #include "../core/aos_enemy_internal.h"
 #include "../core/aos_audio.h"
@@ -178,17 +180,26 @@ static void lg_gore_update(AosEnemy *e) {
  * +0x10 ramp, the sub_0809DB00 soldier AI gate and the attack
  * entries; approximated as approach + periodic soldier orders. */
 static void lg_state0(AosEnemy *e, AosSoma *soma,
-                      const AosAnimSet *anims,
+                      const AosAnimSet *anims, AosHitReport *hit,
                       uint32_t (*random)(void)) {
     (void)random;
     switch (e->step) {
     case 0:
         /* sub_0809DB00 gate: soldiers report readiness, then the
-         * container +0x10 ramp runs (case 1). */
+         * container +0x10 ramp runs (case 1). The same native case
+         * ends with sub_08034498(self), + 0x42C |= 3 and the
+         * + 0xA074 &= ~3 clear (no modeled owner) once the + 0x42C
+         * bit-0 latch passes; the port folds that latch into
+         * lg_escorted. */
         if (player_near(soma, e->x >> 16, e->y >> 16, 0xC0, 0x80)) {
             play(e, anims, 1);
             e->step = 1;
             e->lg_wait = 0;
+            if (!e->lg_escorted) {
+                e->lg_escorted = 1;
+                hit->escort_op = 1;
+                hit->flags42c_set |= 3;
+            }
         }
         break;
     case 1:
@@ -307,7 +318,7 @@ AosHitReport aos_enemy_legion_update(
 
     switch (e->state) {
     case 0:
-        lg_state0(e, soma, anims, random);
+        lg_state0(e, soma, anims, &hit, random);
         break;
     case 1:
         lg_state1(e, soma, anims, &hit, random);
@@ -332,6 +343,12 @@ AosHitReport aos_enemy_legion_update(
     if (!e->defeated && e->hp <= 0 && e->state != 2) {
         e->defeated = true;
         aos_audio_play_song(0x6E);
+        /* sub_0809D51C cases 6/11: the defeat tail releases the
+         * escort once (+ 0x59 bit 3, folded into lg_released). */
+        if (!e->lg_released) {
+            e->lg_released = 1;
+            hit.escort_op = 2;
+        }
         e->state = 2;
         e->step = e->substep = 0;
         e->timer = 0x3C;

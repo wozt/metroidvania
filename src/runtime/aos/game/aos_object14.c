@@ -494,7 +494,7 @@ static bool variant2(AosObject14 *o, const AosObject14Env *env) {
         if (wall)
             o->vel_x = -o->vel_x / 2;
         drag_x(o, 0x50);
-        phys_step(o, 0x800000);
+        phys_step(o, 0x20000);   /* sub_0806D3D8(0x80 << 10) */
         int32_t av = o->vel_x < 0 ? -o->vel_x : o->vel_x;
         if (av <= 0x7FF)
             o->state = 1;

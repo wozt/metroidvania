@@ -7,10 +7,37 @@ static const int32_t leg_vx[4] = {0x10000, 0, -0x10000, 0};
 static const int32_t leg_vy[4] = {0, 0x10000, 0, -0x10000};
 static const int32_t leg_time[4] = {0, 0x160000, 0, 0x160000};
 
+/* sub_08053D90-style arm: record[state] supplies + 0x48/+ 0x4C
+ * and the + 0x18 lifetime (param0 << 16 when the record word is
+ * 0); a set mirror negates + 0x48. Object19Create runs the same
+ * arm for the + 0xA = 0 record and then arithmetic-shifts the
+ * lifetime right once (asrs #1 at 0x08053CE0). */
+static void arm_leg(AosObject19 *o, bool halve) {
+    int32_t vx = leg_vx[o->state];
+    if (o->mirror) vx = -vx;
+    o->vx = vx;
+    o->vy = leg_vy[o->state];
+    int32_t time = leg_time[o->state];
+    /* + 0x30 is an s16 field: param0 + 0xE wraps mod 0x10000
+     * and sign-extends before the << 16. */
+    o->lifetime = time ? time
+                       : (int32_t)((uint32_t)(uint16_t)(int16_t)o->param0
+                                   << 16);
+    if (halve) o->lifetime >>= 1;
+}
+
 void aos_object19_create(AosObject19 *o, int param0, int param1,
-                         int32_t fx, int32_t fy, uint16_t angle_rate) {
-    o->param0 = param0;
-    o->param1 = param1;
+                         int32_t fx, int32_t fy) {
+    /* Object19Create (0x08053BFC): + 0x30 += 0xE feeds the
+     * param0 << 16 leg lifetime, + 0x32 collapses to param1 bit
+     * 0 (the + 0x58 bit-6 mark, the + 0x16 negate and the leg
+     * vx negate all read the collapsed byte), + 0x16 = 0x400
+     * fixed and negated when the mirror is set, then the
+     * + 0xA-indexed record arms the first leg. The hurt slot,
+     * the 0x0C0CFAFA presets and the sub_0803E654 palette roll
+     * stay under special_sprites. */
+    o->param0 = param0 + 0xE;
+    o->mirror = (uint8_t)(param1 & 1);
     o->state = 0;
     o->lifetime = 0;
     o->vx = 0;
@@ -18,17 +45,9 @@ void aos_object19_create(AosObject19 *o, int param0, int param1,
     o->fx = fx;
     o->fy = fy;
     o->angle = 0;
-    o->angle_rate = angle_rate;
-    o->flags58 = 0;
-}
-
-static void arm_leg(AosObject19 *o) {
-    int32_t vx = leg_vx[o->state];
-    if (o->param1 != 0) vx = -vx;
-    o->vx = vx;
-    o->vy = leg_vy[o->state];
-    int32_t time = leg_time[o->state];
-    o->lifetime = time ? time : o->param0 << 16;
+    o->angle_rate = o->mirror ? (uint16_t)-0x400 : (uint16_t)0x400;
+    o->flags58 = (uint8_t)(o->mirror << 6);
+    arm_leg(o, true);
 }
 
 void aos_object19_update(AosObject19 *o, bool near) {
@@ -47,6 +66,6 @@ void aos_object19_update(AosObject19 *o, bool near) {
         o->lifetime -= 0x10000;
     } else {
         o->state = (uint8_t)((o->state + 1) & 3);
-        arm_leg(o);
+        arm_leg(o, false);
     }
 }

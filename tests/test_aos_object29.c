@@ -63,12 +63,11 @@ int main(void) {
     aos_object29_update(&o, 100, 200);
     assert(o.state == 0 && o.dir == 0);
 
-    /* Screen/world mirrors track the moving origin. */
-    int32_t before = o.pos_y;
+    /* Screen/world mirrors: + 0x40/+ 0x44 take the same
+     * + 0x10/+ 0x14 - scroll values as + 0x24/+ 0x28. */
     aos_object29_update(&o, 100, 200);
     assert(o.scr_y == o.pos_y - 200);
-    assert(o.world_y == o.scr_y + 200);
-    (void)before;
+    assert(o.world_y == o.scr_y);
 
     puts("aos_object29: ok");
     return 0;

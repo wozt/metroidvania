@@ -1,3 +1,62 @@
+## Patch 1212 - Aria Object19/Object29/Object31/Object14 mover audit: create-path and physics corrections
+
+- **Scope.** `src/runtime/aos/game/aos_object19.c/.h`,
+  `aos_object29.c/.h`, `aos_object31.c/.h`,
+  `aos_object14.c`, `src/runtime/aria_entities.c`,
+  `tests/test_aos_object19.c`, `tests/test_aos_object29.c`,
+  `tests/test_aos_object31.c`, `data/native_parity/annotations.tsv`
+  and this file only.
+- **Audit.** All fourteen scoped `aos.objects.*` MOVER/PLATFORM
+  rows were re-diffed against `third_party/cvaos/asm/code/`:
+  cyclic_lift (Object21/sub_08056618), ping_pong_platform
+  (Object29/sub_08057180), scripted_elevator (Object22),
+  patrol_mover (Object19), launch_spinner (Object31/sub_080591EC),
+  rotating_emitter (Object14 variants), screen_space_oscillator
+  (Object2A/sub_08057538), spin_synced (Object1B), plus the
+  sprite/ambient family (Object1D/12/2B/24/07/35) and the
+  metal_gate/fountain siblings. Object21, Object22, Object2A,
+  Object1B and Object24 already match their native machines;
+  their remaining gaps are the documented draw/child-entity
+  systems, not motion.
+- **Object19 patrol mover.** `aos_object19_create` now ports
+  Object19Create (0x08053BFC): + 0x30 = param0 + 0xE, + 0x32
+  collapses to param1 bit 0 (mirror for + 0x58 bit 6, the
+  + 0x16 negate and the leg vx negate), + 0x16 = 0x400 fixed
+  (negated on the mirror — previously passed as 0 so the angle
+  never advanced), the + 0xA-indexed 0x0852646C record arms
+  the first leg at create and its + 0x18 lifetime is shifted
+  right once (asrs #1). Previously the first update expired
+  state 0 into the down leg, skipping the entire right leg and
+  using unshifted/unoffset timing.
+- **Object29 ping-pong platform.** The update tail now writes
+  + 0x40 = + 0x10 - scrollX and + 0x44 = + 0x14 - scrollY,
+  landing on the same values as the + 0x24/+ 0x28 screen
+  mirror exactly as sub_08057180's epilogue does; the port
+  previously added the scroll back, storing the + 0x10/+ 0x14
+  origin instead.
+- **Object31 launch spinner.** sub_080591EC corrections:
+  the state-10 launch arm writes + 0x50 = 0x400 (was 0x40000)
+  and + 0x54 = 0x200; state-2/11 y-physics and state-10
+  x/y-physics now use the real sub_0806D430/sub_0806D460
+  accel-sign clamps with native bounds (0x10000 drift and
+  spin, 0x4000 x / 0x2000 y launch-wind — was a flat
+  +/-0x70000); state 3 frees the palette slot for params 0/2
+  and EntityDeletes for EVERY param (params 1/3 previously
+  parked forever in state 4).
+- **Object14 rotating emitter.** Variant 2's state-2 wall
+  bounce now runs sub_0806D3D8 with the native 0x20000 bound
+  (was 0x800000, effectively unclamped).
+- **Tests.** test_aos_object19 covers the create-time leg arm,
+  the halved lifetime, the param0 + 0xE offset, the bit-0
+  mirror collapse, the fixed/negated 0x400 angle rate and the
+  unhalved update-path arms; test_aos_object29 asserts the
+  world mirror equals the screen mirror; test_aos_object31
+  covers the 0x400 x accel, the unconditional state-3 delete
+  and the palette-slot free.
+- **Status.** All four rows stay `partial`: the affine
+  rotation draw, palette-slot allocator, type-0x49 children,
+  hurt/collision presets and emulator comparison remain open.
+
 ## Patch 1211 - Balore param0 intro: sub_080B67A8/sub_080B6880 twelve-state cutscene controller
 
 - **Scope.** `src/runtime/aos/enemies/balore.c`,

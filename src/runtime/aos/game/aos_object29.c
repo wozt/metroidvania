@@ -92,10 +92,11 @@ void aos_object29_update(AosObject29 *o, int32_t room_x,
         }
         break;
     }
-    /* Tail: + 0x40/+ 0x44 follow + 0x24/+ 0x28 — the platform
-     * carries riders through the world-position mirror. */
+    /* Tail (0x08057368): + 0x40 = + 0x10 - scrollX and
+     * + 0x44 = + 0x14 - scrollY — the world mirror lands on
+     * the same value as the + 0x24/+ 0x28 screen mirror. */
     o->scr_x = o->pos_x - room_x;
     o->scr_y = o->pos_y - room_y;
-    o->world_x = o->scr_x + room_x;
-    o->world_y = o->scr_y + room_y;
+    o->world_x = o->scr_x;
+    o->world_y = o->scr_y;
 }

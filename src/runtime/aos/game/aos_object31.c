@@ -22,23 +22,35 @@ static bool probe_offscreen(int16_t sx, int16_t sy) {
 }
 
 /* sub_0806D460 twin-axis gravity step shared with Object21:
- * velocity += accel clamped to +/-0x70000, position += vel. */
-static void physics_y(AosObject31 *o) {
-    o->vel_y += o->accel_y;
-    if (o->vel_y > 0x70000) o->vel_y = 0x70000;
-    if (o->vel_y < -0x70000) o->vel_y = -0x70000;
+ * velocity += accel, clamped in the accel's direction to
+ * +/-bound (bound 0 skips the clamp), position += vel. The
+ * native clamp follows the SIGN OF THE ACCEL, not the
+ * velocity (sub_0806D460 at 0x0806D460). */
+static void physics_y(AosObject31 *o, int32_t bound) {
+    int32_t accel = o->accel_y;
+    o->vel_y += accel;
+    if (bound != 0) {
+        if (accel < 0) {
+            if (o->vel_y < -bound) o->vel_y = -bound;
+        } else if (o->vel_y > bound) {
+            o->vel_y = bound;
+        }
+    }
     o->pos_y += o->vel_y;
 }
 
-static void physics_x(AosObject31 *o) {
-    o->vel_x += o->accel_x;
-    if (o->vel_x > 0x70000) o->vel_x = 0x70000;
-    if (o->vel_x < -0x70000) o->vel_x = -0x70000;
+static void physics_x(AosObject31 *o, int32_t bound) {
+    int32_t accel = o->accel_x;
+    o->vel_x += accel;
+    if (bound != 0) {
+        if (accel < 0) {
+            if (o->vel_x < -bound) o->vel_x = -bound;
+        } else if (o->vel_x > bound) {
+            o->vel_x = bound;
+        }
+    }
     o->pos_x += o->vel_x;
 }
-
-/* sub_0806D3C0: integrate + 0x48 into + 0x40. */
-static void integrate_x(AosObject31 *o) { o->pos_x += o->vel_x; }
 
 /* sub_0803E058 approximation: the + 0x58 byte feeds an angle;
  * the spin state accumulates + 0x1C into + 0x18 instead. */
@@ -107,44 +119,44 @@ bool aos_object31_update(AosObject31 *o, int16_t sx, int16_t sy,
                 o->spin_total = 0;
                 o->spin_acc = 0;
                 o->spin_rate = 4;
-                o->accel_x = 0x40000;
-                o->accel_y = 0x200;
+                o->accel_x = 0x400;      /* + 0x50 */
+                o->accel_y = 0x200;      /* + 0x54 */
                 o->timer = 0x3C;
                 o->child_spawn = true;   /* sub_0805940C fx */
             } else {
                 o->state = 2;
-                o->accel_y = 0x400;
+                o->accel_y = 0x400;      /* + 0x54 via 0x0805930E */
             }
         }
         break;
     case 2:
-        physics_y(o);
+        physics_y(o, 0x10000);       /* sub_0806D460(0x80 << 9) */
         if (probe_offscreen(sx, sy)) o->state = 3;
         break;
     case 3:
+        /* Params 0/2 free the + 0x58 palette slot first; every
+         * param then EntityDeletes (0x080592DC). */
         if (palette_path(o->param)) {
             o->palette_slot = -1;        /* sub_0803E6BC */
-            o->deleted = true;
-            alive = false;
-        } else {
-            o->state = 4;
         }
+        o->deleted = true;
+        alive = false;
         break;
     case 10:
-        physics_x(o);
-        physics_y(o);
+        physics_x(o, 0x4000);        /* sub_0806D430(0x80 << 7) */
+        physics_y(o, 0x2000);        /* sub_0806D460(0x80 << 6) */
         if (--o->timer <= 0) {
             o->state = 11;
-            o->accel_x = 0;
+            o->accel_x = 0;          /* + 0x50 = 0 */
         }
         break;
     case 11:
         o->spin_acc += o->spin_rate;
-        if (o->spin_acc > 0x60) o->spin_acc = 0x60;
+        if (o->spin_acc > 0x5F) o->spin_acc = 0x60;
         o->spin_total += o->spin_acc;
         rotate(o, 0x20000);
-        integrate_x(o);
-        physics_y(o);
+        o->pos_x += o->vel_x;        /* sub_0806D3C0 */
+        physics_y(o, 0x10000);       /* sub_0806D460(0x80 << 9) */
         if (probe_offscreen(sx, sy)) o->state = 3;
         break;
     default:

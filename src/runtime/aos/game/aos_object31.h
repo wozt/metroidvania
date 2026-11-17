@@ -31,22 +31,27 @@
  * sub_0803F17C. The + 0xB machine has 12 cases:
  *  - 0 waits for gEwramData+0x42C bit 12, then -> 1.
  *  - 1 decrements + 0x14; on expiry params 0/2 launch into
- *    10 (+ 0x18 = + 0x1C = 0, + 0x20 = 4, + 0x50 = 0x40000,
+ *    10 (+ 0x18 = + 0x1C = 0, + 0x20 = 4, + 0x50 = 0x400,
  *    + 0x54 = 0x200, + 0xD = 0x3C) and spawn the type-0x49
  *    child via sub_0805940C at + 0xA00000 offset; other
  *    params advance to 2 (+ 0x54 = 0x400).
- *  - 2 runs sub_0806D460(0x20000) y-physics then the
+ *  - launch arm writes + 0x50 = 0x400 (x accel) and
+ *    + 0x54 = 0x200 (y accel); the physics clamps follow
+ *    the accel sign to the per-state bounds above.
+ *  - 2 runs sub_0806D460(0x10000) y-physics then the
  *    sub_0806D128(3) on-screen probe; a hit -> 3.
- *  - 3 frees the palette slot (sub_0803E6BC on + 0x58 low
- *    bits) and deletes for params 0/2, else -> 4.
+ *  - 3 frees the palette slot for params 0/2
+ *    (sub_0803E6BC on + 0x58 low bits) and EntityDeletes
+ *    for EVERY param.
  *  - cases 4-9 are empty (render tail only).
  *  - 10 runs x-physics sub_0806D430(0x4000) +
  *    sub_0806D460(0x2000), ticks + 0xD; on expiry -> 11 with
  *    + 0x50 = 0.
  *  - 11 accumulates + 0x1C += + 0x20 clamped to 0x60 into
  *    + 0x18, applies the sub_0803E058 rotation from the
- *    + 0x58 bits, integrates position (sub_0806D3C0),
- *    re-runs y-physics and the probe; a hit -> 3.
+ *    + 0x58 bits, integrates + 0x40 via sub_0806D3C0,
+ *    re-runs sub_0806D460(0x10000) y-physics and the probe;
+ *    a hit -> 3.
  *  - every frame params 0/2 re-apply sub_0803E058 with a
  *    0x20000 step before sub_0803F17C.
  *
@@ -54,7 +59,8 @@
  * variant index output, sub_0803E058 becomes an angle state,
  * the sub_0806D128(3) probe checks the dumped rect
  * (48,48) -> x in [-48,288], y in [-48,208], and physics
- * uses the shared + 0x4C/+ 0x54 gravity model of Object21. */
+ * uses the sub_0806D430/sub_0806D460 accel-sign clamp model
+ * with the per-state bounds dumped above. */
 typedef struct {
     uint8_t state;          /* +0xB: 0 wait, 1 count, 2 drift,
                              * 3 resolve, 10 launch-wind,
@@ -65,7 +71,7 @@ typedef struct {
     int32_t spin_acc;       /* +0x1C: clamped to 0x60 */
     int32_t spin_total;     /* +0x18: accumulated rotation */
     int32_t accel_y;        /* +0x54: 0x200 launch / 0x400 drift */
-    int32_t accel_x;        /* +0x50: 0x40000 launch */
+    int32_t accel_x;        /* +0x50: 0x400 launch, 0 in spin */
     int32_t vel_y;          /* +0x4C */
     int32_t vel_x;          /* +0x48 */
     int32_t pos_y;          /* +0x44: 16.16 */

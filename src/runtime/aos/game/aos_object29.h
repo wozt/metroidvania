@@ -52,8 +52,8 @@ typedef struct {
     int32_t pos_y;          /* +0x14: world origin y, 16.16 */
     int32_t scr_x;          /* +0x24 */
     int32_t scr_y;          /* +0x28 */
-    int32_t world_x;        /* +0x40 mirror */
-    int32_t world_y;        /* +0x44 mirror */
+    int32_t world_x;        /* +0x40 = + 0x10 - scrollX */
+    int32_t world_y;        /* +0x44 = + 0x14 - scrollY */
     int32_t threshold;      /* +0x1C: param0 << 16 */
     int32_t bottom;         /* +0x18: + 0x44 + A094[8] */
     int16_t param0;         /* +0x30: threshold source */

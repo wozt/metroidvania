@@ -37,20 +37,19 @@ int main(void) {
     assert(o.state == 1);
 
     /* Param 1 (non-palette path): wait expiry -> state 2 with
-     * accel 0x400, drift physics, offscreen probe -> 3 -> 4
-     * parked (no delete). */
+     * accel 0x400, drift physics bounded by sub_0806D460
+     * (0x10000), offscreen probe -> 3 -> EntityDelete (every
+     * param deletes; only 0/2 free a palette slot first). */
     create(&o, 1);
     aos_object31_update(&o, 100, 80, 0x1000);   /* -> state 1 */
     o.wait = 1;
     assert(aos_object31_update(&o, 100, 80, 0));
     assert(o.state == 2 && o.accel_y == 0x400);
-    /* Move far offscreen: probe returns leave -> state 3 -> 4. */
+    /* Move far offscreen: probe returns leave -> state 3. */
     assert(aos_object31_update(&o, -100, 80, 0));
     assert(o.state == 3);
-    assert(aos_object31_update(&o, -100, 80, 0));
-    assert(o.state == 4 && !o.deleted);
-    assert(aos_object31_update(&o, -100, 80, 0));
-    assert(o.state == 4);
+    assert(!aos_object31_update(&o, -100, 80, 0));
+    assert(o.deleted && o.palette_slot == -1);
 
     /* Param 0 (palette path): expiry -> state 10 launch with
      * child fx, wind-down timer, then spin state 11. */
@@ -59,7 +58,7 @@ int main(void) {
     o.wait = 1;
     assert(aos_object31_update(&o, 100, 80, 0));
     assert(o.state == 10 && o.child_spawn);
-    assert(o.spin_rate == 4 && o.accel_x == 0x40000);
+    assert(o.spin_rate == 4 && o.accel_x == 0x400);
     assert(o.timer == 0x3C);
     o.timer = 1;
     assert(aos_object31_update(&o, 100, 80, 0));

@@ -3727,7 +3727,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 e->spawned = true;
                 aos_object19_create(&e->object19, e->param0, e->param1,
                                     ((int32_t)e->x) << 16,
-                                    ((int32_t)e->y) << 16, 0);
+                                    ((int32_t)e->y) << 16);
                 continue;
             }
             int32_t osx = e->x - cam_x, osy = e->y - cam_y;

@@ -1,3 +1,55 @@
+## Patch 1225 - Eight ported red souls now emit their native attack boxes
+
+- **Gap found by audit.** `soul_attacks` (aria_skills.c) converts live
+  skill entities into the type-5 attack records enemies test, but eight
+  red souls whose native `Skill*Use` routines preset an attack box had
+  no case: Student Witch, Slime, Ukoback, Altair, Une, Mandragora, Disc
+  Armor and Cockatrice spawned, animated and drained MP yet dealt zero
+  damage. Soul ownership, equipment, names, descriptions and icons were
+  never evidence of the effect.
+- **Fix.** Each kind now emits the box its native routine presets,
+  decoded with the established little-endian x/y/w/h convention:
+  Student Witch `0x1018F0F4` {-12,15,24,16}, Slime `0x0808FCFC`
+  {-4,-4,8,8}, Ukoback `0x1010F8F8` {-8,-8,16,16}, Altair
+  `0x1020F8F0` {-16,-8,32,16}, Une preset 5 {-8,-8,16,16}
+  (approximated), Mandragora `0x7F7FC0C0` {-64,-64,127,127}, Disc Armor
+  `0x2020F0F0` {-16,-16,32,32} and Cockatrice preset 5 {-8,-8,16,16}
+  (approximated; the + 0x50/+ 0x54 sine-shaped dynamic box stays
+  unported). Power and elements still come from the last used soul's
+  record through `aos_red_soul_power`, so MP cost, soul identity and
+  element data are unchanged - only the missing hitbox is added.
+- **Audit result.** Red: all 56 soul records have a routine and every
+  soul with a native attack box now produces an attack record (parents
+  that only spawn attacking children - Devil, Ghost, Harpy, Merman,
+  Flame Demon, Demon Lord, Millione, spear/bow/axe - were already
+  covered through their children; Nemesis, Chronomage, Kyoma Demon,
+  Red Minotaur's anchor, the Arachne shard, decoy and trail entities
+  have no native attack box). Blue: all 21 guardian routines are
+  ported; the attacking guardians emit through `guardian_attacks`,
+  the utility guardians (Medusa, Flying Armor, Great Armor, Sky Fish,
+  Giant Bat, Final Guard) have no native attack box - Final Guard's
+  `+0x13260`/`+0x131B8` effect bits still have no modelled reader.
+  Yellow: all effect routines (flags, stats, resistances, Zombie,
+  Lubricant, Wooden Golem, Basilisk, Double, Giant Worm, Headhunter,
+  gold/MP-on-hit) run in `aos_yellow_soul_update`/`_hit` off the
+  equipped `stats->yellow_soul`.
+- **Remaining gaps.** Une's `sub_0802D9B4` callback and table-driven
+  `sub_08042848` shots, Cockatrice's dynamic box, Mandragora's death
+  sequence keeping its box, Altair's `+ 0x6C` hit-flag state path and
+  every per-soul visual/palette/sound bookkeeping remain unported;
+  nothing here has an emulator comparison, so all three families stay
+  `partial`.
+- **Registries.** `annotations.tsv` `aos.souls.red_soul_use`
+  divergences record the eight newly wired boxes; the eight monster
+  rows' Soul notes (altair, cockatrice, mandragora, slime, ukoback,
+  une, disc_armor, student_witch) now state the box reaches enemies
+  and their stale "no ported update" drop-aspect sentences were
+  corrected.
+- **Tests.** Build clean; targeted `aos_soul*`/`aos_enemy`/`aos_skills`
+  CTest selection passes. `soul_attacks` lives in the runtime host
+  (not a unit-test target), so the wiring is covered by the build and
+  the runtime path rather than a new unit test.
+
 ## Patch 1224 - Area-name banner: native WIN0 band geometry, load-latency arm timing and full-frame freeze
 
 - **Decoded sequence.** `sub_0800FFCC` (`code_0800F1FC.c`) arms only

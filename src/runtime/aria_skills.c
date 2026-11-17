@@ -2884,6 +2884,39 @@ int soul_attacks(AriaSouls *souls, const AosEnemyKind *bat, AosSoulAttack attack
             box = (AosBox){-6, -6, 12, 12};    /* 0x0C0CFAFA */
         else if (skill->kind == SKILL_AXE && skill->axe.state == 1)
             box = (AosBox){-10, -10, 20, 20};  /* 0x1414F6F6 */
+        else if (skill->kind == SKILL_STUDENT_WITCH)
+            /* SkillStudentWitchUse presets attack box 5 plus the
+             * 0x1018F0F4 box at init; it stands for the entity's life
+             * (state 3 deletes). */
+            box = (AosBox){-12, 15, 24, 16};   /* 0x1018F0F4 */
+        else if (skill->kind == SKILL_SLIME)
+            /* SkillSlimeUse presets box 5 plus the 0x0808FCFC box. */
+            box = (AosBox){-4, -4, 8, 8};      /* 0x0808FCFC */
+        else if (skill->kind == SKILL_UKOBACK)
+            /* SkillUkobackUse presets box 5 (the sub_0802D9B4 callback
+             * is not ported) plus the 0x1010F8F8 box. */
+            box = (AosBox){-8, -8, 16, 16};    /* 0x1010F8F8 */
+        else if (skill->kind == SKILL_ALTAIR)
+            /* SkillAltairUse presets box 5 plus the 0x1020F8F0 box. */
+            box = (AosBox){-16, -8, 32, 16};   /* 0x1020F8F0 */
+        else if (skill->kind == SKILL_UNE)
+            /* SkillUneUse presets attack box 5 with the sub_0802D9B4
+             * callback; the state-3 box refresh stands in with the same
+             * preset approximation. */
+            box = (AosBox){-8, -8, 16, 16};    /* preset 5, approximated */
+        else if (skill->kind == SKILL_MANDRAGORA)
+            /* SkillMandragoraUse presets box 5 plus the 0x7F7FC0C0 box
+             * while the plant lives (the death sequence keeps it). */
+            box = (AosBox){-64, -64, 127, 127}; /* 0x7F7FC0C0 */
+        else if (skill->kind == SKILL_DISC_ARMOR)
+            /* SkillDiscArmorUse presets box 5 plus the 0x2020F0F0 box
+             * for its 0x1A-frame orbit. */
+            box = (AosBox){-16, -16, 32, 32};  /* 0x2020F0F0 */
+        else if (skill->kind == SKILL_COCKATRICE)
+            /* SkillCockatriceUse presets attack box 5; the + 0x50/+ 0x54
+             * sine-shaped dynamic box is not ported, so the preset
+             * approximation stands for its 0x20-frame spin. */
+            box = (AosBox){-8, -8, 16, 16};    /* preset 5, approximated */
         if (!box.w || !box.h) continue;
         owners[count] = skill;
         attacks[count++] = (AosSoulAttack){

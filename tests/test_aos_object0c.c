@@ -71,6 +71,10 @@ static void type2_arms_snapshot_and_pan(void) {
     assert(p.soma_1e_forced);
     assert(p.heavy_set);    /* the heavy OR precedes the + 0x1E check */
     assert(!p.snapshot_armed);
+    /* + 0x131D6 is a per-frame trigger: an update outside every
+     * window clears it (the + 0x131D4 mode persists on Soma). */
+    aos_object0c_update(&o, 0, 0, false, true, 0, 0, 0);
+    assert(!o.snapshot_armed);
 }
 
 static void release_needs_bit2_clear(void) {

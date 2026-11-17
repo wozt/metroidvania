@@ -13,9 +13,9 @@
  *    sub_08045B44 particle pair every frame (the + 0xD odd-frame
  *    extra drift), then probes Soma again: inside, PlaySong(0x111),
  *    the sub_0803D18C/sub_0803CDF0 fades, the + 0x131D4..+ 0x131DC
- *    snapshot writes and sub_08021248 — the globals that arm the
- *    scene. A set + 0x37E bit 0 or soma + 0x10 bit 0x80 ends the
- *    state-0 branch.
+ *    snapshot writes and sub_08021248(0x40000, -0x10000) — surfaced
+ *    as `triggered` and the pan pair for the runtime bridge. A set
+ *    + 0x37E bit 0 or soma + 0x10 bit 0x80 ends the state-0 branch.
  *  - state 1: SetPlayerInput(1, dir) every frame and the + 0xD
  *    countdown; at 0 advances to state 2.
  *  - state 2: while + 0x4CC bit 6 (cinematic active) holds, forces
@@ -46,6 +46,8 @@ typedef struct {
     uint16_t forced;        /* SetPlayerInput(1, mask): 0x10 right, 0x20 left */
     bool force_zero;        /* SetPlayerInput(1, 0) */
     bool triggered;         /* the state-0 probe fired: fades + snapshot */
+    int32_t pan_x, pan_y;   /* the sub_08021248 pair on a trigger:
+                             * + 0x131E0/+ 0x131E4 = 4.0 / -1.0 */
     bool fx_drift;          /* a sub_08045CEC drift particle was requested */
     bool fx_burst;          /* a sub_08045B44 burst particle was requested */
     int32_t fx_x, fx_y;     /* particle room-pixel anchor */

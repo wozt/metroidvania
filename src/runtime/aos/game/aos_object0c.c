@@ -90,6 +90,10 @@ void aos_object0c_update(AosObject0c *o, uint16_t soma_x, uint16_t soma_y,
                          bool soma_flag22, bool global_13260_200,
                          int32_t soma_fx, int32_t soma_fy, uint8_t soma_1e) {
     o->value48 = 0;         /* + 0x48 cleared at the top of the update */
+    /* + 0x131D6 is a per-frame trigger: the player update clears it,
+     * so the flag reports only this update's gated pass. The + 0x131D4
+     * mode itself persists on Soma's pending_type once armed. */
+    o->snapshot_armed = false;
     int index = o->param0 < 3 ? o->param0 : 0;
     /* The native indexes the 0x085261FC pointer table by the s16
      * param0 unchecked; values outside 0-2 would read adjacent data,

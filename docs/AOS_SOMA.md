@@ -149,7 +149,7 @@ ported or emulator-compared.
 
 ## Blue soul guardians
 
-Soma's states 0, 12 and 13 end with the blue soul start `sub_0802E0C4`
+Soma's states 0, 12, 13 and 14 end with the blue soul start `sub_0802E0C4`
 (the `guardian` hook of `AosSoma`). With no guardian alive, the guardian
 button held (and newly pressed for a toggled soul) and at least max MP /
 128 + 1 MP, it creates the guardian entity of the equipped blue soul's
@@ -981,14 +981,22 @@ vy = -2.0, `+0x54` = -0.0625, flags `0x82`, sound 0x195, state 13. State 12
 animation ends. State 13 (`sub_080199A0`) brakes by 0.0625 in bit-3 cells
 and ends when Soma is no longer airborne (his landing is hard because of
 flag 0x80, so he crouches in state 4) or, in such cells, when the animation
-ends; with `0x13260 & 0x400000` a jump press recovers in the air. At 0 HP
+ends; with `0x13260 & 0x400000` a jump press recovers in the air. A type-3
+pending hit (`_0801B4A0`) is the scripted move the region objects arm
+through the `0x131D6`/`0x131D8..0x131DC`/`0x131E0`/`0x131E4` snapshot
+block: `+0x131B8` loses `0x820`, the `+0x131E0`/`+0x131E4` pair (written
+by `sub_08021248` only while `+0x131D4` reads 3) becomes vx/vy, friction
+is +-0.0625 against the velocity sign, flags `0x82` with `0x200000`
+cleared, sound 0x196, state 14. State 14 (`sub_08019A94`) replays
+animation 0x11 with the stand hurtbox while `+0x6D` differs, then runs
+the same special-cell friction and the grounded-or-(special-cell and
+animation-end) exit as state 13, without the air recovery. At 0 HP
 the reaction is the death `sub_0801AF20`: animation 0x33, hurtbox off
 (`+0x72 |= 4`), vx = -1.0 when facing right (+1.0 when facing left), vy =
 -1.5, `+0x54` = +0.125, sound 0x197, state 16; `sub_0801B03C` then brakes vx
 by 0.0078 and vy by `+0x54`, each stopping at zero (no gravity), and spawns
 particles every 4 frames. The game-over mode (`0x42C |= 0x10`, set by
-`sub_08021654`), the curse (`0x13270 & 4`), types 2 and 3 and the
-`0x13260 & 0x20200` immunity are not ported. Soma registers as
+`sub_08021654`) and type 2 are not ported. Soma registers as
 type 1 with the attack box off; his hurtbox changes with his animations:
 standing -6, -32, 12 x 28 (`0x080E12F8`), low -5, -16, 12 x 14
 (`0x080E12FC` / `0x080E1300`: crouch, jumps, falls, hard landing), slide -8,

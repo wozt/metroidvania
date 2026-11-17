@@ -3360,6 +3360,18 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                 aria_pickup_state.special,
                                 (aria_ewram_cine_4cc & 0x40) != 0,
                                 aos_random);
+            if (e->object06.triggered) {
+                /* The state-0 trigger's + 0x131D4 mode-3 snapshot:
+                 * + 0x131D6 = 1, + 0x131D4 = 3, + 0x131D8 = Soma
+                 * + 0x40 + 0x80000, + 0x131DC = Soma + 0x44 and the
+                 * sub_08021248 pan pair; his next update's
+                 * react_to_hit (_0801B4A0) turns them into state 14. */
+                soma->pending_damage = 1;
+                soma->pending_type = 3;
+                soma->pending_source_x = soma->x + 0x80000;
+                soma->pending_kx = e->object06.pan_x;
+                soma->pending_ky = e->object06.pan_y;
+            }
             if (e->object06.force_zero || e->object06.forced) {
                 input->active = true;
                 input->held = e->object06.forced;
@@ -3423,6 +3435,19 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                     soma->x, soma->y, soma->state);
                 if (e->object0c.heavy_set)
                     soma->flags |= AOS_FLAG_HEAVY;
+                if (e->object0c.soma_1e_forced)
+                    soma->cast_1e = 1;  /* entity + 0x1E forced to 1 */
+                if (e->object0c.snapshot_armed) {
+                    /* sub_08050510's snapshot: + 0x131D6 = 1,
+                     * + 0x131D4 = 3, + 0x131D8/+ 0x131DC the Soma
+                     * snapshot and + 0x131E0/+ 0x131E4 the pan pair;
+                     * react_to_hit (_0801B4A0) makes it state 14. */
+                    soma->pending_damage = 1;
+                    soma->pending_type = 3;
+                    soma->pending_source_x = e->object0c.snapshot_x;
+                    soma->pending_kx = e->object0c.pan_x;
+                    soma->pending_ky = e->object0c.pan_y;
+                }
             }
             continue;
         }

@@ -29,6 +29,7 @@ static void reset_outputs(AosObject06 *o) {
     o->triggered = false;
     o->fx_drift = o->fx_burst = false;
     o->fx_x = o->fx_y = 0;
+    o->pan_x = o->pan_y = 0;
 }
 
 bool aos_object06_create(AosObject06 *o, AosCollision *layer,
@@ -117,11 +118,15 @@ void aos_object06_update(AosObject06 *o, AosCollision *layer,
                    0x38, 0x22))
             break;
         /* The trigger: PlaySong(0x111), the two fades, the
-         * + 0x131D4..+ 0x131DC snapshot writes and sub_08021248 —
-         * only `triggered` is surfaced; the global writes are not
-         * modelled. */
+         * + 0x131D4..+ 0x131DC snapshot writes (+ 0x131D8 = Soma
+         * + 0x40 + 0x80000, + 0x131DC = Soma + 0x44 — the runtime
+         * bridge reads Soma directly) and sub_08021248(0x40000,
+         * -0x10000), which lands at + 0x131E0/+ 0x131E4 because the
+         * callback just armed + 0x131D4 = 3. */
         o->song = 0x111;
         o->triggered = true;
+        o->pan_x = 0x40000;
+        o->pan_y = (int32_t)0xFFFF0000;
         break;
     }
     case 1:

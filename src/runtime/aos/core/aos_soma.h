@@ -147,8 +147,13 @@ typedef struct {
     AosCombat combat;       /* + 0x70: type 1 */
     int16_t hp, max_hp;     /* gEwramData + 0x1327A / + 0x1327E */
     int16_t pending_damage; /* gEwramData + 0x131D6 */
-    uint8_t pending_type;   /* + 0x131D4: 0 normal, 1 strong */
-    int32_t pending_source_x;   /* + 0x131D8 */
+    uint8_t pending_type;   /* + 0x131D4: 0 normal, 1 strong, 3 scripted
+                             * (region/Object06 knockback record) */
+    int32_t pending_source_x;   /* + 0x131D8: hit source, or the mode-3
+                                 * snapshot X the region objects write */
+    int32_t pending_kx, pending_ky; /* + 0x131E0/+ 0x131E4: the velocity
+                                     * pair sub_08021248 writes while the
+                                     * + 0x131D4 mode reads 3 */
     AosAnimState anim;
     const AosAnimSet *anims;    /* animation timings; NULL never ends one */
     uint16_t ticks;         /* + 0x22: advanced at the end of every update */
@@ -159,8 +164,8 @@ typedef struct {
      * when a soul was cast (MP spent, slot taken), else -1. NULL: no souls. */
     int (*cast)(void *context);
     void *cast_context;
-    /* sub_0802E0C4, the blue soul start, at the end of states 0, 12 and
-     * 13. NULL: no blue souls. */
+    /* sub_0802E0C4, the blue soul start, at the end of states 0, 12,
+     * 13 and 14. NULL: no blue souls. */
     void (*guardian)(void *context);
     void *guardian_context;
     bool guardian_alive;    /* gEwramData + 0x13144 is set (state 10 waits on it) */
@@ -234,8 +239,9 @@ AosLanding aos_soma_collide(AosSoma *soma, const AosCollision *layer);
  * collision pass, state routine, wall probe selection, the pending
  * animation (+ 0x20) and the animation step. States 0 (normal, ground and
  * air), 1 (attack), 3 (slide), 4 (hard landing), 5 (high jump), 6
- * (ceiling crash), 7 (dive kick), 12 (hit), 13 (knockback) and 16 (death)
- * are ported; other states do nothing. */
+ * (ceiling crash), 7 (dive kick), 12 (hit), 13 (knockback), 14 (the
+ * + 0x131D4 mode-3 scripted move) and 16 (death) are ported; other
+ * states do nothing. */
 AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t held,
                            uint16_t pressed);
 /* sub_08021654 with the hit's elements (+ 2): with `soma->stats`, a

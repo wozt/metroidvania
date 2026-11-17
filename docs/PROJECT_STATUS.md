@@ -1,3 +1,44 @@
+## Patch 1215 - Aria + 0x131D4 mode-3 scripted move: state 14 and the region-object snapshot bridge
+
+- **Scope.** `src/runtime/aos/core/aos_soma.c/.h`,
+  `src/runtime/aos/game/aos_object0c.c/.h`,
+  `src/runtime/aos/game/aos_object06.c/.h`,
+  `src/runtime/aria_entities.c`, `tests/test_aos_soma.c`,
+  `tests/test_aos_object0c.c`, `tests/test_aos_object06.c`,
+  `data/native_parity/annotations.tsv`, `docs/AOS_SOMA.md` and
+  this file.
+- **Consumer ported.** The pending-hit reaction `_0801B4A0` now
+  handles `+ 0x131D4 == 3`: the `+ 0x131E0`/`+ 0x131E4` pair that
+  `sub_08021248` writes while the mode reads 3 becomes Soma's
+  vx/vy, friction +-0.0625 against the sign, flags `0x82` with
+  `0x200000` cleared, sound 0x196 and state 14 — ahead of the
+  type-2 skip and the Iron Golem immunity, after the petrified
+  branch, matching the native order. State 14 (`sub_08019A94`)
+  replays animation 0x11 with the stand hurtbox while `+ 0x6D`
+  differs, then runs the case-13 special-cell friction, the
+  zero-cross stop and the grounded-or-(special-cell and
+  animation-end) exit, without the air recovery; the state-8
+  `sub_080168F0` call, the `+ 0x5A` byte, the `0x131B8 & 0x800`
+  gate and the per-animation palette stay unmodelled.
+- **Writers bridged.** `aria_entities.c` copies Object0C's type-2
+  `snapshot_armed`/`snapshot_x`/`pan_x`/`pan_y` and Object06's new
+  `pan_x`/`pan_y` trigger outputs (the `sub_08021248(0x40000,
+  -0x10000)` pair) into Soma's `pending_damage`/`pending_type`/
+  `pending_source_x`/`pending_kx`/`pending_ky` each armed frame;
+  Object0C's `soma_1e_forced` now writes `cast_1e = 1` (the native
+  `+ 0x1E = 1`). `snapshot_armed` became a per-frame trigger like
+  `+ 0x131D6`; the persistent `+ 0x131D4 == 3` mode lives on
+  `pending_type` until a hit overwrites it.
+- **Tests.** `test_aos_soma` drives a mode-3 pending hit into
+  state 14 (velocity pair, friction step, song 0x196, animation
+  0x11, no damage) through the hard landing back to state 0;
+  `test_aos_object0c` pins the per-frame trigger clear and
+  `test_aos_object06` the pan pair.
+- **Remaining.** The `+ 0x131D8`/`+ 0x131DC` camera snapshot has
+  no consumer, the `+ 0x4CC` bit-6 writer and the `+ 0x10`
+  bit-0x400000 gate writer stay unported, and no emulator
+  comparison exists; the rows keep `partial`.
+
 ## Patch 1214 - Aria gEwramData input/pause/cinematic-control globals (family A)
 
 - **Scope.** `src/runtime/aria_runtime.c`, `src/runtime/aria_skills.c`,

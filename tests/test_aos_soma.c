@@ -598,6 +598,33 @@ static void hit_tests(void) {
     aos_soma_take_hit(&soma, 12, 0, AOS_FIXED(120), 0);
     frame(&soma, 0, 0);
     assert(soma.state == 13);
+    /* The + 0x131D4 mode-3 scripted move (_0801B4A0): the region
+     * objects' + 0x131D6 trigger with pending_type 3 turns the pan
+     * pair into the velocity and enters state 14 — no damage, song
+     * 0x196, animation 0x11. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.hp = soma.max_hp = 40;
+    soma.pending_damage = 1;
+    soma.pending_type = 3;
+    soma.pending_kx = -0x30000;
+    soma.pending_ky = -0x30000;
+    aos_audio_clear();
+    frame(&soma, 0, 0);
+    assert(soma.state == 14 && soma.hp == 40 && soma.pending_damage == 0 &&
+           soma.pending_type == 3);
+    assert(soma.anim.id == AOS_SOMA_ANIM_KNOCKED);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x196) == 1);
+    assert(soma.flags & AOS_FLAG_AIRBORNE);
+    /* State 14's first frame already applied the + 0x1000 friction. */
+    assert(soma.vx == -0x30000 + 0x1000);
+    /* It decays with the friction, lands hard (state 4) and recovers. */
+    bool saw_hard_landing = false;
+    for (int i = 0; i < 120 && soma.state != 0; ++i) {
+        frame(&soma, 0, 0);
+        if (soma.state == 4) saw_hard_landing = true;
+    }
+    assert(soma.state == 0 && saw_hard_landing);
+
     /* Succubus's soul (bit 0x10000): 5 HP on a frame whose attack struck,
      * up to the maximum. */
     soma = at(100, 159, AOS_FLAG_GROUNDED);

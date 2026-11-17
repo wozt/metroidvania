@@ -1087,8 +1087,10 @@ static void death_state(AosSoma *soma) {
 
 /* sub_0801B0D8 (_0801B3C2 .. _0801B9C8): the reaction to a pending hit.
  * With the Iron Golem soul (0x13260 & 0x20200 == 0x20000) a hit only takes
- * the enemy slot for 30 frames, without the flinch or knockback. The curse
- * and grab types are not ported. */
+ * the enemy slot for 30 frames, without the flinch or knockback. Type 3
+ * (_0801B4A0) is the scripted move: the + 0x131E0/+ 0x131E4 pair becomes
+ * the velocity and state 14 runs; the curse and grab types are not
+ * ported. */
 static void react_to_hit(AosSoma *soma) {
     if (!soma->pending_damage) return;
     if (soma->hp <= 0) {
@@ -1110,6 +1112,23 @@ static void react_to_hit(AosSoma *soma) {
             soma->flags |= AOS_FLAG_AIRBORNE;
         }
         soma->flags &= ~(uint32_t)AOS_FLAG_ANIM_DONE;
+        return;
+    }
+    if (soma->pending_type == 3) {
+        /* _0801B4A0: the + 0x131D4 mode-3 scripted move the region
+         * objects arm through the + 0x131D6/+ 0x131D8..+ 0x131E4
+         * snapshot block. The state-8 sub_080168F0 call (carried
+         * entities, not ported) and the + 0x5A &= ~0x78 byte (not
+         * modelled) are skipped; + 0x131B8 & ~0x820 clears the
+         * modelled 0x20 half (hold_still), bit 0x800 is not modelled. */
+        soma->hold_still = false;
+        soma->vx = soma->pending_kx;
+        soma->vy = soma->pending_ky;
+        soma->friction = soma->vx < 0 ? 0x1000 : (int32_t)-0x1000;
+        soma->state = 14;
+        soma->flags |= 0x82u;
+        soma->flags &= ~(uint32_t)AOS_FLAG_ANIM_DONE;
+        aos_audio_play_song(0x196);
         return;
     }
     if (soma->pending_type > 1) return;
@@ -1182,6 +1201,29 @@ static void knockback_state(AosSoma *soma, const AosCollision *layer, uint16_t p
     if (soma->guardian) soma->guardian(soma->guardian_context);
 }
 
+/* Case 14 (sub_08019A94): the scripted move the + 0x131D4 mode-3
+ * snapshot arms — the region objects' pan pair became his velocity.
+ * Every frame the 0x131B8 & 0x800 / + 0x6D != 0x11 gate replays
+ * animation 0x11 with the stand hurtbox (per-animation palettes of
+ * 0x080E126C/0x082097D4 are not modelled); the special-cell friction,
+ * the zero-cross stop and the grounded-or-(special and animation-end)
+ * exit match case 13 minus the air recovery. */
+static void scripted_state(AosSoma *soma, const AosCollision *layer) {
+    soma->flags &= 0xEFFFFE9Fu;
+    if (soma->anim.id != AOS_SOMA_ANIM_KNOCKED)
+        play(soma, AOS_SOMA_ANIM_KNOCKED, false, STAND);
+    bool special = aos_collision_special(layer, soma->x >> 16, soma->y >> 16);
+    if (special) soma->friction = soma->vx >= 0 ? (int32_t)0xFFFFF000 : 0x1000;
+    apply_friction(soma);
+    if (!(soma->flags & AOS_FLAG_AIRBORNE) ||
+        (special && (soma->flags & AOS_FLAG_ANIM_DONE))) {
+        soma->flags &= 0xFFFEFF7Fu;
+        soma->state = 0;
+    }
+    air_routine(soma, layer);
+    if (soma->guardian) soma->guardian(soma->guardian_context);
+}
+
 /* _0801CD80: wall probes for the next frame. */
 static void select_wall_probes(AosSoma *soma) {
     if (soma->state == 9 && soma->transform_step == 3) return;  /* 0x080E12EF */
@@ -1234,6 +1276,7 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
     case 9: transform_state(soma, layer); break;
     case 12: hit_state(soma, layer); break;
     case 13: knockback_state(soma, layer, pressed); break;
+    case 14: scripted_state(soma, layer); break;
     case 15: stone_state(soma, layer); break;
     case 16: death_state(soma); break;
     default: break;

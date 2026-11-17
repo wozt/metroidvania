@@ -68,10 +68,12 @@ int main(void) {
                         0xF0, 0x40, 0x80, 0, false, rng);
     assert(!o.triggered && o.song == -1);
 
-    /* Probe hit: song 0x111 + triggered. */
+    /* Probe hit: song 0x111 + triggered + the sub_08021248 pan pair
+     * (0x40000, -0x10000) the + 0x131D4 mode-3 snapshot carries. */
     aos_object06_update(&o, &layer, 0, 0, 0x100, 0x40,
                         0xF0, 0x40, 0, 0, false, rng);
     assert(o.triggered && o.song == 0x111);
+    assert(o.pan_x == 0x40000 && o.pan_y == (int32_t)0xFFFF0000);
 
     /* State 1: forces the direction, counts + 0xD down to state 2. */
     o.state = 1; o.counter = 2; o.flags58 = 0x40;

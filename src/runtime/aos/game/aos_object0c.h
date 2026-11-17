@@ -36,8 +36,13 @@ typedef struct {
     uint8_t flags59;        /* +0x59: bit 2 claim-held mark, bit 3 released */
     bool claimed;           /* sub_08022088 took the + 0x1316C slot */
     uint32_t value48;       /* +0x48: type-0 record param / type-2 dir */
-    /* Type-2 outputs, the gEwramData + 0x131D4.. snapshot block. */
-    bool snapshot_armed;    /* +0x131D6 = 1 and + 0x131D4 = 3 */
+    /* Type-2 outputs, the gEwramData + 0x131D4.. snapshot block.
+     * `snapshot_armed` is the per-frame + 0x131D6 trigger (cleared at
+     * the top of every update like the player clears the global);
+     * `snapshot_x`/`snapshot_y` are the + 0x131D8/+ 0x131DC pair and
+     * `pan_x`/`pan_y` the + 0x131E0/+ 0x131E4 pair sub_08021248
+     * writes while + 0x131D4 reads 3. */
+    bool snapshot_armed;    /* +0x131D6 = 1 this update (+ 0x131D4 = 3) */
     int32_t snapshot_x;     /* +0x131D8 = Soma + 0x40 + 0x80000 */
     int32_t snapshot_y;     /* +0x131DC = Soma + 0x44 */
     int32_t pan_x, pan_y;   /* +0x131E0/+0x131E4 through sub_08021248 */

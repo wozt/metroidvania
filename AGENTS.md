@@ -50,6 +50,48 @@ decode both games' data), so target it while working and run it in full only onc
 - A failing test is fixed and its targeted test rerun; repeat the full run
   only if the fix touched code that other tests cover.
 
+## Native Emulator Comparison Workflow (Aria of Sorrow)
+
+Use the headless emulator laboratory whenever Aria behavior or rendering is
+compared with the original game. Source reconstruction and verified-ROM unit
+tests remain useful evidence, but they do not replace a live emulator
+comparison.
+
+1. **Start from a reproducible private checkpoint.** Use the user's local ROM
+   and an existing save state with `./build/aos_mgba_lab --state-in`, or create
+   a reusable checkpoint with `--state-out`. Keep ROMs, save states, SRAM,
+   screenshots and memory dumps outside the repository (prefer `/tmp` or an
+   ignored local directory); never stage, commit, push or transfer them.
+2. **Record the exact native run.** Specify `--frames`, a frame-indexed
+   `--keys` schedule, the `--capture` frame(s), and a private `--shot` prefix.
+   Use `--peek` when the claim concerns WRAM, registers or controller state.
+   A typical invocation is:
+
+   ```sh
+   ./build/aos_mgba_lab --rom /private/path/aria.gba \
+     --state-in /tmp/aria_checkpoint.state --frames 120 \
+     --keys '5:8,6:0' --capture '119' --shot /tmp/aria_native
+   ```
+
+3. **Match the portable run.** Exercise the same gameplay path, selection,
+   input timing and observation frame in the runtime. Do not compare screens
+   reached from materially different inventory, language, animation, camera
+   or menu state without documenting that difference.
+4. **Measure the result.** Prefer an exact pixel or mask diff for stable
+   regions. For animated or stateful behavior, compare the relevant frame
+   sequence and memory values; state the crop, metric, tolerance and numeric
+   result. Visual inspection alone may guide debugging but is not sufficient
+   evidence for a fidelity claim.
+5. **Report only the proven scope.** Record the checkpoint origin, input
+   schedule, capture frame and comparison result in `docs/PROJECT_STATUS.md`
+   and the relevant parity annotation. A matching line, sprite or transition
+   validates only that case; keep the containing feature `partial` until its
+   remaining states and known divergences are covered.
+
+The laboratory's broader architecture and controls are documented in
+`docs/LAB.md`; the CLI option contract is kept at the top of
+`src/tools/aos_mgba_lab.c`.
+
 NO JULIUS MODE and NO SOUL TRADE in aria of sorrow
 NO NES METROID in metroid zero mission
 ## Architecture, Native Fidelity and Integration Rules

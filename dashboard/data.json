@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-17T20:59:01+00:00",
+ "generated_at": "2026-11-17T21:03:20+00:00",
  "git": {
-  "commit": "df79feaa",
+  "commit": "14ec9273",
   "branch": "main",
   "dirty": true
  },
@@ -33475,6 +33475,12 @@
  },
  "timeline": [
   {
+   "commit": "14ec9273",
+   "date": "2026-11-17",
+   "subject": "Fix Aria pause menu text cursor carry",
+   "scope": "project"
+  },
+  {
    "commit": "df79feaa",
    "date": "2026-11-17",
    "subject": "Rebuild Aria pause pages and fix cursor frame",
@@ -33946,12 +33952,6 @@
    "commit": "8cee6104",
    "date": "2026-11-15",
    "subject": "aos: wire Object20 held-sound consumers (shop 0x2B, NPC 0x26, story 0x2D)",
-   "scope": "project"
-  },
-  {
-   "commit": "2ca82e3b",
-   "date": "2026-11-15",
-   "subject": "aos: fix pause hand-cursor decode (29-step animation cap)",
    "scope": "project"
   }
  ],

@@ -1,3 +1,18 @@
+## Patch 1222 - Native emulator comparison workflow recorded
+
+- **Scope.** `AGENTS.md` and this status entry; no runtime behavior or parity
+  status changes.
+- **Workflow.** Aria comparisons against the original game now require the
+  existing `aos_mgba_lab` path: a private reproducible save-state checkpoint,
+  explicit frame-indexed inputs and capture frames, a matched portable run,
+  and a quantitative pixel/mask, frame-sequence or memory comparison. The
+  exact checkpoint origin, schedule, metric, tolerance and result must be
+  recorded while claims remain limited to the cases actually observed.
+- **Data handling.** ROMs, save states, SRAM, screenshots and dumps stay in
+  `/tmp` or another ignored local location and must never be staged, committed,
+  pushed or transferred. `docs/LAB.md` remains the architecture reference and
+  `src/tools/aos_mgba_lab.c` remains the CLI option contract.
+
 ## Patch 1221 - Pause-menu proportional text cursor corrected
 
 - **Scope.** `src/runtime/aos/menus/aos_menu_cells.c`,

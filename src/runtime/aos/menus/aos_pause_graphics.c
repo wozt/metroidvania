@@ -13,7 +13,6 @@
 enum {
     AOS_PAUSE_PALETTE = 0x080E5C20,
     AOS_PAUSE_GRAPHICS = 0x0815E02C,
-    AOS_PAUSE_BG1_METADATA = 0x0815E940,
     AOS_PAUSE_BG1_CONTROL = 0x1D00,
     AOS_PAUSE_BANK_ENGLISH = 0x0827B200,
     AOS_PAUSE_BANK_FRENCH = 0x08277984,
@@ -35,6 +34,21 @@ enum {
     AOS_EQUIPMENT_NAME_IDS = 0x08506734,
     AOS_EQUIPMENT_DESCRIPTION_IDS = 0x08506936,
     AOS_ROM_BASE = 0x08000000,
+    AOS_TEXT_TILE_FIRST = 0x200,
+    AOS_TEXT_TILE_LIMIT = 0x400,
+    AOS_PAUSE_HUB_SLEEP = 4,
+};
+
+static const uint32_t pause_background_metadata[AOS_PAUSE_BACKGROUND_COUNT] = {
+    [AOS_PAUSE_BACKGROUND_HUB] = 0x0815E940,
+    [AOS_PAUSE_BACKGROUND_SOUL_SET] = 0x0815E790,
+    [AOS_PAUSE_BACKGROUND_EQUIP] = 0x0815E8B0,
+    [AOS_PAUSE_BACKGROUND_ITEM_USE] = 0x0815E820,
+    [AOS_PAUSE_BACKGROUND_ABILITY] = 0x0815E700,
+    [AOS_PAUSE_BACKGROUND_SLEEP] = 0x0815E700,
+    [AOS_PAUSE_BACKGROUND_CONFIG] = 0x0815E670,
+    [AOS_PAUSE_BACKGROUND_ENEMY_LIST] = 0x0815EA60,
+    [AOS_PAUSE_BACKGROUND_ENEMY_DETAIL] = 0x0815E9D0,
 };
 
 static void set_error(char *error, size_t error_size, const char *message) {
@@ -53,8 +67,30 @@ static void color_rgb(const uint8_t *palette, unsigned index, uint8_t rgb[3]) {
 
 void aos_pause_graphics_free(AosPauseGraphics *graphics) {
     if (!graphics) return;
-    fusion_aos_free_rendered_background(&graphics->background);
+    for (unsigned i = 0; i < AOS_PAUSE_BACKGROUND_COUNT; ++i)
+        fusion_aos_free_rendered_background(&graphics->backgrounds[i]);
     *graphics = (AosPauseGraphics){0};
+}
+
+static bool decode_background(const FusionRom *rom,
+                              const FusionAosVideoMemory *memory,
+                              unsigned index,
+                              FusionAosRenderedBackground *rendered,
+                              char *error, size_t error_size) {
+    FusionAosBackground background = {
+        .layer = 1,
+        .control = AOS_PAUSE_BG1_CONTROL,
+        .metadata_pointer = pause_background_metadata[index],
+    };
+    FusionAosBackgroundTilemap tilemap = {0};
+    bool ok = fusion_aos_read_background_tiles(rom, &background, &tilemap,
+                                                error, error_size) &&
+              tilemap.status == FUSION_AOS_TILEMAP_DECODED &&
+              fusion_aos_render_background(&background, &tilemap, memory,
+                                           rendered, error, error_size) &&
+              rendered->unresolved_count == 0;
+    fusion_aos_free_background_tilemap(&tilemap);
+    return ok;
 }
 
 bool aos_pause_graphics_init(AosPauseGraphics *graphics, const FusionRom *rom,
@@ -76,11 +112,14 @@ bool aos_pause_graphics_init(AosPauseGraphics *graphics, const FusionRom *rom,
     static const uint32_t language_banks[] = {
         AOS_PAUSE_BANK_ENGLISH, AOS_PAUSE_BANK_FRENCH, AOS_PAUSE_BANK_GERMAN,
     };
+    static const uint32_t pause_graphics[] = {
+        AOS_PAUSE_GRAPHICS, 0x0827397C, 0x08268838,
+    };
     bool loaded = aos_rom_load_palette_resource(
                           rom, AOS_PAUSE_PALETTE, memory->palette,
                           error, error_size) &&
                       aos_rom_load_graphics_resource(
-                          rom, AOS_PAUSE_GRAPHICS, memory->vram,
+                          rom, pause_graphics[language - 1], memory->vram,
                           sizeof memory->vram, error, error_size) &&
                       aos_rom_load_graphics_resource(
                           rom, language_banks[language - 1],
@@ -90,20 +129,11 @@ bool aos_pause_graphics_init(AosPauseGraphics *graphics, const FusionRom *rom,
         free(memory);
         return false;
     }
-    FusionAosBackground background = {
-        .layer = 1,
-        .control = AOS_PAUSE_BG1_CONTROL,
-        .metadata_pointer = AOS_PAUSE_BG1_METADATA,
-    };
-    FusionAosBackgroundTilemap tilemap = {0};
-    bool ok = fusion_aos_read_background_tiles(rom, &background, &tilemap,
-                                                error, error_size) &&
-              tilemap.status == FUSION_AOS_TILEMAP_DECODED &&
-              fusion_aos_render_background(&background, &tilemap, memory,
-                                           &graphics->background,
-                                           error, error_size) &&
-              graphics->background.unresolved_count == 0;
-    fusion_aos_free_background_tilemap(&tilemap);
+    bool ok = true;
+    for (unsigned i = AOS_PAUSE_BACKGROUND_HUB;
+         ok && i <= AOS_PAUSE_BACKGROUND_CONFIG; ++i)
+        ok = decode_background(rom, memory, i, &graphics->backgrounds[i],
+                               error, error_size);
     if (ok) {
         color_rgb(memory->palette, 0, graphics->backdrop_rgb);
         memcpy(graphics->palette, memory->palette, sizeof graphics->palette);
@@ -190,6 +220,51 @@ bool aos_pause_graphics_init(AosPauseGraphics *graphics, const FusionRom *rom,
                 graphics->icons_ready = true;
             }
         }
+
+        /* sub_0804C404 replaces the common menu palette/graphics for the
+         * Enemy page, then sub_0804C668/sub_0804C968 load the list/detail
+         * BG1 metadata. Preserve the two native palette rows restored after
+         * the enemy palette load: common row 13 and resource 0x081183F4 row
+         * 1 into destination row 15. */
+        FusionAosVideoMemory *enemy_memory = calloc(1, sizeof *enemy_memory);
+        if (!enemy_memory) {
+            set_error(error, error_size,
+                      "cannot allocate Aria enemy-menu video memory");
+            ok = false;
+        } else {
+            *enemy_memory = *memory;
+            static const uint32_t enemy_graphics[] = {
+                0x0815E034, 0x0827799C, 0x0826C858,
+            };
+            ok = aos_rom_load_palette_resource(
+                     rom, 0x0815E0A4, enemy_memory->palette,
+                     error, error_size) &&
+                 aos_rom_load_palette_range(
+                     rom, AOS_PAUSE_PALETTE, 13, 1, 13,
+                     enemy_memory->palette, error, error_size) &&
+                 aos_rom_load_palette_range(
+                     rom, 0x081183F4, 1, 1, 15,
+                     enemy_memory->palette, error, error_size) &&
+                 aos_rom_load_graphics_resource(
+                     rom, enemy_graphics[language - 1], enemy_memory->vram,
+                     sizeof enemy_memory->vram, error, error_size) &&
+                 decode_background(
+                     rom, enemy_memory, AOS_PAUSE_BACKGROUND_ENEMY_LIST,
+                     &graphics->backgrounds[AOS_PAUSE_BACKGROUND_ENEMY_LIST],
+                     error, error_size) &&
+                 decode_background(
+                     rom, enemy_memory, AOS_PAUSE_BACKGROUND_ENEMY_DETAIL,
+                     &graphics->backgrounds[AOS_PAUSE_BACKGROUND_ENEMY_DETAIL],
+                     error, error_size);
+            if (ok) {
+                memcpy(graphics->enemy_palette, enemy_memory->palette,
+                       sizeof graphics->enemy_palette);
+                memcpy(graphics->enemy_bg0_base_chars,
+                       enemy_memory->vram + 0x4000,
+                       sizeof graphics->enemy_bg0_base_chars);
+            }
+            free(enemy_memory);
+        }
     }
     free(memory);
     if (!ok) {
@@ -255,8 +330,8 @@ static void put_meter(AosPauseGraphics *graphics, int x, int y,
     }
 }
 
-static bool bg0_pixel(const AosPauseGraphics *graphics, unsigned x, unsigned y,
-                      uint8_t rgba[4]) {
+static bool bg0_pixel(const AosPauseGraphics *graphics, const uint8_t *palette,
+                      unsigned x, unsigned y, uint8_t rgba[4]) {
     uint16_t entry = graphics->bg0_map[(y / 8) * 32 + x / 8];
     unsigned px = x & 7, py = y & 7;
     if (entry & 0x400) px = 7 - px;
@@ -267,8 +342,7 @@ static bool bg0_pixel(const AosPauseGraphics *graphics, unsigned x, unsigned y,
         (graphics->bg0_chars[offset] >> ((px & 1u) * 4)) & 0xF;
     if (!color_index) return false;
     size_t color = ((size_t)(entry >> 12) * 16 + color_index) * 2;
-    uint16_t bgr = (uint16_t)(graphics->palette[color] |
-                              graphics->palette[color + 1] << 8);
+    uint16_t bgr = (uint16_t)(palette[color] | palette[color + 1] << 8);
     rgba[0] = (uint8_t)(((bgr & 31) * 255) / 31);
     rgba[1] = (uint8_t)((((bgr >> 5) & 31) * 255) / 31);
     rgba[2] = (uint8_t)((((bgr >> 10) & 31) * 255) / 31);
@@ -280,54 +354,49 @@ static bool valid_output(const AosPauseGraphics *graphics, const uint8_t *rgba,
                          size_t rgba_size) {
     return graphics && rgba &&
            rgba_size >= AOS_PAUSE_WIDTH * AOS_PAUSE_HEIGHT * 4 &&
-           graphics->background.rgba &&
-           graphics->background.width_pixels >= AOS_PAUSE_WIDTH &&
-           graphics->background.height_pixels >= AOS_PAUSE_HEIGHT;
+           graphics->backgrounds[AOS_PAUSE_BACKGROUND_HUB].rgba;
 }
 
 static void draw_flourish(AosPauseGraphics *graphics, uint8_t *rgba);
 static void draw_swipe(AosPauseGraphics *graphics, uint8_t *rgba);
 
-static void composite(AosPauseGraphics *graphics, uint8_t *rgba) {
+static void composite(AosPauseGraphics *graphics, unsigned background_index,
+                      uint8_t *rgba) {
+    const FusionAosRenderedBackground *page =
+        &graphics->backgrounds[background_index];
+    const uint8_t *palette =
+        background_index == AOS_PAUSE_BACKGROUND_ENEMY_LIST ||
+                background_index == AOS_PAUSE_BACKGROUND_ENEMY_DETAIL
+            ? graphics->enemy_palette
+            : graphics->palette;
+    if (!page->rgba || page->width_pixels < AOS_PAUSE_WIDTH ||
+        page->height_pixels < AOS_PAUSE_HEIGHT)
+        return;
     for (unsigned y = 0; y < AOS_PAUSE_HEIGHT; ++y)
         for (unsigned x = 0; x < AOS_PAUSE_WIDTH; ++x) {
             size_t out = ((size_t)y * AOS_PAUSE_WIDTH + x) * 4;
             size_t background =
-                ((size_t)y * graphics->background.width_pixels + x) * 4;
-            memcpy(rgba + out, graphics->background.rgba + background, 4);
-            bg0_pixel(graphics, x, y, rgba + out);
+                ((size_t)y * page->width_pixels + x) * 4;
+            memcpy(rgba + out, page->rgba + background, 4);
+            bg0_pixel(graphics, palette, x, y, rgba + out);
         }
     draw_swipe(graphics, rgba);
     draw_flourish(graphics, rgba);
 }
 
-static void composite_on_backdrop(AosPauseGraphics *graphics,
-                                  uint8_t *rgba) {
-    for (unsigned y = 0; y < AOS_PAUSE_HEIGHT; ++y)
-        for (unsigned x = 0; x < AOS_PAUSE_WIDTH; ++x) {
-            size_t out = ((size_t)y * AOS_PAUSE_WIDTH + x) * 4;
-            memcpy(rgba + out, graphics->backdrop_rgb, 3);
-            rgba[out + 3] = 255;
-            bg0_pixel(graphics, x, y, rgba + out);
-        }
-    draw_swipe(graphics, rgba);
-    draw_flourish(graphics, rgba);
-}
-
-/* sub_08048AD8 positions the hand entity at cell_x*8+6, cell_y*8+3 and its
- * frame pieces hang off that anchor (the first record's -8,-8 offset makes
- * the 16 x 16 hand span anchor-8..anchor+8). sub_0803F2C8 plays animation
- * 0 of the cursor descriptor — a fixed sequence of pointing poses whose
- * steps carry their own durations — and sub_08048018 adds its +-4px
- * horizontal wiggle to the anchor's X from the shared frame counter. */
-static unsigned cursor_frame_index(const AosPauseGraphics *graphics);
+/* sub_08048C74 creates the hand entity and writes 0x1E directly to +0x65.
+ * sub_08048AD8 then positions it at cell_x*8+6, cell_y*8+3, while
+ * sub_08048D3C only adds the horizontal wiggle before committing that fixed
+ * frame. Frame 0 is a different sprite (the black head/orb that was
+ * previously rendered here), not the selection cursor. */
+enum { AOS_PAUSE_CURSOR_FRAME = 0x1E };
 
 static void draw_cursor(const AosPauseGraphics *graphics, uint8_t *rgba,
                         int cell_x, int cell_y) {
     if (!graphics->cursor_ready || graphics->cursor_sheet.anim_count == 0)
         return;
     const AosObjSheet *sheet = &graphics->cursor_sheet;
-    unsigned frame_index = cursor_frame_index(graphics);
+    unsigned frame_index = AOS_PAUSE_CURSOR_FRAME;
     if (frame_index >= sheet->frame_count) return;
     const AosObjFrame *frame = &sheet->frames[frame_index];
     int step = (int)((graphics->cursor_tick >> 1) & 7);
@@ -448,51 +517,38 @@ static void flourish_page(AosPauseGraphics *graphics, unsigned page) {
     }
 }
 
-/* The cursor sheet's current animation frame, used by draw_cursor and
- * as the press flourish's fallback when the native +0x65 page frame is
- * outside the decoded descriptor. */
-static unsigned cursor_frame_index(const AosPauseGraphics *graphics) {
-    const AosObjSheet *sheet = &graphics->cursor_sheet;
-    unsigned total = 0;
-    for (unsigned k = 0; k < sheet->anim_length[0]; ++k)
-        total += sheet->anim_duration[0][k];
-    if (!total) return sheet->frame_count;
-    unsigned t = (unsigned)(graphics->cursor_tick % total), step = 0;
-    while (step + 1 < sheet->anim_length[0] &&
-           t >= sheet->anim_duration[0][step]) {
-        t -= sheet->anim_duration[0][step];
-        ++step;
-    }
-    return sheet->anim_frame[0][step];
-}
-
 static void draw_flourish(AosPauseGraphics *graphics, uint8_t *rgba) {
-    if (!graphics->fx_timer || !graphics->cursor_ready ||
+    bool title_page = graphics->fx_page == AOS_FX_SOUL_SET ||
+                      graphics->fx_page == AOS_FX_EQUIP ||
+                      graphics->fx_page == AOS_FX_ITEM_USE ||
+                      graphics->fx_page == AOS_FX_ABILITY ||
+                      graphics->fx_page == AOS_FX_CONFIG;
+    if (!title_page || !graphics->cursor_ready ||
         graphics->cursor_sheet.anim_count == 0)
         return;
     const AosObjSheet *sheet = &graphics->cursor_sheet;
     /* sub_08048B0C stores the page argument in entity +0x65, which
-     * sub_0804342C resolves as a frame index (out-of-range falls back
-     * to frame 0 natively; the port falls back to the live cursor
-     * pose, which is frame 0's neighbour in every shipped descriptor). */
+     * sub_0804342C resolves as a frame index (out-of-range falls back to
+     * frame 0 natively). */
     unsigned frame_index = graphics->fx_frame < sheet->frame_count
                                ? graphics->fx_frame
-                               : cursor_frame_index(graphics);
+                               : 0;
     if (frame_index >= sheet->frame_count) {
         if (++graphics->fx_timer > 16) graphics->fx_timer = 0;
         return;
     }
     /* Native +0x0D runs 0..15; the scale is timer<<12 in Q16.16, so the
      * hand grows from invisible to ~0.94 over the 16 updates. */
-    unsigned t = (unsigned)graphics->fx_timer - 1;
-    int32_t scale = (int32_t)t << 12;
+    unsigned t = graphics->fx_timer ? (unsigned)graphics->fx_timer - 1 : 16;
+    int32_t scale = t >= 16 ? 0x10000 : (int32_t)t << 12;
     /* sub_0804875C state 1's fixed anchor: pixel (0x35,9). */
     int16_t params[4];
     aos_affine_matrix(0, scale, scale, false, false, params);
     aos_affine_sprite_draw(sheet, &sheet->frames[frame_index],
                            graphics->cursor_palette, 0x35, 9,
                            params, rgba, AOS_PAUSE_WIDTH, AOS_PAUSE_HEIGHT);
-    if (++graphics->fx_timer > 16) graphics->fx_timer = 0;
+    if (graphics->fx_timer && ++graphics->fx_timer > 16)
+        graphics->fx_timer = 0;
 }
 
 /* sub_08048108's three-commit slide. Each sprite i gets the decoded
@@ -686,9 +742,11 @@ static bool cells_commit(AosPauseGraphics *graphics, unsigned tile_x,
                          uint16_t w, uint16_t h, unsigned palette,
                          unsigned *next_tile);
 
-static void reset_bg0(AosPauseGraphics *graphics) {
+static void reset_bg0(AosPauseGraphics *graphics, bool enemy) {
     ++graphics->cursor_tick;
-    memcpy(graphics->bg0_chars, graphics->bg0_base_chars,
+    memcpy(graphics->bg0_chars,
+           enemy ? graphics->enemy_bg0_base_chars
+                 : graphics->bg0_base_chars,
            sizeof graphics->bg0_chars);
     for (size_t index = 0; index < 32 * 32; ++index)
         graphics->bg0_map[index] = AOS_PAUSE_BG0_FILL;
@@ -709,7 +767,7 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
         !valid_output(graphics, rgba, rgba_size))
         return false;
     flourish_page(graphics, AOS_FX_HUB);
-    reset_bg0(graphics);
+    reset_bg0(graphics, false);
 
     /* sub_08047C4C: seven six-tile labels, palette 3 selected and palette 7
      * otherwise. The tile sequence is the language bank at VRAM 0xA000. */
@@ -742,22 +800,57 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
                               : values->status & 4 ? 1 : 0;
     put_tiles(graphics, 12, 9, (uint16_t)(0x330A + status_variant * 0x10), 4);
 
+    /* sub_08047520 builds the 19x5-cell description frame at tilemap
+     * column 10, row 15 before sub_08047C4C prints text 0x362+selected.
+     * This is deliberately separate from the label rows at columns 2..7. */
+    window_fill(graphics, 10, 15, 0x3200, 0x1A, 3);
     /* sub_08047C4C's tail: sub_0804728C(0x362 + selected) prints the
      * selected entry's description into the bottom message window
      * through the native cell engine. The native caller runs
      * sub_08040748(0,0,0x1a,3) + sub_08040FE0 then sub_0804728C, so
      * the text window is cols 0-25 (6px units) x rows 0-2 (12px
      * units) and the cursor starts at the window home; sub_08046BC8
-     * restores it on exit. The cell canvas origin is tile (0,15) =
-     * pixel (0,120), so window pixels map to screen y 120-156. */
-    unsigned next_tile = 0;
+     * restores it on exit. The cell canvas is mapped at tile (10,15),
+     * matching sub_08047520's frame rather than the label column. */
+    unsigned next_tile = AOS_TEXT_TILE_FIRST;
     if (!place_text_cells(graphics, (uint16_t)(0x362 + selected), false,
-                          0, 15, 0, 0, 26, 3, 3, &next_tile))
+                          10, 15, 0, 0, 26, 3, 3, &next_tile))
         return false;
 
-    composite(graphics, rgba);
+    composite(graphics, AOS_PAUSE_BACKGROUND_HUB, rgba);
     /* sub_08047818's hub placement: sub_08048AD8(1, selected + 0xC). */
     draw_cursor(graphics, rgba, 1, 12 + (int)selected);
+    return true;
+}
+
+bool aos_pause_graphics_render_sleep_hub(
+    AosPauseGraphics *graphics, const AosPauseHubValues *values,
+    bool can_sleep, uint8_t choice, unsigned sleep_result,
+    uint8_t *rgba, size_t rgba_size) {
+    if (!values || choice > 1 ||
+        !aos_pause_graphics_render_hub(graphics, values, AOS_PAUSE_HUB_SLEEP,
+                                       rgba, rgba_size))
+        return false;
+    uint16_t message = can_sleep ? 0x36A : 0x361;
+    if (sleep_result == AOS_PAUSE_SLEEP_RESULT_SAVED)
+        message = 0x36B;
+    else if (sleep_result == AOS_PAUSE_SLEEP_RESULT_FAILED)
+        message = 0x386;
+    unsigned next_tile = AOS_TEXT_TILE_FIRST;
+    if (!cells_begin(graphics, false, 0, 0, 0x1A, 3) ||
+        !cells_print_id(graphics, message, false, 0, 0))
+        return false;
+    if (can_sleep && sleep_result == AOS_PAUSE_SLEEP_RESULT_NONE &&
+        (!cells_print_id(graphics, 0x34B, false, 4, 1) ||
+         !cells_print_id(graphics, 0x34D, false, 12, 1)))
+        return false;
+    if (!cells_commit(graphics, 10, 15, 0, 0, 0x1A, 3, 3,
+                      &next_tile))
+        return false;
+    composite(graphics, AOS_PAUSE_BACKGROUND_HUB, rgba);
+    draw_cursor(graphics, rgba, 1, 12 + AOS_PAUSE_HUB_SLEEP);
+    if (can_sleep && sleep_result == AOS_PAUSE_SLEEP_RESULT_NONE)
+        draw_cursor(graphics, rgba, choice ? 18 : 12, 17);
     return true;
 }
 
@@ -781,7 +874,9 @@ static bool place_text(AosPauseGraphics *graphics, const AosNativeText *text,
     unsigned height = offset_y + (unsigned)line_count * line_height;
     unsigned tile_width = (offset_x + width + 7u) / 8u;
     unsigned tile_height = (height + 7u) / 8u;
-    if (*next_tile + tile_width * tile_height > 0x200u) return false;
+    if (*next_tile < AOS_TEXT_TILE_FIRST ||
+        *next_tile + tile_width * tile_height > AOS_TEXT_TILE_LIMIT)
+        return false;
 
     aos_intro_text_tiles_clear(&graphics->text_tiles);
     for (size_t line = 0; line < line_count; ++line) {
@@ -853,8 +948,8 @@ static uint16_t soul_description_id(unsigned category, unsigned soul) {
  * as a BG0 tile. `tile_x`/`tile_y` are the BG0 map origin of the cell
  * canvas; `col`/`row`/`w`/`h` are the context-A window arguments fed
  * to sub_08040748 (6px columns, 12px rows). Only cells containing
- * glyph pixels consume tiles from `next_tile` (cap 0x200 like
- * place_text); empty cells keep the existing map entry. */
+ * glyph pixels consume tiles from `next_tile` in native's 0x200..0x2FF
+ * scratch character region; empty cells keep the existing map entry. */
 static bool cells_begin(AosPauseGraphics *graphics, bool small,
                         uint16_t col, uint16_t row, uint16_t w,
                         uint16_t h) {
@@ -888,49 +983,34 @@ static bool cells_print_id(AosPauseGraphics *graphics, uint16_t id,
     return true;
 }
 
-/* Commits framebuffer cells [cx0,cx1] x [cy0,cy1] as BG0 tiles whose
- * map position is (tile_x + cx, tile_y + cy). Shared by the context-A
- * and context-B commit paths. */
+/* Native sub_080412DC points the software renderer directly at VRAM
+ * 0x06008000. A framebuffer cell (cx,cy) is therefore character tile
+ * 0x200 + cy*32 + cx; page strip/window tilemaps already reference those
+ * fixed characters. Copying cells there, without rewriting the screen map,
+ * is what makes the same text canvas appear at each page's native anchor. */
 static bool cells_commit_range(AosPauseGraphics *graphics,
                                unsigned tile_x, unsigned tile_y,
                                unsigned cx0, unsigned cy0, unsigned cx1,
                                unsigned cy1, unsigned palette,
                                unsigned *next_tile) {
     if (!graphics || !next_tile) return false;
+    (void)tile_x;
+    (void)tile_y;
+    (void)palette;
     for (unsigned cy = cy0; cy <= cy1 && cy < 32; ++cy)
         for (unsigned cx = cx0; cx <= cx1 && cx < 32; ++cx) {
-            const uint32_t *cell =
-                graphics->cells_fb + (size_t)cy * AOS_MENU_CELLS_ROW_WORDS +
-                cx * 8;
-            bool empty = true;
-            for (unsigned word = 0; word < 8; ++word)
-                if (cell[word]) { empty = false; break; }
-            if (empty) continue;
-            unsigned map_x = tile_x + cx, map_y = tile_y + cy;
-            if (map_x >= 32 || map_y >= 32 || *next_tile >= 0x200)
+            unsigned tile = AOS_TEXT_TILE_FIRST + cy * 32 + cx;
+            if (tile >= AOS_TEXT_TILE_LIMIT)
                 return false;
-            unsigned tile = (*next_tile)++;
             uint8_t tile_data[32];
             if (!aos_menu_cells_cell_tile(&graphics->cells,
                                           (uint16_t)cx, (uint16_t)cy,
                                           tile_data))
                 return false;
-            uint16_t previous = graphics->bg0_map[map_y * 32 + map_x];
-            uint8_t *destination = graphics->bg0_chars + (size_t)tile * 32;
-            memcpy(destination,
-                   graphics->bg0_chars + (size_t)(previous & 0x3FF) * 32,
-                   32);
-            for (unsigned byte = 0; byte < 32; ++byte) {
-                uint8_t low = tile_data[byte] & 0x0F;
-                uint8_t high = tile_data[byte] & 0xF0;
-                if (low) destination[byte] =
-                    (uint8_t)((destination[byte] & 0xF0) | low);
-                if (high) destination[byte] =
-                    (uint8_t)((destination[byte] & 0x0F) | high);
-            }
-            graphics->bg0_map[map_y * 32 + map_x] =
-                (uint16_t)(tile | palette << 12);
+            memcpy(graphics->bg0_chars + (size_t)tile * 32,
+                   tile_data, sizeof tile_data);
         }
+    *next_tile = AOS_TEXT_TILE_FIRST;
     return true;
 }
 
@@ -999,8 +1079,9 @@ static bool place_text_cells(AosPauseGraphics *graphics, uint16_t id,
                              uint16_t col, uint16_t row, uint16_t w,
                              uint16_t h, unsigned palette,
                              unsigned *next_tile) {
-    return cells_begin(graphics, small, col, row, w, h) &&
-           cells_print_id(graphics, id, small, col, row) &&
+    if (!cells_begin(graphics, small, col, row, w, h)) return false;
+    aos_menu_cells_set_attr(&graphics->cells, (uint16_t)palette);
+    return cells_print_id(graphics, id, small, col, row) &&
            cells_commit(graphics, tile_x, tile_y, col, row, w, h,
                         palette, next_tile);
 }
@@ -1008,6 +1089,28 @@ static bool place_text_cells(AosPauseGraphics *graphics, uint16_t id,
 static bool place_text_id(AosPauseGraphics *graphics, uint16_t id, bool small,
                           unsigned x, unsigned y, unsigned width,
                           unsigned palette, unsigned *next_tile) {
+    if (small) {
+        const uint8_t *entry = NULL;
+        size_t entry_size = 0;
+        uint16_t col = (uint16_t)(x / 6), row = (uint16_t)(y / 8);
+        uint16_t w = (uint16_t)((width + 5) / 6 + 1);
+        if (!aos_intro_resources_entry(&graphics->text, graphics->language,
+                                       id, &entry, &entry_size) ||
+            !cells_begin_b(graphics, col, row, w, 1))
+            return false;
+        aos_menu_cells_set_attr(&graphics->cells, (uint16_t)palette);
+        /* sub_0804090C accepts exact pixel X, unlike the six-pixel window
+         * origin (notably the right column uses x=128 with window col 21). */
+        graphics->cells.b_col = (uint16_t)(x / 6);
+        graphics->cells.b_sx = (uint16_t)(x % 6);
+        graphics->cells.b_px = (uint16_t)x;
+        graphics->cells.b_row = row;
+        graphics->cells.b_py = (uint16_t)(row * 8);
+        aos_menu_cells_run_b(&graphics->cells, entry, 0,
+                             graphics->cells_char_b, 4,
+                             graphics->cells_glyph_b, 10);
+        return cells_commit_b(graphics, 0, 0, palette, next_tile);
+    }
     AosNativeText text;
     return read_text(graphics, id, &text) &&
            place_text(graphics, &text, small, x, y, width, palette, next_tile);
@@ -1046,7 +1149,7 @@ bool aos_pause_graphics_render_soul_set(
     graphics->fx_swipe_pose =
         graphics->fx_swipe_cat < AOS_PAUSE_SOUL_FAMILIES &&
         values->equipped[graphics->fx_swipe_cat] != 0;
-    reset_bg0(graphics);
+    reset_bg0(graphics, false);
     /* sub_08041204 clears the language-bank placeholders before the small
      * font renderer rewrites their character data. */
     clear_bg0_tiles(graphics, 0x380, 0x80);
@@ -1085,7 +1188,7 @@ bool aos_pause_graphics_render_soul_set(
      * through sub_0804728C -> sub_08046BC8 on that window. The cell
      * canvas origin is the strip's top-left tile (7,15): the covered
      * cells land exactly on tiles 7..28 x 15..17, the strip itself. */
-    unsigned next_tile = 0;
+    unsigned next_tile = AOS_TEXT_TILE_FIRST;
     for (unsigned category = 0; category < AOS_PAUSE_SOUL_FAMILIES; ++category) {
         unsigned x = category == 0 ? 126 : category == 1 ? 0 : 126;
         unsigned y = category == 0 ? 80 : 88;
@@ -1158,7 +1261,7 @@ bool aos_pause_graphics_render_soul_set(
                           false, 7, 15, 0, 0, 0x1E, 2, 3, &next_tile))
         return false;
 
-    composite_on_backdrop(graphics, rgba);
+    composite(graphics, AOS_PAUSE_BACKGROUND_SOUL_SET, rgba);
     swipe_advance(graphics);
     /* sub_08048EA4: column 2 or 0x10 on the flat slot's bit 0, row
      * 0xA + slot/2 where slot = selected - top in the eight-entry list. */
@@ -1237,7 +1340,7 @@ bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
         !valid_output(graphics, rgba, rgba_size))
         return false;
     flourish_page(graphics, AOS_FX_EQUIP);
-    reset_bg0(graphics);
+    reset_bg0(graphics, false);
     clear_bg0_tiles(graphics, 0x340, 0x80);
 
     put_number(graphics, 22, 2, values->current[0], 3, 0x3300, false);
@@ -1265,7 +1368,7 @@ bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
         put_tiles(graphics, 5, 16 + (int)row,
                   (uint16_t)(0x3200 + row * 0x20), 24);
 
-    unsigned next_tile = 0;
+    unsigned next_tile = AOS_TEXT_TILE_FIRST;
     static const unsigned equipped_x[] = {126, 0, 126};
     static const unsigned equipped_y[] = {64, 72, 72};
     for (unsigned slot = 0; slot < AOS_PAUSE_EQUIP_SLOTS; ++slot) {
@@ -1301,11 +1404,11 @@ bool aos_pause_graphics_render_equip(AosPauseGraphics *graphics,
         return false;
     if (values->selected_item == AOS_PAUSE_EQUIP_NONE && values->preview_active)
         description = 0x350;
-    if (!place_text_id(graphics, description, false, 40, 128, 192,
-                       3, &next_tile))
+    if (!place_text_cells(graphics, description, false, 5, 16,
+                          0, 0, 0x20, 2, 3, &next_tile))
         return false;
 
-    composite_on_backdrop(graphics, rgba);
+    composite(graphics, AOS_PAUSE_BACKGROUND_EQUIP, rgba);
     /* sub_0804A00C draws the description popup's icon entity at the
      * same (0x1C,0x94) anchor: the selected list item while the list
      * is open, otherwise the slot's equipped record. */
@@ -1350,7 +1453,7 @@ bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
     if (!config || cursor >= AOS_BUTTON_ACTIONS ||
         !valid_output(graphics, rgba, rgba_size)) return false;
     flourish_page(graphics, AOS_FX_CONFIG);
-    reset_bg0(graphics);
+    reset_bg0(graphics, false);
     /* sub_0804BF8C init: three 24-tile description strips at column 5,
      * rows 15-17 (0x3200+i*0x20), the context-A window (0,0,0x20,2)
      * and the hint text 0x352 via sub_0804728C. */
@@ -1361,22 +1464,20 @@ bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
      * sub_08041204 then eight controller glyphs 0x80-0x87 printed with
      * manual +6..8 px cursor bumps (the native code adds to
      * +0x115B6/+0x115B8 before each sub_08040C60 call). */
-    static const struct {
-        uint8_t ch;
-        int8_t bump_sub, bump_px;
-    } buttons[] = {
-        {0x80, 7, 7}, {0x81, 8, 8}, {0x82, 8, 8}, {0x83, 8, 8},
-        {0x86, 7, 7}, {0x87, 7, 6}, {0x84, 7, 7}, {0x85, 7, 7},
-    };
-    unsigned next_tile = 0;
+    unsigned next_tile = AOS_TEXT_TILE_FIRST;
     if (!cells_begin_b(graphics, 0, 5, 0x1E, 1))
         return false;
-    for (size_t i = 0; i < sizeof buttons / sizeof buttons[0]; ++i) {
+    static const uint8_t pairs[4][2] = {
+        {0x80, 0x81}, {0x82, 0x83}, {0x86, 0x87}, {0x84, 0x85},
+    };
+    static const uint8_t gap_before[4] = {7, 15, 14, 13};
+    for (unsigned pair = 0; pair < 4; ++pair) {
         graphics->cells.b_sx =
-            (uint16_t)(graphics->cells.b_sx + buttons[i].bump_sub);
+            (uint16_t)(graphics->cells.b_sx + gap_before[pair]);
         graphics->cells.b_px =
-            (uint16_t)(graphics->cells.b_px + buttons[i].bump_px);
-        if (!cells_print_glyph_b(graphics, buttons[i].ch))
+            (uint16_t)(graphics->cells.b_px + gap_before[pair]);
+        if (!cells_print_glyph_b(graphics, pairs[pair][0]) ||
+            !cells_print_glyph_b(graphics, pairs[pair][1]))
             return false;
     }
     if (!cells_commit_b(graphics, 0, 0, 3, &next_tile))
@@ -1399,10 +1500,10 @@ bool aos_pause_graphics_render_config(AosPauseGraphics *graphics,
     }
     /* sub_0804BF8C's sub_0804728C(0x352): "Press SELECT to restore /
      * the default settings." in the bottom window at (40,128). */
-    if (!place_text_id(graphics, 0x352, false, 40, 128, 192, 3,
-                       &next_tile))
+    if (!place_text_cells(graphics, 0x352, false, 5, 15,
+                          0, 0, 0x20, 2, 3, &next_tile))
         return false;
-    composite(graphics, rgba);
+    composite(graphics, AOS_PAUSE_BACKGROUND_CONFIG, rgba);
     /* sub_0804C3AC: sub_08048AD8(5, cursor*2 + 4) beside the rows. */
     draw_cursor(graphics, rgba, 5, 4 + 2 * (int)cursor);
     return true;
@@ -1433,7 +1534,7 @@ bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
         !valid_output(graphics, rgba, rgba_size))
         return false;
     flourish_page(graphics, AOS_FX_ABILITY);
-    reset_bg0(graphics);
+    reset_bg0(graphics, false);
     /* sub_08041204-style placeholder clear shared with the soul pages. */
     clear_bg0_tiles(graphics, 0x380, 0x80);
     /* sub_0804BA18 init: sub_080472B0(6,0xD,0x3200,0x1F,4) draws the
@@ -1463,7 +1564,7 @@ bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
      * and row 0xC + i/2; odd slots take the sub_0804090C pixel cursor at
      * x=0x80 (128 px), even slots stay at the window origin x=0. Rows
      * are 8px cells so text lands at (0|128, (12+i/2)*8). */
-    unsigned next_tile = 0;
+    unsigned next_tile = AOS_TEXT_TILE_FIRST;
     for (unsigned i = 0; i < AOS_PAUSE_ABILITY_COUNT; ++i) {
         if (!place_text_id(graphics,
                            values->owned[i] ? (uint16_t)(0x156 + i) : 0x34F,
@@ -1484,7 +1585,7 @@ bool aos_pause_graphics_render_ability(AosPauseGraphics *graphics,
                               ? (uint16_t)(0x257 + values->cursor) : 0x34F,
                           false, 6, 0xD, 0, 0, 0x1F, 4, 3, &next_tile))
         return false;
-    composite(graphics, rgba);
+    composite(graphics, AOS_PAUSE_BACKGROUND_ABILITY, rgba);
     /* sub_0804BA18's placement: column 2 or 0x10 on cursor bit 0, row
      * 4 + 2*(cursor>>1) — the hand sits left of the selected strip. */
     draw_cursor(graphics, rgba,
@@ -1503,8 +1604,22 @@ bool aos_pause_graphics_render_item_use(
         !valid_output(graphics, rgba, rgba_size))
         return false;
     flourish_page(graphics, AOS_FX_ITEM_USE);
-    reset_bg0(graphics);
+    reset_bg0(graphics, false);
     clear_bg0_tiles(graphics, 0x380, 0x80);
+    /* sub_0804B6C4 calls sub_080463A8(10,4): current HP/MP end at
+     * columns 10, max values at 15, and the seven-tile meters begin at
+     * 17. sub_080471E4(20,7) writes the four-tile status word. */
+    put_number(graphics, 10, 4, values->hp, 4, 0x3300, false);
+    put_number(graphics, 10, 5, values->mp, 4, 0x3300, false);
+    put_number(graphics, 15, 4, values->max_hp, 4, 0x3300, false);
+    put_number(graphics, 15, 5, values->max_mp, 4, 0x3300, false);
+    put_meter(graphics, 17, 4, values->hp, values->max_hp, 3);
+    put_meter(graphics, 17, 5, values->mp, values->max_mp, 4);
+    unsigned status_variant = values->status & 1 ? 2
+                              : values->status & 2 ? 3
+                              : values->status & 4 ? 1 : 0;
+    put_tiles(graphics, 20, 7,
+              (uint16_t)(0x330A + status_variant * 0x10), 4);
     /* sub_0804B6C4: four slot rows of strips at columns 2 and 0x11, tile
      * rows 11-14 (entries 0x3380/0x3390+i*0x20), then three 24-tile
      * description bars at column 5, rows 16-18 (0x3200+i*0x20). */
@@ -1525,7 +1640,7 @@ bool aos_pause_graphics_render_item_use(
     unsigned owned_count = 0;
     for (unsigned item = 0; item < AOS_PAUSE_ITEM_USE_RECORDS; ++item)
         if (values->counts[item]) owned[owned_count++] = (uint8_t)item;
-    unsigned next_tile = 0;
+    unsigned next_tile = AOS_TEXT_TILE_FIRST;
     for (unsigned slot = 0; slot < AOS_PAUSE_ITEM_USE_VISIBLE; ++slot) {
         unsigned ordinal = values->top + slot;
         bool filled = ordinal < owned_count;
@@ -1557,10 +1672,11 @@ bool aos_pause_graphics_render_item_use(
      * pixel (40,128) — same anchor as the Equip page. */
     if (values->selected < AOS_PAUSE_ITEM_USE_RECORDS &&
         values->counts[values->selected] &&
-        !place_text_id(graphics, (uint16_t)(0x15C + values->selected),
-                       false, 40, 128, 192, 3, &next_tile))
+        !place_text_cells(graphics,
+                          (uint16_t)(0x15C + values->selected), false,
+                          5, 16, 0, 0, 0x20, 2, 3, &next_tile))
         return false;
-    composite(graphics, rgba);
+    composite(graphics, AOS_PAUSE_BACKGROUND_ITEM_USE, rgba);
     /* sub_0804B6C4 (init) and sub_0804B808 (update) each spawn exactly
      * ONE sub_08048804 icon entity at pixel anchor (0x1C, 0x94), rebuilt
      * only when the selection changes. Its frame's (-8, -16) piece
@@ -1632,12 +1748,13 @@ bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
         !valid_output(graphics, rgba, rgba_size))
         return false;
     flourish_page(graphics, AOS_FX_ENEMY);
-    reset_bg0(graphics);
+    reset_bg0(graphics, true);
     clear_bg0_tiles(graphics, 0x380, 0x80);
-    unsigned next_tile = 0;
+    unsigned next_tile = AOS_TEXT_TILE_FIRST;
     for (unsigned slot = 0; slot < AOS_PAUSE_ENEMY_PAGE; ++slot) {
         unsigned enemy = values->top + slot;
         if (enemy >= AOS_PAUSE_ENEMY_RECORDS) break;
+        bool found = enemy_defeated(values, enemy);
         /* sub_0804D2C8 intro loop: ten-tile row strips at columns 6/0x14,
          * rows 5+2*(slot/2), entries 0xF320+slot*0x10 (palette 15). */
         put_tiles(graphics, (int)(slot & 1u ? 0x14 : 6),
@@ -1659,7 +1776,6 @@ bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
             put_bignum(graphics, num_x, row, (int32_t)number, 2, 1, 1);
         /* Names: palette 15 when defeated, 14 with 0x34E otherwise
          * (sub_080412F0 calls in the loop). */
-        bool found = enemy_defeated(values, enemy);
         uint16_t id = found ? (uint16_t)(0x25D + enemy) : 0x34E;
         if (!place_text_id(graphics, id, true, slot & 1u ? 126u : 0u,
                            (8u + slot / 2u) * 8u, 110,
@@ -1714,7 +1830,7 @@ bool aos_pause_graphics_render_enemy(AosPauseGraphics *graphics,
         if (!cells_commit_b(graphics, 0, 0, 3, &next_tile))
             return false;
     }
-    composite(graphics, rgba);
+    composite(graphics, AOS_PAUSE_BACKGROUND_ENEMY_LIST, rgba);
     /* sub_0804C668/sub_0804C770: column 2 or 0x10 on the slot's bit 0,
      * row 5 + slot/2 where slot = cursor - top on the ten-entry page. */
     if (!values->detail && values->cursor >= values->top &&
@@ -1772,13 +1888,13 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
         return false;
     unsigned enemy = values->cursor;
     flourish_page(graphics, AOS_FX_ENEMY);
-    reset_bg0(graphics);
+    reset_bg0(graphics, true);
     clear_bg0_tiles(graphics, 0x380, 0x80);
     /* sub_0804C968 header strips: 0x1320 x10 at (0x12,8) and
      * 0x1330 x10 at (0x12,9). */
     put_tiles(graphics, 0x12, 8, 0x1320, 0xA);
     put_tiles(graphics, 0x12, 9, 0x1330, 0xA);
-    unsigned next_tile = 0;
+    unsigned next_tile = AOS_TEXT_TILE_FIRST;
     /* sub_0804CDF4 header numbers. */
     put_dashes(graphics, 6, 1, 1);
     unsigned number = enemy + 1;
@@ -1820,8 +1936,9 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
                                            name_text.glyph_counts[0])
             : 0;
     unsigned name_x = name_width > 0xB0 ? 0 : 0xB0 - name_width / 2;
-    if (!place_text(graphics, &name_text, true, name_x, 64, 110, 3,
-                    &next_tile))
+    if (!place_text_id(graphics,
+                       found ? (uint16_t)(0x25D + enemy) : 0x34E,
+                       true, name_x, 64, 110, 3, &next_tile))
         return false;
     /* Soul-type icon tile on the underline, only in soul view while
      * the soul exists and is owned (r6 gate in sub_0804D0D0). */
@@ -1859,16 +1976,17 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
      * the enemy text). Cell home pixel (56,120), palette 3, like the
      * soul-set description window. */
     if (values->soul_view && owned) {
-        if (!place_text_id(graphics,
-                           values->soul_index
-                               ? soul_description_id(values->soul_type,
-                                                     values->soul_index)
-                               : 0x34F,
-                           false, 56, 120, 174, 3, &next_tile))
+        if (!place_text_cells(
+                graphics,
+                values->soul_index
+                    ? soul_description_id(values->soul_type,
+                                          values->soul_index)
+                    : 0x34F,
+                false, 3, 14, 0, 0, 0x1E, 2, 3, &next_tile))
             return false;
-    } else if (!place_text_id(graphics,
-                              found ? (uint16_t)(0x2CE + enemy) : 0x34E,
-                              false, 56, 120, 198, 3, &next_tile)) {
+    } else if (!place_text_cells(
+                   graphics, found ? (uint16_t)(0x2CE + enemy) : 0x34E,
+                   false, 3, 14, 0, 0, 0x22, 2, 3, &next_tile)) {
         return false;
     }
     /* sub_0804D1DC tail: owned markers at column 0x1C rows 0xE/0x10 —
@@ -1886,7 +2004,7 @@ bool aos_pause_graphics_render_enemy_detail(AosPauseGraphics *graphics,
         put_dashes(graphics, 0x1C, 0xE, 1);
         put_dashes(graphics, 0x1C, 0x10, 1);
     }
-    composite(graphics, rgba);
+    composite(graphics, AOS_PAUSE_BACKGROUND_ENEMY_DETAIL, rgba);
     return true;
 }
 
@@ -1896,8 +2014,8 @@ bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
                                      uint8_t *rgba, size_t rgba_size) {
     if (choice > 1 || !valid_output(graphics, rgba, rgba_size)) return false;
     flourish_page(graphics, AOS_FX_SLEEP);
-    reset_bg0(graphics);
-    unsigned next_tile = 0;
+    reset_bg0(graphics, false);
+    unsigned next_tile = AOS_TEXT_TILE_FIRST;
     /* sub_0804BD38/sub_0804BE0C draw three separate bands, not one shared
      * bottom window. Band 1 is the question/refusal: sub_0804728C ->
      * sub_08046BC8 prints 0x36A ("Pause the game?") or 0x361 ("Cannot
@@ -1908,11 +2026,11 @@ bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
      * three rows; it is placed at pixel (68,64). The cell engine is
      * used (not place_text_id) because only it wraps the string at the
      * window edge the way sub_08046BC8 does natively. */
-    if (!cells_begin(graphics, true, 0, 0, 11, 3))
+    if (!cells_begin(graphics, false, 0, 0, 0x1A, 3))
         return false;
     if (!cells_print_id(graphics, can_sleep ? 0x36A : 0x361,
-                        true, 0, 0) ||
-        !cells_commit(graphics, 8, 8, 0, 0, 11, 3, 3, &next_tile))
+                        false, 0, 0) ||
+        !cells_commit(graphics, 10, 15, 0, 0, 0x1A, 3, 3, &next_tile))
         return false;
     if (can_sleep) {
         /* Band 2 is the framed Yes/No prompt: sub_0804066C(4,1) +
@@ -1953,7 +2071,7 @@ bool aos_pause_graphics_render_sleep(AosPauseGraphics *graphics,
             return false;
     }
     (void)next_tile;
-    composite(graphics, rgba);
+    composite(graphics, AOS_PAUSE_BACKGROUND_SLEEP, rgba);
     /* sub_0804BD38 initializes the hand at (0x95,0x89), the native
      * default No choice. sub_0804BE0C then writes x = 0x65 for Yes or
      * 0x95 for No while y stays 0x89. draw_cursor adds its decoded bob

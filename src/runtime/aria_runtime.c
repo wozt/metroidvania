@@ -4890,28 +4890,81 @@ aria_render_frame:
                 SDL_RenderFillRect(renderer, &whole);
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
             }
-        } else if (!draw_native_equip(renderer, pause_texture, &pause_graphics,
-                                    &soul_menu, &progress,
-                                    have_equipment ? &equipment : NULL) &&
-                 !draw_native_soul_set(renderer, pause_texture, &pause_graphics,
-                                       &soul_menu, &progress) &&
-                 !draw_native_pause_hub(renderer, pause_texture, &pause_graphics,
-                                   &soul_menu, &progress, &soma,
-                                   has_active_save ? active_save.play_frames : (uint32_t)step) &&
-                 !draw_native_config(renderer, pause_texture, &pause_graphics,
-                                     &soul_menu) &&
-                 !draw_native_ability(renderer, pause_texture, &pause_graphics,
-                                      &soul_menu, &progress) &&
-                 !draw_native_item_use(renderer, pause_texture, &pause_graphics,
-                                       &soul_menu, &progress,
-                                       have_item_use ? item_use : NULL) &&
-                 !draw_native_enemy(renderer, pause_texture, &pause_graphics,
-                                    &soul_menu, &progress, &objects) &&
-                 !draw_native_sleep(renderer, pause_texture, &pause_graphics,
-                                    &soul_menu))
-            draw_soul_menu(renderer, &soul_menu, &progress,
-                           have_equipment ? &equipment : NULL,
-                           have_item_use ? item_use : NULL, &soma, &objects);
+        } else {
+            /* One authoritative production renderer per pause page. A
+             * renderer failure is reported explicitly; the old SDL debug
+             * menu is available only through an opt-in diagnostic switch
+             * and can no longer silently replace partially rendered native
+             * pages. */
+            bool pause_expected = soul_menu.open || soul_menu.room_black;
+            bool pause_drawn = false;
+            uint32_t play_frames = has_active_save
+                                       ? active_save.play_frames
+                                       : (uint32_t)step;
+            if (!soul_menu.open && soul_menu.room_black) {
+                pause_drawn = draw_native_pause_hub(
+                    renderer, pause_texture, &pause_graphics, &soul_menu,
+                    &progress, &soma, play_frames);
+            } else if (soul_menu.open) {
+                switch (soul_menu.page) {
+                case AOS_SOUL_MENU_PAGE_HUB:
+                    pause_drawn = draw_native_pause_hub(
+                        renderer, pause_texture, &pause_graphics, &soul_menu,
+                        &progress, &soma, play_frames);
+                    break;
+                case AOS_SOUL_MENU_PAGE_SOUL_SET:
+                    pause_drawn = draw_native_soul_set(
+                        renderer, pause_texture, &pause_graphics, &soul_menu,
+                        &progress);
+                    break;
+                case AOS_SOUL_MENU_PAGE_ABILITY:
+                    pause_drawn = draw_native_ability(
+                        renderer, pause_texture, &pause_graphics, &soul_menu,
+                        &progress);
+                    break;
+                case AOS_SOUL_MENU_PAGE_EQUIP:
+                    pause_drawn = draw_native_equip(
+                        renderer, pause_texture, &pause_graphics, &soul_menu,
+                        &progress, have_equipment ? &equipment : NULL);
+                    break;
+                case AOS_SOUL_MENU_PAGE_ITEM_USE:
+                    pause_drawn = draw_native_item_use(
+                        renderer, pause_texture, &pause_graphics, &soul_menu,
+                        &progress, have_item_use ? item_use : NULL, &soma);
+                    break;
+                case AOS_SOUL_MENU_PAGE_SLEEP:
+                    pause_drawn = draw_native_sleep(
+                        renderer, pause_texture, &pause_graphics, &soul_menu,
+                        &progress, &soma, play_frames);
+                    break;
+                case AOS_SOUL_MENU_PAGE_CONFIG:
+                    pause_drawn = draw_native_config(
+                        renderer, pause_texture, &pause_graphics, &soul_menu);
+                    break;
+                case AOS_SOUL_MENU_PAGE_ENEMY:
+                    pause_drawn = draw_native_enemy(
+                        renderer, pause_texture, &pause_graphics, &soul_menu,
+                        &progress, &objects);
+                    break;
+                default:
+                    break;
+                }
+            }
+            if (pause_expected && !pause_drawn) {
+                static int reported_pause_page = -1;
+                if (reported_pause_page != soul_menu.page) {
+                    fprintf(stderr,
+                            "Native Aria pause renderer failed for page %u\n",
+                            soul_menu.page);
+                    reported_pause_page = soul_menu.page;
+                }
+                if (getenv("ARIA_DEBUG_LEGACY_PAUSE"))
+                    draw_soul_menu(renderer, &soul_menu, &progress,
+                                   have_equipment ? &equipment : NULL,
+                                   have_item_use ? item_use : NULL,
+                                   &soma, &objects);
+            }
+        }
         /* sub_080106DC's modeled bldY: the case-5 fade veils the room
          * like the quick-map/picker ramps (weight = bldY/16). */
         if (in_game_mode.unk_64 == AOS_INGAME_TRANSITION_FADE &&

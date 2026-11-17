@@ -54,9 +54,9 @@ bool debug_teleport(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **backgr
 bool debug_spawn(AriaRoom *room, const AriaCombat *combat, const AosSoma *soma,
                  const AosCollision *layer, int id);
 
-/* The native pause pages rendered into the shared pause texture; each
- * returns false when its page is not the open one so the caller can
- * chain them into the draw_soul_menu fallback. */
+/* The native pause pages rendered into the shared pause texture. The runtime
+ * selects exactly one by page; false is an explicit renderer failure, not a
+ * signal to fall through to the legacy SDL debug menu. */
 bool draw_native_pause_hub(SDL_Renderer *renderer, SDL_Texture *texture,
                            AosPauseGraphics *graphics,
                            const AosSoulMenu *menu, const AosStats *stats,
@@ -73,14 +73,16 @@ bool draw_native_config(SDL_Renderer *renderer, SDL_Texture *texture,
                         const AosSoulMenu *menu);
 bool draw_native_sleep(SDL_Renderer *renderer, SDL_Texture *texture,
                        AosPauseGraphics *graphics,
-                       const AosSoulMenu *menu);
+                       const AosSoulMenu *menu, const AosStats *stats,
+                       const AosSoma *soma, uint32_t play_frames);
 bool draw_native_ability(SDL_Renderer *renderer, SDL_Texture *texture,
                          AosPauseGraphics *graphics,
                          const AosSoulMenu *menu, const AosStats *stats);
 bool draw_native_item_use(SDL_Renderer *renderer, SDL_Texture *texture,
                           AosPauseGraphics *graphics,
                           const AosSoulMenu *menu, const AosStats *stats,
-                          const AosItemUseRecord items[AOS_ITEM_RECORDS]);
+                          const AosItemUseRecord items[AOS_ITEM_RECORDS],
+                          const AosSoma *soma);
 bool draw_native_enemy(SDL_Renderer *renderer, SDL_Texture *texture,
                        AosPauseGraphics *graphics,
                        const AosSoulMenu *menu, const AosStats *stats,
@@ -89,8 +91,7 @@ bool draw_native_quick_map(SDL_Renderer *renderer, SDL_Texture *texture,
                            AosQuickMap *map, const AosStats *stats,
                            uint32_t animation_frame);
 
-/* Source-adapted slices of sub_080473F4 / sub_08047764. Native tile, icon,
- * description and transition rendering remain separate future work. */
+/* Explicit ARIA_DEBUG_LEGACY_PAUSE-only diagnostic renderer. */
 void draw_soul_menu(SDL_Renderer *renderer, const AosSoulMenu *menu,
                     const AosStats *stats, const AosEquipmentTables *equipment,
                     const AosItemUseRecord items[AOS_ITEM_RECORDS],

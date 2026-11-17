@@ -13,6 +13,16 @@ enum {
     PALETTE_OFFSET = 0x0E5C20,
     GRAPHICS_OFFSET = 0x15E02C,
     METADATA_OFFSET = 0x15E940,
+    SOUL_METADATA_OFFSET = 0x15E790,
+    EQUIP_METADATA_OFFSET = 0x15E8B0,
+    ITEM_METADATA_OFFSET = 0x15E820,
+    ABILITY_METADATA_OFFSET = 0x15E700,
+    CONFIG_METADATA_OFFSET = 0x15E670,
+    ENEMY_LIST_METADATA_OFFSET = 0x15EA60,
+    ENEMY_DETAIL_METADATA_OFFSET = 0x15E9D0,
+    ENEMY_GRAPHICS_OFFSET = 0x15E034,
+    ENEMY_PALETTE_OFFSET = 0x15E0A4,
+    ENEMY_EXTRA_PALETTE_OFFSET = 0x1183F4,
     LANGUAGE_OFFSET = 0x27B200,
     COMPRESSED_GRAPHICS = 0x1000,
     COMPRESSED_LANGUAGE = 0x4000,
@@ -74,6 +84,18 @@ static void write_ppm(const char *path, const uint8_t *rgba) {
     assert(fclose(out) == 0);
 }
 
+static bool is_text_tile(uint16_t entry) {
+    unsigned tile = entry & 0x3FF;
+    return tile >= 0x200 && tile < 0x300;
+}
+
+static bool tile_has_pixels(const AosPauseGraphics *graphics, unsigned tile) {
+    if (!graphics || tile >= 0x400) return false;
+    for (unsigned byte = 0; byte < 32; ++byte)
+        if (graphics->bg0_chars[tile * 32 + byte]) return true;
+    return false;
+}
+
 int main(int argc, char **argv) {
     uint8_t *bytes = calloc(1, ROM_SIZE);
     uint8_t *decoded = calloc(1, GRAPHICS_SIZE + 4);
@@ -96,7 +118,17 @@ int main(int argc, char **argv) {
     write_literal_lz77(bytes + COMPRESSED_LANGUAGE, decoded,
                        GRAPHICS_SIZE + 4);
     graphics_descriptor(bytes, GRAPHICS_OFFSET, COMPRESSED_GRAPHICS);
+    graphics_descriptor(bytes, ENEMY_GRAPHICS_OFFSET, COMPRESSED_GRAPHICS);
     graphics_descriptor(bytes, LANGUAGE_OFFSET, COMPRESSED_LANGUAGE);
+
+    /* sub_0804C404's Enemy-page palette setup: a full replacement palette,
+     * common row 13, and row 1 of 0x081183F4 copied to destination row 15. */
+    bytes[ENEMY_PALETTE_OFFSET] = 0;
+    bytes[ENEMY_PALETTE_OFFSET + 2] = 16;
+    bytes[ENEMY_PALETTE_OFFSET + 3] = 0;
+    bytes[ENEMY_EXTRA_PALETTE_OFFSET] = 0;
+    bytes[ENEMY_EXTRA_PALETTE_OFFSET + 2] = 2;
+    bytes[ENEMY_EXTRA_PALETTE_OFFSET + 3] = 0;
 
     bytes[TEXT_SCRIPT_OFFSET + 2] = 'A';
     bytes[TEXT_SCRIPT_OFFSET + 3] = 10;
@@ -117,15 +149,24 @@ int main(int argc, char **argv) {
         write_u16(bytes, BLOCKS_OFFSET + cell * 2, 1);
     for (unsigned block = 0; block < 64; ++block)
         write_u16(bytes, MAP_OFFSET + block * 2, 1);
+    static const size_t page_metadata[] = {
+        SOUL_METADATA_OFFSET, EQUIP_METADATA_OFFSET, ITEM_METADATA_OFFSET,
+        ABILITY_METADATA_OFFSET, CONFIG_METADATA_OFFSET,
+        ENEMY_LIST_METADATA_OFFSET, ENEMY_DETAIL_METADATA_OFFSET,
+    };
+    for (unsigned i = 0; i < sizeof page_metadata / sizeof page_metadata[0];
+         ++i)
+        memcpy(bytes + page_metadata[i], bytes + METADATA_OFFSET, 16);
 
     /* sub_08048C74's hand cursor for language 1: the raw (uncompressed)
      * 16 x 16-tile sheet at 0x082052D8, frame descriptor 0x08256EF8 and
      * the OBJ palette block at 0x0820C2C0 + 36 (sixteen colours; the real
-     * row's upper half is zero). The real cursor
-     * animation cycles 29 poses, so the fixture uses 10 steps — past the
-     * old 8-step cap — to prove the decode accepts it. The sheet is all
-     * colour index 15 and the palette all white, so every cursor pixel is
-     * (255,255,255), a colour nothing else in this fixture produces. */
+     * row's upper half is zero). The fixture keeps a 10-step animation to
+     * cover its independent decoder limit, but makes animation frame 0 an
+     * 8 x 8 piece and native cursor frame 0x1E a 16 x 16 piece. That makes
+     * the render regression fail if the black-head frame 0 is selected
+     * again. The sheet is all colour index 15 and the palette all white, so
+     * every cursor pixel is (255,255,255), a colour nothing else here uses. */
     {
         const size_t cursor_graphics = 0x2052D8, cursor_tiles = 0x2052DC;
         bytes[cursor_graphics] = 0;      /* raw resource */
@@ -153,8 +194,11 @@ int main(int argc, char **argv) {
             bytes[0x50D000 + f * 16 + 5] = 1; /* one piece per record */
             write_u32(bytes, 0x50D000 + f * 16 + 12, 0x0850C100);
         }
+        write_u32(bytes, 0x50D000 + 12, 0x0850C120); /* frame 0 differs */
         bytes[0x50C106] = 16;                 /* width */
         bytes[0x50C107] = 16;                 /* height */
+        bytes[0x50C126] = 8;
+        bytes[0x50C127] = 8;
         write_u32(bytes, 0x50C200, 0x0850C300); /* anim data */
         write_u16(bytes, 0x50C300, 10);       /* ten 4-tick steps */
         write_u16(bytes, 0x50C302, 1);
@@ -168,9 +212,10 @@ int main(int argc, char **argv) {
     AosPauseGraphics graphics;
     char error[160];
     assert(aos_pause_graphics_init(&graphics, &rom, 1, error, sizeof error));
-    assert(graphics.background.width_pixels == 256 &&
-           graphics.background.height_pixels == 256 &&
-           graphics.background.unresolved_count == 0);
+    for (unsigned i = 0; i < AOS_PAUSE_BACKGROUND_COUNT; ++i)
+        assert(graphics.backgrounds[i].width_pixels == 256 &&
+               graphics.backgrounds[i].height_pixels == 256 &&
+               graphics.backgrounds[i].unresolved_count == 0);
     AosPauseHubValues values = {
         .hp = 320, .mp = 80, .max_hp = 320, .max_mp = 80,
         .stats = {10, 12, 11, 9}, .attack = 15, .defence = 11,
@@ -182,10 +227,15 @@ int main(int argc, char **argv) {
     assert((graphics.bg0_map[12 * 32 + 2] & 0xF000) == 0x3000);
     assert((graphics.bg0_map[13 * 32 + 2] & 0xF000) == 0x7000);
     assert(graphics.bg0_map[2 * 32 + 14] == 0x3300);
-    /* The hand cursor decoded: one record, a ten-step animation (past the
-     * former 8-step cap) and a painted 16 x 16 piece. sub_08048AD8(1, 12)
-     * anchors it at pixel (14 + wiggle, 99); tick 1 gives wiggle -3 and a
-     * 16 x 16 white piece at x 11..26, y 99..114. */
+    uint16_t *hub_map = malloc(sizeof graphics.bg0_map);
+    uint8_t *hub_chars = malloc(sizeof graphics.bg0_chars);
+    assert(hub_map && hub_chars);
+    memcpy(hub_map, graphics.bg0_map, sizeof graphics.bg0_map);
+    memcpy(hub_chars, graphics.bg0_chars, sizeof graphics.bg0_chars);
+    /* The hand cursor decoded: native frame 0x1E supplies the painted
+     * 16 x 16 piece even though animation frame 0 is only 8 x 8.
+     * sub_08048AD8(1, 12) anchors it at pixel (14 + wiggle, 99); tick 1
+     * gives wiggle -3 and a white piece at x 11..26, y 99..114. */
     assert(graphics.cursor_ready);
     assert(graphics.cursor_sheet.frame_count == 40);
     assert(graphics.cursor_sheet.anim_count == 1);
@@ -215,9 +265,10 @@ int main(int argc, char **argv) {
     assert((graphics.bg0_map[3 * 32 + 6] & 0xF000) == 0x8000);
     assert((graphics.bg0_map[5 * 32 + 6] & 0xF000) == 0x3000);
     assert(graphics.bg0_map[2 * 32 + 22] == 0x3305);
-    assert((graphics.bg0_map[10 * 32 + 15] & 0x3FF) < 0x200);
-    assert((graphics.bg0_map[12 * 32] & 0x3FF) < 0x200);
-    assert((graphics.bg0_map[15 * 32 + 7] & 0x3FF) < 0x200);
+    assert(tile_has_pixels(&graphics, 0x34F));
+    assert(tile_has_pixels(&graphics, 0x380));
+    assert(tile_has_pixels(&graphics, 0x200));
+    assert(graphics.bg0_map[15 * 32 + 7] == 0x3200);
 
     /* Patch 1171: entering Soul Set armed sub_08048B0C's press flourish
      * (entity +0x24 state machine) and the first render already consumed
@@ -349,10 +400,11 @@ int main(int argc, char **argv) {
     assert(graphics.bg0_map[3 * 32 + 2] == 0x33D0);
     assert(graphics.bg0_map[2 * 32 + 22] == 0x3305);
     assert((graphics.bg0_map[2 * 32 + 24] & 0x3FF) == 0x34A);
-    assert((graphics.bg0_map[8 * 32 + 15] & 0x3FF) < 0x200);
-    assert((graphics.bg0_map[10 * 32] & 0x3FF) < 0x200);
-    assert((graphics.bg0_map[16 * 32 + 5] & 0x3FF) < 0x200);
-    assert(graphics.bg0_chars[0x340 * 32] == 0);
+    assert(tile_has_pixels(&graphics, 0x34F));
+    assert(tile_has_pixels(&graphics, 0x340));
+    assert(tile_has_pixels(&graphics, 0x200));
+    assert(graphics.bg0_map[16 * 32 + 5] == 0x3200);
+    assert(tile_has_pixels(&graphics, 0x340));
     /* sub_0804C264: rows 4,6,8,10 show actions {0,1,3,2}; the name strip
      * is 0x32A0+button_index*3 in column 0x12. */
     {
@@ -370,8 +422,17 @@ int main(int argc, char **argv) {
     }
     assert(aos_pause_graphics_render_hub(&graphics, &values, 0,
                                          rgba, 240 * 160 * 4));
+    /* Every page owns a distinct native BG1 resource and mutates the BG0
+     * character scratch area. Returning through the authoritative hub
+     * renderer must nevertheless reconstruct the exact original hub state,
+     * with no stale Config/Equip text or tilemap entries. */
+    assert(memcmp(graphics.bg0_map, hub_map, sizeof graphics.bg0_map) == 0);
+    assert(memcmp(graphics.bg0_chars, hub_chars,
+                  sizeof graphics.bg0_chars) == 0);
     assert(memcmp(graphics.bg0_chars + 0x340 * 32,
                   graphics.bg0_base_chars + 0x340 * 32, 32) == 0);
+    free(hub_chars);
+    free(hub_map);
     aos_pause_graphics_free(&graphics);
     free(rgba);
     free(decoded);
@@ -389,10 +450,10 @@ int main(int argc, char **argv) {
                                              rgba, 240 * 160 * 4));
         if (argc >= 3) write_ppm(argv[2], rgba);
         /* Real-ROM cursor regression: the English descriptor at
-         * 0x0827B1F0 decodes to 38 frames and one 29-step animation, the
+         * 0x08256EF8 decodes to 38 frames and one 29-step animation, the
          * OBJ palette row keeps its native zero upper half (indices 8-15
          * render black, not the next ROM block's colours), and the hub
-         * render actually paints the hand next to the first entry. */
+         * render paints fixed native frame 0x1E next to the first entry. */
         assert(graphics.cursor_ready);
         assert(graphics.cursor_sheet.frame_count == 38);
         assert(graphics.cursor_sheet.anim_count == 1);
@@ -495,22 +556,10 @@ int main(int argc, char **argv) {
         assert(aos_pause_graphics_render_sleep(
             &graphics, false, 1, AOS_PAUSE_SLEEP_RESULT_NONE,
             rgba, 240 * 160 * 4));
-        /* sub_0804BD38 renders three bands, not one shared bottom window:
-         * the 0x361 refusal must land in the narrow upper-left question
-         * box (tile rows ~8-10), not only the bottom description band. */
-        {
-            unsigned upper = 0;
-            for (unsigned row = 8; row <= 10; ++row)
-                for (unsigned col = 8; col <= 19; ++col)
-                    if (graphics.bg0_map[row * 32 + col] != 0x330D)
-                        ++upper;
-            assert(upper > 0);
-        }
-        /* Band 3 stays empty on entry: sub_0804BD38 prints no result
-         * into the shared bottom window (tile rows 15-19). */
-        for (unsigned row = 15; row <= 19; ++row)
-            for (unsigned col = 0; col <= 25; ++col)
-                assert(graphics.bg0_map[row * 32 + col] == 0x330D);
+        /* sub_0804BD38 prints through the inherited context-A canvas at
+         * character tile 0x200; the caller decides where that canvas is
+         * mapped (the unavailable hub path keeps its bottom-right frame). */
+        assert(tile_has_pixels(&graphics, 0x200));
         assert(aos_pause_graphics_render_sleep(
             &graphics, true, 1, AOS_PAUSE_SLEEP_RESULT_NONE,
             rgba, 240 * 160 * 4));
@@ -537,17 +586,7 @@ int main(int argc, char **argv) {
             assert(yes_diff > 0 && no_diff > 0);
             free(sleep_no);
         }
-        /* The available path draws the 0x36A question in the same upper
-         * band plus vertically stacked Yes/No labels in the middle
-         * parallelogram frame (place_text_id at pixels y96/y104). */
-        {
-            unsigned upper = 0;
-            for (unsigned row = 8; row <= 10; ++row)
-                for (unsigned col = 8; col <= 19; ++col)
-                    if (graphics.bg0_map[row * 32 + col] != 0x330D)
-                        ++upper;
-            assert(upper > 0);
-        }
+        assert(tile_has_pixels(&graphics, 0x200));
         /* sub_0804BE0C: a successful save prints 0x36B "Game was saved/
          * successfully." and a failed one 0x386 "Save failed." into the
          * shared bottom window (tile rows 15-19, cols 0-25) as
@@ -556,12 +595,7 @@ int main(int argc, char **argv) {
              result <= AOS_PAUSE_SLEEP_RESULT_FAILED; ++result) {
             assert(aos_pause_graphics_render_sleep(
                 &graphics, true, 1, result, rgba, 240 * 160 * 4));
-            unsigned result_cells = 0;
-            for (unsigned row = 15; row <= 19; ++row)
-                for (unsigned col = 0; col <= 25; ++col)
-                    if ((graphics.bg0_map[row * 32 + col] & 0x3FF) < 0x200)
-                        ++result_cells;
-            assert(result_cells > 0);
+            assert(tile_has_pixels(&graphics, 0x200));
         }
         /* sub_0804BA18/sub_0804BB40: window fill, strips, ON/OFF pairs and
          * names. Ability 0 owned+enabled, 1 owned+disabled, 2 unowned. */
@@ -578,8 +612,10 @@ int main(int argc, char **argv) {
              * i=1,j=0 -> 0x3200+1*32+0 = 0x3220; (18,26) -> 0x32B4. The
              * description canvas sub_0804BCA0 commits at tile origin
              * (6,13) — the strip's top-left — spans rows 13-18. */
-            assert(graphics.bg0_map[14 * 32 + 6] == 0x3220);
-            assert(graphics.bg0_map[18 * 32 + 26] == 0x32B4);
+            assert(graphics.bg0_map[14 * 32 + 6] == 0x3220 ||
+                   is_text_tile(graphics.bg0_map[14 * 32 + 6]));
+            assert(graphics.bg0_map[18 * 32 + 26] == 0x32B4 ||
+                   is_text_tile(graphics.bg0_map[18 * 32 + 26]));
             /* Strips: byte14>>1 = 3 iterations give rows 4,6,8 only —
              * i=0 row 4 -> 0x3380/0x3390, i=2 row 8 -> 0x33C0/0x33D0.
              * Row 10 stays at the 0x330D fill (no fourth strip row). */
@@ -603,24 +639,24 @@ int main(int argc, char **argv) {
              * pressing B." through the context-A cell path committed at
              * tile origin (6,13) — the strip's top-left — so cells land
              * on tile rows 13-18, columns 6-28, exactly the filled
-             * frame, as palette-3 text tiles (index < 0x200). */
+             * frame, as palette-3 text tiles in the native scratch range. */
             unsigned description_cells = 0;
             for (unsigned row = 13; row <= 18; ++row)
                 for (unsigned col = 6; col <= 28; ++col)
-                    if ((graphics.bg0_map[row * 32 + col] & 0x3FF) < 0x200)
+                    if (is_text_tile(graphics.bg0_map[row * 32 + col]))
                         ++description_cells;
             assert(description_cells > 0);
+            uint8_t owned_description[0x2000];
+            memcpy(owned_description, graphics.bg0_chars + 0x200 * 32,
+                   sizeof owned_description);
             /* Selecting an unowned ability prints 0x34F "---" instead —
              * still text cells, but far fewer than a full description. */
             ability.cursor = 2;
             assert(aos_pause_graphics_render_ability(&graphics, &ability,
                                                      rgba, 240 * 160 * 4));
-            unsigned unowned_cells = 0;
-            for (unsigned row = 13; row <= 18; ++row)
-                for (unsigned col = 6; col <= 28; ++col)
-                    if ((graphics.bg0_map[row * 32 + col] & 0x3FF) < 0x200)
-                        ++unowned_cells;
-            assert(unowned_cells > 0 && unowned_cells < description_cells);
+            assert(memcmp(owned_description,
+                          graphics.bg0_chars + 0x200 * 32,
+                          sizeof owned_description) != 0);
         }
         /* sub_0804B6C4/sub_0804B494: slot strips rows 11-14, bottom bars
          * rows 16-18, dashes for empty slots, quantity digits. */

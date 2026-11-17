@@ -15,12 +15,31 @@
 struct AosRecentSouls;
 #include "fusion/assets/aos.h"
 
+enum {
+    AOS_PAUSE_BACKGROUND_HUB,
+    AOS_PAUSE_BACKGROUND_SOUL_SET,
+    AOS_PAUSE_BACKGROUND_EQUIP,
+    AOS_PAUSE_BACKGROUND_ITEM_USE,
+    AOS_PAUSE_BACKGROUND_ABILITY,
+    AOS_PAUSE_BACKGROUND_SLEEP,
+    AOS_PAUSE_BACKGROUND_CONFIG,
+    AOS_PAUSE_BACKGROUND_ENEMY_LIST,
+    AOS_PAUSE_BACKGROUND_ENEMY_DETAIL,
+    AOS_PAUSE_BACKGROUND_COUNT,
+};
+
 typedef struct {
-    FusionAosRenderedBackground background;
+    /* sub_08047764 loads a distinct BG1 metadata resource before every
+     * page init. Enemy has its own graphics/palette setup and separate list
+     * and detail maps; keeping all decoded planes prevents a stale hub BG1
+     * from leaking through page transitions. */
+    FusionAosRenderedBackground backgrounds[AOS_PAUSE_BACKGROUND_COUNT];
     uint16_t bg0_map[32 * 32];
     uint8_t bg0_base_chars[0x8000];
+    uint8_t enemy_bg0_base_chars[0x8000];
     uint8_t bg0_chars[0x8000];
     uint8_t palette[0x200];
+    uint8_t enemy_palette[0x200];
     uint8_t backdrop_rgb[3];
     uint8_t language;
     AosIntroResources text;
@@ -32,7 +51,7 @@ typedef struct {
     AosObjSheet cursor_sheet;
     uint16_t cursor_palette[16];
     bool cursor_ready;
-    uint32_t cursor_tick;      /* frame counter driving bob and frame cycle */
+    uint32_t cursor_tick;      /* frame counter driving the native X wiggle */
     /* The native software cell renderer: fb is the 32x32-cell buffer
      * (each cell already a 32-byte 4bpp tile), and the four pointers
      * address the ROM char/glyph metric tables. */
@@ -158,6 +177,9 @@ typedef struct {
     uint8_t icons[AOS_PAUSE_ITEM_USE_RECORDS];  /* item_use.tsv icon column */
     uint8_t selected;                           /* item index or 0xFF */
     uint8_t top;                                /* first visible owned ordinal */
+    int16_t hp, mp;
+    uint16_t max_hp, max_mp;
+    uint16_t status;
 } AosPauseItemUseValues;
 
 enum {
@@ -203,6 +225,12 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
                                    const AosPauseHubValues *values,
                                    uint8_t selected, uint8_t *rgba,
                                    size_t rgba_size);
+/* Sleep's no-fade entry keeps the fully populated hub planes and replaces
+ * only the inherited bottom context-A message (sub_0804BD38). */
+bool aos_pause_graphics_render_sleep_hub(
+    AosPauseGraphics *graphics, const AosPauseHubValues *values,
+    bool can_sleep, uint8_t choice, unsigned sleep_result,
+    uint8_t *rgba, size_t rgba_size);
 /* sub_08048D84/sub_080493E8/sub_080494F8/sub_08049DB4: reconstruct the
  * Soul Set BG0 page with the ROM's localized names, descriptions and native
  * proportional fonts. Sprite icons and the animated OBJ cursor remain a

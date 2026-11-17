@@ -1,3 +1,44 @@
+## Patch 1220 - Pause pages rebuilt from native planes; selection hand frame corrected
+
+- **Scope.** `src/runtime/aos/menus/aos_pause_graphics.c/.h`,
+  `src/runtime/aria_menus_debug.c/.h`, `src/runtime/aria_runtime.c`,
+  `tests/test_aos_pause_graphics.c`, the pause-menu registry notes and this
+  file. The playable runtime remains on the existing pause-menu owner; the
+  legacy SDL renderer is available only through its explicit debug switch.
+- **Native page composition.** The renderer now decodes the distinct BG1
+  metadata used by the hub, Soul Set, Equip, Item Use, Ability, Config,
+  Enemy list and Enemy detail pages instead of compositing every page on the
+  hub plane. Enemy pages also use `sub_0804C404`'s replacement graphics and
+  palette setup. BG0 software text follows the `0x06008000` fixed character
+  mapping used by `sub_080412DC`: cell `(x,y)` writes character
+  `0x200+y*32+x`, with the text colour carried by the cell pixel nibble. The
+  hub description is rooted at its native column-10 frame; Item Use draws
+  the live HP/MP/max/status fields; Config uses the decoded button-glyph
+  pairs; and unavailable Sleep reconstructs the populated hub before drawing
+  its refusal message. Runtime page dispatch is now an explicit page switch,
+  so a native-render failure is reported instead of silently substituting a
+  different menu.
+- **Selection cursor root cause and fix.** The black head/orb was real frame
+  0 of descriptor `0x08256EF8`, selected because the host incorrectly played
+  animation 0. `sub_08048C74` writes fixed frame `0x1E` to entity `+0x65`;
+  `sub_08048D3C` only applies the horizontal wiggle and commits it, while
+  `sub_08048AD8` supplies the cell anchor. `draw_cursor` now renders frame
+  `0x1E` on every page. A real runtime capture shows the blue pointing hand
+  on the hub in place of the orb.
+- **Tests and evidence.** The synthetic cursor fixture gives frame 0 an
+  8x8 component and frame `0x1E` a 16x16 component, so the regression cannot
+  pass by choosing the old frame. The pause-graphics test also verifies that
+  visiting Equip and Config then returning to the hub reconstructs the exact
+  original BG0 map and character data. Both the synthetic and verified-ROM
+  pause-graphics runs pass. Local mGBA captures were used to decode the page
+  resources and Sleep behavior; no ROM-derived capture or asset is tracked.
+- **Still partial.** The Enemy portrait remains a host-rendered probe whose
+  animation advances, not a complete port of every enemy record's
+  `sub_0804CA18` update. The Soul Set affine transition still has the
+  documented retrigger and per-piece OAM-wrap approximations. Page fidelity
+  therefore remains `partial`; this patch does not raise a status or claim a
+  complete emulator comparison.
+
 ## Patch 1219 - Belmont state-2 choreography and the param0-1 intro
 
 - **Scope.** `src/runtime/aos/enemies/belmont.c`,

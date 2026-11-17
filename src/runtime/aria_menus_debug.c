@@ -148,6 +148,27 @@ static void pause_text_buttons(AosPauseGraphics *graphics,
     aos_menu_cells_set_buttons(&graphics->cells, menu->config_buttons);
 }
 
+static AosPauseHubValues pause_hub_values(const AosStats *stats,
+                                          const AosSoma *soma,
+                                          uint32_t play_frames) {
+    AosPauseHubValues values = {
+        .hp = soma->hp,
+        .mp = stats->mp,
+        .max_hp = (uint16_t)soma->max_hp,
+        .max_mp = stats->max_mp,
+        .attack = stats->atk,
+        .defence = stats->def,
+        .level = stats->level,
+        .experience = stats->experience,
+        .next_experience = (uint32_t)aos_stats_experience_to_next(stats),
+        .gold = stats->gold,
+        .play_frames = play_frames,
+        .status = stats->status,
+    };
+    memcpy(values.stats, stats->current, sizeof values.stats);
+    return values;
+}
+
 bool draw_native_pause_hub(SDL_Renderer *renderer, SDL_Texture *texture,
                                   AosPauseGraphics *graphics,
                                   const AosSoulMenu *menu, const AosStats *stats,
@@ -168,21 +189,7 @@ bool draw_native_pause_hub(SDL_Renderer *renderer, SDL_Texture *texture,
     }
     if (menu->page != AOS_SOUL_MENU_PAGE_HUB) return false;
     pause_text_buttons(graphics, menu);
-    AosPauseHubValues values = {
-        .hp = soma->hp,
-        .mp = stats->mp,
-        .max_hp = (uint16_t)soma->max_hp,
-        .max_mp = stats->max_mp,
-        .attack = stats->atk,
-        .defence = stats->def,
-        .level = stats->level,
-        .experience = stats->experience,
-        .next_experience = (uint32_t)aos_stats_experience_to_next(stats),
-        .gold = stats->gold,
-        .play_frames = play_frames,
-        .status = stats->status,
-    };
-    memcpy(values.stats, stats->current, sizeof values.stats);
+    AosPauseHubValues values = pause_hub_values(stats, soma, play_frames);
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
     if (!aos_pause_graphics_render_hub(graphics, &values, menu->hub_cursor,
                                        pixels, sizeof pixels)) {
@@ -320,16 +327,18 @@ bool draw_native_config(SDL_Renderer *renderer, SDL_Texture *texture,
 
 bool draw_native_sleep(SDL_Renderer *renderer, SDL_Texture *texture,
                               AosPauseGraphics *graphics,
-                              const AosSoulMenu *menu) {
-    if (!renderer || !texture || !graphics || !menu || !menu->open ||
+                              const AosSoulMenu *menu, const AosStats *stats,
+                              const AosSoma *soma, uint32_t play_frames) {
+    if (!renderer || !texture || !graphics || !menu || !stats || !soma ||
+        !menu->open ||
         menu->page != AOS_SOUL_MENU_PAGE_SLEEP)
         return false;
     pause_text_buttons(graphics, menu);
+    AosPauseHubValues values = pause_hub_values(stats, soma, play_frames);
     static uint8_t pixels[VIEW_W * VIEW_H * 4];
-    if (!aos_pause_graphics_render_sleep(graphics, menu->sleep_available,
-                                         menu->sleep_choice,
-                                         menu->sleep_result,
-                                         pixels, sizeof pixels)) {
+    if (!aos_pause_graphics_render_sleep_hub(
+            graphics, &values, menu->sleep_available, menu->sleep_choice,
+            menu->sleep_result, pixels, sizeof pixels)) {
         if (getenv("ARIA_DEBUG_MENU_DRAW"))
             fprintf(stderr, "menu draw: sleep render failed\n");
         return false;
@@ -372,12 +381,20 @@ bool draw_native_ability(SDL_Renderer *renderer, SDL_Texture *texture,
 bool draw_native_item_use(SDL_Renderer *renderer, SDL_Texture *texture,
                                  AosPauseGraphics *graphics,
                                  const AosSoulMenu *menu, const AosStats *stats,
-                                 const AosItemUseRecord items[AOS_ITEM_RECORDS]) {
+                                 const AosItemUseRecord items[AOS_ITEM_RECORDS],
+                                 const AosSoma *soma) {
     if (!renderer || !texture || !graphics || !menu || !stats || !menu->open ||
-        !items || menu->page != AOS_SOUL_MENU_PAGE_ITEM_USE)
+        !items || !soma || menu->page != AOS_SOUL_MENU_PAGE_ITEM_USE)
         return false;
     pause_text_buttons(graphics, menu);
-    AosPauseItemUseValues values = {.selected = 0xFF};
+    AosPauseItemUseValues values = {
+        .selected = 0xFF,
+        .hp = soma->hp,
+        .mp = stats->mp,
+        .max_hp = (uint16_t)soma->max_hp,
+        .max_mp = stats->max_mp,
+        .status = stats->status,
+    };
     memcpy(values.counts, stats->item_counts, sizeof values.counts);
     for (unsigned item = 0; item < AOS_PAUSE_ITEM_USE_RECORDS; ++item)
         values.icons[item] = items[item].icon;

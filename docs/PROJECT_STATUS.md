@@ -1,3 +1,64 @@
+## Patch 1208 - Chaos phase 2: real attack machines, script tables and role children
+
+- **Scope.** `src/runtime/aos/enemies/chaos.c`,
+  `src/runtime/aos/core/aos_enemy.h` and `tests/test_aos_enemy.c`
+  only. Replaces the collapsed phase-2 intro/attack/death cycle
+  with the decoded `EnemyChaos2Update` (0x080A6ED4) state machines
+  and their type-0x49 child entities; phase 1 is unchanged.
+- **Native decode.** `sub_080A4508` is a twelve-case attack
+  selector on the + 0xB record: case 0 waits
+  `(RandomNumberGenerator() & 0x7F) + 0xB4`, picks the volley
+  (case 1/2, table 0x0852838E, + 0xD = 0x38, firing angle 0x4000,
+  ±0x1555/0x1556 step, twelve shots every other frame with song
+  0x145) or, while the record's + 0x14 armed flag is clear, the
+  burst (case 10/11, table 0x0852839B, ~82 script ticks of
+  `sub_080A6BE8` bursts then four `sub_080A5270` turrets at
+  vx ±0x60000 / vy ∓0x30000 and song 0x85); an armed record just
+  reloads the delay. `sub_080A4CE4` steps the `sub_080A6F58`
+  script tables (create 0x08528374, intro 0x08528381, volley
+  0x0852838E, burst 0x0852839B — real ROM bytes). `sub_080A4728`
+  is the eleven-case intro (timers 0x3B/0x77/0x27/0x27) spawning
+  the four `sub_080A4D64` limbs; `sub_080A49E0` is the four-case
+  death machine (song 0x167/0x168, three `sub_080A6C7C` orbs and
+  five `sub_080A6DEC` embers, the 0x3C/0x3A tail and song
+  0x1010); `sub_080A4C0C` plays 0x1010 and enters state 3 at
+  hp <= 0 (phase-2 hp 0xBB8).
+- **Port.** New roles `AOS_ROLE_CHAOS_SHOT` (sub_080A5048/
+  sub_080A51C0 homing volley shot, 0x4E + 0xEF life),
+  `AOS_ROLE_CHAOS_TURRET` (sub_080A5270/sub_080A537C: aim at the
+  target entity, 23/24 velocity damping, 0x5DB lifetime, the
+  sub_080A6FC0 state-9/sub_080A56CC muzzle blast and the
+  sub_080A55F0 knockback folded into the shared collide),
+  `AOS_ROLE_CHAOS_ORB`/`ORB2` (sub_080A6C7C/sub_080A6DEC
+  orbiting embers), `AOS_ROLE_CHAOS_LIMB` (sub_080A4D64/
+  sub_080A4E80 intro limbs with the sub_080A4FA0 lethal tail,
+  song 0x6E and the parent's limb countdown),
+  `AOS_ROLE_CHAOS_MUZZLE` (sub_080A56CC/sub_080A6FE4) and
+  `AOS_ROLE_CHAOS_BURST` (sub_080A6BE8/sub_080A70CC). Children
+  ride the established `AosHitReport.children` mechanism with
+  `parent` links; `AosEnemy` gains the + 0x20 record fields
+  (`ch2_delay`/`ch2_volley`/`ch2_armed`/`ch2_table`/`ch2_idx`/
+  `ch2_frame`/`ch2_anim`/`ch2_done`) plus the child state fields.
+- **Tests.** `chaos_tests` now covers the phase-2 hp 0xBB8, the
+  lethal entry (song 0x1010, state 3, removal tail), the volley
+  path (12 `CHAOS_SHOT` children, song 0x145, shot life/state),
+  the burst path (4 `CHAOS_TURRET` children, `CHAOS_BURST`
+  children, armed flag, song 0x85, turret homing/damping and
+  the state-9 blast entry), the intro's four `CHAOS_LIMB`
+  children at the decoded positions and the limb lethal tail.
+- **Still unported (documented).** The `sub_080A57BC` eight-limb
+  body spawn, the remaining ~helper effects beyond the routines
+  above, the `sub_0803E058` affine channels, the palette
+  fades/restores, the `SetPlayerInput` locks and the `gEwramData`
+  story writes; the phase-2 children reuse the `Enemy/chaos`
+  kind's anim set because the phase-2 art (tiles 0x08119224 /
+  frames 0x08226B58) has no second exported kind; no emulator
+  comparison yet.
+- **Registries.** `annotations.tsv` (`aos.enemies.chaos`) and
+  `aos_monster_aspects.tsv` (chaos) notes/divergences updated;
+  status stays `functional`/`ported` — the boss runs end-to-end
+  but fidelity is not emulator-validated.
+
 ## Patch 1207 - opening: sub_08067A04 page-clear window slide ported; pacing gap closed
 
 - **Scope.** Closes the ~1085-frame opening pacing gap localized by

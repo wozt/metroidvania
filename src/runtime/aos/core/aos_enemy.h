@@ -296,7 +296,11 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_GA_PART = 171, AOS_ROLE_GRAHAM_CLONE = 172,
        AOS_ROLE_GRAHAM_CORE = 173, AOS_ROLE_CHAOS_PART = 174,
        AOS_ROLE_BG_PART = 175,
-       AOS_ROLE_HH_WAVE = 176, AOS_ROLE_HH_WAVE_TRAIL = 177 };
+       AOS_ROLE_HH_WAVE = 176, AOS_ROLE_HH_WAVE_TRAIL = 177,
+       AOS_ROLE_CHAOS_SHOT = 178, AOS_ROLE_CHAOS_TURRET = 179,
+       AOS_ROLE_CHAOS_ORB = 180, AOS_ROLE_CHAOS_ORB2 = 181,
+       AOS_ROLE_CHAOS_LIMB = 182, AOS_ROLE_CHAOS_MUZZLE = 183,
+       AOS_ROLE_CHAOS_BURST = 184 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -404,6 +408,27 @@ typedef struct AosEnemy {
     uint8_t ch_f15, ch_f18, ch_t19, ch_t1a, ch_t1b;
     int32_t ch_cx, ch_cy;
     uint32_t ch_spin;
+    /* Chaos phase 2 (EnemyChaos2Update's +0x20 attack record of
+     * sub_080A6F58): +0xC the attack delay, +0x10 the volley count,
+     * +0x14 the turret-armed flag, +0x18/+0x1C the script entry and
+     * frame, +0x20 the script-done flag and +0x24 the script table;
+     * the entity's +0x48 firing angle and +0x50 per-volley step reuse
+     * the native velocity slots, and +0x6D/+0x6E/+0x6F are the byte
+     * flags the sub_080A49E0 song gate and the sub_080A4D64 limbs
+     * read. */
+    int32_t ch2_delay, ch2_angle, ch2_astep;
+    uint16_t ch2_volley;
+    bool ch2_armed, ch2_done;
+    uint8_t ch2_idx, ch2_frame, ch2_anim;
+    const uint8_t *ch2_table;
+    uint8_t ch2_f6d, ch2_f6e, ch2_f6f;
+    uint16_t ch2_t20;
+    /* The sub_080A6FE4 muzzle's +0x14/+0x18 home offset from the aim
+     * entity and the phase-2 turret's +0x14 lifetime counter; the
+     * parent's +0x1C signed limb countdown sub_080A4FA0 decrements. */
+    int32_t ch2_hx, ch2_hy, ch2_life;
+    int8_t ch2_limb_n;
+    uint16_t ch2_rot;       /* the ORB child's + 0x18 u16 affine angle */
     bool buer_fire_mirrored; /* linked second sprite's +0x58 bit 0x40, separate from parent */
     /* Death step-one linked-fire displacement: +1 X/Y on every third
      * tick, then -1 on the following tick; carried into death step two.

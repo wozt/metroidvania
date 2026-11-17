@@ -13343,10 +13343,11 @@ static void chaos_tests(void) {
     for (int i = 0; i < W * H; ++i) cells[i] = 0;
     for (int r = 20; r < 24; ++r)
         for (int x = 0; x < W; ++x) cells[r * W + x] = 0x03;
-    enum { CH_ANIMS = 4 };
-    static const uint8_t ticks4[4] = {4, 4, 4, 4};
+    /* 0x12 anims: the phase-2 death machine plays id 0x11. */
+    enum { CH_ANIMS = 0x12 };
+    static const uint8_t ticks8[8] = {4, 4, 4, 4, 4, 4, 4, 4};
     static AosAnimDef defs[CH_ANIMS];
-    for (int a = 0; a < CH_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks4};
+    for (int a = 0; a < CH_ANIMS; ++a) defs[a] = (AosAnimDef){8, ticks8};
     static AosAnimSet anims;
     anims.anims = defs;
     anims.count = CH_ANIMS;
@@ -13419,6 +13420,8 @@ static void chaos_tests(void) {
     aos_enemy_update(&e2, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 0, 0, always_zero);
     assert(e2.defeated && e2.state == 3);
+    /* 0x1010 >= 0x400: PlaySong routes it through AudioCommand. */
+    assert(aos_audio_requested(AOS_AUDIO_COMMAND, 0x1010) >= 1);
     frames = 0;
     while (!e2.removed && frames < 0x200) {
         aos_enemy_update(&e2, &soma, &layer, &kind, NULL, NULL,
@@ -13426,6 +13429,157 @@ static void chaos_tests(void) {
         ++frames;
     }
     assert(e2.removed);
+
+    /* Phase-2 attack machine (sub_080A4508): RNG & 1 == 1 arms the
+     * volley — table 0x0852838E, + 0xD = 0x38, firing angle 0x4000
+     * and the ±0x1555/0x1556 step — then case 2 emits one
+     * CHAOS_SHOT every other frame for twelve volleys with song
+     * 0x145 per shot. */
+    AosEnemy e3;
+    assert(aos_enemy_create(&e3, 0x70, 300, 150, 0, 1,
+                            &soma, &layer, &kind, &ch));
+    e3.state = 1;
+    e3.step = 0;
+    e3.ch2_delay = 0;
+    int shots = 0;
+    frames = 0;
+    while (frames < 0x400 && shots < 12) {
+        AosHitReport h = aos_enemy_update(&e3, &soma, &layer, &kind,
+                                          NULL, NULL, 10, 4, 0, 0,
+                                          never_zero);
+        for (int i = 0; i < h.child_count; ++i)
+            if (h.children[i].role == AOS_ROLE_CHAOS_SHOT) shots++;
+        ++frames;
+    }
+    assert(shots >= 12);
+    assert(e3.ch2_volley > 0);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x145) >= 1);
+    /* A spawned shot carries the decoded life/frame/velocity: it
+     * integrates and deletes on its 0x4E + 0xEF counters or margin. */
+    AosEnemy shot;
+    memset(&shot, 0, sizeof shot);
+    shot.id = 0x70;
+    shot.role = AOS_ROLE_CHAOS_SHOT;
+    shot.parent = &e3;
+    shot.state = 0;
+    shot.timer = 0x4E;
+    shot.hp = 1;
+    shot.x = AOS_FIXED(100);
+    shot.y = AOS_FIXED(100);
+    shot.vx = 0x30000;
+    shot.vy = 0;
+    int32_t sx0 = shot.x;
+    aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    /* State 0 only counts + 0xD down from 0x4E. */
+    assert(shot.state == 0 && shot.timer == 0x4D && !shot.removed);
+    frames = 0;
+    while (shot.state == 0 && frames < 0x60) {
+        aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(shot.state == 1);
+    aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(shot.x != sx0);
+
+    /* RNG & 1 == 0 with the record unarmed runs case 10: the burst
+     * table 0x0852839B walks ~82 ticks then case 11 emits the four
+     * CHAOS_TURRET children and song 0x85. */
+    AosEnemy e4;
+    assert(aos_enemy_create(&e4, 0x70, 300, 150, 0, 1,
+                            &soma, &layer, &kind, &ch));
+    e4.state = 1;
+    e4.step = 0;
+    e4.ch2_delay = 0;
+    int turrets = 0, bursts = 0;
+    frames = 0;
+    while (frames < 0x600 && turrets < 4) {
+        AosHitReport h = aos_enemy_update(&e4, &soma, &layer, &kind,
+                                          NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+        for (int i = 0; i < h.child_count; ++i) {
+            if (h.children[i].role == AOS_ROLE_CHAOS_TURRET) turrets++;
+            if (h.children[i].role == AOS_ROLE_CHAOS_BURST) bursts++;
+        }
+        ++frames;
+    }
+    assert(turrets == 4);
+    assert(bursts > 0);
+    assert(e4.ch2_armed);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x85) >= 1);
+
+    /* A turret homes toward the aim point, damps 23/24 and enters
+     * the state-9 blast on a lethal hit. */
+    AosEnemy tu;
+    memset(&tu, 0, sizeof tu);
+    tu.id = 0x70;
+    tu.role = AOS_ROLE_CHAOS_TURRET;
+    tu.parent = &e4;
+    tu.state = 0;
+    tu.hp = 0x258;
+    tu.x = AOS_FIXED(100);
+    tu.y = AOS_FIXED(100);
+    tu.vx = 0x60000;
+    tu.vy = -0x30000;
+    int32_t tx0 = tu.x, ty0 = tu.y;
+    for (int i = 0; i < 30; ++i)
+        aos_enemy_update(&tu, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(tu.x != tx0 || tu.y != ty0);
+    tu.hp = 0;
+    aos_enemy_update(&tu, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(tu.state == 9 && tu.timer == 0x3C);
+
+    /* The intro's case 3 emits the four CHAOS_LIMB children at the
+     * decoded positions; a limb dies into state 0xA on a lethal hit
+     * and deletes on the blink timer. */
+    AosEnemy e5;
+    assert(aos_enemy_create(&e5, 0x70, 300, 150, 0, 1,
+                            &soma, &layer, &kind, &ch));
+    int limbs = 0;
+    bool saw_limb_pos = false;
+    frames = 0;
+    while (e5.state == 0 && frames < 0x400) {
+        AosHitReport h = aos_enemy_update(&e5, &soma, &layer, &kind,
+                                          NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+        for (int i = 0; i < h.child_count; ++i)
+            if (h.children[i].role == AOS_ROLE_CHAOS_LIMB) {
+                limbs++;
+                if (h.children[i].x == 0x180000 &&
+                    h.children[i].y == 0x280000)
+                    saw_limb_pos = true;
+            }
+        ++frames;
+    }
+    assert(e5.state == 1);
+    assert(limbs == 4);
+    assert(saw_limb_pos);
+    assert(e5.ch2_limb_n == 4);
+    AosEnemy limb;
+    memset(&limb, 0, sizeof limb);
+    limb.id = 0x70;
+    limb.role = AOS_ROLE_CHAOS_LIMB;
+    limb.parent = &e5;
+    limb.state = 0;
+    limb.hp = 0xBB8;
+    limb.x = AOS_FIXED(50);
+    limb.y = AOS_FIXED(50);
+    limb.hp = 0;
+    aos_enemy_update(&limb, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    /* sub_080A4FA0's lethal tail: song 0x6E, state 0xA, timer 0x28. */
+    assert(limb.state == 0xA && limb.timer == 0x28);
+    frames = 0;
+    while (!limb.removed && frames < 0x100) {
+        aos_enemy_update(&limb, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(limb.removed);
 
     /* A CHAOS_PART child orbits the core record and dies with the
      * parent. */

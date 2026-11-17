@@ -115,10 +115,6 @@ aos:asm:asm/code/code_08040A38.s:sub_08045BC8	sub_08045BC8	unclassified		technic
 aos:asm:asm/code/code_08040A38.s:sub_08045C34	sub_08045C34	unclassified		technical	exclusive_callees	asm_function	0x08045C34	asm/code/code_08040A38.s	8925	1	5
 aos:asm:asm/code/code_08040A38.s:sub_08045D5C	sub_08045D5C	unclassified				asm_function	0x08045D5C	asm/code/code_08040A38.s	9069	0	1
 aos:asm:asm/code/code_08040A38.s:sub_08045DC8	sub_08045DC8	unclassified		technical	exclusive_callees	asm_function	0x08045DC8	asm/code/code_08040A38.s	9127	4	3
-aos:asm:asm/code/code_08040A38.s:sub_08045EE0	sub_08045EE0	unclassified				asm_function	0x08045EE0	asm/code/code_08040A38.s	9273	0	4
-aos:asm:asm/code/code_08040A38.s:sub_08046080	sub_08046080	unclassified		technical	exclusive_callees	asm_function	0x08046080	asm/code/code_08040A38.s	9489	1	7
-aos:asm:asm/code/code_08040A38.s:sub_08046100	sub_08046100	unclassified				asm_function	0x08046100	asm/code/code_08040A38.s	9545	0	2
-aos:asm:asm/code/code_08040A38.s:sub_08046148	sub_08046148	unclassified				asm_function	0x08046148	asm/code/code_08040A38.s	9582	1	3
 aos:asm:asm/code/code_08040A38.s:sub_080461BC	sub_080461BC	unclassified				asm_function	0x080461BC	asm/code/code_08040A38.s	9636	4	0
 aos:asm:asm/code/code_08040A38.s:sub_080462F0	sub_080462F0	unclassified				asm_function	0x080462F0	asm/code/code_08040A38.s	9807	5	0
 aos:asm:asm/code/code_08040A38.s:sub_080463A8	sub_080463A8	unclassified		technical	exclusive_callees	asm_function	0x080463A8	asm/code/code_08040A38.s	9907	3	2
@@ -1102,7 +1098,6 @@ aos:c:src/code_08032444.c:sub_08032CD0	sub_08032CD0	menus	referrers			c_function
 aos:c:src/code_08032444.c:sub_08032CE0	sub_08032CE0	menus	referrers			c_function	0x08032CE0	src/code_08032444.c	938	1	1
 aos:c:src/code_08032444.c:sub_08032D18	sub_08032D18	menus	referrers			c_function	0x08032D18	src/code_08032444.c	964	1	1
 aos:c:src/code_08032444.c:sub_08032D58	sub_08032D58	unclassified		inventory	exclusive_callees	c_function	0x08032D58	src/code_08032444.c	992	2	1
-aos:c:src/code_08032444.c:sub_08032DF0	sub_08032DF0	unclassified				c_function	0x08032DF0	src/code_08032444.c	1048	3	2
 aos:c:src/code_08032E4C.c:sub_08032E4C	sub_08032E4C	unclassified		technical	exclusive_callees	c_function	0x08032E4C	src/code_08032E4C.c	37	0	4
 aos:c:src/code_08032E4C.c:sub_08032EFC	sub_08032EFC	unclassified		technical	exclusive_callees	c_function	0x08032EFC	src/code_08032E4C.c	228	2	2
 aos:c:src/code_08032E4C.c:sub_08032FC8	sub_08032FC8	unclassified		technical	exclusive_callees	c_function	0x08032FC8	src/code_08032E4C.c	289	0	5

@@ -26,7 +26,7 @@ regenerate this view.
 | Game | Source revision | Routines | Addressed | Call edges (indirect) | Annotated features |
 |---|---:|---:|---:|---:|---:|
 | Metroid: Zero Mission | `43b7fd52f552` | 2970 | 2458 | 6071 (406) | 92 |
-| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 199 |
+| Castlevania: Aria of Sorrow | `bc23d849d578` | 3573 | 2938 | 14228 (17) | 200 |
 
 | Game | Header declarations | Data symbols | Pointer tables | Named types | Constants |
 |---|---:|---:|---:|---:|---:|
@@ -42,7 +42,7 @@ routine IDs and call edges are rooted at
 | Game | Attached to features | Not yet attached |
 |---|---:|---:|
 | Metroid: Zero Mission | 1655 | 1315 |
-| Castlevania: Aria of Sorrow | 2280 | 1293 |
+| Castlevania: Aria of Sorrow | 2285 | 1288 |
 
 The complete generated Aria backlog is
 [`data/native_parity/aos_unassigned_routines.tsv`](../data/native_parity/aos_unassigned_routines.tsv).
@@ -2425,6 +2425,15 @@ Dependencies: `aos.environment.wooden_doors`.
 Known divergences: The entry table 0x08526064 (frame, block offset, box and shape) is a source constant. The event words gEwramData + 0x344 are stored in the portable save (schema v10), not in a native SRAM slot. Nothing in the port sets the bit of an object 0x09 yet. The map update of sub_08012154 / sub_08012048, the OBJ priorities (6 and 0x16) against the backgrounds and the weapon callback on a wall hit are not modelled; translucent effects use half alpha.  
 Next action: Trace the setters of the object 0x09 bits and the map update.
 Evidence: in game: `aria area_02_room_001 (--spawn 90 120 --weapon 1, attacking left): the wall at x 16 breaks at the fourth blow and Soma walks into the corridor; with --yellow-soul 6 it sparkles`.
+
+[~] **`aos.environment.room_breakables` — Aria kind-3 breakable records and conditional room pickups.** sub_0800F1FC case 3 spawns every kind-3 record through sub_08046080/sub_08045EE0: sub_08046148's per-param0 tile DMA is exported as Object/special_62_v00-v15 animation 3 (0x081C3E00 chunks onto sheet tiles 32-37/48-53) and drawn per record; sub_08045F9C case 0 drops a sub_08043F70 money pickup ((RNG&1)+param1) on full MP Soma or a sub_08043C10 heart (big = param1 != 0) through the AosPickup paths. Cases 5/6 spawn their conditional sub_08044054 placed pickups once on camera-window entry: kind 5 on unk_A1_4 + Soma, kind 6 on Soma + unowned inventory slot + all souls collected.
+
+Native evidence: `aos:asm:asm/code/code_08040A38.s:sub_08043C10`, `aos:asm:asm/code/code_08040A38.s:sub_08043F70`, `aos:asm:asm/code/code_08040A38.s:sub_08044054`, `aos:asm:asm/code/code_08040A38.s:sub_08044FA8`, `aos:asm:asm/code/code_08040A38.s:sub_08045EE0`, `aos:asm:asm/code/code_08040A38.s:sub_08045F9C`, `aos:asm:asm/code/code_08040A38.s:sub_08046080`, `aos:asm:asm/code/code_08040A38.s:sub_08046100`, `aos:asm:asm/code/code_08040A38.s:sub_08046148`, `aos:asm:asm/code/code_08060B98.s:sub_08068AD4`, `aos:asm:asm/code/code_08060B98.s:sub_0806D5C0`, `aos:c:src/code_0800F1FC.c:sub_0800F1FC`, `aos:c:src/code_08032444.c:sub_08032DF0`, `aos:c:src/code_080D73B8.c:PlaySong`.  
+Local implementation: [`src/runtime/aos/game/aos_breakable.c`](../src/runtime/aos/game/aos_breakable.c), [`src/runtime/aos/game/aos_breakable.h`](../src/runtime/aos/game/aos_breakable.h), [`src/runtime/aria_entities.c`](../src/runtime/aria_entities.c), [`src/runtime/aria_entities.h`](../src/runtime/aria_entities.h), [`src/runtime/aria_draw.c`](../src/runtime/aria_draw.c), [`src/runtime/aria_runtime.c`](../src/runtime/aria_runtime.c), [`src/assets/aos/objects.c`](../src/assets/aos/objects.c), [`src/runtime/aos/game/aos_pickup.c`](../src/runtime/aos/game/aos_pickup.c).  
+Tests: [`tests/test_aos_breakable.c`](../tests/test_aos_breakable.c).
+Dependencies: `aos.items.money_pickups`, `aos.objects.special_sprites`.  
+Known divergences: The sub_08068AD4 probe and the sub_08045F9C attack-box match stay caller approximations; entity +0x36 (the drop selector) is unmodelled and reads 0, so only case 0 (heart or full-MP money) drops — cases 1/2 are unreachable; the +0x92 param0 cache's last-variant-wins VRAM fight is drawn per-entity instead; unk_60.unk_A1_4 uses its new-game value (the sub_080074C0 menu toggle is unported); sub_08032DF0 is reduced to the ==0x3E8 all-souls check; kind-5 id>=5 and kind-6 categories outside 1-4 spawn nothing (native sub_08044054 coverage); the state-1 gore burst remains an effect approximation; no emulator comparison.  
+Next action: Port the +0x36 drop-selector source if a record field is found, model the unk_60.unk_A1_4 menu toggle, and compare a breakable room against an emulator.
 
 [+] **`aos.environment.wooden_doors` — Native wooden doors.** Object00 is ported: creation open or closed with its three blocks, opening on contact while facing it (not on a backdash), walking Soma through or out, closing, the off-screen hiding of sub_08068AD4(e, -32, 0, 0x130, 0xD0) and the global flags held while Soma passes; wooden and green door graphics with their palette cycles are exported, and sub_0804D794's affine swing is reproduced: the leaf is horizontally squashed by cos(swing) and shifted by 32*sin(swing)-1 px while 0 < swing < 0x4000 (aos_door_swing_scale/shift, drawn in draw_doors); the fully-open non-affine draw of the door-frame variant is approximated by the edge-on (zero-width) leaf since the open-doorway art is not separately exported.
 

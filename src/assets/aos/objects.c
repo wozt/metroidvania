@@ -2325,6 +2325,72 @@ static bool write_text_file(const char *directory, const char *name,
                                     text->size, error, error_size);
 }
 
+/* sub_08046148's variant tile DMA for the kind-3 breakable props
+ * (sub_08046080): param0 (+ 0x30, 0-15 in the extracted rooms)
+ * selects a 0x200-byte pair of 0xC0-byte tile chunks in the table at
+ * 0x081C3E00 — source 0x081C3E00 + (param0 & 1) * 0x100 +
+ * (param0 >> 1) * 0x400, second chunk at + 0x200. Each chunk is six
+ * 8x8 tiles copied into OBJ VRAM at 0x06010800 + r4 and
+ * 0x06010C00 + r4 (r4 the sheet's VRAM offset). The OBJ tile rows
+ * are 32 tiles wide while the decoded sheet packs 16 per row, so the
+ * native destinations are export tiles 32-37 and 48-53 — exactly
+ * the region frames 30-32 of 0x0820ED60 animation 3 sample (verified
+ * against the param0 = 0 chunks, which reproduce sheet tiles
+ * 32-37). Exported as Object/special_62_v<param0> animation 3: id
+ * 62 collides with no SPECIAL record and the _vN slot carries the
+ * variant. The native + 0x92 param0 cache re-DMAs only on change,
+ * so multiple variants in one room fight over the shared tiles —
+ * the per-variant frames here draw each prop correctly instead. */
+static bool export_breakable_variants(const FusionRom *rom,
+                                      FusionSpriteLibrary *library,
+                                      Text *rows, char *error,
+                                      size_t error_size) {
+    TileSheet sheet;
+    if (!load_tile_sheet(rom, 0x081C15F4, &sheet, error, error_size))
+        return false;
+    const uint8_t *palette = load_palette(rom, 0x0826F8A4, 7,
+                                          error, error_size);
+    const uint8_t *descriptor = palette
+        ? slice(rom, 0x0820ED60, 16, "breakable frame descriptor",
+                error, error_size)
+        : NULL;
+    const uint8_t *animation = descriptor && read_u16(descriptor + 2) > 3
+        ? slice(rom, read_u32(descriptor + 12) + 3 * 4, 4,
+                "breakable animation 3", error, error_size)
+        : NULL;
+    uint32_t animation_pointer = animation ? read_u32(animation) : 0;
+    bool success = palette && descriptor && animation && animation_pointer;
+    for (int param0 = 0; success && param0 < 16; ++param0) {
+        TileSheet variant = {0};
+        variant.width_tiles = sheet.width_tiles;
+        variant.size = sheet.size;
+        variant.data = malloc(sheet.size);
+        if (!variant.data) { success = false; break; }
+        memcpy(variant.data, sheet.data, sheet.size);
+        uint32_t src = 0x081C3E00 + ((uint32_t)(param0 & 1) << 8) +
+                       ((uint32_t)(param0 >> 1) << 10);
+        for (int chunk = 0; chunk < 2 && success; ++chunk)
+            for (int tile = 0; tile < 6; ++tile) {
+                const uint8_t *data = slice(
+                    rom, src + (uint32_t)chunk * 0x200 + (uint32_t)tile * 32,
+                    TILE_BYTES, "breakable variant tile", error, error_size);
+                if (!data) { success = false; break; }
+                memcpy(variant.data + ((size_t)(chunk ? 48 : 32) + tile) *
+                           TILE_BYTES,
+                       data, TILE_BYTES);
+            }
+        char name[32];
+        int written = snprintf(name, sizeof name, "special_62_v%02d", param0);
+        success = success && written > 0 && (size_t)written < sizeof name &&
+                  export_animation(rom, library, "Object", name, 0x0820ED60,
+                                   &variant, palette, 3, animation_pointer,
+                                   0, false, true, rows, error, error_size);
+        free(variant.data);
+    }
+    free(sheet.data);
+    return success;
+}
+
 bool fusion_aos_export_objects(const FusionRom *rom,
                                const char *metadata_output,
                                const char *runtime_output,
@@ -2387,6 +2453,9 @@ bool fusion_aos_export_objects(const FusionRom *rom,
          ++index)
         success = export_entity(rom, &library, &special15_variants[index],
                                 "Object", &object_rows, error, error_size);
+    if (success)
+        success = export_breakable_variants(rom, &library, &object_rows,
+                                            error, error_size);
     for (size_t index = 0;
          success && index < sizeof special07_variants / sizeof special07_variants[0];
          ++index)

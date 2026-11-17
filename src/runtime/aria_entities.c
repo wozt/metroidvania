@@ -566,6 +566,47 @@ static int boss_clear_bit(const AriaEntity *e) {
     }
 }
 
+/* sub_08044FA8(type, variant): the owned-count byte of the player
+ * inventories — type 2 itemInventory (+ 0x38), 3 weaponInventory
+ * (+ 0x58), 4 armorInventory (+ 0x93, which runs into
+ * accessoryInventory: armor_counts already models the combined
+ * 45-entry span); other types read itemInventory[0]. The kind-6
+ * gate needs *ptr == 0. Out-of-range variants read past the native
+ * arrays too; the port bounds them and reports owned (no spawn). */
+static bool kind6_inventory_unowned(const AosStats *stats, int type,
+                                    int variant) {
+    if (!stats) return false;
+    switch (type) {
+    case 2:
+        return variant >= 0 && variant < AOS_ITEM_RECORDS &&
+               stats->item_counts[variant] == 0;
+    case 3:
+        return variant >= 0 && variant < AOS_WEAPON_RECORDS &&
+               stats->weapon_counts[variant] == 0;
+    case 4:
+        return variant >= 0 && variant < AOS_ARMOR_RECORDS &&
+               stats->armor_counts[variant] == 0;
+    default:
+        return stats->item_counts[0] == 0;
+    }
+}
+
+/* sub_08032DF0(): 1000 * owned / total over the red, blue and yellow
+ * soul inventories (sUnk_080E1CD4 totals 55/24/35 — the ability
+ * souls do not count). Only the == 0x3E8 result is consumed, which
+ * requires every soul owned. */
+static bool kind6_all_souls_collected(const AosStats *stats) {
+    static const uint8_t totals[3] = {55, 24, 35};
+    if (!stats) return false;
+    int owned = 0, total = 0;
+    for (int type = 0; type < 3; ++type)
+        for (int index = 0; index < totals[type]; ++index) {
+            ++total;
+            if (aos_souls_total(stats, type, index)) ++owned;
+        }
+    return owned * 1000 / total == 0x3E8;
+}
+
 static bool spawn_special_boss_soul(AriaRoom *room, const AriaEntity *entity,
                                     const AosSoma *soma, const AriaCombat *combat) {
     uint16_t special_index;
@@ -2980,21 +3021,87 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                          wy + wh - 1 < e->y - 16 || e->y < wy);
             /* sub_08046100's bounce gate: gEwramData word 0 bit 1 is
              * the whip-swing flag — approximated by the live weapon. */
+            bool mp_full_soma = combat->progress &&
+                combat->progress->mp == (int16_t)combat->progress->max_mp &&
+                combat->progress->character == 0;
             aos_breakable_update(&e->breakable, near, hit,
-                                 combat->weapon != NULL);
+                                 combat->weapon != NULL, mp_full_soma);
             if (e->breakable.song >= 0) {
                 sound = e->breakable.song;
                 printf("Breakable %zu: song 0x%X\n", i, e->breakable.song);
             }
-            for (int fx = 0; fx < e->breakable.content_fx +
-                 e->breakable.gore_fx && room->effect_count < MAX_EFFECTS;
-                 fx++) {
+            /* sub_08045F9C's latched drop, created through the same
+             * AosPickup paths the placed records and enemy drops
+             * use: sub_08043F70 money (variant (RNG&1) + param1) or
+             * sub_08043C10 heart (big = param1 != 0, pop = 0) at the
+             * entity's + 0x42/+ 0x46. */
+            if (e->breakable.drop_kind == AOS_BREAKABLE_DROP_MONEY &&
+                combat->money && combat->progress &&
+                room->pickup_count < MAX_PICKUPS) {
+                uint8_t variant =
+                    (uint8_t)((aos_random() & 1) + e->breakable.param1);
+                room->pickups[room->pickup_count++] = aos_pickup_create_money(
+                    combat->money, variant, e->x, e->y);
+                printf("Breakable %zu: money variant %u\n", i, variant);
+            } else if (e->breakable.drop_kind == AOS_BREAKABLE_DROP_HEART &&
+                       room->pickup_count < MAX_PICKUPS) {
+                room->pickups[room->pickup_count++] = aos_pickup_create_heart(
+                    e->breakable.drop_big, false, e->x, e->y);
+            }
+            for (int fx = 0; fx < e->breakable.gore_fx &&
+                 room->effect_count < MAX_EFFECTS; fx++) {
                 room->effects[room->effect_count++] = (AosEffect){
                     .kind = AOS_EFFECT_SPARKLE, .direct = true,
                     .x = e->x, .y = e->y - 8};
             }
-            e->breakable.content_fx = 0;
             e->breakable.gore_fx = 0;
+            continue;
+        }
+        /* sub_0800F1FC cases 5 and 6: conditional placed pickups.
+         * Like case 4 they run once when the record enters the
+         * camera window, then the temporary entity deletes itself.
+         * The created pickup's + 0x514 persistent field copies the
+         * record's param0 (unk_8) — the same bit index
+         * aos_pickup_create_placed tests — while the record's own
+         * persistent_index only dedups the room-load pass (the
+         * port's e->spawned covers it). sub_08044054's last argument
+         * is 1 (fixed placed pickup). */
+        if (e->kind == 5 || e->kind == 6) {
+            if (!e->spawned) {
+                if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
+                e->spawned = true;
+                bool spawn = false;
+                if (e->kind == 5) {
+                    /* unk_60.unk_A1_4 && currentCharacter == 0 &&
+                     * persistent bit clear && id < 5 (id >= 5 hits
+                     * the decompiled var_r8 path with no create —
+                     * nothing spawns). */
+                    spawn = combat->unk60_a1_4 && combat->progress &&
+                            combat->progress->character == 0 &&
+                            e->id < 5;
+                } else {
+                    /* currentCharacter == 0 && bit clear &&
+                     * *sub_08044FA8(id, param1) == 0 &&
+                     * sub_08032DF0() == 0x3E8 (every red/blue/yellow
+                     * soul owned). */
+                    spawn = combat->progress &&
+                            combat->progress->character == 0 &&
+                            kind6_inventory_unowned(combat->progress,
+                                                    e->id, e->param1) &&
+                            kind6_all_souls_collected(combat->progress);
+                }
+                if (spawn) {
+                    AosPickup pickup;
+                    if (aos_pickup_create_placed(
+                            &pickup, combat->money, (uint8_t)e->id,
+                            (uint16_t)e->param1, (uint16_t)e->param0,
+                            e->x, e->y, aria_pickup_state.placed)) {
+                        aos_pickup_snap_to_floor(&pickup, layer);
+                        if (room->pickup_count < MAX_PICKUPS)
+                            room->pickups[room->pickup_count++] = pickup;
+                    }
+                }
+            }
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && (e->id == 10 || e->id == 11)) {

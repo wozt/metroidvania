@@ -52,6 +52,10 @@ typedef struct {
     AosHud *hud;                                 /* sub_0800EA98 enemy-name notice */
     const AosHudFont *hud_font;
     bool derive_atk, derive_def;                 /* false under --atk / --def */
+    /* gEwramData unk_60.unk_A1_4 (sub_0800F1FC case 5's gate): the
+     * file-select/menu toggle of sub_080074C0 is not ported, so the
+     * caller passes the new-game value sub_08008750 installs (1). */
+    uint8_t unk60_a1_4;
     /* sub_0800E708 on every soul collection (sub_080441F8 tail): the
      * obtained-soul banner plus sub_0800E540's description when the
      * soul is new (sub_080441F8's GetSoulTotal == 0 branch). */

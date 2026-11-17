@@ -678,19 +678,33 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (e->kind == ARIA_KIND_BREAKABLE) {
             /* sub_08046080's breakable record: the same tile sheet
              * 0x081C15F4 / frames 0x0820ED60 / palette row 7 triple
-             * Object0F's special_15_v7 exports, animation 3 (the
-             * sub_08046148 variant tile DMA is not exported — every
-             * kind-3 record draws the shared prop frame). Band
-             * + 0x5C = 0x14 draws in the front pass like Object0E. */
+             * Object0F's special_15_v7 exports, animation 3. The
+             * sub_08046148 variant DMA is exported per param0 as
+             * special_62_v<param0> (id 62 is unused by any SPECIAL
+             * record): the native + 0x92 cache makes the last
+             * spawned param0 win for every prop, so the port's
+             * per-entity variant is strictly more correct than the
+             * shared frame. The special_15_v7 fallback covers an
+             * export without the variant rows. Band + 0x5C = 0x14
+             * draws in the front pass like Object0E. */
             if (prio_slot >= 0 || e->breakable.finished) continue;
             const __typeof__(objects->special_objects[0]) *art = NULL;
             for (int v = 0; v < SPECIAL_VARIANTS; ++v)
-                if (objects->special_variants[v].id == 15 &&
-                    objects->special_variants[v].param0 == 7 &&
+                if (objects->special_variants[v].id == 62 &&
+                    objects->special_variants[v].param0 ==
+                        e->breakable.param0 &&
                     objects->special_variants[v].loaded) {
                     art = &objects->special_variants[v];
                     break;
                 }
+            if (!art)
+                for (int v = 0; v < SPECIAL_VARIANTS; ++v)
+                    if (objects->special_variants[v].id == 15 &&
+                        objects->special_variants[v].param0 == 7 &&
+                        objects->special_variants[v].loaded) {
+                        art = &objects->special_variants[v];
+                        break;
+                    }
             if (!art || !art->defs[3].count) continue;
             unsigned total = 0;
             for (unsigned f = 0; f < art->defs[3].count; ++f)

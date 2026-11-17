@@ -1582,6 +1582,10 @@ int aria_runtime_main(int argc, char **argv) {
             .hud_font = NULL,
             .derive_atk = !atk_override,
             .derive_def = !def_override,
+            /* sub_0800F1FC case 5's unk_60.unk_A1_4 gate: the
+             * file-select/menu toggle is unported, so the
+             * new-game value sub_08008750 installs (1). */
+            .unk60_a1_4 = 1,
         };
         if (objects.money_loaded) combat.money = objects.money;
         for (int k = 0; objects_ok && k < AOS_EFFECT_KINDS; ++k)
@@ -2450,6 +2454,10 @@ int aria_runtime_main(int argc, char **argv) {
         .hud_font = have_hud ? &hud_font : NULL,
         .derive_atk = !atk_override,
         .derive_def = !def_override,
+        /* sub_0800F1FC case 5's unk_60.unk_A1_4 gate: the
+         * file-select/menu toggle is unported, so the
+         * new-game value sub_08008750 installs (1). */
+        .unk60_a1_4 = 1,
         .soul_notice = aria_gameplay_soul_notice,
         .soul_notice_ctx = &soul_notice_ctx,
     };

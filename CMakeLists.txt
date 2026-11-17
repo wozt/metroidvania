@@ -1647,6 +1647,13 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_object0e_tests)
     add_test(NAME aos_object0e COMMAND fusion_aos_object0e_tests)
 
+    add_executable(fusion_aos_breakable_tests tests/test_aos_breakable.c
+                   src/runtime/aos/game/aos_breakable.c)
+    target_include_directories(fusion_aos_breakable_tests PRIVATE src/runtime)
+    target_link_libraries(fusion_aos_breakable_tests PRIVATE m)
+    fusion_enable_warnings(fusion_aos_breakable_tests)
+    add_test(NAME aos_breakable COMMAND fusion_aos_breakable_tests)
+
     add_executable(fusion_aos_object11_tests tests/test_aos_object11.c
                    src/runtime/aos/game/aos_object11.c)
     target_include_directories(fusion_aos_object11_tests PRIVATE src/runtime)

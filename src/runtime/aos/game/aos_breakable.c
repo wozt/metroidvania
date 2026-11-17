@@ -14,9 +14,12 @@ void aos_breakable_create(AosBreakable *b, int param0, int param1) {
      * the exported animation directly, so no anim state is kept. */
 }
 
-void aos_breakable_update(AosBreakable *b, bool near, bool hit, bool swing) {
+void aos_breakable_update(AosBreakable *b, bool near, bool hit, bool swing,
+                          bool mp_full_soma) {
     b->song = -1;
-    b->content_fx = 0;
+    b->drop_kind = AOS_BREAKABLE_DROP_NONE;
+    b->drop_big = false;
+    b->drop_roll = false;
     b->gore_fx = 0;
     /* sub_08046100 runs before the update natively (drawFunc order is
      * approximated): the bounce only marks this frame's draw. */
@@ -34,10 +37,18 @@ void aos_breakable_update(AosBreakable *b, bool near, bool hit, bool swing) {
             b->flags58 |= 0x20;
             b->timer = 0x28;
             b->state = 1;
-            /* sub_08045F9C's content dispatch: the + 0x36/+ 0x32
-             * selector tables are unported; report one content child
-             * like Object0E's approximation. */
-            b->content_fx = 1;
+            /* sub_08045F9C case 0 (the + 0x36 selector reads 0 — no
+             * record field or create writes it): full MP on Soma
+             * drops sub_08043F70 of variant (RandomNumberGenerator
+             * () & 1) + param1, anything else a sub_08043C10 heart
+             * with big = (param1 != 0), pop = 0. */
+            if (mp_full_soma) {
+                b->drop_kind = AOS_BREAKABLE_DROP_MONEY;
+                b->drop_roll = true;
+            } else {
+                b->drop_kind = AOS_BREAKABLE_DROP_HEART;
+                b->drop_big = b->param1 != 0;
+            }
         }
         return;
     }

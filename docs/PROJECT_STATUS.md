@@ -1,3 +1,51 @@
+## Patch 1198 - kind-3 breakable variants and drops, conditional pickups (room records kinds 5/6)
+
+- **Variant tile DMA (`sub_08046148`).** The kind-3 prop's per-param0
+  look is now exported: `src/assets/aos/objects.c` gained
+  `export_breakable_variants`, which overlays the two 0xC0-byte tile
+  chunks of the 0x081C3E00 table (source
+  `0x081C3E00 + (param0 & 1) * 0x100 + (param0 >> 1) * 0x400`,
+  second chunk at +0x200) onto export tiles 32-37 and 48-53 of the
+  shared 0x081C15F4 sheet — the OBJ VRAM destinations 0x06010800 /
+  0x06010C00 resolve to under the native 32-tile OBJ rows (verified
+  against the param0 = 0 chunks, which reproduce sheet tiles 32-37).
+  Sixteen sprite sets export as `Object/special_62_v00`-`v15`
+  animation 3 (id 62 collides with no SPECIAL record) and
+  `draw_special_objects` picks the record's param0 variant, falling
+  back to `special_15_v7` when the variant rows are absent. Native
+  quirk kept honest: the +0x92 param0 cache re-DMAs only on change,
+  so multiple variants in one room would fight over the shared VRAM
+  tiles natively — the per-entity frames draw each prop correctly
+  instead.
+- **Drop tables (`sub_08045F9C`).** The breakable's content dispatch
+  is ported for the only reachable case: entity +0x36 (the selector)
+  is never written by any record field or create, so it reads 0 and
+  case 0 runs — full MP on Soma (`currentMP == maxMP`,
+  `currentCharacter == 0`) drops a `sub_08043F70` money pickup of
+  variant `(RandomNumberGenerator() & 1) + param1`, anything else a
+  `sub_08043C10` MP heart with `big = (param1 != 0)`, `pop = 0`, both
+  created through the existing `AosPickup` paths at the entity
+  position. The `content_fx` sparkle placeholder is gone; the
+  state-1 gore burst stays an effect approximation. Selector cases
+  1/2 (money variant param1, `sub_08044054` item) remain unreachable
+  while +0x36 is unmodelled — documented in `aos_breakable.h`.
+- **Room kinds 5/6.** The six conditional-pickup records now spawn
+  through `sub_0800F1FC` cases 5/6 in `update_entities`: kind 5
+  gates on `unk_60.unk_A1_4` (new-game value 1 — the file-select
+  toggle `sub_080074C0` is unported, exposed as
+  `AriaCombat.unk60_a1_4`) and `currentCharacter == 0`; kind 6 on
+  `currentCharacter == 0`, `*sub_08044FA8(id, param1) == 0` (the
+  item/weapon/armor owned-count bytes ported against `AosStats`)
+  and `sub_08032DF0() == 0x3E8` (every red/blue/yellow soul owned,
+  totals 55/24/35 from `sUnk_080E1CD4`). Both then run
+  `aos_pickup_create_placed` (the `sub_08044054` port: id = category,
+  param1 = variant, param0 = persistent bit index, flag 1) once when
+  the record enters the camera window, snap to the floor and consume
+  the record. Kind 5's `id >= 5` branch has no create natively
+  (decompiled `var_r8` path) — nothing spawns, as decoded.
+- **Checks.** New `tests/test_aos_breakable.c` covers the probe,
+  state/timer machine, gore cadence and both drop latches.
+
 ## Patch 1197 - Headhunter dash cases: faithful ArcTan2 aim, song 0x67 on every volley
 
 - The state-1 (`sub_08082FFC`) dash cases 22/32/42 are now decoded

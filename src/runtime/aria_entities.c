@@ -3385,8 +3385,9 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* Object0CCreate / Object0CUpdate (sUnk_084F0DF8[12] /
              * sUnk_084F0ED8[12]): the room-region trigger. The player
              * room position is Soma's fixed-point position minus the
-             * camera; the + 0x10 bit-30 gate is unmodelled and passed
-             * as set while Soma is active. */
+             * camera; the + 0x10 bit-0x400000 gate (the slow-fall/water
+             * flag, whose writer is unported) is passed as set while
+             * Soma is active so the records still fire. */
             if (!e->spawned) {
                 if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;

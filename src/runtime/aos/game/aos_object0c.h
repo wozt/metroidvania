@@ -16,16 +16,19 @@
  * sub_080220B4; nothing in the port clears bit 2, matching the native
  * paths that leave the claim held.
  *
- * Callbacks:
- *  - type 0 (sub_08050694): when Soma + 0x10 bit 30 is set,
- *    entity + 0x48 = record param (read back by sub_080506EC).
- *  - type 1 (sub_080506C0): when the bit is set, Soma + 0x10 |=
- *    0x4000000 (AOS_FLAG_HEAVY — the region applies heavy physics).
- *  - type 2 (sub_08050510): gated by gEwramData + 0x13260 bit 0x200 OR
- *    the same Soma bit; sets Soma + 0x10 |= 0x4000000, forces entity
- *    + 0x1E to 1 when nonzero, arms the + 0x131D4/+ 0x131D6 camera
- *    snapshot at Soma + 0x40/+ 0x44 + 0x80000, then writes the pan
- *    target + 0x131E0/+ 0x131E4 through sub_08021248 (only while the
+ * Callbacks (all three gate on the player entity + 0x10 bit
+ * 0x400000 — 0x80 << 15, the slow-fall/water flag whose writer is
+ * unported — except type 2 which also accepts gEwramData + 0x13260
+ * bit 0x200):
+ *  - type 0 (sub_08050694): entity + 0x48 = record param (read back
+ *    by sub_080506EC).
+ *  - type 1 (sub_080506C0): Soma + 0x10 |= 0x4000000 (AOS_FLAG_HEAVY —
+ *    the region applies heavy physics).
+ *  - type 2 (sub_08050510): additionally ORs 0x4000000 into player
+ *    + 0x10 on every gated pass, forces entity + 0x1E to 1 when
+ *    nonzero, arms the + 0x131D4/+ 0x131D6 camera snapshot at Soma
+ *    + 0x40/+ 0x44 + 0x80000, then writes the pan target
+ *    + 0x131E0/+ 0x131E4 through sub_08021248 (only while the
  *    snapshot mode reads 3, which the callback itself just set) and
  *    entity + 0x48 = -+0x30000 by record param == 0. */
 typedef struct {
@@ -48,11 +51,12 @@ void aos_object0c_create(AosObject0c *o, int param0);
 
 /* Object0CUpdate. `soma_x`/`soma_y` are the player's room pixel
  * position truncated to u16 like GetEntityRoom*PositionInteger;
- * `soma_flag30` is entity + 0x10 bit 30 (the callback gate);
+ * `soma_flag22` approximates the player entity + 0x10 bit 0x400000
+ * gate (the real writer — the slow-fall/water flag — is unported);
  * `global_13260_200` is gEwramData + 0x13260 bit 0x200; `soma_fx`/
  * `soma_fy` are Soma + 0x40/+ 0x44 fixed-point for the type-2
  * snapshot; `soma_1e` is the entity + 0x1E byte. */
 void aos_object0c_update(AosObject0c *o, uint16_t soma_x, uint16_t soma_y,
-                         bool soma_flag30, bool global_13260_200,
+                         bool soma_flag22, bool global_13260_200,
                          int32_t soma_fx, int32_t soma_fy, uint8_t soma_1e);
 #endif

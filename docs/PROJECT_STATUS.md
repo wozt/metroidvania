@@ -1,3 +1,51 @@
+## Patch 1213 - Aria TRIGGER/DIRECTOR family audit: Object0C gate correction and verified divergences
+
+- **Scope.** `src/runtime/aos/game/aos_object0c.c/.h`,
+  `src/runtime/aria_entities.c`, `tests/test_aos_object0c.c`,
+  `data/native_parity/annotations.tsv` and this file only.
+- **Audit.** The fifteen scoped `aos.objects.*` TRIGGER/DIRECTOR
+  rows (region_trigger, proximity_trigger, proximity_attack,
+  cinematic_director, cinematic_trigger, cutscene_director,
+  directional_director, escort_director, fade_director,
+  intro_zoom_director, enemy_spawners, arena_dpad_puzzle,
+  opening_gate, save_point_remover, save_statue) were re-diffed
+  against `third_party/aria-recomp/`. Most remaining gaps are
+  blocked on unported gEwramData globals (+ 0x42C input flags,
+  + 0x4CC cinematic bits, the + 0x13110 entity pool, the + 0x4D0
+  statue-state word) rather than on the objects' own machines.
+- **Object0C region triggers.** Re-reading sub_08050694,
+  sub_080506C0 and sub_08050510 in the recompilation showed the
+  shared callback gate is the player entity + 0x10 bit 0x400000
+  (0x80 << 15 — the slow-fall/water flag), not the previously
+  documented "bit 30"; the runtime still passes the approximation
+  set because the flag's writer is unported and the records must
+  fire in normal play. sub_08050510 also ORs 0x4000000
+  (AOS_FLAG_HEAVY) into player + 0x10 on EVERY gated pass —
+  including the + 0x1E-forced early-out — which the port now
+  reports through `heavy_set`; previously only the type-1
+  callback set it. The sub_08021248 pan pair was re-verified:
+  (+ 0x131E0, + 0x131E4) = (-0x30000, -0x30000) for record param
+  0 and (+ 0x30000, 0xFFFD0000) otherwise, with + 0x48 taking
+  the same +/-0x30000 direction word.
+- **Verified non-gaps.** enemy_spawners: the record + 0xC u16
+  pre-written to entity + 0x34 is the enemy record HP word that
+  sub_0806B04C copies inside every enemy create anyway, and the
+  record tail is the drop/portrait field block already carried by
+  the stats path — the remaining divergence is architectural
+  (slot reuse) plus unported enemy ids. arena_dpad_puzzle:
+  Object23Update (0x080577FC) is a bare sub_0803F17C animation
+  step in the recompilation — no D-pad state machine lives in
+  the object; the + 0x5A/+ 0x5C marks are create-time writes
+  whose consumers are elsewhere. save_statue: the + 0x4D0 word
+  is a gEwramData global (accessed as 0x9A << 3) whose writer is
+  untraced; the three art triples were re-verified against the
+  literal pool.
+- **Tests.** test_aos_object0c now asserts the type-2 heavy OR
+  on both the snapshot and the + 0x1E-forced paths.
+- **Status.** All scoped rows stay `partial`: the trigger
+  globals, entity-pool slots, camera consumers, SRAM sequence
+  and emulator comparison remain open.
+
 ## Patch 1212 - Aria Object19/Object29/Object31/Object14 mover audit: create-path and physics corrections
 
 - **Scope.** `src/runtime/aos/game/aos_object19.c/.h`,

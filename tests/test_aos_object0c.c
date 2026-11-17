@@ -13,13 +13,13 @@ static void create_claims_and_marks(void) {
     assert(o.param0 == 1);
 }
 
-static void type0_writes_param_when_flag30(void) {
+static void type0_writes_param_when_flag22(void) {
     AosObject0c o;
     aos_object0c_create(&o, 1);   /* list1: type-0 rec at (512,400,96,96) */
     /* Outside every window: nothing fires, +0x48 stays cleared. */
     aos_object0c_update(&o, 0, 0, true, false, 0, 0, 0);
     assert(o.value48 == 0);
-    /* Inside the type-0 record with bit 30 set: +0x48 = 0x8000. */
+    /* Inside the type-0 record with the + 0x10 bit-0x400000 gate set: +0x48 = 0x8000. */
     aos_object0c_update(&o, 560, 440, true, false, 0, 0, 0);
     assert(o.value48 == 0x8000);
     /* Same frame a type-1 record also contains the point? No: the
@@ -27,7 +27,7 @@ static void type0_writes_param_when_flag30(void) {
      * heavy flag instead. */
     aos_object0c_update(&o, 100, 500, true, false, 0, 0, 0);
     assert(o.heavy_set);
-    /* Bit 30 clear: the callback is gated off. */
+    /* Bit 0x400000 clear: the callback is gated off. */
     AosObject0c p;
     aos_object0c_create(&p, 1);
     aos_object0c_update(&p, 560, 440, false, false, 0, 0, 0);
@@ -51,11 +51,14 @@ static void type1_sets_heavy(void) {
 static void type2_arms_snapshot_and_pan(void) {
     AosObject0c o;
     aos_object0c_create(&o, 0);   /* list0 type-2 rec (344,1088,48,144) */
-    /* Gate needs + 0x13260 bit 0x200 or Soma bit 30. */
+    /* Gate needs + 0x13260 bit 0x200 or the player + 0x10 bit 0x400000. */
     aos_object0c_update(&o, 360, 1100, false, false, 0x12345678, -0x10, 0);
     assert(!o.snapshot_armed);
     aos_object0c_update(&o, 360, 1100, false, true, 0x12345678, -0x10, 0);
     assert(o.snapshot_armed);
+    /* sub_08050510 ORs AOS_FLAG_HEAVY (0x4000000) into player + 0x10
+     * on every gated pass, snapshot or not. */
+    assert(o.heavy_set);
     assert(o.snapshot_x == 0x12345678 + 0x80000);
     assert(o.snapshot_y == (int32_t)-0x10);
     /* record param == 0: pan (-0x30000, -0x30000), value48 = 0xFFFD0000. */
@@ -66,6 +69,7 @@ static void type2_arms_snapshot_and_pan(void) {
     aos_object0c_create(&p, 0);
     aos_object0c_update(&p, 360, 1100, true, false, 0, 0, 7);
     assert(p.soma_1e_forced);
+    assert(p.heavy_set);    /* the heavy OR precedes the + 0x1E check */
     assert(!p.snapshot_armed);
 }
 
@@ -87,7 +91,7 @@ static void release_needs_bit2_clear(void) {
 
 int main(void) {
     create_claims_and_marks();
-    type0_writes_param_when_flag30();
+    type0_writes_param_when_flag22();
     type1_sets_heavy();
     type2_arms_snapshot_and_pan();
     release_needs_bit2_clear();

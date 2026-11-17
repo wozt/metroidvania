@@ -846,6 +846,33 @@ uint32_t aria_events[AOS_WALL_EVENT_WORDS];
 /* The durable words touched by the common pickup collection tail. */
 AosPickupCollectionState aria_pickup_state;
 
+/* gEwramData session globals of the input/pause/cinematic-control
+ * family, shared by the entity pass (aria_entities.c) and the skill
+ * host (aria_skills.c):
+ *  - + 0x4BE s16: the Chronomage time-stop hold. SkillChronomageUse
+ *    (0x08024950) writes the source entity's + 0x1E at create and
+ *    counts the global down inside its state-1 update (a 0x16E tick
+ *    every sixteenth frame); sub_080235C8's soul-clear tail and
+ *    sub_0801487C's player reset write 0. The port mirrors the live
+ *    skill's countdown field into it (aria_skills.c).
+ *  - + 0x4CC u8: the cinematic/link bitfield byte (unk_4CC_0..6).
+ *    Object03/06 gate their forced-walk release on bit 6; Object25's
+ *    create gates on bits 0-1. Every identified writer is a game-mode
+ *    init/transition routine (0x08004A48, 0x08007D84, 0x08007FF0,
+ *    0x0800A3A4 and the func_08001164 region's bit clears) unreachable
+ *    from the room loop, and bit 6's writer is unidentified in the
+ *    recompilation corpus — the byte keeps its fresh-state 0.
+ *    in_game_mode.unk_4cc_6 (aos_in_game_mode.h) is the mode
+ *    module's bool view of the same bit; both stay clear until a
+ *    writer is ported.
+ *  - + 0x13220: the escort partner entity pointer written only by
+ *    sub_08034498(arg) (~190 story/boss-intro call sites, all
+ *    unported). Object03's state 0 skips while it is non-zero; NULL
+ *    here until a ported caller exists. */
+int16_t aria_ewram_pause_4be;
+uint8_t aria_ewram_cine_4cc;
+void *aria_ewram_escort_13220;
+
 /* One shared room dialogue: the native routines never run two text
  * windows at once and sub_08067934 re-open closes the previous one.
  * The host adapter reuses the opening path's verified-ROM text
@@ -1503,6 +1530,9 @@ int aria_runtime_main(int argc, char **argv) {
         memset(aria_events, 0, sizeof aria_events);
         aos_object01_reset();
         memset(&aria_pickup_state, 0, sizeof aria_pickup_state);
+        aria_ewram_pause_4be = 0;
+        aria_ewram_cine_4cc = 0;
+        aria_ewram_escort_13220 = NULL;
         aos_stats_new_game_equipment(&progress);
         aos_stats_new_game_inventory(&progress);
         aos_stats_level_up(&progress);
@@ -2033,6 +2063,9 @@ int aria_runtime_main(int argc, char **argv) {
     memset(aria_events, 0, sizeof aria_events);
     aos_object01_reset();   /* the + 0x1316C claim is per-room here */
     memset(&aria_pickup_state, 0, sizeof aria_pickup_state);
+    aria_ewram_pause_4be = 0;
+    aria_ewram_cine_4cc = 0;
+    aria_ewram_escort_13220 = NULL;
     if (has_active_save) {
         progress.experience = active_save.experience;
         progress.gold = active_save.gold;

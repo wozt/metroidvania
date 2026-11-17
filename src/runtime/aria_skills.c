@@ -14,6 +14,11 @@
  * frame loop's skill draw share. */
 int static_index(const int *ids, int count, int id);
 
+/* gEwramData + 0x4BE s16, the Chronomage hold SkillChronomageUse
+ * (0x08024950) counts down; defined in aria_runtime.c beside
+ * aria_pickup_state. */
+extern int16_t aria_ewram_pause_4be;
+
 /* sub_08031EA4(entity, source, dx, dy): the source's facing and whole
  * position (only + 0x42 and + 0x46 are written; a fresh entity's fractions
  * are 0), dx mirrored when it faces left. */
@@ -352,6 +357,8 @@ int cast_red_soul(void *context) {
          * hold field; the soul record's value is not decoded here, so
          * the runtime passes a documented 0x100-frame hold. */
         skill->chronomage = aos_chronomage_create(0x100);
+        /* The native STRH lands gEwramData + 0x4BE at create too. */
+        aria_ewram_pause_4be = (int16_t)skill->chronomage.field;
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left,
               0, -0x30);
     } else if (kind == SKILL_MANDRAGORA) {
@@ -1635,9 +1642,14 @@ void update_skills(AriaSouls *souls) {
             place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left,
                   0, -0x30);
             if (!aos_chronomage_update(&skill->chronomage)) {
+                /* gEwramData + 0x4BE mirrors the countdown: native
+                 * STRH writes it at create and each state-1 tick;
+                 * a finished hold leaves 0. */
+                aria_ewram_pause_4be = (int16_t)skill->chronomage.field;
                 end_skill(souls, skill);
                 break;
             }
+            aria_ewram_pause_4be = (int16_t)skill->chronomage.field;
             if (skill->chronomage.tick)
                 /* sub_08013DA8(0x16E): hold only when not already
                  * listed — no replay while the tick stays held. */
@@ -2799,6 +2811,9 @@ void clear_skills(AriaSouls *souls) {
         if (skill->alive && skill->kind == SKILL_CHRONOMAGE &&
             skill->chronomage.field != 0) {
             chronomage_release_audio(souls);
+            /* sub_080235C8's STRH zeroes gEwramData + 0x4BE when the
+             * hold was live. */
+            aria_ewram_pause_4be = 0;
             break;
         }
     }

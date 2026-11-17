@@ -479,6 +479,31 @@ int main(void) {
     assert(out.slots.rec_53c_val == 0x03);   /* 0x43 & ~0x40 */
     assert(o.v.slots.sub_b == 3);
 
+    /* ---- param0 16 (slots, sub_08061734 update tail): the
+     * + 0x4BE s16 pause word gates the probe chain — with the
+     * Chronomage hold live (s16_4be != 0, fed from
+     * aria_ewram_pause_4be by the runtime) the window pick,
+     * velocity writes and + 0x42C |= 1 all stay silent. ---- */
+    memset(&o, 0, sizeof o);
+    in = mk_in();
+    assert(create_ok(&o, 16, &in, &out));
+    assert(o.family == AOS_OBJECT20_FAMILY_SLOTS);
+    /* paused: probe + edge present but + 0x4BE != 0 — nothing. */
+    in.slots.probe_68ad4 = true;
+    in.word16 = 0x42;
+    in.slots.s16_4be = 1;
+    memset(&out, 0, sizeof out);
+    assert(aos_object20_update(&o, &in, &out) == 0);
+    assert(out.slots.window_text == -1);
+    assert(!(out.slots.set_42c & 1));
+    /* clear: the same probes open window 0x1D (old +0xD <= 3)
+     * and arm + 0x42C bit 0 like the native tail. */
+    in.slots.s16_4be = 0;
+    memset(&out, 0, sizeof out);
+    assert(aos_object20_update(&o, &in, &out) == 0);
+    assert(out.slots.window_text == 0x1D);
+    assert(out.slots.set_42c & 1);
+
     printf("aos_object20 tests passed\n");
     return 0;
 }

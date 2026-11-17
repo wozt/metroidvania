@@ -160,6 +160,12 @@
  * declared here the same way aria_assets.c does. */
 extern uint32_t aria_events[AOS_WALL_EVENT_WORDS];
 extern AosPickupCollectionState aria_pickup_state;
+/* gEwramData session globals of the input/pause/cinematic-control
+ * family (defined in aria_runtime.c): + 0x4BE s16 Chronomage hold,
+ * + 0x4CC u8 cinematic/link bits, + 0x13220 escort partner. */
+extern int16_t aria_ewram_pause_4be;
+extern uint8_t aria_ewram_cine_4cc;
+extern void *aria_ewram_escort_13220;
 /* Object1C's SaveData_SaveSlotToSram needs the live save and its
  * store path; the room loops publish them (same pattern as
  * object10_save_ctx, which stays runtime-private). */
@@ -859,8 +865,9 @@ static int obj14_probe(void *ctx, int kind, int32_t a, int32_t b,
  *   npc probe_inside: sub_08068AD4's box test approximated by the
  *   player screen position inside a 0x40x0x40 box centred on the
  *   entity's screen position.
- *   npc gate_4be: the gEwramData + 0x4BE pause word has no runtime
- *   channel; 0 (clear, the in-game value).
+ *   npc gate_4be: gEwramData + 0x4BE s16, the Chronomage hold
+ *   aria_skills.c mirrors into aria_ewram_pause_4be (0 while no
+ *   hold runs — the in-game value).
  *   npc picked_text: DEPRECATED upstream — the param0-27 +0x14
  *   pick runs the ported sub_08066308/sub_0806666C/sub_0806668C
  *   pickers on the committed 0x08118C85 table through guard_pick;
@@ -1037,6 +1044,7 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
             (uint16_t)(psy - esy + 0x20) <= 0x40;
     }
     in->npc.cond_5b864 = object20_flag12078(0x3A);
+    in->npc.gate_4be = aria_ewram_pause_4be;
     in->npc.flags37e = aria_pickup_state.special;
     in->npc.picked_text = (uint8_t)e->object20.v.guard.text_id;
     in->npc.rng = aos_random();
@@ -1052,12 +1060,12 @@ static void object20_fill_in(AriaRoom *room, const AriaEntity *e,
     /* slots probes (param0 0-2, 11-18). player_w4c is the player
      * +0x4C fine word — approximated by the fine Y velocity;
      * ret_roomx by the room-pixel X; probe_68ad4 reuses the same
-     * 0x40-box approximation as npc.probe_inside; s16_4be has no
-     * channel (0). */
+     * 0x40-box approximation as npc.probe_inside; s16_4be is the
+     * same + 0x4BE pause word. */
     in->slots.player_w4c = soma ? soma->vy : 0;
     in->slots.ret_roomx = soma ? (int)((soma->x >> 16) - cam_x) : 0;
     in->slots.probe_68ad4 = in->npc.probe_inside;
-    in->slots.s16_4be = 0;
+    in->slots.s16_4be = aria_ewram_pause_4be;
     /* param0-15 update15 (sub_08060F98) case-0 record view: the
      * +0x11-bound entityData record's +0x524 (fine X, record
      * +0x40) and +0x53C (+0x58 flags) — the same bound record
@@ -2798,15 +2806,16 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * when the + 0xD ramp completes, the no-fade branch
              * (+ 0x4BE clear and sub_080212F4(6) — ability bit 5 of
              * unk_13396 — clear) writes sub_0800C5A8(0); the fade
-             * branch writes nothing. + 0x4BE has no runtime channel
-             * and is treated as clear; the ported sequence
-             * collapses both branches into steps 4 -> 5, so the
-             * report is gated on the modelled ability bit only.
+             * branch writes nothing. + 0x4BE is the live
+             * aria_ewram_pause_4be channel (the ported Chronomage
+             * skill's hold); the ported sequence collapses both
+             * branches into steps 4 -> 5, so the report is gated on
+             * the modelled ability bit and the pause word.
              * The wisp child is excluded by role. */
             if (e->id == AOS_ENEMY_CHRONOMAGE &&
                 e->enemy.role != AOS_ROLE_CHRONO_WISP &&
                 e->enemy.state == 1 && pre_enemy_step == 4 &&
-                e->enemy.step == 5 &&
+                e->enemy.step == 5 && aria_ewram_pause_4be == 0 &&
                 !(combat->progress &&
                   (combat->progress->abilities[0] & 0x20)))
                 C5A8_REPORT(0, e);
@@ -3244,9 +3253,9 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 3) {
             /* Object03Create / Object03Update: the escort director —
              * the column is always sealed at create; state 0 waits on
-             * the + 0x13220/+ 0x4CC globals and the partner entities
-             * (none modelled: cinematic false takes the direct
-             * state-0 -> 2 path). */
+             * the + 0x13220 escort pointer and the + 0x4CC bit-6
+             * cinematic flag — both live session globals now; the
+             * partner-entity probes stay approximated. */
             if (!e->spawned) {
                 if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
@@ -3258,7 +3267,9 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             int32_t ssy = (int32_t)(soma->y >> 16) - cam_y;
             aos_object03_update(&e->object03, layer, cam_x, cam_y,
                                 e->x, e->y, ssx, ssy,
-                                false, false, 0x4000, 0x4000);
+                                aria_ewram_escort_13220 != NULL,
+                                (aria_ewram_cine_4cc & 0x40) != 0,
+                                0x4000, 0x4000);
             if (e->object03.force_zero || e->object03.forced) {
                 input->active = true;
                 input->held = e->object03.forced;
@@ -3328,7 +3339,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* Object06Create / Object06Update: the cinematic trigger —
              * state-0 particle idle, the 0x111 song + snapshot on the
              * probe, then the forced-walk release gated on the + 0x4CC
-             * bit 6 cinematic flag (not modelled: passed false). */
+             * bit 6 cinematic flag (aria_ewram_cine_4cc; its writer
+             * is unported so the bit stays clear in the room loop). */
             if (!e->spawned) {
                 if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
@@ -3345,7 +3357,9 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             aos_object06_update(&e->object06, layer, cam_x, cam_y,
                                 e->x, e->y, ssx, ssy,
                                 (uint16_t)soma->flags,
-                                aria_pickup_state.special, false, aos_random);
+                                aria_pickup_state.special,
+                                (aria_ewram_cine_4cc & 0x40) != 0,
+                                aos_random);
             if (e->object06.force_zero || e->object06.forced) {
                 input->active = true;
                 input->held = e->object06.forced;
@@ -3375,6 +3389,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 e->spawned = true;
                 aos_object07_create(&e->object07, e->param0, e->param1,
                                     cam_x, cam_y, aos_random);
+                /* param0 == 3's create tail: + 0x42C |= 0x800 (the
+                 * + 0x4C4 = 0 half has no runtime channel). */
+                if (e->object07.set_42c_800)
+                    aria_pickup_state.global_flags |= 0x800;
                 continue;
             }
             aos_object07_update(&e->object07, cam_x, cam_y,
@@ -3398,7 +3416,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 aos_object0c_update(&e->object0c,
                                     (uint16_t)(soma->x >> 16),
                                     (uint16_t)(soma->y >> 16),
-                                    true, false,
+                                    true,
+                                    combat->progress &&
+                                        (combat->progress->flags &
+                                         0x200) != 0,
                                     soma->x, soma->y, soma->state);
                 if (e->object0c.heavy_set)
                     soma->flags |= AOS_FLAG_HEAVY;
@@ -3657,9 +3678,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* Object14Create/Object14Update (sUnk_084F0DF8[20] /
              * sUnk_084F0ED8[20]): the param0-selected moving probe
              * object; the sprite triple exports as special_20.
-             * The + 0x4BE gate, the + 0x14 collision writers and
-             * the + 0x13190 self-link are approximated clear/false
-             * (the player snap stays off), the palette allocator
+             * The + 0x4BE gate reads aria_ewram_pause_4be, the
+             * + 0x14 collision writers and the + 0x13190 self-link
+             * stay approximated clear/false (the player snap stays
+             * off), the palette allocator
              * is a fixed slot, the tile/wall queries map onto
              * aos_collision through obj14_probe and the six
              * sub_08051CC4 children collapse to counted sparkles. */
@@ -3674,7 +3696,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 continue;
             }
             AosObject14Env o14env = {
-                .gate_4be = 0,
+                .gate_4be = aria_ewram_pause_4be,
                 .collide14 = 0,
                 .linked_self = false,
                 .player_x = soma ? soma->x : 0,
@@ -4591,7 +4613,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                     (int16_t)e->param1,
                                     (int32_t)e->x << 16,
                                     (int32_t)e->y << 16,
-                                    0, aria_pickup_state.special,
+                                    aria_ewram_cine_4cc,
+                                    aria_pickup_state.special,
                                     &deleted);
                 if (deleted) e->spawned = false;
                 continue;
@@ -4628,7 +4651,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 aos_object25_create(&child->object25,
                                     e->object25.spawn_param0, 0,
                                     e->object25.spawn_x,
-                                    e->object25.spawn_y, 0,
+                                    e->object25.spawn_y,
+                                    aria_ewram_cine_4cc,
                                     aria_pickup_state.special,
                                     &cdeleted);
                 if (!cdeleted) {

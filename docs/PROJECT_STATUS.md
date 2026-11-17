@@ -1,3 +1,53 @@
+## Patch 1214 - Aria gEwramData input/pause/cinematic-control globals (family A)
+
+- **Scope.** `src/runtime/aria_runtime.c`, `src/runtime/aria_skills.c`,
+  `src/runtime/aria_entities.c`, `tests/test_aos_object20.c`,
+  `data/native_parity/annotations.tsv` and this file. Family A of the
+  missing gEwramData globals blocking the Object20 director/trigger
+  consumers: + 0x42C input-lock word, + 0x4BE s16 pause word,
+  + 0x16 newInput edge, + 0x4CC cinematic/link bitfield and the
+  + 0x13220 escort pointer. The entity-slot (+ 0x13110/+ 0x13190)
+  and OAM (+ 0x3E0/+ 0x3F0) regions stay with the sibling audit.
+- **New session channels.** Three globals beside `aria_pickup_state`
+  in `aria_runtime.c`, zeroed on new game and save load:
+  `aria_ewram_pause_4be` (+ 0x4BE s16), `aria_ewram_cine_4cc`
+  (+ 0x4CC u8) and `aria_ewram_escort_13220` (+ 0x13220 pointer).
+- **+ 0x4BE writers ported.** `SkillChronomageUse` (0x08024950)
+  writes the hold at create and counts it down in its state-1
+  update; `aria_skills.c` now mirrors the live skill's countdown
+  field into the global each frame and `clear_skills` zeroes it on
+  the `sub_080235C8` soul-clear path (with the existing audio
+  release). `sub_0801487C`'s player-reset zero is covered by the
+  session init.
+- **+ 0x4BE readers wired.** `in->npc.gate_4be` (the npc_talk
+  +0x4BE==0 flag bit), `in->slots.s16_4be` (param0-16 update
+  probe), Object14's env `gate_4be` and the Chronomage enemy's
+  step-4->5 `sub_0800C5A8(0)` report gate all read the live word
+  instead of hardcoded 0.
+- **+ 0x4CC / + 0x13220 readers wired, writers honestly absent.**
+  Object03's escort-busy and cinematic inputs and Object06's
+  cinematic input now read the channels; Object25 create receives
+  the real bits-0-1 byte. Every identified + 0x4CC writer is a
+  game-mode init/transition routine unreachable from the room loop
+  and no bit-6 set-to-1 exists in the recompilation corpus, so the
+  byte stays 0; `sub_08034498` is the only + 0x13220 writer (~190
+  unported story callers), so the pointer stays NULL. Both are
+  documented in the channel comments rather than faked.
+- **+ 0x42C / + 0x16.** + 0x16 newInput and + 0x42C
+  `aria_pickup_state.global_flags` were already live; this patch
+  connects Object07Create param0 == 3's `+ 0x42C |= 0x800` (the
+  produced `set_42c_800` was previously dropped) and Object0C's
+  `+ 0x13260` bit-0x200 callback arm now reads `progress.flags`
+  instead of a hardcoded clear.
+- **Tests.** `tests/test_aos_object20.c` gains a param0-16 drive
+  pinning the + 0x4BE pause gate: a nonzero hold suppresses the
+  window pick, velocity writes and + 0x42C arm; a clear hold opens
+  window 0x1D and sets the bit like the native tail.
+- **Remaining.** The + 0x4CC bit-6 writer, `sub_08034498` escort
+  writes, the + 0x13114/+ 0x13118 partner entities, the camera
+  snapshot/pan consumers and emulator comparison stay open; the
+  affected registry rows keep `partial`.
+
 ## Patch 1213 - Aria TRIGGER/DIRECTOR family audit: Object0C gate correction and verified divergences
 
 - **Scope.** `src/runtime/aos/game/aos_object0c.c/.h`,

@@ -1,3 +1,109 @@
+## Patch 1203 - opening cutscene visual ground truth vs native (diagnosis only, no fixes)
+
+- **Scope.** Frame-aligned native-vs-runtime comparison of the room
+  0/0 Object20 parameter-3 opening (Mina/Genya standoff, Winged
+  Skeleton soul grant), run against the tree at Patch 1202. Read-only
+  investigation for the opening-event port; no gameplay changes.
+  Native evidence: `aos_mgba_lab` from `/tmp/aos_room0.state`, 5000
+  frames, entity-table peeks at 10-60 frame resolution plus PPM
+  captures; runtime evidence: `fusion_aria_runtime --capture` 9000
+  frames with the env-gated `ARIA_OPENING_TRACE` per-frame actor
+  dump (stderr diagnostic committed under Patch 1202) and
+  `ARIA_DEBUG_ENT`. Captures and scripts under `/tmp/opening_cmp/`.
+- **Native actor map (WRAM).** entityData slots: 0 Soma
+  `0x020004E4` (update `0x0801B0D9`), 27 Object20 parent
+  `0x020012D0`, 28 Mina `0x02001354`, 29 Genya/Arikado `0x020013D8`,
+  30 scripted Winged Skeleton `0x0200145C` (update `0x0805DAA1`).
+  `+0x40/+0x44` are screen-space 16.16; world = screen + scroll
+  `0x0200A098/0x0200A09C`; anim id `+0x6D`; Object20 beat byte
+  `+0xB`.
+- **Spawn positions ported exactly.** Native world coordinates
+  during the scene: Soma (168,703), Mina (144,704), Genya (281,704),
+  skeleton (367,616) -> dash -> (202,686) — identical to the
+  `AOS_OPENING_*` constants and the runtime trace endpoints.
+- **DIVERGENCE: the runtime walks Arikado 281->208; the native
+  entity never translates.** The runtime approach (Patch 1202's
+  documented approximation for the `+0x48` consumer absent from the
+  dump) moves actor 1 from 281 to 208 during frames ~65-260 (walk
+  anim `an0.x`, ~0.55 px/frame) spanning the MOSAIC reveal and the
+  first dialogue window, stopping 40 px right of Soma. The native
+  Arikado entity world x stays 281 for the entire scene at 10-15
+  frame sampling — his screen position moves only with the camera,
+  and his world x is constant across the 96->222->94 confrontation
+  pan, which rules out any `+0x40`-driven walk of any speed or
+  direction. If a native approach exists at all it is not visible in
+  the entity position fields (an OAM-only/scripted draw offset
+  cannot be excluded from WRAM entity data alone, but no position
+  write of any kind was observed). Consequences in the current
+  runtime: the skeleton's native-exact stop point (202,686) lands
+  ~6 px from the displaced Arikado versus 79 px natively, and the
+  standoff distance to Soma is 40 px runtime versus 113 px native.
+- **DIVERGENCE: total length ~1085 frames short.** The runtime story
+  completes ~frame 3600; the native Object20 `+0xB` beat returns to
+  0 ~frame 4685 under the same A-every-60-frames input. The
+  compression sits mid-scene: the confrontation camera pan runs at
+  runtime f1441-1575 versus native ~f2050-2190 (~600f early), and
+  the post-battle dialogue runs f2101-3481 (1380f) versus native
+  ~f2845-4620 (1775f, ~400f shorter). Camera pan shapes otherwise
+  match: entry pan 64f vs ~70f, confrontation out/in 35f/32f vs
+  ~40f/30f with a ~60-68f hold at scroll 222, return pan 45f both.
+- **Animations.** Mina native `+0x6D` 4->1->5 versus runtime
+  an4->an1->an5 at matching relative beats. Arikado native 1->2->3
+  (3 held through post-battle) versus runtime an1->an2->an3.2 in the
+  same order (the approach's an0.x walk segment has no native
+  counterpart per above). Skeleton native 4->5->2 versus runtime
+  an4->an5->an2->an5 absorb cycle. Soma native `+0x6D` runs
+  81->13->0->4->5->82->9->2->0: a real ~15 px world-x step excursion
+  (168->153->168) with anim 13 during the entry pan ~f605-680, a
+  hit/react chain (4,5,82,9,2) ~f2605-2830, then idle 0 through the
+  post-battle dialogue. Runtime sampled Soma anims are only 81
+  (f700-1700) then 82 subframe 2 held frozen f1900-3400 — sparse
+  sampling caveat, but no 13/4/5/9/2 beats were observed and Soma
+  holds anim 82 where native returns to 0. Runtime Soma position is
+  pinned at (168,704) versus native (168,703).
+- **Dialogue window.** Runtime `window_open` rises at f113 (MOSAIC
+  end) and stays set through scene end. Native WIN0-band luminance
+  under the same A/60 schedule is lit from ~f30 with page-turn dips
+  ~f210-240 and ~f270+. The earlier scout-key comparison measured
+  reveal->window latency ~170f native versus ~176f runtime;
+  absolute edges are frame-zero/schedule dependent, so window timing
+  is approximately aligned, not exact.
+- **Actors present/missing.** Both sides show exactly Soma, Mina,
+  Arikado and the scripted skeleton plus the invisible Object20
+  parent; no extra actors observed. The runtime skeleton `visible`
+  flickers off during the soul absorb (f1883+) and stays hidden,
+  while the native skeleton entity persists at (202,686) anim 2 —
+  whether it is still drawn natively is unverified from WRAM alone
+  (its draw band/priority was not decoded). Runtime `attack_flag`
+  stays set f1631->end versus the native skeleton `+0xB`==1 only
+  during the dash ~f2290-2340; different field semantics, noted not
+  judged.
+- **INFRASTRUCTURE BUG blocking all runtime object drawing.** The
+  generated `assets/extracted/aria/sprites/objects/runtime/
+  runtime_index.tsv` carries 850 `Object/special_NN_vP` rows
+  covering 58 distinct (id,param0) pairs, but `SPECIAL_VARIANTS` is
+  48 (`src/runtime/aria_runtime_types.h:136`). `aria_load_objects`
+  (`src/runtime/aria_assets.c`, variant-slot search ~line 782) fails
+  on the 49th pair, `objects_ok` becomes 0, and every runtime
+  capture/simulate renders with zero object/enemy/opening-actor
+  sprites. Verified: shipped index -> `LOADFAIL 788`,
+  `objects_ok=0`; the same index filtered to 44 variant pairs ->
+  `objects_ok=1`. Any visual capture taken against the current tree
+  without that workaround shows an empty scene. Ownership of the
+  fix (index dedup versus raising `SPECIAL_VARIANTS`) was not
+  changed here.
+- **Next actions for the opening port.** (1) Decide the Arikado
+  approach on evidence: either find the native routine that the
+  `+0x48`/`+0x42` fields imply (it would have to write a position
+  field this sweep never saw change) or treat the walk as a
+  documented approximation and re-check the skeleton stop point and
+  standoff distances against a non-approaching Arikado at 281.
+  (2) Restore Soma's anim chain (13 step, 4/5/82/9/2 react, return
+  to 0) and the position excursion. (3) Close the ~1085f pacing gap
+  beat-by-beat using the Object20 `+0xB` beat timeline as the
+  alignment key. (4) Resolve the `SPECIAL_VARIANTS` index overflow
+  before trusting any runtime visual capture.
+
 ## Patch 1202 - opening: +0x58 facing flips, corrected absorb-pose window, player-relative Arikado stop
 
 - **Scope.** A second pass over `sub_0805D410` (Object20 parameter-3

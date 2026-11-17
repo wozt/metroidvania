@@ -286,6 +286,14 @@ typedef struct {
     uint8_t anim_tick[AOS_OPENING_ACTOR_COUNT];
     bool anim_finished[AOS_OPENING_ACTOR_COUNT];
     bool anim_ended[AOS_OPENING_ACTOR_COUNT];
+    /* The three story children's +0x58 attribute byte. Only bit 6
+     * (0x40, the OAM horizontal flip consumed by sub_0803AC40's
+     * `+0x58 << 0x19 >> 0x1f` -> attribute bit 12) and bit 0 (cleared
+     * alongside it by the same writes) are tracked; every other bit
+     * stays at its spawn value. sub_0805D410's +0xB==2 writes
+     * child0 &= ~0x41 and child1 |= 0x40, and +0xB==3 sub-state 3
+     * rewrites child1 as (old & ~0x41) | (!bit6 << 6). */
+    uint8_t actor_flags58[AOS_OPENING_ACTOR_COUNT];
     bool visible[AOS_OPENING_ACTOR_COUNT];
     uint8_t state;
     uint8_t step;

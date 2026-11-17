@@ -1024,6 +1024,68 @@ void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
                                 const AosOpeningActors *actors, int cam_x,
                                 int cam_y, int prio_slot) {
     if (!actors) return;
+    /* DIAGNOSTIC ONLY (ARIA_OPENING_TRACE): per-frame dump of the
+     * Object20 opening scene state for native-parity comparison
+     * captures. actors->frame increments once per
+     * aos_opening_actors_update, so the static latch prints one line
+     * per simulated frame regardless of how many priority passes
+     * call this function. No gameplay effect; remove once the
+     * comparison campaign is done. */
+    static uint32_t trace_last_frame = UINT32_MAX;
+    if (getenv("ARIA_OPENING_TRACE") && actors->frame != trace_last_frame) {
+        trace_last_frame = actors->frame;
+        fprintf(stderr, "OT f=%u scene=%u/%u tmr=%u cam=%d/%d mc=%u "
+                "rev=%u win=%u/%u hold=%u tr=%u/%u mos=%04x atk=%u "
+                "skel=%u/%u/%u ph=%u |",
+                (unsigned)actors->frame, (unsigned)actors->scene_state,
+                (unsigned)actors->scene_step, (unsigned)actors->scene_timer,
+                cam_x, cam_y, (unsigned)actors->camera_mode,
+                actors->reveal_done ? 1u : 0u, actors->window_open ? 1u : 0u,
+                actors->window_shown ? 1u : 0u, (unsigned)actors->text_hold,
+                (unsigned)actors->transition_step,
+                (unsigned)actors->transition_timer,
+                (unsigned)actors->mosaic, actors->attack_flag ? 1u : 0u,
+                (unsigned)actors->skeleton_state,
+                (unsigned)actors->skeleton_step,
+                (unsigned)actors->skeleton_timer,
+                (unsigned)actors->skeleton_phase);
+        for (int a = 0; a < AOS_OPENING_ACTOR_COUNT; ++a)
+            fprintf(stderr, " a%d=%d,%d,an%u.%u,v%u ", a,
+                    (int)(actors->x[a] >> 16), (int)(actors->y[a] >> 16),
+                    (unsigned)actors->animation[a],
+                    (unsigned)actors->anim_subframe[a],
+                    actors->visible[a] ? 1u : 0u);
+        fprintf(stderr, "| soul=%d,%d,st%u,tm%u,act%u,abs%u,arr%u,age%u |",
+                (int)(actors->soul_x >> 16), (int)(actors->soul_y >> 16),
+                (unsigned)actors->soul_state, (unsigned)actors->soul_timer,
+                actors->soul_active ? 1u : 0u, actors->soul_absorbed ? 1u : 0u,
+                actors->soul_arrived ? 1u : 0u, (unsigned)actors->soul_age);
+        fprintf(stderr, " em=%u dep=%u prj=%u spk=%u flm=%u",
+                (unsigned)actors->emitted_count,
+                (unsigned)actors->debris_count,
+                (unsigned)actors->projectile_count,
+                (unsigned)actors->spark_count,
+                (unsigned)actors->flame_count);
+        for (unsigned e = 0; e < actors->emitted_count; ++e) {
+            const AosOpeningEntity *en = &actors->emitted[e];
+            if (!en->active) continue;
+            fprintf(stderr, " e%u:t%u,p%u@%d,%d,an%u,st%u.s%u,tm%u,h%u,d%u",
+                    e, (unsigned)en->entity_type, (unsigned)en->parameter,
+                    (int)(en->x >> 16), (int)(en->y >> 16),
+                    (unsigned)en->animation, (unsigned)en->state,
+                    (unsigned)en->step, (unsigned)en->timer,
+                    en->hidden ? 1u : 0u,
+                    en->disappearing ? 1u : 0u);
+        }
+        for (unsigned p = 0; p < actors->projectile_count; ++p) {
+            const AosOpeningProjectile *pj = &actors->projectiles[p];
+            if (!pj->active) continue;
+            fprintf(stderr, " pj%u@%d,%d,tm%u,st%u", p,
+                    (int)(pj->x >> 16), (int)(pj->y >> 16),
+                    (unsigned)pj->timer, (unsigned)pj->state);
+        }
+        fputc('\n', stderr);
+    }
     for (int actor = 0; actor < AOS_OPENING_ACTOR_COUNT; ++actor) {
         if (!actors->visible[actor]) continue;
         int band_prio = aria_bg_band_priority(0x11);
@@ -1061,10 +1123,18 @@ void draw_opening_actors(SDL_Renderer *renderer, const AriaObjects *objects,
         const AriaFrame *frame = &art->frames[animation][index];
         if (!frame->texture) continue;
         int x = actors->x[actor] >> 16, y = actors->y[actor] >> 16;
-        SDL_FRect rect = {(float)(x + frame->offset_x - cam_x),
+        /* +0x58 bit 6 mirrors the OAM row through sub_0803AC40; use the
+         * same draw-x correction as the emitted children above. */
+        bool mirrored = (actors->actor_flags58[actor] & 0x40) != 0;
+        float draw_x = mirrored
+                           ? (float)(x - frame->offset_x) - frame->w
+                           : (float)(x + frame->offset_x);
+        SDL_FRect rect = {draw_x - (float)cam_x,
                           (float)(y + frame->offset_y - cam_y), frame->w,
                           frame->h};
-        SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+        SDL_RenderTextureRotated(
+            renderer, frame->texture, NULL, &rect, 0, NULL,
+            mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
     }
     for (unsigned actor = 0; actor < actors->emitted_count; ++actor) {
         const AosOpeningEntity *entity = &actors->emitted[actor];

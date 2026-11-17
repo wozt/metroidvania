@@ -1085,7 +1085,12 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
     case AOS_OPENING_CUE_CONFRONTATION:
         /* +0xB==2 is a single sub-state-0 pass: child +0x58 attribute
          * writes and sub_08013CF0(0x10)'s music change, then +0xC=1
-         * idles. It never raises the suspend flag. */
+         * idles. It never raises the suspend flag. The attribute
+         * writes are child0's +0x58 &= ~0x41 (Mina's flip and bit 0
+         * cleared) and child1's +0x58 |= 0x40 (Genya flips toward the
+         * incoming threat side). */
+        actors->actor_flags58[0] &= (uint8_t)~0x41;
+        actors->actor_flags58[1] |= 0x40;
         actors->scene_state = 2;
         actors->pending_cue = cue;
         break;
@@ -1416,7 +1421,13 @@ AosOpeningCue aos_opening_actors_update(
      * frame until a source-position guard keeps this partial
      * controller bounded and honest. */
     if (actors->state == 1) {
-        const int32_t stop_x = 0xD0 << 16;
+        /* Arikado walks left toward the Soma/Mina group and stops one
+         * step to the right of the player — world x 0xD0 against Soma's
+         * 0xA8 (+0x28). The native stop consumer is still absent from
+         * the dump, so this bound is the port's honest approximation;
+         * expressing it relative to the player's own position keeps the
+         * approach honest if the spawn record ever moves him. */
+        const int32_t stop_x = ((actors->soma_x >> 16) + 0x28) << 16;
         if (actors->x[1] > stop_x) {
             actors->x[1] -= 0x6000;
             if (actors->x[1] < stop_x) actors->x[1] = stop_x;
@@ -1551,6 +1562,13 @@ scene:
             actors->emitted_batches |= AOS_OPENING_EMISSION_NEAR_SOMA;
             append_emission(actors, AOS_OPENING_EMISSION_NEAR_SOMA);
             actor_animation(actors, 0, 5, false);
+            /* sub_0805D410 +0xB==3 sub-state 3 rewrites child18's
+             * +0x58 as (old & ~0x41) | (!bit6 << 6): bit 0 clears and
+             * the horizontal flip toggles — Genya turns back toward
+             * Soma as the near Skeleton Knights land. */
+            actors->actor_flags58[1] = (uint8_t)(
+                (actors->actor_flags58[1] & (uint8_t)~0x41) |
+                ((actors->actor_flags58[1] & 0x40) ? 0 : 0x40));
             if (output == AOS_OPENING_CUE_NONE)
                 output = AOS_OPENING_CUE_ENEMY_APPEARS;
             else
@@ -1661,17 +1679,24 @@ scene:
             }
             if (actors->scene_timer) --actors->scene_timer;
         }
-        /* sub_0805D410 state 5 keeps pose 0x52 from the start of the
-         * 0xD2 countdown through the window wait, alternating the player
-         * object's visibility on the timer's bit 0. The blink stops once
-         * the window starts closing (sub-state 5 sets the pose once more
-         * without blinking). */
-        if (actors->scene_step >= 1) {
+        /* sub_0805D410 +0xB==5's sub_0801D028(0x52) calls: sub-state 2
+         * binds the absorb pose only on the frames +0xD <= 0x8F (the
+         * 0x8F frame itself plus its tail), and sub-states 3-5 call it
+         * every frame — the whole obtained-soul window. During the
+         * earlier 0xD2 -> 0x90 countdown (+0xD > 0x8F) no pose call
+         * runs at all, so Soma keeps the spawn pose 0x51. The +0x5A
+         * bit-5 visibility blink likewise runs only while +0xD <= 0x8F
+         * in sub-state 2 and throughout sub-state 3's input wait —
+         * the port's soul-notice window — never during the early
+         * countdown. */
+        if (actors->scene_step == 2 || actors->soul_notice == 1 ||
+            actors->soul_notice == 2) {
             actors->soma_animation = 0x52;
-            bool flashing = actors->scene_step == 1 ||
-                            actors->soul_notice == 1 ||
-                            actors->soul_notice == 2;
-            actors->soma_hidden = flashing && (actors->frame & 1u) != 0;
+            actors->soma_hidden =
+                (actors->soul_notice == 1 || actors->soul_notice == 2) &&
+                (actors->frame & 1u) != 0;
+        } else {
+            actors->soma_hidden = false;
         }
         break;
     case 6:

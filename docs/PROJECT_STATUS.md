@@ -1,3 +1,58 @@
+## Patch 1202 - opening: +0x58 facing flips, corrected absorb-pose window, player-relative Arikado stop
+
+- **Scope.** A second pass over `sub_0805D410` (Object20 parameter-3
+  actor choreography) closed three divergences in the first-room
+  opening: the children's `+0x58` attribute writes, the `+0xB==5`
+  absorb-pose/visibility gating, and the expression of Arikado's
+  approach stop. The status stays `partial`: the `+0x48` walk
+  consumer is still absent from the dump and no new emulator
+  comparison was run.
+- **+0x58 facing.** The three story children share the same OAM
+  attribute byte the emitted children already model: bit 6 is the
+  horizontal flip consumed through `sub_0803AC40`'s
+  `+0x58 << 0x19 >> 0x1F` -> attribute bit 12. `sub_0805D410`
+  `+0xB==2`'s single sub-state-0 pass writes child0 `&= ~0x41`
+  (Mina's flip and bit 0 cleared) and child1 `|= 0x40` (Genya turns
+  toward the incoming threat), and `+0xB==3` sub-state 3's near
+  Skeleton Knight emission rewrites child1 as
+  `(old & ~0x41) | (!bit6 << 6)` — bit 0 clears and the flip toggles
+  back as Genya faces Soma again. `AosOpeningActors.actor_flags58`
+  tracks the byte and `draw_opening_actors` mirrors bit 6 through
+  the same draw-x correction and `SDL_FLIP_HORIZONTAL` the emitted
+  children use.
+- **Absorb pose window.** The native `sub_0801D028(0x52)` call
+  sites in `+0xB==5` bind the absorb pose only on the `+0xD <= 0x8F`
+  frames of sub-state 2 (the `0x8F` transition frame itself) and on
+  every frame of sub-states 3-5 — the whole obtained-soul window.
+  During the earlier `0xD2 -> 0x90` countdown (`+0xD > 0x8F`) no
+  pose call runs, so Soma keeps the spawn pose `0x51` visible; the
+  `+0x5A` bit-5 blink likewise runs only while `+0xD <= 0x8F` in
+  sub-state 2 and throughout sub-state 3's input wait. The port
+  previously held `0x52` and the blink for the entire countdown;
+  both are now gated to the decoded windows (`scene_step == 2` or
+  the soul-notice states).
+- **Arikado's approach.** `sub_0805D198` writes `+0x48 =
+  0xFFFFA000` and the `+0x48` consumer remains absent from the
+  disassembly dump (his only callback is `sub_0805B748` ->
+  `sub_0803F17C`, animation dispatch only). The bounded walk now
+  expresses its stop as the player's world X `+0x28` — `0xD0`
+  against Soma's `0xA8` — instead of a bare constant, so the
+  approach stays anchored to the player if the spawn record ever
+  moves; the approximation status is unchanged.
+- **Verification.** `tests/test_aos_opening_event.c` asserts the
+  `+0x58` writes at both native sites, the `0x51` pose and clear
+  visibility during the early countdown, and the existing `0x52`
+  absorb assertions; `ctest -R aos_opening_event` passes. A fresh
+  portable save under `xvfb-run --capture` with a per-frame A-tap
+  script runs the whole scene to completion: "Aria opening story
+  completed; event 0x20 set and Winged Skeleton soul granted and
+  equipped", and the end-of-run actor dump shows Genya stopped at
+  `0xD0`, Mina at `0x90` and Soma on animation `0x52`. No mGBA
+  comparison was run.
+- **Registries.** `annotations.tsv` (`aos.events.opening_scene`)
+  and `features.tsv` (`story.aria_opening_event`) notes updated;
+  status remains `partial`.
+
 ## Patch 1201 - Headhunter case-24 sine-wave projectile (sub_08085A48/85BF0/85E48/85F8C)
 
 - **Scope.** The last documented state-1 (`sub_08082FFC`) gap is

@@ -343,8 +343,9 @@ static void test_trigger(void) {
      * every opening child the animation-only sub_0805B748 callback
      * (only child+0x1c gets sub_0805DAA0), and sub_0805C628 is an
      * unrelated object's walk-on, so no dumped routine integrates
-     * child18's +0x48 — the 0xD0 guard remains a documented
-     * approximation of the unidentified stop consumer. */
+     * child18's +0x48 — the port stops him at the player's x + 0x28
+     * (0xD0 against Soma's 0xA8), a documented approximation of the
+     * unidentified stop consumer. */
     unsigned walk_guard = 0;
     while (actors.state == 1 && walk_guard++ < 400)
         aos_opening_actors_update(&actors, NULL, NULL, 0);
@@ -352,6 +353,10 @@ static void test_trigger(void) {
     assert(actors.visible[0] && actors.visible[1] && actors.visible[2]);
 
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_CONFRONTATION);
+    /* sub_0805D410 +0xB==2's sub-state-0 attribute writes: child0's
+     * +0x58 loses bits 0 and 6, child1's gains bit 6 — Genya flips
+     * toward the incoming threat while Mina does not. */
+    assert(actors.actor_flags58[0] == 0 && actors.actor_flags58[1] == 0x40);
     assert(aos_opening_actors_update(&actors, NULL, NULL, 0) ==
            AOS_OPENING_CUE_CONFRONTATION);
     aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_ENEMY_APPEARS);
@@ -377,6 +382,10 @@ static void test_trigger(void) {
     assert(aos_opening_actors_update(&actors, NULL, &camera_x, 0) ==
            AOS_OPENING_CUE_ENEMY_APPEARS);
     assert(actors.animation[0] == 5 && actors.animation_age[0] == 0);
+    /* +0xB==3 sub-state 3's child18 +0x58 rewrite toggles bit 6 back
+     * off (and clears bit 0) as the near batch lands — Genya faces
+     * Soma again. */
+    assert(actors.actor_flags58[1] == 0);
     assert(actors.emitted_batches ==
            (AOS_OPENING_EMISSION_DISTANT | AOS_OPENING_EMISSION_NEAR_SOMA));
     assert(actors.emitted_count == AOS_OPENING_EMITTED_CAPACITY);
@@ -460,6 +469,11 @@ static void test_trigger(void) {
     for (unsigned frame = 0; frame < 20; ++frame)
         assert(aos_opening_actors_update(&actors, durations, &camera_x, 0) ==
                AOS_OPENING_CUE_NONE);
+    /* The 0xD2 -> 0x90 countdown still sits above the +0xD<=0x8F
+     * window, so sub_0801D028(0x52) has not run yet: Soma keeps the
+     * spawn pose 0x51 and the +0x5A visibility bit stays set — no
+     * absorb-pose or blink during the early countdown. */
+    assert(actors.soma_animation == 0x51 && !actors.soma_hidden);
     /* Countdown update 3 sees +0xD==0xD0: sub_0805E9F0's seven
      * pieces (the sb=6..0 loop consumes all of 0x08526802),
      * sub_0806D578's flame, sub_0805EAFC's soul orb, SE 0x6B and

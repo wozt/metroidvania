@@ -13581,6 +13581,182 @@ static void chaos_tests(void) {
     }
     assert(limb.removed);
 
+    /* sub_080A57BC: the intro's case-4 exit also emits the phase-2
+     * crawler body — one CHAOS_BODY child at the parent's position
+     * with the decoded +0x17/+0x1B/+0x5C/+0x65/+0x20/+0x3C fields,
+     * the 120-record trail pre-filled with {0,0,0x0B,0x1E,0x40,0}
+     * and +0x72 hurt-off. Its first update emits the eight
+     * CHAOS_BODY_LIMB children (indices 7 down to 0): independent
+     * animated entities that integrate the body's trail into
+     * centipede segments — attack-capable, hurt-immune, with an
+     * every-eighth-tick contact pass — not attack-origin markers. */
+    AosEnemy e6;
+    assert(aos_enemy_create(&e6, 0x70, 300, 150, 0, 1,
+                            &soma, &layer, &kind, &ch));
+    AosEnemy body;
+    bool saw_body = false;
+    frames = 0;
+    while (e6.state == 0 && frames < 0x400) {
+        AosHitReport h = aos_enemy_update(&e6, &soma, &layer, &kind,
+                                          NULL, NULL, 10, 4, 0, 0,
+                                          always_zero);
+        for (int i = 0; i < h.child_count; ++i)
+            if (h.children[i].role == AOS_ROLE_CHAOS_BODY &&
+                !saw_body) {
+                body = h.children[i];
+                saw_body = true;
+            }
+        ++frames;
+    }
+    assert(saw_body);
+    assert(body.parent == &e6);
+    assert(body.x == e6.x && body.y == e6.y);
+    assert(body.role == AOS_ROLE_CHAOS_BODY && body.state == 0);
+    assert(body.ch2_bgrp == 0 && body.ch2_blmb == 4);
+    assert(body.ch2_bcnt == 0x1E && body.ch2_banim == 0x0B);
+    assert(body.ch2_bang == 0x4000 && body.ch2_t22 == 0);
+    assert(body.stats.contact == 0x55);
+    assert(body.combat.hurt_off && !body.combat.attack_off);
+    assert(body.ch2_trail[2] == 0x0B && body.ch2_trail[3] == 0x1E &&
+           body.ch2_trail[4] == 0x40 && body.ch2_trail[5] == 0);
+    /* First body update: the eight limbs emit in reverse index
+     * order, each parented to the persistent body record. */
+    AosHitReport hb = aos_enemy_update(&body, &soma, &layer, &kind,
+                                       NULL, NULL, 10, 4, 0, 0,
+                                       always_zero);
+    int blimbs = 0;
+    bool order_ok = true;
+    for (int i = 0; i < hb.child_count; ++i) {
+        const AosEnemy *c = &hb.children[i];
+        if (c->role != AOS_ROLE_CHAOS_BODY_LIMB) continue;
+        blimbs++;
+        if (c->variant != (uint8_t)(7 - (blimbs - 1)) ||
+            c->parent != &body || c->x != body.x || c->y != body.y ||
+            c->ch2_lidx != c->variant ||
+            c->ch2_anim != (c->variant == 7 ? 5 : 0x0E) ||
+            c->combat.attack_off || !c->combat.hurt_off)
+            order_ok = false;
+    }
+    assert(blimbs == 8 && order_ok);
+    /* The crawl: case 0 arms +0x54 = 0x800 and the shared acquire
+     * picks group-0 table entry +0x1B = 4 -> target (0x80, 0xD0);
+     * the body then steers, accelerates and writes trail records. */
+    assert(body.step == 2 && body.ch2_t20 == 0x80 &&
+           body.ch2_tgy == 0xD0);
+    int32_t bx = body.x, by = body.y;
+    for (int i = 0; i < 30; ++i)
+        aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(body.x != bx || body.y != by || body.vx != 0 ||
+           body.vy != 0);
+    assert(body.ch2_trail[0] != 0 || body.ch2_trail[2] != 0x0B ||
+           memcmp(body.ch2_trail + 6, body.ch2_trail,
+                  6) != 0);
+    /* A limb integrates the sampled trail record: its +0x42/+0x46
+     * pixel words move by the record's signed deltas plus the
+     * origin-byte delta, +0x5C counts the sampled band and the
+     * +0x72 combat bits follow the 0x12 window. */
+    AosEnemy limb8;
+    memset(&limb8, 0, sizeof limb8);
+    limb8.id = 0x70;
+    limb8.role = AOS_ROLE_CHAOS_BODY_LIMB;
+    limb8.parent = &body;
+    limb8.state = 0;
+    limb8.variant = 3;
+    limb8.ch2_lidx = 3;
+    limb8.x = AOS_FIXED(100);
+    limb8.y = AOS_FIXED(100);
+    limb8.ch2_lox = (uint8_t)body.ch2_box;
+    limb8.ch2_loy = (uint8_t)body.ch2_oy;
+    int32_t lx = limb8.x, ly = limb8.y;
+    for (int i = 0; i < 16; ++i)
+        aos_enemy_update(&limb8, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(limb8.timer == 16 && !limb8.removed);
+    assert((int16_t)(limb8.x >> 16) != 100 ||
+           (int16_t)(limb8.y >> 16) != 100 || limb8.x != lx ||
+           limb8.y != ly);
+    /* Body death (parent Chaos -> state 3): the body enters state
+     * 0xA with timer 0x28 and zeroed +0x50/+0x54 = 0x400000; the
+     * limbs follow into their own state-1 tails. */
+    e6.state = 3;
+    aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(body.state == 0xA && body.timer == 0x28 &&
+           body.ay == 0x400000);
+    aos_enemy_update(&limb8, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(limb8.state == 1 && limb8.timer >= 0x3C &&
+           limb8.timer <= 0x3F);
+    frames = 0;
+    while (!body.removed && frames < 0x100) {
+        aos_enemy_update(&body, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+        ++frames;
+    }
+    assert(body.removed);
+    e6.state = 1;
+
+    /* The case-3 attack: force group-1 arrival semantics by arming
+     * the substate directly; record index 9 fires one
+     * CHAOS_BODY_SHOT per frame for its three ticks — a
+     * sub_080A65C0/sub_080A6724 entity with the decoded sine
+     * offsets, 0x30000 velocity, contact 0x82 and hurt-off. */
+    AosEnemy body2;
+    memset(&body2, 0, sizeof body2);
+    body2.id = 0x70;
+    body2.role = AOS_ROLE_CHAOS_BODY;
+    body2.parent = &e6;
+    body2.state = 0;
+    body2.step = 3;
+    body2.substep = 1;          /* already primed */
+    body2.ch2_idx = 9;
+    body2.ch2_frame = 0;
+    body2.ch2_bang = 0x4000;
+    body2.ch2_bcnt = 0x1E;
+    body2.boss_parts_spawned = true;   /* limbs already out natively */
+    body2.x = AOS_FIXED(100);
+    body2.y = AOS_FIXED(100);
+    AosHitReport ha = aos_enemy_update(&body2, &soma, &layer, &kind,
+                                       NULL, NULL, 10, 4, 0, 0,
+                                       always_zero);
+    int bshots = 0;
+    bool shot_ok = true;
+    for (int i = 0; i < ha.child_count; ++i) {
+        const AosEnemy *c = &ha.children[i];
+        if (c->role != AOS_ROLE_CHAOS_BODY_SHOT) continue;
+        bshots++;
+        if (c->parent != &body2 || c->stats.contact != 0x82 ||
+            !c->combat.hurt_off || c->combat.attack_off ||
+            (c->vx == 0 && c->vy == 0))
+            shot_ok = false;
+    }
+    assert(bshots == 1 && shot_ok);
+    /* The shot integrates, bounces inside the arena band and dies
+     * on the Chaos state-3 watch or the +0xD > 0xEF cap. */
+    AosEnemy bshot;
+    memset(&bshot, 0, sizeof bshot);
+    bshot.id = 0x70;
+    bshot.role = AOS_ROLE_CHAOS_BODY_SHOT;
+    bshot.parent = &body2;
+    body2.parent = &e6;         /* shot's grandparent = Chaos */
+    bshot.state = 0;
+    bshot.hp = 0;
+    bshot.x = AOS_FIXED(100);
+    bshot.y = AOS_FIXED(100);
+    bshot.vx = 0x30000;
+    bshot.vy = -0x10000;
+    int32_t shx = bshot.x;
+    for (int i = 0; i < 4; ++i)
+        aos_enemy_update(&bshot, &soma, &layer, &kind, NULL, NULL,
+                         10, 4, 0, 0, always_zero);
+    assert(bshot.x != shx && !bshot.removed);
+    e6.state = 3;
+    aos_enemy_update(&bshot, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(bshot.removed);
+    e6.state = 1;
+
     /* A CHAOS_PART child orbits the core record and dies with the
      * parent. */
     AosEnemy pt;

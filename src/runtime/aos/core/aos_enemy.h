@@ -300,7 +300,8 @@ enum { AOS_ROLE_ENEMY = 0, AOS_ROLE_GRENADE = 1, AOS_ROLE_AXE = 2, AOS_ROLE_ARRO
        AOS_ROLE_CHAOS_SHOT = 178, AOS_ROLE_CHAOS_TURRET = 179,
        AOS_ROLE_CHAOS_ORB = 180, AOS_ROLE_CHAOS_ORB2 = 181,
        AOS_ROLE_CHAOS_LIMB = 182, AOS_ROLE_CHAOS_MUZZLE = 183,
-       AOS_ROLE_CHAOS_BURST = 184 };
+       AOS_ROLE_CHAOS_BURST = 184, AOS_ROLE_CHAOS_BODY = 185,
+       AOS_ROLE_CHAOS_BODY_LIMB = 186, AOS_ROLE_CHAOS_BODY_SHOT = 187 };
 
 /* The linked Nemesis sprite (sub_080C7784): state, step, + 0x0D, direct
  * frame (+ 0x65), facing and visibility (+ 0x58), room position. Its slot
@@ -429,6 +430,18 @@ typedef struct AosEnemy {
     int32_t ch2_hx, ch2_hy, ch2_life;
     int8_t ch2_limb_n;
     uint16_t ch2_rot;       /* the ORB child's + 0x18 u16 affine angle */
+    /* Chaos phase-2 crawler body sub_080A5A7C (spawned by sub_080A57BC)
+     * and its sub_080A62B8 limbs: +0x17 target group, +0x1B limb index,
+     * +0x18/+0x19 origin bytes, +0x14 turn speed, +0x1E target Y, +0x20
+     * crawl angle, +0x22 pattern counter, +0x5C band counter, +0x65 OAM
+     * frame, the +0x42/+0x46 low-byte deltas and the 120-record +0x24
+     * trail heap; the limb's +0x1A index, +0x18/+0x19 bytes, +0x5C. */
+    uint8_t ch2_bgrp, ch2_blmb, ch2_lox, ch2_loy, ch2_lidx, ch2_lcnt;
+    uint8_t ch2_bcnt, ch2_banim, ch2_bdx, ch2_bdy;
+    uint16_t ch2_turn, ch2_t22, ch2_bang;
+    uint16_t ch2_box, ch2_oy;
+    int16_t ch2_tgy;
+    uint8_t ch2_trail[720];
     bool buer_fire_mirrored; /* linked second sprite's +0x58 bit 0x40, separate from parent */
     /* Death step-one linked-fire displacement: +1 X/Y on every third
      * tick, then -1 on the following tick; carried into death step two.

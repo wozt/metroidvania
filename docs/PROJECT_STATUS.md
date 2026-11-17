@@ -1,3 +1,92 @@
+## Patch 1210 - Chaos phase 2: sub_080A57BC crawler body, eight trail limbs and mouth shots
+
+- **Scope.** `src/runtime/aos/enemies/chaos.c`,
+  `src/runtime/aos/core/aos_enemy.h` and `tests/test_aos_enemy.c`
+  only. Ports the last unported phase-2 spawn: the intro's case-4
+  exit (`sub_080A4728` +0xB == 4, timer > 0x27) now fires
+  `sub_080A57BC(e,0,0,0)` exactly where the native call sits,
+  replacing the documented gap left by Patch 1208.
+- **Native decode.** `sub_080A57BC` creates one type-0x49 /
+  band-0xCF entity (update `sub_080A5A7C`, draw `sub_080A7044`)
+  at the caller's +0x40/+0x44 plus the (0,0) offsets with +0x5C =
+  0x1E, +0x65 = 0x0B, +0x3C = 0x55, +0x20 = 0x4000, +0x17 = 0,
+  +0x1B = 4, +0x72 = (old | 4) & 0xFD (attack on, hurt off), the
+  +0x18/+0x19 spawn-origin bytes off the gEwramData + 0xA094 room
+  record and a 120-record 6-byte heap (+0x24, `sub_0806C2CC`)
+  pre-filled with {0,0,0x0B,0x1E,0x40,0x00}; it then runs
+  `sub_0806DFF8(sub_080A62B8)` eight times for indices 7 down to
+  0 — each limb copies the band byte, takes +0x1A = +0x0D = index,
+  +0x5C = body +0x5C + 1, +0x3C = 0x55, +0x65 = 0x0E (index 7
+  gets 5 plus its own affine channel) and +0x72 hurt-off through
+  `sub_080A657C`. The limbs are independent animated entities —
+  not attack-origin markers: `sub_080A62B8` validates the body
+  (+0x10 link, active flag, +0x36 band byte), samples heap record
+  8*index+8 for signed motion deltas, frame select and the +0x72
+  combat window, integrates them into the +0x42/+0x46 pixel words,
+  mirrors on the record's byte-0 sign and runs the
+  `sub_080421AC` contact pass every eighth tick; on body +0xA ==
+  0xA it enters a state-1 tail (+0x54 = 0x400000, +0xD =
+  (rand & 3) + 0x3C) with the blink/countdown delete.
+  `sub_080A5A7C` itself is the crawler brain: +0xB substates
+  0/1 acquire a target from one of four decoded tables
+  (0x0811926C five pairs, 0x08119280 eight pairs, 0x081192C0
+  eight {x,y,pad} triples copied twice for groups 2/3), substate
+  2 homes on it in pixel space — Sqrt distance, ArcTan2 aim, the
+  +0x14 turn ramp with the u16 dead-zone wrap, the +0x5C band
+  counter, per-group +0x65 frame rules, the six-band +0x50 speed
+  ramp against +0x54, sine-pair velocity through
+  `sub_0803E86C`/`sub_0806D3AC`, the low-byte deltas feeding the
+  trail record, the dist <= 2 group transitions (0->2, 1->attack,
+  2->3, 3->0/1/2 through the rand & 0x7F gates) and the +0x22 >
+  0x12B stuck watchdog — and substate 3 replays the twelve-record
+  0x085283CC sequence (`sub_0803F0E4`/`sub_0803F17C`/
+  `sub_0803EC34`), firing a `sub_080A65C0` shot and song 0x147 on
+  every frame +0x6E == 9 holds. `sub_080A65C0`/`sub_080A6724` is
+  the mouth shot: sine-offset spawn (0x1C0000 position, 0x30000
+  velocity), contact +0x3C = 0x82, hurt-off, the arena bounce
+  while +0xD <= 0x63, the margin entry-1 cull, the +0xD > 0xEF
+  cap and the Chaos grandparent watch (active, same +0x36 band,
+  +0xA != 3). Parent loss or +0x36 mismatch enters the +0xA = 0xA
+  death tail (flame every 4th tick, `sub_0806D3D8` 0x70000, blink,
+  heap free and palette restore at expiry).
+- **Port.** New roles `AOS_ROLE_CHAOS_BODY` (185),
+  `AOS_ROLE_CHAOS_BODY_LIMB` (186) and
+  `AOS_ROLE_CHAOS_BODY_SHOT` (187); `AosEnemy` gains the body
+  fields (`ch2_bgrp`/`ch2_blmb`/`ch2_lox`/`ch2_loy`/`ch2_lidx`/
+  `ch2_lcnt`/`ch2_bcnt`/`ch2_banim`/`ch2_bdx`/`ch2_bdy`/
+  `ch2_turn`/`ch2_t22`/`ch2_bang`/`ch2_box`/`ch2_oy`/`ch2_tgy` and
+  the 720-byte `ch2_trail` standing in for the +0x24 heap).
+  Children ride the existing `AosHitReport.children` mechanism
+  with persistent `parent` links — the body's limbs parent to the
+  persistent body record and the shot's grandparent watch walks
+  body -> Chaos, matching the native +0x10 chain. Documented
+  approximations: the limbs emit on the body's first update
+  instead of inside `sub_080A57BC` (one frame), the +0x36 room
+  band byte compares port as id/removed checks, the +0x18/+0x19
+  spawn-origin bytes approximate the room record with the parent
+  pixel position, the sub_0803E058 affine channels (body steer,
+  index-7 limb read, shot spawn) and the palette merges/restores
+  have no runtime counterpart, the +0x5A/+0x5B/+0x23 flag bytes
+  fold away, frame table 0x08226B58 still shares the phase-1
+  `Enemy/chaos` kind's anim set, and `static_frame` stays -1 so
+  the +0x65 OAM frames are tracked in `ch2_anim`/`ch2_banim`
+  rather than drawn as stills.
+- **Tests.** `chaos_tests` grows the sub_080A57BC block: the
+  intro emits exactly one `CHAOS_BODY` child with the decoded
+  spawn fields and pre-filled trail; its first update emits
+  eight `CHAOS_BODY_LIMB` children in reverse index order, each
+  parented to the body with index 7 on frame 5 and the rest on
+  0x0E; the crawl acquires group-0 entry 4 target (0x80, 0xD0),
+  steers and writes trail records; a synthetic limb integrates
+  the sampled deltas and enters the state-1 death tail when the
+  body dies; a forced `CHAOS_BODY_SHOT` carries the decoded
+  contact/hurt-off flags, integrates and deletes on the Chaos
+  state-3 watch.
+- **Registries.** `annotations.tsv` (`aos.enemies.chaos`) and
+  `aos_monster_aspects.tsv` (chaos) routines/divergences/notes
+  updated; status stays `functional`/`ported` — still no
+  emulator comparison.
+
 ## Patch 1209 - pause transients: full sub_08048108 three-sprite swipe and native +0x65 press frames
 
 - **Decode.** `sub_08048108` (entity +0xFB8, created by the Soul Set

@@ -55,12 +55,18 @@
  * sub_080A6DEC/sub_080A70F0 orbiting embers (CHAOS_ORB/ORB2), the
  * four sub_080A4D64/sub_080A4E80 intro limbs (CHAOS_LIMB) and the
  * sub_080A56CC/sub_080A6FE4 player-anchored muzzle (CHAOS_MUZZLE).
- * Still unported: the sub_080A57BC eight-limb body spawn, the
- * ~5000-line helper cluster beyond the routines above, the
- * sub_0803E058 affine channels, the palette fades/restores, the
- * SetPlayerInput locks, the gEwramData story writes and the
- * phase-2 art (tiles 0x08119224/frames 0x08226B58 share the
- * Enemy/chaos kind). */
+ * The intro's case 4 also fires sub_080A57BC(e,0,0,0): the
+ * phase-2 crawler — one sub_080A5A7C body that crawls a decoded
+ * four-group target table on pixel-space ArcTan2 homing, feeds a
+ * 120-record motion trail and cycles group attacks; its eight
+ * sub_080A62B8 limbs integrate that trail into centipede
+ * segments, and its case-3 sub_080A5A7C attack replays the
+ * 0x085283CC sequence firing sub_080A65C0/sub_080A6724 mouth
+ * shots. Still unported: the ~5000-line helper cluster beyond
+ * the routines above, the sub_0803E058 affine channels, the
+ * palette fades/restores, the SetPlayerInput locks, the
+ * gEwramData story writes and the phase-2 art (tiles
+ * 0x08119224/frames 0x08226B58 share the Enemy/chaos kind). */
 static void ch_emit_parts(AosEnemy *e, AosHitReport *hit) {
     for (unsigned i = 0; i < 3 &&
                         hit->child_count < AOS_ENEMY_MAX_CHILDREN;
@@ -872,14 +878,763 @@ static void ch2_burst_update(AosEnemy *e, const AosEnemyKind *kind) {
 }
 
 /* ------------------------------------------------------------------ */
+/* sub_080A57BC: the phase-2 crawler body, its eight sub_080A62B8     */
+/* limbs and the sub_080A65C0/sub_080A6724 mouth shot.                */
+/* ------------------------------------------------------------------ */
+
+/* The target tables sub_080A5A7C memcpy's onto its stack: group 0 the
+ * five {x,y} u16 pairs of 0x0811926C, group 1 the eight of
+ * 0x08119280, groups 2/3 the eight {x,y,pad} u16 triples of
+ * 0x081192C0 (group 3 is a second identical copy natively). The
+ * 0x08119264 and 0x081192A0 copies are dead in the ported paths
+ * (documented). Targets are whole pixels compared against the
+ * +0x42/+0x46 pixel words. */
+/* Groups 0/1 sit back-to-back on the native stack frame (sb =
+ * sp+0x40, r8 = sp+0x54), so a group-0 index past its five entries
+ * reads the head of the group-1 table — mirrored here so the read
+ * stays in bounds. */
+static const uint8_t CH2_BODY_T0[32] = {
+    0x30, 0x00, 0xD0, 0x00, 0x30, 0x00, 0xD0, 0x00, 0xC0, 0x00, 0xD0,
+    0x00, 0xC0, 0x00, 0xD0, 0x00, 0x80, 0x00, 0xD0, 0x00,
+    0x58, 0x00, 0x50, 0x00, 0x80, 0x00, 0x50, 0x00, 0xA8, 0x00,
+    0x50, 0x00};
+static const uint8_t CH2_BODY_T1[32] = {
+    0x58, 0x00, 0x50, 0x00, 0x80, 0x00, 0x50, 0x00, 0xA8, 0x00, 0x50,
+    0x00, 0x80, 0x00, 0x30, 0x00, 0x80, 0x00, 0x70, 0x00, 0x70, 0x00,
+    0x40, 0x00, 0xA0, 0x00, 0x60, 0x00, 0x40, 0x00, 0x60, 0x00};
+static const uint8_t CH2_BODY_T2[48] = {
+    0x30, 0x00, 0x20, 0x00, 0x00, 0x00, 0x30, 0x00, 0x78, 0x00, 0x00,
+    0x00, 0xC0, 0x00, 0x20, 0x00, 0x00, 0x00, 0xC0, 0x00, 0x78, 0x00,
+    0x00, 0x00, 0x78, 0x00, 0xD0, 0xFF, 0x00, 0x00, 0x78, 0x00, 0xD0,
+    0x00, 0x00, 0x00, 0xD0, 0xFF, 0x54, 0x00, 0x00, 0x00, 0x20, 0x01,
+    0x54, 0x00, 0x00, 0x00};
+#define CH2_BODY_T3 CH2_BODY_T2    /* the native second memcpy is identical */
+
+/* sub_0803F0E4(body, 0x085283CC, 2, 0): the case-3 attack sequence —
+ * twelve 4-byte {frame, ticks} records (the leading {0x0B, 0} record
+ * is the prime's instant-advance entry). +0x6E is the record index,
+ * +0x6F the tick and +0x59 bit 0 the end latch; the port replays the
+ * timing on ch2_idx/ch2_frame/ch2_done because frame table
+ * 0x08226B58 has no runtime kind (documented). */
+static const uint8_t CH2_BODY_ATK[12][2] = {
+    {0x0B, 0}, {7, 20}, {8, 10}, {9, 9}, {8, 8}, {9, 7},
+    {8, 6}, {9, 5}, {8, 4}, {9, 3}, {7, 30}, {5, 2}};
+
+static uint16_t ch2_body_u16(const uint8_t *t, unsigned off) {
+    return (uint16_t)(t[off] | ((uint16_t)t[off + 1] << 8));
+}
+
+/* The case-0/1 target acquire: +0x17 picks the table, +0x1B the
+ * entry; +0x1C/+0x1E get the u16 pair (strh — +0x1E reads back
+ * signed, e.g. the 0xFFD0 entries). */
+static void ch2_body_target(AosEnemy *e) {
+    unsigned i = e->ch2_blmb;
+    const uint8_t *t;
+    unsigned stride;
+    switch (e->ch2_bgrp) {
+    case 0:  t = CH2_BODY_T0; stride = 4; break;
+    case 1:  t = CH2_BODY_T1; stride = 4; break;
+    case 2:  t = CH2_BODY_T2; stride = 6; break;
+    default: t = CH2_BODY_T3; stride = 6; break;
+    }
+    e->ch2_t20 = ch2_body_u16(t, i * stride);
+    e->ch2_tgy = (int16_t)ch2_body_u16(t, i * stride + 2);
+}
+
+/* The +0x24 heap trail: 120 6-byte records shifted one slot toward
+ * the top (newest at index 0), then record 0 written as
+ * {b0, b1, frame-byte, +0x5C, +0x20 hi, +0x20 lo}. The sub_080A62B8
+ * limbs sample record 8*index+8 — limb 7 the oldest, limb 0 the
+ * newest — which is what makes the body a centipede. */
+static void ch2_body_trail(AosEnemy *e, uint8_t b0, uint8_t b1,
+                           uint8_t frame_byte) {
+    memmove(e->ch2_trail + 6, e->ch2_trail, 714);
+    e->ch2_trail[0] = b0;
+    e->ch2_trail[1] = b1;
+    e->ch2_trail[2] = frame_byte;
+    e->ch2_trail[3] = e->ch2_bcnt;
+    e->ch2_trail[4] = (uint8_t)(e->ch2_bang >> 8);
+    e->ch2_trail[5] = (uint8_t)e->ch2_bang;
+}
+
+/* The shared limb-index redraw of the dist <= 2 transitions: a
+ * (rand % 3) == 0 gate picks (rand & 3) + 4, otherwise rand & 3,
+ * redrawn until it differs from +0x1B. */
+static void ch2_body_pick(AosEnemy *e, uint32_t (*random)(void)) {
+    for (;;) {
+        if (aos_enemy_umod(random(), 3) == 0) {
+            uint8_t r = (uint8_t)((random() & 3) + 4);
+            if (r != e->ch2_blmb) {
+                e->ch2_blmb = r;
+                return;
+            }
+        } else {
+            uint8_t r = (uint8_t)(random() & 3);
+            if (r != e->ch2_blmb) {
+                e->ch2_blmb = r;
+                return;
+            }
+        }
+    }
+}
+
+/* sub_080A57BC(e, 0, 0, 0): the crawler body — one type-0x49 entity
+ * (update sub_080A5A7C) spawned at the parent's +0x40/+0x44 plus the
+ * (0,0) offsets, +0x5C = 0x1E, +0x65 = 0x0B, +0x5B = 2,
+ * +0x3C = 0x55, +0x20 = 0x4000, +0x17 = 0, +0x1B = 4 and the
+ * +0x18/+0x19 spawn-origin bytes off the gEwramData + 0xA094 room
+ * record (approximated by the parent's pixel position — documented).
+ * The eight sub_080A62B8 limbs are emitted by the body's first
+ * update; natively they are created inside the same call (a
+ * one-frame difference, documented). The affine channels
+ * (sub_0803E654/sub_0803E058), the palette merges and the
+ * sub_0804277C/sub_08042848 box preset 0x1010F8F8 have no runtime
+ * counterpart. */
+static void ch2_spawn_body(AosEnemy *e, const AosAnimSet *anims,
+                           AosHitReport *report) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN)
+        return;
+    AosEnemy *c = &report->children[report->child_count++];
+    *c = *e;
+    c->role = AOS_ROLE_CHAOS_BODY;
+    c->parent = e;
+    c->state = c->step = c->substep = 0;
+    c->variant = 0;
+    c->x = e->x;
+    c->y = e->y;
+    c->vx = c->vy = c->ax = c->ay = 0;
+    c->timer = 0;
+    c->static_frame = -1;
+    c->hp = 0xBB8;
+    c->hit_flash = 0;
+    c->defeated = false;
+    c->hidden = false;
+    c->removed = false;
+    c->boss_parts_spawned = false;
+    c->ch2_bgrp = 0;                    /* +0x17 */
+    c->ch2_blmb = 4;                    /* +0x1B */
+    c->ch2_box = (uint16_t)(e->x >> 16); /* +0x18/+0x19 room-record
+                                          * origin approximation */
+    c->ch2_oy = (uint16_t)(e->y >> 16);
+    c->ch2_lox = (uint8_t)c->ch2_box;
+    c->ch2_loy = (uint8_t)c->ch2_oy;
+    c->ch2_turn = 0;                    /* +0x14 */
+    c->ch2_t20 = 0;                     /* +0x1C */
+    c->ch2_tgy = 0;                     /* +0x1E */
+    c->ch2_bang = 0x4000;               /* +0x20 = 0x80 << 7 */
+    c->ch2_t22 = 0;                     /* +0x22 */
+    c->ch2_bcnt = 0x1E;                 /* +0x5C */
+    c->ch2_banim = 0x0B;                /* +0x65 */
+    c->ch2_bdx = c->ch2_bdy = 0;
+    c->ch2_idx = c->ch2_frame = c->ch2_anim = 0;
+    c->ch2_done = false;
+    /* sub_080A57BC fills all 120 heap records at creation with
+     * {0, 0, +0x65 = 0x0B, +0x5C = 0x1E, +0x20 = 0x4000}. */
+    for (int i = 0; i < 120; ++i) {
+        c->ch2_trail[i * 6 + 0] = 0;
+        c->ch2_trail[i * 6 + 1] = 0;
+        c->ch2_trail[i * 6 + 2] = 0x0B;
+        c->ch2_trail[i * 6 + 3] = 0x1E;
+        c->ch2_trail[i * 6 + 4] = 0x40;
+        c->ch2_trail[i * 6 + 5] = 0x00;
+    }
+    c->stats.contact = 0x55;            /* +0x3C */
+    c->own_boxes = true;
+    c->own_hurt = (AosBox){-16, -16, 32, 32};
+    c->own_attack = (AosBox){-8, -8, 16, 16};
+    c->combat.attack_off = false;       /* +0x72 = (old | 4) & 0xFD:
+                                         * attack on, hurt off */
+    c->combat.hurt_off = true;
+    /* sub_0803B924 frames 0x08226B58 share the Chaos kind's art —
+     * the Chaos anim set stands in (documented). */
+    play_loop(c, anims, 0, true);
+}
+
+/* The eight sub_080A62B8 limbs sub_080A57BC creates (indices 7
+ * down to 0): linked through +0x10, position and room-band byte
+ * copied, +0x5C = body +0x5C + 1, +0x1A = +0x0D = index, +0x3C =
+ * 0x55, +0x65 = 0x0E (index 7 gets 5 plus its own affine channel —
+ * unported) and +0x72 = (old & 0xFD) | 4: attack on, hurt off. */
+static void ch2_body_emit_limbs(AosEnemy *body, const AosAnimSet *anims,
+                                AosHitReport *report) {
+    for (int i = 7; i >= 0; --i) {
+        if (report->child_count >= AOS_ENEMY_MAX_CHILDREN)
+            return;
+        AosEnemy *c = &report->children[report->child_count++];
+        *c = *body;
+        c->role = AOS_ROLE_CHAOS_BODY_LIMB;
+        c->parent = body;
+        c->state = c->step = c->substep = 0;
+        c->variant = (uint8_t)i;
+        c->ch2_lidx = (uint8_t)i;       /* +0x1A (s8) */
+        c->x = body->x;
+        c->y = body->y;
+        c->vx = c->vy = c->ax = c->ay = 0;
+        c->timer = (uint8_t)i;          /* +0xD = the spawn index */
+        c->static_frame = -1;
+        c->ch2_anim = (i == 7) ? 5 : 0x0E;  /* +0x65 */
+        c->hp = 0;
+        c->hit_flash = 0;
+        c->defeated = false;
+        c->hidden = false;
+        c->removed = false;
+        c->boss_parts_spawned = false;
+        c->ch2_lox = (uint8_t)body->ch2_box;  /* +0x18/+0x19 */
+        c->ch2_loy = (uint8_t)body->ch2_oy;
+        c->ch2_lcnt = (uint8_t)(body->ch2_bcnt + 1);  /* +0x5C */
+        c->own_boxes = true;
+        c->own_hurt = (AosBox){-8, -8, 16, 16};
+        c->own_attack = (AosBox){-6, -6, 12, 12};
+        c->combat.attack_off = false;   /* +0x72: attack on */
+        c->combat.hurt_off = true;      /*          hurt off */
+        play_loop(c, anims, 0, true);
+    }
+}
+
+/* sub_080A65C0(body, angle): the case-3 mouth shot — a type-0x49
+ * entity (update sub_080A6724) at the body's position plus the
+ * decoded sine offsets, velocity sin * 0x30000 on +0x48/+0x4C,
+ * contact +0x3C = 0x82, attack-only +0x72, anim 7 loop and
+ * +0x65 = 0x1E. r8 = angle - 0x1300, r5 = r8 + 0x4000. */
+static void ch2_spawn_body_shot(AosEnemy *e, uint32_t angle,
+                                const AosAnimSet *anims,
+                                AosHitReport *report) {
+    if (report->child_count >= AOS_ENEMY_MAX_CHILDREN)
+        return;
+    AosEnemy *c = &report->children[report->child_count++];
+    *c = *e;
+    c->role = AOS_ROLE_CHAOS_BODY_SHOT;
+    c->parent = e;
+    c->state = c->step = c->substep = 0;
+    c->variant = 0;
+    uint32_t r8 = angle + 0xFFFFED00u;      /* angle - 0x1300 */
+    uint32_t r5 = r8 + 0x4000;              /* + 0x80 << 7 */
+    int32_t s5 = aos_sine(r5 & 0xFFFF);
+    int32_t s8 = aos_sine(r8 & 0xFFFF);
+    /* Position offsets mul(sin, 0xE0 << 13 = 0x1C0000); velocities
+     * mul(sin, 0xC0 << 10 = 0x30000). */
+    c->x = e->x + aos_fixed_mul(s5, 0x1C0000);
+    c->y = e->y + aos_fixed_mul(s8, 0x1C0000);
+    c->vx = aos_fixed_mul(s5, 0x30000);
+    c->vy = aos_fixed_mul(s8, 0x30000);
+    c->ch2_lcnt = (uint8_t)(e->ch2_bcnt + 1);  /* +0x5C = body + 1 */
+    c->ax = c->ay = 0;
+    c->timer = 0;
+    c->static_frame = -1;
+    c->ch2_anim = 0x1E;                 /* +0x65 */
+    c->hp = 0;
+    c->hit_flash = 0;
+    c->defeated = false;
+    c->hidden = false;
+    c->removed = false;
+    c->boss_parts_spawned = false;
+    c->stats.contact = 0x82;            /* +0x3C */
+    c->own_boxes = true;
+    c->own_hurt = (AosBox){-6, -6, 12, 12};
+    c->own_attack = (AosBox){-6, -6, 12, 12};
+    c->combat.attack_off = false;       /* +0x72: attack on */
+    c->combat.hurt_off = true;          /*          hurt off */
+    play_loop(c, anims, 7, true);       /* sub_0803F2C8(.,7,2,1) */
+}
+
+/* The case-2 crawl (sub_080A5A7C's +0xB == 2 block): pixel-space
+ * homing on +0x1C/+0x1E with the ArcTan2 aim, the +0x14 turn-speed
+ * ramp and u16 angle wrap, the +0x5C band counter and +0x65 frame
+ * rules per group, the distance-banded +0x50 speed ramp against
+ * +0x54, the sin/cos * speed velocity, the motion deltas feeding
+ * the trail record, the dist <= 2 group transitions, the +0x22 >
+ * 0x12B stuck watchdog and the parent-state-3 death entry. The
+ * sub_0803E058 affine calls are visual-only (unported). */
+static void ch2_body_crawl(AosEnemy *e, AosSoma *soma,
+                           const AosEnemyKind *kind,
+                           const AosWeaponEntity *weapon,
+                           const AosWeaponFrames *weapon_frames,
+                           int soma_atk, int soma_def,
+                           uint32_t (*random)(void),
+                           AosHitReport *report) {
+    int32_t px = (int16_t)(e->x >> 16);
+    int32_t py = (int16_t)(e->y >> 16);
+    int32_t tx = (int16_t)e->ch2_t20;
+    int32_t ty = e->ch2_tgy;
+    int32_t dx = tx - px, dy = ty - py;
+    uint32_t d2 = (uint32_t)dx * (uint32_t)dx +
+                  (uint32_t)dy * (uint32_t)dy;
+    uint32_t dist = (uint16_t)aos_isqrt(d2);
+    if (dist == 0) {
+        /* Arrival snap: the +0x42/+0x46 pixel words take the target
+         * and the +0x40/+0x44 low words zero (native strh r2 with
+         * d2 == 0); the +0x50 speed drops — the shared tail still
+         * runs (ArcTan2(0,0), zero velocity). */
+        e->x = (int32_t)(uint16_t)e->ch2_t20 << 16;
+        e->y = (int32_t)(uint16_t)e->ch2_tgy << 16;
+        e->ax = 0;
+        px = tx;
+        py = ty;
+    }
+    uint8_t oldx = (uint8_t)px, oldy = (uint8_t)py;
+    dx = tx - px;
+    dy = ty - py;
+    uint16_t ang = aos_arctan2((int16_t)dx, (int16_t)dy);
+    uint16_t diff = (uint16_t)(ang - e->ch2_bang);
+    /* The +0x14 turn speed: dist > 5 ramps +8 capped at 0x280;
+     * inside 5 px it adds the raw diff (or 0x20 past 0x20). */
+    uint16_t turn;
+    if (dist > 5)
+        turn = e->ch2_turn > 0x27F ? 0x280 : (uint16_t)(e->ch2_turn + 8);
+    else if (diff > 0x20)
+        turn = (uint16_t)(e->ch2_turn + 0x20);
+    else
+        turn = (uint16_t)(e->ch2_turn + diff);
+    e->ch2_turn = turn;
+    /* The u16 angle integrate with the native dead-zone wrap. */
+    uint16_t bang = e->ch2_bang;
+    if (diff & 0x8000) {
+        if (diff >= (uint16_t)(0x10000 - turn)) {
+            if (diff < (uint16_t)(0x10000 - (turn >> 1)))
+                bang = (uint16_t)(bang + diff);
+        } else {
+            bang = (uint16_t)(bang - turn);
+        }
+    } else {
+        if (diff > turn)
+            bang = (uint16_t)(bang + turn);
+        else if (diff > (turn >> 1))
+            bang = (uint16_t)(bang + diff);
+    }
+    e->ch2_bang = bang;
+    /* The +0x5C band counter counts down only in group 0 past 0x11. */
+    if (e->ch2_bgrp == 0 && e->ch2_bcnt > 0x11)
+        e->ch2_bcnt--;
+    /* The +0x65 frame rules per group on the +0xD timer. */
+    switch (e->ch2_bgrp) {
+    case 0:
+        if (e->timer > 5) {
+            if (e->ch2_banim == 0xA) e->ch2_banim = 0xB;
+        } else if (e->ch2_banim == 5) {
+            e->ch2_banim = 0xA;
+        }
+        break;
+    case 1:
+    case 2:
+        if (e->timer > 9) {
+            if (e->ch2_banim == 0xA) e->ch2_banim = 5;
+        } else if (e->ch2_banim == 5) {
+            e->ch2_banim = 0xA;
+        }
+        break;
+    default:
+        if (e->timer > 9 && e->ch2_banim == 6) e->ch2_banim = 5;
+        break;
+    }
+    /* The distance-banded +0x50 speed ramp against the +0x54 rate
+     * (0x800 from the case-0 entry); the two smallest bands share
+     * the 0x1000 floor. */
+    int32_t rate = e->ay;
+    if (dist > 0x28) {
+        if (e->ax <= 0x27FFF) e->ax += rate * 2;
+    } else if (dist > 0x20) {
+        if (e->ax > 0x20000) e->ax -= rate * 3;
+    } else if (dist > 0x18) {
+        if (e->ax > 0x18000) e->ax -= rate * 2;
+    } else if (dist > 0xC) {
+        if (e->ax > 0x10000) e->ax -= rate * 2;
+    } else if (dist > 4) {
+        if (e->ax > 0x8000) e->ax -= rate * 2;
+    } else {
+        if (e->ax > 0x1000) e->ax -= rate * 2;
+        else if (e->ax <= 0xFFF) e->ax = 0x1000;
+    }
+    /* Velocity = the angle's sine pair times the speed (the native
+     * sub_0803E058 affine between the lookups and the multiply is
+     * visual-only — unported). */
+    e->vx = aos_fixed_mul(aos_sine((bang + 0x4000) & 0xFFFF), e->ax);
+    e->vy = aos_fixed_mul(aos_sine(bang & 0xFFFF), e->ax);
+    e->x += e->vx;                      /* sub_0806D3AC */
+    e->y += e->vy;
+    e->timer++;
+    e->ch2_t22++;
+    /* The +0x42/+0x46 low-byte deltas feed the trail record: the
+     * new pixel low byte minus the sign-extended stored one. */
+    int32_t npx = (int16_t)(e->x >> 16), npy = (int16_t)(e->y >> 16);
+    e->ch2_bdx = (uint8_t)((uint8_t)npx - (uint8_t)(int8_t)oldx);
+    e->ch2_bdy = (uint8_t)((uint8_t)npy - (uint8_t)(int8_t)oldy);
+    ch2_body_trail(e, e->ch2_bdx, e->ch2_bdy, e->ch2_banim);
+    if (dist <= 2) {
+        /* Arrival: the group transition table. grp 0 -> 2 with a
+         * rand & 7 re-aim and +0x65 = 5; grp 1 -> the case-3
+         * attack; grp 2 -> 3 with +0x5C = 0x19, +0x72 |= 6 and the
+         * dual-mode pick; grp 3 rolls the 0x20/0x40 gates into
+         * groups 0/1/2 with +0x5C = 0x11 and +0x72 &= ~6. All
+         * re-arm +0x14 = 0. */
+        switch (e->ch2_bgrp) {
+        case 0: {
+            uint8_t old = e->ch2_blmb;
+            e->step = 1;
+            e->ch2_bgrp = 2;
+            do {
+                e->ch2_blmb = (uint8_t)(random() & 7);
+            } while (e->ch2_blmb == old);
+            e->ch2_banim = 5;
+            break;
+        }
+        case 1:
+            e->step = 3;
+            e->timer = 0;
+            e->substep = 0;
+            break;
+        case 2:
+            e->step = 1;
+            e->ch2_bcnt = 0x19;
+            e->combat.attack_off = true;    /* +0x72 |= 6 */
+            e->combat.hurt_off = true;
+            e->ch2_bgrp = 3;
+            ch2_body_pick(e, random);
+            break;
+        default:
+            e->step = 1;
+            if (e->ch2_blmb <= 3 && (random() & 0x7F) <= 0x20) {
+                e->ch2_bcnt = 0x11;
+                e->combat.attack_off = false;   /* +0x72 &= ~6 */
+                e->combat.hurt_off = false;
+                e->ch2_bgrp = 0;
+            } else {
+                e->ch2_bcnt = 0x11;
+                e->combat.attack_off = false;
+                e->combat.hurt_off = false;
+                if ((random() & 0x7F) <= 0x40) {
+                    e->ch2_bgrp = 1;
+                } else {
+                    e->ch2_bgrp = 2;
+                }
+                ch2_body_pick(e, random);
+            }
+            break;
+        }
+        e->ch2_turn = 0;                /* +0x14 = 0 */
+    } else if (e->ch2_t22 > 0x12B) {
+        /* The stuck watchdog: re-aim +0x1B at rand & 3 (no +0x14
+         * reset, no group change). */
+        e->step = 1;
+        uint8_t r;
+        do {
+            r = (uint8_t)(random() & 3);
+        } while (r == e->ch2_blmb);
+        e->ch2_blmb = r;
+    }
+    /* _080A6104: the parent's +0xA == 3 death entry — velocity and
+     * speed zeroed, +0x54 = 0x400000, +0xD = 0x28. The case-3
+     * attack skips this check natively (it finishes first). */
+    if (e->parent && e->parent->state == 3) {
+        e->state = 0xA;
+        e->step = 0;
+        e->vx = e->vy = e->ax = 0;
+        e->ay = 0x400000;
+        e->timer = 0x28;
+    }
+    (void)soma;
+    (void)kind;
+    (void)weapon;
+    (void)weapon_frames;
+    (void)soma_atk;
+    (void)soma_def;
+    (void)report;
+}
+
+/* The case-3 attack (sub_080A5A7C's +0xB == 3 block): the
+ * 0x085283CC sequence on +0x6D/+0x6E/+0x6F/+0x59 replayed through
+ * ch2_idx/ch2_frame/ch2_done; +0x6E == 9 (the 30-tick mouth-open
+ * record) fires a sub_080A65C0 shot and song 0x147 every frame;
+ * the sequence end latches +0x59 bit 0 which the next frame turns
+ * into grp 2 / step 1 / +0x1B = (rand & 3) + 4. The trail record
+ * writes {0, 0, 5, +0x5C, angle} every frame. */
+static void ch2_body_attack(AosEnemy *e, const AosAnimSet *anims,
+                            uint32_t (*random)(void),
+                            AosHitReport *report) {
+    if (e->substep == 0) {
+        /* sub_0803F0E4 prime: it runs one sub_0803F17C step — +0x65
+         * takes record 0's frame (0x0B) and the zero-tick record
+         * advances +0x6E straight to 1; song 0x77 plays. */
+        e->substep = 1;
+        e->ch2_idx = 0;
+        e->ch2_frame = 0;
+        e->ch2_done = false;
+        e->ch2_banim = CH2_BODY_ATK[0][0];
+        e->ch2_frame = 1;
+        if (e->ch2_frame >= CH2_BODY_ATK[0][1]) {
+            e->ch2_frame = 0;
+            e->ch2_idx = 1;
+        }
+        play_loop(e, anims, 1, true);   /* stand-in for 0x08226B58 */
+        aos_audio_play_song(0x77);
+    }
+    if (e->ch2_idx == 9) {
+        /* +0x6E == 9: the {9,3} record's three frames each fire a
+         * sub_080A65C0 shot and song 0x147. */
+        ch2_spawn_body_shot(e, e->ch2_bang, anims, report);
+        aos_audio_play_song(0x147);
+    }
+    if (e->ch2_done) {
+        /* +0x59 bit 0: grp 2, step 1, +0xC = 0 and +0x1B =
+         * (rand & 3) + 4 — then the shared trail/collide tail. */
+        e->ch2_bgrp = 2;
+        e->step = 1;
+        e->substep = 0;
+        e->ch2_blmb = (uint8_t)((random() & 3) + 4);
+    }
+    /* sub_0803F17C / sub_0803EC34: +0x65 takes the current record's
+     * frame, +0x6F ticks against its duration and +0x6E advances;
+     * the end pins +0x6E at 11, sets +0x6C bit 2 and latches
+     * +0x59 bit 0. */
+    if (!e->ch2_done) {
+        e->ch2_banim = CH2_BODY_ATK[e->ch2_idx][0];
+        e->ch2_frame++;
+        if (e->ch2_frame >= CH2_BODY_ATK[e->ch2_idx][1]) {
+            e->ch2_frame = 0;
+            e->ch2_idx++;
+            if (e->ch2_idx >= 12) {
+                e->ch2_done = true;
+                e->ch2_idx = 11;
+            }
+        }
+    }
+    ch2_body_trail(e, 0, 0, 5);
+}
+
+/* sub_080A5A7C: the crawler body update. +0xA 0 alive / 0xA the
+ * death tail; +0xB the crawl substate (0/1 the target acquire, 2
+ * the crawl, 3 the attack). The top watch deletes into the death
+ * entry when the parent record is gone or inactive — natively the
+ * room-byte compare on +0x36, ported as id/removed (documented);
+ * a missing parent never reaches collide. */
+static void ch2_body_update(AosEnemy *e, AosSoma *soma,
+                            const AosEnemyKind *kind,
+                            const AosWeaponEntity *weapon,
+                            const AosWeaponFrames *weapon_frames,
+                            int soma_atk, int soma_def,
+                            uint32_t (*random)(void),
+                            AosHitReport *report,
+                            const AosAnimSet *anims) {
+    /* The limbs spawn with the body natively (same sub_080A57BC
+     * call); the port emits them on the first update. */
+    if (!e->boss_parts_spawned) {
+        ch2_body_emit_limbs(e, anims, report);
+        e->boss_parts_spawned = true;
+    }
+    if (e->state == 0xA) {
+        /* _080A622C: flame every 4th tick, sub_0806D3D8(0x70000),
+         * the blink on +0xD and the heap free / palette restore at
+         * expiry (visual parts folded, documented). */
+        if ((e->timer & 3) == 0)
+            spawn_flame_at(e->x, e->y - 0x60000, 0x100000, 0xC00000,
+                           random, report);
+        aos_enemy_accel_move(e, 0x70000);
+        e->hidden = ch2_blink(kind, e->timer);
+        e->timer--;
+        if ((int8_t)e->timer <= 0)
+            e->removed = true;
+        return;
+    }
+    AosEnemy *p = e->parent;
+    if (!p || p->removed || p->id != 0x70) {
+        /* _080A61F0: the orphaned-body death entry — +0x34 = 0,
+         * +0xD = 0x28, +0x50 = 0, +0x54 = 0x400000; no collide. */
+        e->state = 0xA;
+        e->step = 0;
+        e->hp = 0;
+        e->timer = 0x28;
+        e->hit_flash = 0;
+        e->ax = 0;                  /* +0x50; +0x48/+0x4C keep
+                                     * their velocity natively */
+        e->ay = 0x400000;           /* +0x54 */
+        return;
+    }
+    switch (e->step) {
+    case 0:
+        /* +0x54 = 0x80 << 4 then the shared acquire below takes
+         * +0xB straight to 2. */
+        e->ay = 0x800;
+        /* FALLTHROUGH */
+    case 1:
+        ch2_body_target(e);
+        e->step = 2;
+        e->timer = 0;               /* +0xD */
+        e->ch2_t22 = 0;             /* +0x22 */
+        ch2_body_trail(e, 0, 0, e->ch2_banim);
+        break;
+    case 2:
+        ch2_body_crawl(e, soma, kind, weapon, weapon_frames,
+                       soma_atk, soma_def, random, report);
+        break;
+    case 3:
+        ch2_body_attack(e, anims, random, report);
+        break;
+    default:
+        break;
+    }
+    /* _080A61DE: the contact pass runs for every alive substate. */
+    AosHitReport hit = collide(e, soma, kind, weapon, weapon_frames,
+                               soma_atk, soma_def);
+    skeleton_merge(report, &hit);
+    step_anim(e, anims);            /* stand-in for the +0x65 OAM
+                                     * frames (documented) */
+}
+
+/* sub_080A62B8: a crawler limb. +0xA 0 alive / 1 the death tail
+ * (the native writes state 1, not 0xA). Alive: the body watch
+ * (id/removed — the +0x36 room byte has no runtime counterpart),
+ * the +0x58 bit-5 copy, +0xD++ and the trail sample — record
+ * 8*index+8's bytes drive the +0x4A/+0x4E steps integrated into
+ * the +0x42/+0x46 pixel words, the +0x5C counter, the +0x72 combat
+ * bits (both off unless the sampled counter is 0x12), the
+ * +0x18/+0x19 refresh, the index-7 affine read (unported), the
+ * +0x65 frame select, the byte-0 facing sign and the every-
+ * eighth-tick contact pass. Body +0xA == 0xA enters the tail:
+ * +0x50/+0x54 = 0/0x400000, +0xD = (rand & 3) + 0x3C then the
+ * sub_0806D3D8/blink/countdown like sub_080A4E80's. */
+static void ch2_body_limb_update(AosEnemy *e, AosSoma *soma,
+                                 const AosEnemyKind *kind,
+                                 const AosWeaponEntity *weapon,
+                                 const AosWeaponFrames *weapon_frames,
+                                 int soma_atk, int soma_def,
+                                 uint32_t (*random)(void),
+                                 AosHitReport *report) {
+    AosEnemy *b = e->parent;
+    if (e->state != 0) {
+        /* The +0xA != 0 tail: +0xB latches once (+0x59 |= 2 has no
+         * runtime field — documented), then integrate/blink/
+         * countdown; index 7's palette restore is visual-only. */
+        if (e->step == 0)
+            e->step = 1;
+        aos_enemy_accel_move(e, 0x70000);
+        e->hidden = ch2_blink(kind, e->timer);
+        e->timer--;
+        if ((int8_t)e->timer <= 0)
+            e->removed = true;
+        return;
+    }
+    if (!b || b->removed || b->id != e->id) {
+        e->removed = true;          /* EntityDelete (+0x36 band
+                                     * compare, ported as id) */
+        return;
+    }
+    e->hidden = b->hidden;          /* +0x58 bit 5 copy */
+    e->timer++;                     /* +0xD++ */
+    /* The trail sample: limb index * 48 bytes into the heap puts
+     * record 8*index+8 at offsets +0x30..+0x35. */
+    const uint8_t *s = b->ch2_trail + e->variant * 48;
+    int32_t stepx = (int8_t)s[0x30] +
+        ((int32_t)e->ch2_lox - (int32_t)b->ch2_box);
+    int32_t stepy = (int8_t)s[0x31] +
+        ((int32_t)e->ch2_loy - (int32_t)b->ch2_oy);
+    /* +0x42/+0x46 += the s16 steps — u16 pixel words of +0x40/+0x44. */
+    uint16_t px = (uint16_t)((e->x >> 16) & 0xFFFF);
+    uint16_t py = (uint16_t)((e->y >> 16) & 0xFFFF);
+    px = (uint16_t)(px + (uint16_t)stepx);
+    py = (uint16_t)(py + (uint16_t)stepy);
+    e->x = (e->x & 0xFFFF) | ((int32_t)(uint32_t)px << 16);
+    e->y = (e->y & 0xFFFF) | ((int32_t)(uint32_t)py << 16);
+    e->ch2_lcnt = (uint8_t)(s[0x33] + 1);    /* +0x5C */
+    if (e->ch2_lcnt == 0x12) {
+        e->combat.attack_off = false;       /* +0x72 &= ~6 */
+        e->combat.hurt_off = false;
+    } else {
+        e->combat.attack_off = true;        /* +0x72 |= 6 */
+        e->combat.hurt_off = true;
+    }
+    e->ch2_lox = (uint8_t)b->ch2_box;       /* +0x18/+0x19 refresh */
+    e->ch2_loy = (uint8_t)b->ch2_oy;
+    int8_t sel = (int8_t)s[0x32];            /* the +0x65 select byte */
+    if (e->variant == 7) {
+        /* The affine read (record +0x34/+0x35 through sub_0803E058)
+         * is unported; the +0x65 map is 5->5, 6->0xA, 0xA->6, 0xB->6. */
+        if (sel == 5) e->ch2_anim = 5;
+        else if (sel == 6) e->ch2_anim = 0xA;
+        else if (sel == 0xA || sel == 0xB) e->ch2_anim = 6;
+    } else {
+        if (sel == 5) e->ch2_anim = 0x0E;
+        else if (sel == 0xB) e->ch2_anim = 0x0F;
+    }
+    /* The byte-0 sign drives +0x58 bit 6 for indices 0-6 only
+     * (index 7 skips the facing block natively); the negative side
+     * clears bits 0x40|0x01 — bit 0 has no runtime field
+     * (documented). */
+    if (e->variant != 7) {
+        int8_t dir = (int8_t)s[0x30];
+        if (dir > 0) {
+            e->mirrored = true;
+        } else if (dir < 0) {
+            e->mirrored = false;
+        }
+    }
+    if ((e->timer & 7) == 0) {
+        AosHitReport hit = collide(e, soma, kind, weapon,
+                                   weapon_frames, soma_atk, soma_def);
+        skeleton_merge(report, &hit);
+    }
+    if (b->state == 0xA) {
+        /* Body death: +0xA = 1, +0xB = 0, +0x50 = 0,
+         * +0x54 = 0x400000, +0xD = (rand & 3) + 0x3C. */
+        e->state = 1;
+        e->step = 0;
+        e->ax = 0;
+        e->ay = 0x400000;
+        e->timer = (uint8_t)((random() & 3) + 0x3C);
+    }
+}
+
+/* sub_080A6724: the mouth shot — position += velocity, the contact
+ * pass, the ±8/+9 px bounce while +0xD <= 0x63, the margin entry-1
+ * cull, the +0xD > 0xEF cap and the Chaos watch: the grandparent
+ * record must be active, in the same room band and out of state 3
+ * or the shot deletes. The body itself is not checked natively —
+ * shots outlive it (documented). */
+static void ch2_body_shot_update(AosEnemy *e, AosSoma *soma,
+                                 const AosEnemyKind *kind,
+                                 const AosWeaponEntity *weapon,
+                                 const AosWeaponFrames *weapon_frames,
+                                 int soma_atk, int soma_def,
+                                 int cam_x, int cam_y,
+                                 const AosAnimSet *anims,
+                                 AosHitReport *report) {
+    e->x += e->vx;                      /* sub_0806D3AC */
+    e->y += e->vy;
+    AosHitReport hit = collide(e, soma, kind, weapon, weapon_frames,
+                               soma_atk, soma_def);
+    skeleton_merge(report, &hit);
+    if ((uint8_t)e->timer <= 0x63) {
+        if ((uint32_t)(e->x - 0x80000) > 0xE00000u)
+            e->vx = -e->vx;
+        if ((uint32_t)(e->y - 0x80000) > 0x900000u)
+            e->vy = -e->vy;
+    }
+    int sx = (int)(e->x >> 16) - cam_x, sy = (int)(e->y >> 16) - cam_y;
+    if (aos_enemy_outside_margins(kind, 1, sx, sy)) {
+        e->removed = true;
+        return;
+    }
+    uint8_t old = e->timer;
+    e->timer = (uint8_t)(old + 1);
+    if (old > 0xEF) {
+        e->removed = true;
+        return;
+    }
+    AosEnemy *gp = e->parent ? e->parent->parent : NULL;
+    if (!gp || gp->removed || gp->id != 0x70 || gp->state == 3) {
+        e->removed = true;
+        return;
+    }
+    step_anim(e, anims);
+}
+
+/* ------------------------------------------------------------------ */
 /* The + 0xA state machines.                                           */
 /* ------------------------------------------------------------------ */
 
 /* sub_080A4728: the intro — eleven cases on + 0xB. The SetPlayerInput
- * lock, palette fades/restores, the gEwramData + 0xA074/+ 0x42C story
- * writes and the sub_080A57BC eight-limb body spawn have no runtime
- * counterpart (documented); case 10's sub_0803D06C gate is treated as
- * nonzero so the early-exit stays dormant. */
+ * lock, palette fades/restores and the gEwramData + 0xA074/+ 0x42C
+ * story writes have no runtime counterpart (documented); case 10's
+ * sub_0803D06C gate is treated as nonzero so the early-exit stays
+ * dormant. */
 static void ch2_intro(AosEnemy *e, const AosAnimSet *anims,
                       uint32_t (*random)(void), AosHitReport *report) {
     switch (e->step) {
@@ -939,8 +1694,10 @@ static void ch2_intro(AosEnemy *e, const AosAnimSet *anims,
             e->timer = (uint8_t)(old + 1);
             if (old > 0x27) {
                 /* sub_0803D270/sub_0803CED4 restores and the story
-                 * writes fold away; sub_080A57BC(e,0,0,0) — the
-                 * eight-limb body spawn — is unported (documented). */
+                 * writes fold away; sub_080A57BC(e,0,0,0) spawns
+                 * the crawler body (its limbs follow on its first
+                 * update). */
+                ch2_spawn_body(e, anims, report);
                 e->state = 1;
                 e->step = 0;
                 e->substep = 0;
@@ -1076,10 +1833,13 @@ static void ch2_death(AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
         break;
     case 1:
         /* The + 0x6F/+ 0x6E song gate: + 0x6F clear and + 0x6E in
-         * {1,3,4,5} plays 0x167 — those bytes are written by the
-         * unported sub_080A57BC limb machine, so the gate is dormant
-         * in the port (documented). The step then waits on + 0x59
-         * bit 0 — the anim-ended marker of the 0x11 play — ported as
+         * {1,3,4,5} plays 0x167 — natively those bytes are driven
+         * through the phase-2 children's shared +0x6C/+0x6D/+0x6E/
+         * +0x6F anim-sequencer fields (the sub_080A57BC body runs
+         * its own copy on its own record); no ported path writes
+         * them on the Chaos record, so the gate stays dormant
+         * (documented). The step then waits on + 0x59 bit 0 — the
+         * anim-ended marker of the 0x11 play — ported as
          * AOS_ANIM_ENDED. */
         if (e->ch2_f6f == 0 &&
             (e->ch2_f6e == 1 || e->ch2_f6e == 3 || e->ch2_f6e == 4 ||
@@ -1217,6 +1977,22 @@ AosHitReport aos_enemy_chaos_update(
     case AOS_ROLE_CHAOS_BURST:
         ch2_burst_update(enemy, kind);
         return report;
+    case AOS_ROLE_CHAOS_BODY:
+        ch2_body_update(enemy, soma, kind, weapon, weapon_frames,
+                        soma_atk, soma_def, random, &report, kind->anims);
+        aos_combat_tick(&enemy->combat);
+        return report;
+    case AOS_ROLE_CHAOS_BODY_LIMB:
+        ch2_body_limb_update(enemy, soma, kind, weapon, weapon_frames,
+                             soma_atk, soma_def, random, &report);
+        aos_combat_tick(&enemy->combat);
+        return report;
+    case AOS_ROLE_CHAOS_BODY_SHOT:
+        ch2_body_shot_update(enemy, soma, kind, weapon, weapon_frames,
+                             soma_atk, soma_def, cam_x, cam_y,
+                             kind->anims, &report);
+        aos_combat_tick(&enemy->combat);
+        return report;
     default:
         break;
     }
@@ -1224,7 +2000,8 @@ AosHitReport aos_enemy_chaos_update(
     if (phase2 && enemy->state != 3 && enemy->hit_flash)
         enemy->hit_flash--;     /* EnemyChaos2Update's sub_0806AE54 */
     /* The sub_080A2A4C orbit parts are a phase-1-only spawn; the
-     * phase-2 body comes from the unported sub_080A57BC machine. */
+     * phase-2 crawler body comes from sub_080A57BC via the intro's
+     * case-4 trigger. */
     if (!phase2 && !enemy->boss_parts_spawned) {
         ch_emit_parts(enemy, &report);
         enemy->boss_parts_spawned = true;

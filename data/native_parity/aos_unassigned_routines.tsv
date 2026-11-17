@@ -449,12 +449,6 @@ aos:asm:asm/code/code_080A0A8C.s:sub_080A42A8	sub_080A42A8	enemies	referrers			a
 aos:asm:asm/code/code_080A0A8C.s:sub_080A42D4	sub_080A42D4	enemies	referrers			asm_function	0x080A42D4	asm/code/code_080A0A8C.s	7138	1	3
 aos:asm:asm/code/code_080A0A8C.s:sub_080A4408	sub_080A4408	enemies	referrers			asm_function	0x080A4408	asm/code/code_080A0A8C.s	7291	1	12
 aos:asm:asm/code/code_080A0A8C.s:sub_080A537C	sub_080A537C	enemies	referrers			asm_function	0x080A537C	asm/code/code_080A0A8C.s	9165	0	12
-aos:asm:asm/code/code_080A0A8C.s:sub_080A57BC	sub_080A57BC	enemies	referrers			asm_function	0x080A57BC	asm/code/code_080A0A8C.s	9708	1	10
-aos:asm:asm/code/code_080A0A8C.s:sub_080A5A7C	sub_080A5A7C	enemies	referrers			asm_function	0x080A5A7C	asm/code/code_080A0A8C.s	10047	0	18
-aos:asm:asm/code/code_080A0A8C.s:sub_080A62B8	sub_080A62B8	enemies	referrers			asm_function	0x080A62B8	asm/code/code_080A0A8C.s	11132	0	7
-aos:asm:asm/code/code_080A0A8C.s:sub_080A657C	sub_080A657C	enemies	referrers			asm_function	0x080A657C	asm/code/code_080A0A8C.s	11503	1	3
-aos:asm:asm/code/code_080A0A8C.s:sub_080A65C0	sub_080A65C0	enemies	referrers			asm_function	0x080A65C0	asm/code/code_080A0A8C.s	11536	1	8
-aos:asm:asm/code/code_080A0A8C.s:sub_080A6724	sub_080A6724	enemies	referrers			asm_function	0x080A6724	asm/code/code_080A0A8C.s	11699	0	5
 aos:asm:asm/code/code_080A0A8C.s:sub_080A68B0	sub_080A68B0	enemies	referrers			asm_function	0x080A68B0	asm/code/code_080A0A8C.s	11898	0	6
 aos:asm:asm/code/code_080A0A8C.s:sub_080A6B50	sub_080A6B50	enemies	referrers			asm_function	0x080A6B50	asm/code/code_080A0A8C.s	12248	1	4
 aos:asm:asm/code/code_080A0A8C.s:sub_080A6D88	sub_080A6D88	enemies	referrers			asm_function	0x080A6D88	asm/code/code_080A0A8C.s	12521	0	4

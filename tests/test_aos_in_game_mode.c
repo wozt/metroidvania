@@ -144,6 +144,19 @@ int main(void) {
     aos_in_game_mode_area_banner_step(&mode, true);
     assert(!mode.unk_42C_80 && mode.unk_4CD == 0 && !mode.unk_A074_0 &&
            mode.unk_A074_1);
+    /* The same abort lands mid-freeze: run into stage 2's hold,
+     * then a door bit releases unk_A074_0/unk_A074_1 through the
+     * sub_0801093C path while the shown bit stays latched. */
+    aos_in_game_mode_init(&mode);
+    aos_in_game_mode_arm_area_banner(&mode, 5);
+    aos_in_game_mode_area_banner_step(&mode, false);
+    while (mode.unk_4CD != 2)
+        aos_in_game_mode_area_banner_step(&mode, false);
+    assert(mode.unk_A074_0 && !mode.unk_A074_1 && mode.unk_66 == 0x3C);
+    aos_in_game_mode_area_banner_step(&mode, true);
+    assert(!mode.unk_42C_80 && mode.unk_4CD == 0 && !mode.unk_A074_0 &&
+           mode.unk_A074_1);
+    assert(mode.unk_37C & (1u << 5));
     /* sub_08010244's prologue cancels an armed banner the same way. */
     aos_in_game_mode_arm_area_banner(&mode, 2);
     aos_in_game_mode_area_banner_cancel(&mode);

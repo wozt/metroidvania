@@ -1,3 +1,53 @@
+## Patch 1224 - Area-name banner: native WIN0 band geometry, load-latency arm timing and full-frame freeze
+
+- **Decoded sequence.** `sub_0800FFCC` (`code_0800F1FC.c`) arms only
+  while `unk_42C & 0x80` holds; `(unk_42C & 0x101) == 1` diverts to
+  `sub_0801093C`/`sub_08010144` cleanup. Stage 0 (`unk_4CD`) sets
+  `unk_A074_0`/clears `unk_A074_1`, `unk_66 = 0x3E` and calls
+  `sub_0800FE98`, which configures the window registers, schedules the
+  palette load `func_0803C918(0x08266520, 0, 1, 0xC)` into BG palette
+  bank 0xC, uploads the strip through `func_0803FD9C` to VRAM
+  `0x06006000` and writes the 64-entry tilemap pair with
+  `func_08046DD4(0, 0xA, 0xC300, 0x40)`. Stages 1-3 tick `unk_66`
+  (-2, hold `0x3C`, +1 to `0x5F`) under the `sub_0800FDC8` hBlank fade;
+  stage 4 clears the arm and restores `unk_A074`.
+- **Geometry.** mGBA framebuffer measurement of the real ROM shows the
+  WIN0 band darkens the full 240 px width across rows 70-93 (about
+  half brightness) while the 256x16 strip occupies rows 78-93 centred
+  on the screen. The runtime now composites both: a 50% black fill
+  over rows 70-93 plus the strip texture moved from y 80 to y 78,
+  both under the same stage alpha envelope.
+- **Timing.** The native stage-1 room load (`sub_0800F9EC`) blanks
+  ~9 frames before the settle stage; the runtime committed the swap
+  on the first blanked frame, arming the banner ~10 frames early.
+  `AriaRoomTransition` gains `load_left` (`AOS_ROOM_TRANSITION_LOAD_FRAMES
+  = 9`, a measured approximation — the native span is data-dependent)
+  so the commit lands on the equivalent of the native settle boundary.
+- **Freeze.** The `unk_A074_0` branch no longer advances
+  `active_save.play_frames`, and the opening soul notice (whose
+  `step`-driven animation would otherwise keep moving) is gated on
+  `!unk_A074_0`; entities, HUD and save counters now hold for the
+  whole banner exactly like the native suspended `sub_08000B64` /
+  `sub_0800CA40` tail.
+- **Asset fix.** `write_area_banners` had two decode bugs: the 4bpp
+  row stride read `py*8` (outside the 32-byte tile for py >= 4) and
+  only 16 of 32 tile columns were emitted, leaving the right half
+  uninitialised. It now uses the verified `py*4` stride, the
+  tilemap-order `ty*32+tx` layout and the traced palette resource
+  `0x08266520` (func_0803C918's bank-0xC load), whose colours
+  reproduce the native blue text `(49,49,156)` and white `(255,255,255)`
+  measured on the framebuffer. `area_banners.bin` regenerated.
+- **Remaining approximations.** The WIN0 "darken" is a 50% black SDL
+  fill rather than the native per-layer brightness effect; the
+  `sub_0800FDC8` hBlank register work is folded into the alpha
+  envelope; the load latency is a fixed 9 frames though the native
+  span varies with room payload; strip pixels whose palette
+  provenance beyond bank 0xC is untraced may still differ in the
+  dim background tones.
+- **Tests.** `test_aos_in_game_mode` gained a mid-hold door-bit abort
+  case (stage-2 `unk_66 == 0x3C`, `unk_A074` release, shown bit kept).
+  Build clean; `aos_game_mode` and `aos_in_game_mode` pass.
+
 ## Patch 1223 - Wooden-door palette cycle runs on the door's own script instance
 
 - **Root cause.** `draw_doors` picked the exported palette-cycle phase

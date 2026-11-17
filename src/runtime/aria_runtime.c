@@ -346,10 +346,20 @@ static int take_exit(SDL_Renderer *renderer, AriaRoom *room, SDL_Texture **backg
 typedef struct {
     bool active;            /* unk_64 == 3 */
     int stage;              /* unk_65: 1 commit pending, 2 settling, 3 restore */
+    int load_left;          /* stage-1 blanked load frames remaining */
     int settle_left;        /* stage-2 frames remaining */
     bool has_door;          /* editor door copy for the stage-1 commit */
     AosProjectDoor door;
 } AriaRoomTransition;
+/* sub_0800F9EC's room load is not instantaneous natively: unk_65
+ * stays 1 for the whole decompression/streaming span with dispCnt =
+ * 0. Measured on the real ROM (mGBA log, 0/0 -> 0/3 exit): stage 1
+ * occupies ~9 blanked frames before the settle stage begins. The
+ * duration is data-dependent natively (it tracks the room's
+ * compressed payload); the runtime performs the same take_exit
+ * commit synchronously, so a fixed measured span stands in — a
+ * documented approximation, not a native constant. */
+#define AOS_ROOM_TRANSITION_LOAD_FRAMES 9
 static AriaRoomTransition room_transition;
 /* GameModeInGameUpdate's unk_60.unk_64/+0x65 dispatch channel
  * (sub_0800B700): the ported counterparts latch their case here —
@@ -522,6 +532,7 @@ static void room_transition_begin(AriaRoomTransition *t,
     t->active = true;
     t->stage = 1;           /* stage 0 (fade + cleanup) ran inline */
     t->settle_left = 1;
+    t->load_left = AOS_ROOM_TRANSITION_LOAD_FRAMES;
     /* sub_08010244's prologue: an armed area banner is aborted
      * through sub_08010144 before unk_64 = 3 latches. */
     aos_in_game_mode_area_banner_cancel(&in_game_mode);
@@ -558,7 +569,17 @@ static int room_transition_tick(AriaRoomTransition *t,
     in_game_mode.unk_65 = (uint8_t)t->stage;
     if (t->stage == 1) {
         /* unk_65 == 1: sub_08010350 picks the entry and sub_0800F9EC
-         * loads the target room while dispCnt = 0 blanks the display. */
+         * loads the target room while dispCnt = 0 blanks the display.
+         * Native keeps the stage open for the whole streaming span —
+         * the mGBA-measured 0/0 -> 0/3 load blanked ~9 frames before
+         * the settle stage; the port's take_exit commit is
+         * synchronous, so the blanked frames are modelled as a
+         * countdown ahead of it (data-dependent natively, fixed
+         * approximation here). */
+        if (t->load_left > 0) {
+            --t->load_left;
+            return 0;
+        }
         t->stage = 2;
         int result = take_exit(renderer, room, background, soma,
                                *cam_x, *cam_y,
@@ -2877,11 +2898,12 @@ int aria_runtime_main(int argc, char **argv) {
                  * case 1's exit check (`&& !unk_A074_0`); the
                  * unk_A074_1 = 0 from stage 0's sub_0800C5A8(0)
                  * keeps the SELECT/START menu edges closed below.
-                 * The room keeps rendering — native draws the
-                 * area-name strip in the WIN0 band (rows 70-94),
-                 * which the runtime does not composite. */
+                 * The room keeps rendering frozen — only the
+                 * sub_0800FFCC banner itself advances (its strip and
+                 * WIN0 band composite at render). The save play-time
+                 * counter does not drift: native's frozen tail owns
+                 * every gameplay tick this frame skipped. */
                 ++step;
-                if (has_active_save) active_save.play_frames++;
                 goto aria_render_frame;
             }
             /* Case 5 (sub_080106DC, the Object1F seal-break fade):
@@ -4819,12 +4841,17 @@ aria_render_frame:
             SDL_FRect whole = {0, 0, 240, 160};
             SDL_RenderTexture(renderer, hud_texture, NULL, &whole);
         }
-        /* sub_0800FE98/sub_0800FFCC's area-name banner: the 256x16 strip
-         * sits on BG0 palette row 12 at tilemap rows 10-11 (y 80-95),
-         * centred on the 240-wide screen, while the WIN0 band darkens
-         * the rest. The native fade is a brightness (bldY) ramp; the
-         * port approximates it with strip alpha — stage 1 ramps in over
-         * the 0x3E countdown, stage 2 holds, stage 3 ramps out. The
+        /* sub_0800FE98/sub_0800FFCC's area-name banner. Measured on
+         * the real ROM the composition is: a WIN0 window darkens the
+         * full 240 px width across rows 70-93 (roughly half
+         * brightness), and the 256x16 strip that func_0803FD9C
+         * uploads to VRAM 0x06006000 (func_08046DD4's 64-entry
+         * tilemap pair at map rows 10-11, BG0 palette bank 0xC from
+         * func_0803C918's 0x08266520 resource) draws centred on the
+         * screen at rows 78-93. The native fade is a brightness
+         * (bldY) ramp; the port approximates it with alpha on both
+         * the band and the strip — stage 1 ramps in over the 0x3E
+         * countdown, stage 2 holds, stage 3 ramps out. The
          * shown-bit suppression (unk_37C) already ran in
          * aos_in_game_mode_area_banner_step. */
         if (banner_texture && !opening.active &&
@@ -4838,16 +4865,25 @@ aria_render_frame:
                         : (unsigned)((0x60 - in_game_mode.unk_66) * 255 / 0x60);
             else
                 alpha = 255;
-            SDL_SetTextureAlphaMod(banner_texture, (uint8_t)(alpha > 255 ? 255 : alpha));
+            if (alpha > 255) alpha = 255;
+            /* WIN0 band: rows 70-93, full width, ~50% black — the
+             * native window darkens every layer under it, so the
+             * dimmed room and HUD pixels both sit under this fill. */
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, (uint8_t)(alpha / 2));
+            SDL_FRect band = {0.0f, 70.0f, 240.0f, 24.0f};
+            SDL_RenderFillRect(renderer, &band);
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+            SDL_SetTextureAlphaMod(banner_texture, (uint8_t)alpha);
             SDL_FRect src = {(float)(in_game_mode.banner_area * 256), 0.0f,
                              256.0f, 16.0f};
-            SDL_FRect dst = {-8.0f, 80.0f, 256.0f, 16.0f};
+            SDL_FRect dst = {-8.0f, 78.0f, 256.0f, 16.0f};
             SDL_RenderTexture(renderer, banner_texture, &src, &dst);
             SDL_SetTextureAlphaMod(banner_texture, 255);
         }
         /* sub_0800E708's banner rides the HUD BG0 like the opening notice. */
         if (!opening.active && gameplay_soul_notice_timer > 0 &&
-            gameplay_soul_notice_ready)
+            gameplay_soul_notice_ready && !in_game_mode.unk_A074_0)
             draw_opening_soul_notice(renderer, &gameplay_soul_notice,
                                      (uint32_t)step);
         /* sub_0800C8C8's fades: BG at its own weight (the room and the HUD

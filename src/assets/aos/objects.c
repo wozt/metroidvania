@@ -2216,26 +2216,27 @@ static bool write_hud(const FusionRom *rom, const char *metadata_output, char *e
 }
 
 /* sub_0800FE98's area-name banner strips. The table at 0x08260328 holds
- * 13 records {0x04100401, data pointer}; each data blob is an LZ77
- * stream decompressing to a 4-byte resource header plus 0x800 bytes =
- * 64 4bpp tiles (a 256x16 strip) that the native draws on BG0 palette
- * row 12 at tilemap rows 10-11 inside the WIN0 band. The port bakes
- * each strip to RGBA with palette row 3 of 0x0820C428 (the gold UI
- * ramp the strip's indices resolve to); the provenance of native BG
- * palette row 12 is not yet traced, so the colors are a documented
- * approximation. Output: area_banners.bin, 13 x 256x16 RGBA8888,
- * record index = banner area. */
+ * 13 records {0x04100401, data pointer} (reached through the mode tables
+ * 0x084F0FB8/0x084F0FEC/0x084F1020); each data blob decompresses to a
+ * 4-byte resource header plus 0x800 bytes = 64 4bpp tiles (a 256x16
+ * strip, tiles row-major 32x2) that func_0803FD9C uploads to VRAM
+ * 0x06006000 and func_08046DD4 maps through the tilemap pair at rows
+ * 10-11. func_0803C918 loads the 16-colour palette resource at
+ * 0x08266520 into BG palette bank 0xC (palette row 12); its colours
+ * reproduce the native blues (49,49,156) and white (255,255,255)
+ * measured on the real framebuffer. Output: area_banners.bin,
+ * 13 x 256x16 RGBA8888, record index = banner area. */
 static bool write_area_banners(const FusionRom *rom,
                                const char *metadata_output, char *error,
                                size_t error_size) {
     enum { RECORDS = 13, STRIP_TILE_BYTES = 0x800, STRIP_PIXELS = 256 * 16 };
-    const uint8_t *palette = slice(rom, HUD_PALETTE, 4 + 6 * 32,
+    const uint8_t *palette = slice(rom, 0x08266520, 4 + 16 * 2,
                                    "banner palette", error, error_size);
-    if (!palette || palette[0] != 0 || palette[2] < 4) {
+    if (!palette || palette[0] != 0) {
         if (palette) set_error(error, error_size, "unsupported banner palette resource");
         return false;
     }
-    const uint8_t *colors = palette + 4 + 3 * 32;
+    const uint8_t *colors = palette + 4;
     size_t total = (size_t)RECORDS * STRIP_PIXELS * 4;
     uint8_t *bytes = malloc(total);
     if (!bytes) {
@@ -2267,16 +2268,18 @@ static bool write_area_banners(const FusionRom *rom,
                 set_error(error, error_size, "invalid area banner strip");
             break;
         }
-        /* tiles[4..] is 64 tiles of 32 bytes row-major: tile (tx,ty)
-         * covers pixels (tx*8..tx*8+7, ty*8..ty*8+7) of the 256x16
-         * strip; each byte holds two 4bpp pixels. */
+        /* tiles[4..] is 64 tiles of 32 bytes in tilemap order
+         * (func_08046DD4 writes tile indices 0x300-0x33F across the
+         * two rows): tile (tx,ty) covers pixels (tx*8..tx*8+7,
+         * ty*8..ty*8+7) of the 256x16 strip with tx in [0,32);
+         * each byte holds two 4bpp pixels, four bytes per row. */
         uint8_t *out = bytes + area * STRIP_PIXELS * 4;
         for (size_t ty = 0; ty < 2; ++ty)
-            for (size_t tx = 0; tx < 16; ++tx) {
-                const uint8_t *tile = tiles + 4 + (ty * 16 + tx) * 32;
+            for (size_t tx = 0; tx < 32; ++tx) {
+                const uint8_t *tile = tiles + 4 + (ty * 32 + tx) * 32;
                 for (size_t py = 0; py < 8; ++py)
                     for (size_t px = 0; px < 8; ++px) {
-                        uint8_t byte = tile[py * 8 + px / 2];
+                        uint8_t byte = tile[py * 4 + px / 2];
                         unsigned index = px % 2 ? byte & 15 : byte >> 4;
                         uint16_t color = read_u16(colors + index * 2);
                         uint8_t *px_out = out +

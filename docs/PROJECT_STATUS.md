@@ -1,3 +1,50 @@
+## Patch 1232 - Fix the save-room exit crash and wire Object1C's +0xA074 byte
+
+- **Dead-edge transition crash fixed.** The one-screen save rooms
+  (0/36, 0/14, ...) export transition entries only for their left
+  edge; their open right edge still trips `sub_08011A44`'s bounds
+  check, but `sub_08010350`'s native table scan is unbounded — it
+  reads past the entries, so the case has no defined native
+  outcome. The port used to arm the transition anyway and die in
+  `take_exit`'s "No transition" path, which aborts the SDL loop
+  (`goto cleanup`) and stops `--simulate` — leaving the save room
+  through the wrong edge crashed the runtime, and the repeated
+  `+0xA074 set 0x02` lines were Object1C's dormant state 99
+  re-asserting `|= 2` every frame (`_08054D68`, native-faithful)
+  with no host consumer. `room_transition_begin` now returns
+  without arming when the exit under Soma matches no table entry,
+  and `room_dead_edge_clamp` pulls Soma back to the room bounds
+  with the outward velocity killed (the `sub_08010244` exit-velocity
+  precedent), so the dead edge behaves as the wall the room
+  geometry implies; real exits are unchanged.
+- **+0xA074 wired to the game-mode bitfield.** Object1C's
+  read-modify-write reports (`sub_080549B0`'s `&= ~3` prompt-open
+  clear, `_08054B44`'s `|= 2` save-close tail, `_08054D68`'s
+  per-frame `|= 2`) previously only printed. They now accumulate in
+  the entity pass's pending channel
+  (`aria_entities_object1c_a074`) and fold into
+  `in_game_mode.unk_A074_0`/`unk_A074_1` after `update_entities`,
+  before the `sub_0800C5A8` store keeps its last-writer order —
+  bit 1 gates the SELECT/START menu edges (the save prompt now
+  actually blocks them like native) and bit 0 the entity-pass
+  freeze. The diagnostic prints on mask changes only.
+- **Banner-load delay verified.** `AOS_ROOM_TRANSITION_LOAD_FRAMES`
+  stays armed only when the destination's `sub_0800FCB8` pick lands
+  in `[0, 0xC]` (patch 1231): headless frame logs show the
+  0/36 -> 0/5 save-room exit spending the 9-frame blanked span on
+  the first visit (0/5 banners) and committing on the first
+  stage-1 frame once `unk_37C` marks the area shown, while
+  0/5 -> 0/36 (a save room) never delays.
+- **Tests.** `tests/test_aria_simulate_save_room.sh` now asserts the
+  run reaches its last frame with no "No transition" diagnostic and
+  a bounded `+0xA074` line count (the room-14 script already walked
+  into the dead right edge). New
+  `tests/test_aria_simulate_save_room_route.sh`
+  (`aria_simulate_save_room_route`) scripts the reported route —
+  save, exit 0/36 -> 0/5, return 0/5 -> 0/36, dead-edge clamp,
+  re-exit — and requires all three transitions plus a complete
+  2600-frame run.
+
 ## Patch 1231 - Gate the room-load delay on the area banner; verify level-up in later rooms
 
 - **Unwanted transition delay fixed.** Commit `0c9c3b11` armed the fixed

@@ -131,6 +131,13 @@ void room_dialogue_bind(void);
  * matching the native suspension of sub_08000B64. */
 int aria_entities_c5a8_result(void);
 
+/* Object1C's gEwramData +0xA074 read-modify-write masks reported
+ * by the entity pass this frame (0 = none): bit 1 ->
+ * in_game_mode.unk_A074_1, bit 0 -> in_game_mode.unk_A074_0. The
+ * room loop applies them after update_entities like the c5a8
+ * store; the masks reset at the next call's top. */
+void aria_entities_object1c_a074(uint8_t *set_mask, uint8_t *clear_mask);
+
 /* ARIA_DEBUG_C5A8 diagnostics only: the entity and source line of
  * the frame's last sub_0800C5A8 report (NULL/-1 when silent). */
 void aria_entities_c5a8_debug(const void **ent, int *line);

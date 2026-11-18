@@ -246,6 +246,19 @@ static uint8_t object20_ewram_427;
  * + 0x4BE arm, Graham's clone/core and 0xF0 cinematic
  * callbacks). */
 static int8_t c5a8_pending = -1;
+/* Object1C's +0xA074 read-modify-write reports (aos_object1c.h
+ * save_mode_set/save_mode_clear): the byte's bit 1 is
+ * unk_A074_1 and bit 0 is unk_A074_0, but the entity pass cannot
+ * reach in_game_mode, so the masks accumulate here for the room
+ * loop to fold in after the pass — the same channel shape as
+ * c5a8_pending. */
+static uint8_t object1c_a074_set_pending;
+static uint8_t object1c_a074_clear_pending;
+/* Edge-detection for the +0xA074 diagnostic print: state 99
+ * re-asserts |= 2 every frame natively, so only mask changes
+ * are worth a line. */
+static uint8_t object1c_a074_dbg_set;
+static uint8_t object1c_a074_dbg_clear;
 /* sub_08021654's lethal branch also clears gEwramData->
  * unk_A074_0 inside the damage routine; the port cannot reach
  * in_game_mode from the entity pass, so the same detection
@@ -1529,6 +1542,16 @@ int aria_entities_c5a8_result(void) {
     return c5a8_pending;
 }
 
+/* Object1C's +0xA074 masks for the frame's entity pass (0/0 =
+ * none): gEwramData +0xA074 bit 1 is unk_A074_1 (the sub_0800C5A8
+ * menu/cutscene gate) and bit 0 is unk_A074_0 (the entity-pass
+ * freeze). The room loop folds the masks into in_game_mode after
+ * update_entities; the masks reset at the next call's top. */
+void aria_entities_object1c_a074(uint8_t *set_mask, uint8_t *clear_mask) {
+    if (set_mask) *set_mask = object1c_a074_set_pending;
+    if (clear_mask) *clear_mask = object1c_a074_clear_pending;
+}
+
 /* sub_08021654's lethal branch clears gEwramData->unk_A074_0
  * inside the damage routine; the entity pass cannot reach
  * in_game_mode, so the room loop reads this once per
@@ -2689,6 +2712,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
      * the entity pass runs; reset so a frozen pass cannot leak
      * last frame's report into the room loop's store. */
     c5a8_pending = -1;
+    object1c_a074_set_pending = 0;
+    object1c_a074_clear_pending = 0;
     lethal_clear_pending = false;
     c5a8_dbg_ent = NULL;
     c5a8_dbg_line = -1;
@@ -4656,10 +4681,21 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             aria_pickup_state.global_flags |= out1c.flags42c_set;
             aria_pickup_state.global_flags &= ~out1c.flags42c_clear;
             if (out1c.save_mode_set || out1c.save_mode_clear) {
-                /* +0xA074 save-mode byte has no host consumer yet. */
-                printf("Object1C %zu: +0xA074 %s0x%02X\n", i,
-                       out1c.save_mode_set ? "set " : "clear ",
-                       out1c.save_mode_set | out1c.save_mode_clear);
+                /* +0xA074 read-modify-write: accumulate for the
+                 * room loop's in_game_mode store (see
+                 * aria_entities_object1c_a074). State 99's dormant
+                 * re-assert runs |= 2 every frame natively
+                 * (_08054D68), so only mask changes print. */
+                object1c_a074_set_pending |= out1c.save_mode_set;
+                object1c_a074_clear_pending |= out1c.save_mode_clear;
+                if (out1c.save_mode_set != object1c_a074_dbg_set ||
+                    out1c.save_mode_clear != object1c_a074_dbg_clear) {
+                    printf("Object1C %zu: +0xA074 %s0x%02X\n", i,
+                           out1c.save_mode_set ? "set " : "clear ",
+                           out1c.save_mode_set | out1c.save_mode_clear);
+                    object1c_a074_dbg_set = out1c.save_mode_set;
+                    object1c_a074_dbg_clear = out1c.save_mode_clear;
+                }
             }
             if (out1c.save_setup) {
                 /* sub_08054280's palette upload (0x0820C428 records

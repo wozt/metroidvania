@@ -531,16 +531,20 @@ static bool room_music_flags_for(const AriaRoom *room,
     return true;
 }
 
-static void room_transition_begin(AriaRoomTransition *t,
+/* Returns false without arming when the exit under Soma matches
+ * no transition-table entry: sub_08010350's native scan is
+ * unbounded (it reads past the table — undefined behaviour the
+ * port cannot reproduce), so an outside position with no entry
+ * is treated as a non-exit edge the player can simply walk back
+ * from, instead of reaching take_exit's fatal "No transition"
+ * path. Editor doors always arm. */
+static bool room_transition_begin(AriaRoomTransition *t,
                                   const AosProjectDoor *door,
                                   const AriaRoom *room, const AosSoma *soma,
                                   const FusionRom *rom,
                                   AosQuickMap *quick_map,
                                   bool have_quick_map) {
     memset(t, 0, sizeof *t);
-    t->active = true;
-    t->stage = 1;           /* stage 0 (fade + cleanup) ran inline */
-    t->settle_left = 1;
     /* The stage-1 blanked load span stands in for sub_0800F9EC's
      * streaming only when the destination will run the
      * sub_0800FFCC area-name banner: the 9-frame figure was
@@ -562,11 +566,13 @@ static void room_transition_begin(AriaRoomTransition *t,
             room->transitions, room->transition_count,
             room->width_screens, room->height_screens,
             soma->x >> 16, soma->y >> 16);
-        if (exit) {
-            target_area = exit->area;
-            target_room = exit->room;
-        }
+        if (!exit) return false;
+        target_area = exit->area;
+        target_room = exit->room;
     }
+    t->active = true;
+    t->stage = 1;           /* stage 0 (fade + cleanup) ran inline */
+    t->settle_left = 1;
     int banner = target_area >= 0
         ? room_area_banner(target_area, target_room, rom, quick_map,
                            have_quick_map)
@@ -587,6 +593,40 @@ static void room_transition_begin(AriaRoomTransition *t,
     if (door) {
         t->has_door = true;
         t->door = *door;
+    }
+    return true;
+}
+
+/* sub_08010350's transition-table scan is unbounded natively —
+ * a position outside the room bounds that matches no entry has
+ * no defined native outcome (the scan reads past the table).
+ * The port pulls Soma back to the boundary and kills the outward
+ * velocity like sub_08010244's exit-velocity stop does for real
+ * exits, so a dead edge behaves as the wall the room geometry
+ * implies instead of letting him roam past the room. Only the
+ * position bounds are clamped: an exit-cell (0xF0) trigger with
+ * no matching entry stays put like any other non-exit. */
+static void room_dead_edge_clamp(const AriaRoom *room, AosSoma *soma) {
+    int32_t x = soma->x >> 16, y = soma->y >> 16;
+    uint32_t right = room->width_screens > 1
+        ? (uint32_t)room->width_screens << 8 : 0xF0u;
+    uint32_t bottom = room->height_screens > 1
+        ? ((uint32_t)room->height_screens << 8) - 0x30u : 0xD0u;
+    if (x < 0) {
+        soma->x = soma->x & 0xFFFF;
+        soma->vx = 0;
+        soma->friction = 0;
+    } else if ((uint32_t)x > right) {
+        soma->x = (int32_t)((uint32_t)right << 16) | (soma->x & 0xFFFF);
+        soma->vx = 0;
+        soma->friction = 0;
+    }
+    if (y < 0x30) {
+        soma->y = (int32_t)((uint32_t)0x30 << 16) | (soma->y & 0xFFFF);
+        soma->vy = 0;
+    } else if ((uint32_t)y > bottom) {
+        soma->y = (int32_t)((uint32_t)bottom << 16) | (soma->y & 0xFFFF);
+        soma->vy = 0;
     }
 }
 
@@ -1900,20 +1940,27 @@ int aria_runtime_main(int argc, char **argv) {
             /* sub_08010244 latches unk_64 = 3; the sub_080104EC stage
              * machine then commits the swap on a later blanked frame
              * (room_transition_tick at the top of the loop). */
-            if (!room_transition.active &&
+            if (!room_transition.active && !in_game_mode.unk_A074_0 &&
                 in_game_mode.unk_64 == AOS_INGAME_PLAY &&
                 (sim_leaving || sim_door)) {
-                room_transition_begin(&room_transition,
-                                      sim_leaving ? NULL : sim_door,
-                                      &room, &soma, &room_dialogue_rom,
-                                      sim_have_quick_map ? &sim_quick_map
-                                                         : NULL,
-                                      sim_have_quick_map);
-                /* unk_65 == 0 cleanup: the room's effects die with the
-                 * stage; entities are replaced by the stage-1 load. */
-                room.effect_count = 0;
-                printf("Aria simulate: transition begin frame %ld (%s)\n",
-                       frame, sim_leaving ? "exit" : "door");
+                if (room_transition_begin(&room_transition,
+                                          sim_leaving ? NULL : sim_door,
+                                          &room, &soma, &room_dialogue_rom,
+                                          sim_have_quick_map ? &sim_quick_map
+                                                             : NULL,
+                                          sim_have_quick_map)) {
+                    /* unk_65 == 0 cleanup: the room's effects die
+                     * with the stage; entities are replaced by the
+                     * stage-1 load. */
+                    room.effect_count = 0;
+                    printf("Aria simulate: transition begin frame %ld (%s)\n",
+                           frame, sim_leaving ? "exit" : "door");
+                } else if (sim_leaving) {
+                    /* Outside with no matching transition entry:
+                     * the dead edge clamps like a wall (see
+                     * room_dead_edge_clamp). */
+                    room_dead_edge_clamp(&room, &soma);
+                }
             }
             if (sim_door) project_door_latch = true;
             if (aos_save_room_update(&save_room, room_has_save_point(&room), soma.x >> 16,
@@ -3755,14 +3802,21 @@ int aria_runtime_main(int argc, char **argv) {
             if (!room_transition.active && !in_game_mode.unk_A074_0 &&
                 in_game_mode.unk_64 == AOS_INGAME_PLAY &&
                 (leaving || project_door)) {
-                room_transition_begin(&room_transition,
-                                      leaving ? NULL : project_door,
-                                      &room, &soma, &opening_rom,
-                                      have_quick_map ? &quick_map : NULL,
-                                      have_quick_map);
-                /* unk_65 == 0 cleanup: the room's effects die with the
-                 * stage; entities are replaced by the stage-1 load. */
-                room.effect_count = 0;
+                if (room_transition_begin(&room_transition,
+                                          leaving ? NULL : project_door,
+                                          &room, &soma, &opening_rom,
+                                          have_quick_map ? &quick_map : NULL,
+                                          have_quick_map)) {
+                    /* unk_65 == 0 cleanup: the room's effects die
+                     * with the stage; entities are replaced by the
+                     * stage-1 load. */
+                    room.effect_count = 0;
+                } else if (leaving) {
+                    /* Outside with no matching transition entry:
+                     * the dead edge clamps like a wall (see
+                     * room_dead_edge_clamp). */
+                    room_dead_edge_clamp(&room, &soma);
+                }
             }
             if (project_door) project_door_latch = true;
             if (aos_save_room_update(&save_room, room_has_save_point(&room), soma.x >> 16,
@@ -3829,6 +3883,21 @@ int aria_runtime_main(int argc, char **argv) {
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
                             aria_input.new_input, aria_input.held_input,
                             &room_music);
+            /* Object1C's +0xA074 read-modify-writes (sub_080549B0's
+             * &= ~3 prompt-open clear, _08054B44's |= 2 save-close
+             * tail, _08054D68's state-99 |= 2 dormant re-assert)
+             * land inside the same entity pass as sub_0800C5A8's
+             * write; fold them into the bitfield first so a
+             * same-frame c5a8 store keeps the native last-writer
+             * order. Bit 1 is unk_A074_1 (the menu gate the
+             * SELECT/START edges test), bit 0 is unk_A074_0. */
+            {
+                uint8_t o1c_set = 0, o1c_clear = 0;
+                aria_entities_object1c_a074(&o1c_set, &o1c_clear);
+                if (o1c_set & 0x2) in_game_mode.unk_A074_1 = true;
+                if (o1c_clear & 0x1) in_game_mode.unk_A074_0 = false;
+                if (o1c_clear & 0x2) in_game_mode.unk_A074_1 = false;
+            }
             /* sub_0800C5A8's gEwramData->unk_A074_1 write lands inside
              * the entity pass natively; the port's menu edges above
              * already ran, so the store takes effect next frame.

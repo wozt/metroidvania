@@ -1614,6 +1614,16 @@ if(BUILD_TESTING)
                      sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_save_room.sh")
     set_tests_properties(aria_simulate_save_room PROPERTIES SKIP_RETURN_CODE 77)
 
+    # Headless save-room route contract: the post-save exit through
+    # 0/36's left edge, the 0/5 -> 0/36 return, the dead right edge
+    # clamp and the re-exit — the oscillation path from the bug
+    # report, bounded by real transition entries only.
+    add_test(NAME aria_simulate_save_room_route
+             COMMAND ${CMAKE_COMMAND} -E env
+                     FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>
+                     sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_save_room_route.sh")
+    set_tests_properties(aria_simulate_save_room_route PROPERTIES SKIP_RETURN_CODE 77)
+
     # START pause-gate contract in a later room: room 0/19 spawns a
     # passive Object00 door; native Object00Create only reports
     # sub_0800C5A8(0) when Soma is near, so a far spawn must leave

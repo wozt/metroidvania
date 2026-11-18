@@ -1606,6 +1606,14 @@ if(BUILD_TESTING)
                      sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_water_float.sh")
     set_tests_properties(aria_simulate_water_float PROPERTIES SKIP_RETURN_CODE 77)
 
+    # Water entry dip, surface-float stability and the swim stroke that lets
+    # Soma jump back out of the pool (room 0/5).
+    add_test(NAME aria_simulate_water_entry_jump
+             COMMAND ${CMAKE_COMMAND} -E env
+                     FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>
+                     sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_water_entry_jump.sh")
+    set_tests_properties(aria_simulate_water_entry_jump PROPERTIES SKIP_RETURN_CODE 77)
+
     add_test(NAME aria_simulate_skeleton_parts
              COMMAND ${CMAKE_COMMAND} -E env
                      FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>

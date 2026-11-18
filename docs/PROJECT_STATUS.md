@@ -1,3 +1,45 @@
+## Patch 1256 - Water float stability, entry dip and the surface swim stroke
+
+- **Scope.** `src/runtime/aos/core/aos_soma.c` (`aos_soma_air` buoyancy,
+  `aos_soma_jump` stroke gate, `collide_special` cooldown),
+  `tests/test_aria_simulate_water_entry_jump.sh` (new),
+  `CMakeLists.txt`, `docs/AOS_SOMA.md` and the
+  `aos.player.soma_controller` annotation.
+- **Reported defects.** In room 0/5's pool the sprite trembled at the
+  surface (a head-above/head-below limit cycle that alternated the
+  `0x800000`/`0x1000000` flags every few frames), Soma could not jump back
+  out of the water, and he did not sink at all on entry.
+- **Root causes.** (1) The buoyancy only regulated vy while the head was
+  submerged, so once the head cleared the surface normal gravity pulled
+  Soma back under and buoyancy pushed him up again - the limit cycle.
+  (2) The swim stroke was gated on `HEAD_SPECIAL`, which is clear at the
+  float depth where the head sits just above the water line, so no stroke
+  could fire while treading. (3) The `0x02000000` stroke cooldown was only
+  released on a head-in->out transition, which never happens while the head
+  stays out, locking swimming after a single stroke. (4) The old vy=-0.75
+  clamp killed downward velocity on entry, so there was no sink.
+- **Port change.** `aos_soma_air` now applies buoyancy after gravity so it
+  wins and splits the surface case (`0x1000000` set, `0x800000` clear): a
+  strong fall keeps sinking under water drag so the head dips under
+  briefly (the entry dip), a strong rise is preserved so the stroke can
+  breach, and only a weak residual velocity is held at vy = 0, which kills
+  the bob without freezing a real stroke. `aos_soma_jump` gates the stroke
+  on HEAD_SPECIAL or BODY_SPECIAL (excluding SPECIAL_WALK) so it fires
+  while treading, and `collide_special` clears `0x02000000` whenever the
+  head is out so repeated strokes are not locked.
+- **Verification.** New `tests/test_aria_simulate_water_entry_jump.sh`
+  (registered in CMake) drives `AOS_SIM_TRACE_SOMA` per-frame positions and
+  asserts: a fast drop penetrates below the float depth then returns
+  without reaching the floor; the last settled frames hold a single y (no
+  tremble); and repeated jump taps breach the surface (min y well above
+  the ~424 float). Manual traces confirm float y=424/vy=0/flags=0x1001002
+  steady, an entry dip to ~434 then recovery, and a stroke climb to ~406
+  out of the water. `aria_simulate_water_float` and the `aos_soma` CTest
+  selection still pass. The exact native routine producing the -0.75
+  remains unisolated (trace-measured, as Patch 1255 noted); the
+  head-out-body-in drag/stroke-preserve split is a port model of the
+  observed behaviour, not a decoded routine.
+
 ## Patch 1255 - Default water buoyancy and the mGBA --poke lab hook
 
 - **Scope.** `src/runtime/aos/core/aos_soma.c`,

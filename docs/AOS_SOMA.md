@@ -542,12 +542,23 @@ same depth, and Down does not dive. During the float the entity flags read
 `0x41C01802` (head/body special + slow-fall). Per-frame `vy`/`+0x54` traces
 show the rise is a **constant ~-0.75 px/frame** terminal velocity (not an
 acceleration) that ends with vy = 0 once the head leaves the water.
-`aos_soma_air` reproduces it: while both special probes are in water and
-the walk-on-special ability (`0x13260 & 0x8000`) is absent, vy is driven to
--0.75 unless already rising faster (the swim stroke); `collide_special`
-latches vy to 0 at the surface for the head-at-surface bob.
-`tests/test_aria_simulate_water_float.sh` checks the port holds Soma off
-the pool floor. Soul-dependent variants (bottom walking with water
+`aos_soma_air` reproduces it, applied after gravity so it wins:
+with the body probes in bit-3 cells and the walk-on-special ability
+(`0x13260 & 0x8000`) absent, a submerged head (`0x800000`) rises at a
+constant -0.75 unless already rising faster, while a downward entry is
+bled off gradually so Soma dips on landing instead of snapping up. With
+the head just out but the body still in (`0x1000000` alone, the float
+depth) a strong fall keeps sinking under water drag (the entry dip), a
+strong rise is preserved so the swim stroke can breach the surface, and
+only a weak residual velocity is held at vy = 0 so the head does not bob
+across the water-cell boundary (the earlier head-above/head-below limit
+cycle read as sprite tremble). `aos_soma_jump` gates the stroke on
+HEAD_SPECIAL or BODY_SPECIAL (not SPECIAL_WALK) so it fires while
+treading, and `collide_special` clears the `0x02000000` stroke cooldown
+once the head is out so repeated strokes are not locked.
+`tests/test_aria_simulate_water_float.sh` holds Soma off the pool floor
+and `tests/test_aria_simulate_water_entry_jump.sh` locks the entry dip,
+the stable float and the surface breach. Soul-dependent variants (bottom walking with water
 inertia, higher/multi jump, walk-on-water) are not yet ported; the
 walk-on-water ability still clears `0x800000` in `collide_special`.
 

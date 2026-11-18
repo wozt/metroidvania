@@ -161,7 +161,12 @@ bool aos_soma_jump(AosSoma *soma, uint16_t held, uint16_t pressed) {
         return true;
     }
     if (soma->drop_timer) return false;
-    if (flags & AOS_FLAG_HEAD_SPECIAL) {
+    /* The swim stroke is gated on the body being in water (sub_08019180
+     * tests HEAD_SPECIAL; BODY_SPECIAL is the surface float where the head
+     * sits just above the water line, so the stroke must still fire there
+     * for Soma to jump out). */
+    if ((flags & (AOS_FLAG_HEAD_SPECIAL | AOS_FLAG_BODY_SPECIAL)) &&
+        !(soma->abilities & AOS_ABILITY_SPECIAL_WALK)) {
         if (!(flags & 0x02000000u) && (pressed & AOS_KEY_JUMP)) {
             soma->gravity_mod = 0;
             soma->flags = (flags | 0x02000002u) & 0xFFEFFBF7u;
@@ -291,20 +296,41 @@ void aos_soma_air(AosSoma *soma, const AosCollision *layer, uint16_t held) {
              (soma->flags & AOS_FLAG_SLOW_FALL)) && soma->vy > 0x2800)
             soma->vy += (int32_t)0xFFFFD800;               /* -0.15625 */
         if (soma->abilities & AOS_ABILITY_ZERO_FALL) soma->vy = soma->gravity_mod = 0;
-        /* Water buoyancy (mGBA-traced, room 0/5 pool): while the head and
-         * body probes sit in bit-3 cells and the walk-on-special ability is
-         * absent, native drives vy to a constant ~-0.75 px/frame rise (not
-         * an acceleration — the per-frame vy/+0x54 trace shows a flat
-         * -0.75 then vy=0 at the surface). Faster upward values (the swim
-         * stroke) are preserved; collide_special latches vy to 0 when the
-         * head leaves the water, giving the float-at-arm-depth bob. */
-        if ((soma->flags & (AOS_FLAG_BODY_SPECIAL | AOS_FLAG_HEAD_SPECIAL)) ==
-                (AOS_FLAG_BODY_SPECIAL | AOS_FLAG_HEAD_SPECIAL) &&
-            !(soma->abilities & AOS_ABILITY_SPECIAL_WALK) &&
-            soma->vy > (int32_t)0xFFFF4000)
-            soma->vy = (int32_t)0xFFFF4000;                  /* -0.75 */
     }
     air_routine(soma, layer);
+    /* Water buoyancy, applied after gravity so it wins (mGBA-traced, room
+     * 0/5 pool): with the body probes in bit-3 cells and the walk-on-special
+     * ability absent, native rises at a constant ~-0.75 px/frame while the
+     * head stays submerged, then settles to vy=0 once the head reaches the
+     * surface. A downward entry is bled off gradually so Soma dips on
+     * landing instead of snapping up; faster strokes are preserved. With the
+     * head out but the body still submerged the float holds level (vy=0) so
+     * the head does not bob across the water-cell boundary every frame. */
+    if ((soma->flags & AOS_FLAG_BODY_SPECIAL) &&
+        !(soma->abilities & AOS_ABILITY_SPECIAL_WALK)) {
+        if (soma->flags & AOS_FLAG_HEAD_SPECIAL) {
+            if (soma->vy > 0) {
+                soma->vy -= 0x8000;                     /* bleed the entry fall */
+                if (soma->vy < 0) soma->vy = 0;
+            } else if (soma->vy > (int32_t)0xFFFF4000) {
+                soma->vy = (int32_t)0xFFFF4000;         /* -0.75 float rise */
+            }
+        } else {
+            /* Head out, body still submerged (the float depth). A strong
+             * downward entry keeps sinking under water drag so the head dips
+             * under briefly; a strong rise (the swim stroke) is left alone so
+             * Soma can breach the surface; only a weak residual velocity is
+             * held level so the head does not bob across the water-cell
+             * boundary every frame. */
+            if (soma->vy > 0x8000) {
+                soma->vy -= 0x6000;                 /* water drag */
+                if (soma->vy < 0) soma->vy = 0;
+            } else if (soma->vy >= -(int32_t)0x8000) {
+                soma->vy = 0;
+                soma->gravity_mod = 0;
+            }
+        }
+    }
 }
 
 /* Floor walk with the collision mode; *raw receives the first cell byte, as
@@ -388,8 +414,11 @@ static void collide_special(AosSoma *soma, const AosCollision *layer, int32_t x,
     } else {
         if ((soma->flags & AOS_FLAG_HEAD_SPECIAL) && !(soma->flags & 0x10u)) {
             if (!(soma->flags & 0x02000000u)) soma->vy = 0;
-            soma->flags &= ~0x02000000u;
         }
+        /* The stroke cooldown also ends once the head is out of the water;
+         * at the surface float the head never re-submerges, so without this
+         * the cooldown would latch and swimming would lock after one stroke. */
+        soma->flags &= ~0x02000000u;
         soma->flags &= ~0x00C00000u;
     }
     if (soma->flags & AOS_FLAG_HEAD_SPECIAL) {

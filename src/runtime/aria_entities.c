@@ -814,12 +814,43 @@ static bool entity_slot_referenced(const AriaRoom *room, size_t slot) {
     return false;
 }
 
-/* Return a reusable slot or MAX_ENTITIES when the native pool is full. */
+/* A slot is recyclable once its native record is deleted.
+ * sub_08000B64's post-update sweep frees any entity whose +0x59
+ * bit 3 (unk_53D_3) is set and EntityDelete frees the record
+ * directly; both leave updateFunc NULL, which is the free-slot
+ * test EntityCreateInRange's first-fit scan (code_080009A0.c)
+ * reuses. The port's deletion marks: kind-1 enemies report
+ * removal through enemy.removed, and the Object25 carrier and
+ * its state-1 children (SPECIAL id 37 = object 0x25) report the
+ * +0x59 bit-3 done mark and the create-gate EntityDelete through
+ * object25.finished/.deleted. Other SPECIAL kinds keep their
+ * slots until their own delete paths are ported; the Object26
+ * orbs (ids 39/40) live as long as their chandelier parent. */
+static bool entity_slot_dead(const AriaEntity *e) {
+    if (e->kind == ARIA_KIND_ENEMY)
+        return e->spawned && e->enemy.removed;
+    if (e->kind == ARIA_KIND_SPECIAL && e->id == 37)
+        return e->object25.deleted || e->object25.finished;
+    return false;
+}
+
+/* Return a reusable slot or MAX_ENTITIES when the native pool is
+ * full. Native child creates scan a fixed slot range
+ * (EntityCreateInRange's minSlot/maxSlot — 0x49..0xCF for the
+ * generic dynamic entities like Object35Create's sub_0805A50C
+ * carrier child, 0x1B..0x48 for the Object25Update state-1
+ * children and the Object26 orbs, 2..0x10/0x11 for the
+ * enemy-side creates); the host table keeps one unified pool
+ * and approximates every range with this first-fit scan, which
+ * preserves the reuse-before-extend order but not the per-range
+ * partitioning (documented divergence). A dead slot may still be
+ * referenced by a linked child; keep those until the owner chain
+ * has drained, preserving the index-based parent links used by
+ * this port. */
 static size_t entity_reserve_slot(AriaRoom *room) {
     for (size_t i = 0; i < room->entity_count; ++i) {
         AriaEntity *e = &room->entities[i];
-        if (e->kind == ARIA_KIND_ENEMY && e->spawned && e->enemy.removed &&
-            !entity_slot_referenced(room, i))
+        if (entity_slot_dead(e) && !entity_slot_referenced(room, i))
             return i;
     }
     if (room->entity_count >= MAX_ENTITIES)
@@ -4880,9 +4911,14 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                 aos_random);
             e->x = (int)(e->object25.pos_x >> 16);
             e->y = (int)(e->object25.pos_y >> 16);
-            if (e->object25.spawn_pending &&
-                room->entity_count < MAX_ENTITIES) {
-                AriaEntity *child = &room->entities[room->entity_count];
+            if (e->object25.spawn_pending) {
+                /* Object25Update state-1 children take EntityCreateInRange
+                 * slots natively (0x1B..0x48); the unified pool reuses a
+                 * dead slot before extending, like the enemy children. */
+                size_t child_slot = entity_reserve_slot(room);
+                if (child_slot >= MAX_ENTITIES) continue;
+                size_t count_before = room->entity_count;
+                AriaEntity *child = &room->entities[child_slot];
                 *child = (AriaEntity){.kind = ARIA_KIND_SPECIAL,
                     .id = 37,
                     .x = (int)(e->object25.spawn_x >> 16),
@@ -4898,10 +4934,12 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                     aria_pickup_state.special,
                                     &cdeleted);
                 if (!cdeleted) {
-                    room->entity_count++;
+                    /* reserve_slot already counted a fresh append;
+                     * a reused dead slot keeps the count. */
                     child->object25.linked = true;
                     child->object25.field36 = e->object25.field36;
-                }
+                } else if (child_slot + 1 == count_before)
+                    room->entity_count--;   /* fresh append rolled back */
             }
             if (e->object25.damage >= 0 &&
                 room->damage_popup_count < MAX_DAMAGE_POPUPS)

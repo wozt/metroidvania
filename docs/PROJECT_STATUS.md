@@ -1,3 +1,33 @@
+## Patch 1240 - Complete the entity slot recycler for Object25 children
+
+- **Interrupted refactor completed.** An in-progress change had replaced the
+  enemy-only `entity_reserve_slot` predicate with `entity_slot_dead` but left
+  its two call sites dangling, so the tree did not build. The reserve path is
+  restored on top of the new predicate: a slot is recyclable once its native
+  record is deleted (`sub_08000B64`'s post-update sweep or `EntityDelete`
+  leaves `updateFunc` NULL, which is what `EntityCreateInRange`'s first-fit
+  scan reuses). Enemies still report through `enemy.removed`; the Object25
+  carrier and its state-1 children (SPECIAL id 37) now also report through
+  `object25.deleted`/`object25.finished`, matching the native +0x59 bit-3
+  done mark and the create-gate `EntityDelete`. Other SPECIAL kinds keep
+  their slots until their own delete paths are ported, and Object26 orbs
+  live as long as their chandelier parent.
+- **Object25 spawn path.** The `spawn_pending` child append now reserves a
+  slot through the same first-fit path instead of only growing the table,
+  preserving the `link_parent` index reference (still protected by
+  `entity_slot_referenced`). A fresh append is rolled back if
+  `aos_object25_create` reports an immediate delete, matching the enemy
+  spawn path's count fix-up.
+- **Documented divergence.** Native creates scan fixed slot ranges
+  (`EntityCreateInRange` minSlot/maxSlot: `0x49..0xCF` for generic dynamic
+  children, `0x1B..0x48` for Object25 state-1 children and Object26 orbs,
+  `2..0x10/0x11` for enemy-side creates). The host keeps one unified pool
+  and approximates every range with the first-fit scan, preserving
+  reuse-before-extend order but not per-range partitioning.
+- **Evidence.** Full suite green (238 tests); the room-0/3 entity-pool
+  contract from patch 1226 still holds its 16-entry high-water mark. This
+  is runtime integration evidence, not an emulator comparison.
+
 ## Patch 1239 - Restore the native Merman art in room 0/5
 
 - **Root cause and native correction.** The room record already identifies

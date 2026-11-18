@@ -1,3 +1,80 @@
+## Patch 1245 - Affine draw audit + sub_080421AC non-enemy victim dispatch
+
+- **Scope.** `src/runtime/aria_draw.c`,
+  `src/runtime/aos/game/aos_object19.h`,
+  `src/runtime/aos/game/aos_object0d.c/.h`,
+  `src/runtime/aos/core/aos_enemy.c/.h`,
+  `src/runtime/aos/core/aos_wall.c`,
+  `src/runtime/aos/enemies/chaos.c`,
+  `src/runtime/aria_entities.c`, `tests/test_aos_enemy.c`,
+  `CMakeLists.txt`, `data/native_parity/annotations.tsv` and this
+  file. Audit of the native `sub_0803E058` affine call sites that
+  recorded rotation or scale state without a renderer consumer,
+  plus the non-enemy victim side of `sub_080421AC`.
+- **Native evidence.** `sub_0803E058(angle, sx, sy, flip_h, flip_v,
+  slot)` in `third_party/cvaos/asm/code/code_08039340.s` writes the
+  GBA OBJ affine parameters (angle a fraction of a turn,
+  0x10000 = 360°, scales Q16.16). `Object19Update` ends every near
+  update with `sub_0803E058(+0x14, 0x10000, 0x10000, +0x58 bit 6,
+  ...)`; `Object0DUpdate` calls it with the +-0x1000-clamped +0x18
+  swing and no flip; Chaos's `sub_080A6D88` ORB update adds the
+  +0x50 spin increment into the +0x18 accumulator and re-arms the
+  affine at unit scale; Killer Mantle's `sub_080BB0F0` orbit child
+  passes +0x1A as angle and +0x1C as both scale arguments;
+  Bael's `func_080CD144` walk driver and `func_080CCDDC` death tail
+  accumulate speed>>6 / the decaying spin into +0x14.
+- **Fix.** `draw_special_objects` now renders the special_25
+  (Object19) and special_13 (Object0D) frames through
+  `SDL_RenderTextureRotated` about the entity position with the
+  native flip arguments. `draw_enemies` consumes `ch2_rot` for
+  `AOS_ROLE_CHAOS_ORB`, applies a uniform about-position scale for
+  `AOS_ROLE_MANTLE_ORBIT` from `walk_timer` (+0x1C, hidden at
+  scale <= 0x400 like the native out-of-range matrix) and turns the
+  Bael body by `angle` (+0x14).
+- **sub_080421AC dispatch.** The routine
+  (`third_party/cvaos/asm/code/code_08040A38.s:1848`) scans five
+  attacker sources into a result mask: bit 0x1 the + 0x13110
+  entity's `sub_08041D54` path, bit 0x4 its `sub_08041BDC` path,
+  bit 0x2 the + 0x1311C attack entity (`sub_08041864` record check
+  + `sub_080415A8` overlap + entity-record callbacks), bit 0x8 the
+  + 0x13124 red-soul list and bit 0x10 the + 0x13144 blue-soul
+  list (eight slots each, `sub_08041864` cooldown/recent-slot
+  consumption, type-7 gated to type-0xA victims). `sub_08045F9C`
+  (breakable props) tests mask & 0x1E; `Object08Update` and
+  `Object0DUpdate` test mask & 0x1A. The port's transient soul
+  list only reached `aos_enemy_collide`, so soul attacks never
+  broke pots, walls or re-armed Object0D. `aos_enemy_soul_attack_hit`
+  now exposes the + 0x13124/+ 0x13144 scan for non-enemy victims
+  (attacker type of the first overlapping record, the type-7 gate
+  on the victim's + 0x70 byte, no struck/target latch);
+  `aria_entities` feeds it to the wall (`AosCombat` recent-hit
+  slots), Object0D (new embedded `AosCombat`, `sub_0804277C`
+  type 8, `sub_080426B0` tick) and the three breakable-prop hit
+  approximations. `aos_object0d`/`aos_wall` create now write the
+  native + 0x72 = 1 record (neither attack nor hurt gate) instead
+  of a stale attack-off flag.
+- **Tests.** `soul_attack_tests` in `tests/test_aos_enemy.c`
+  covers `aos_enemy_soul_attack_hit` (overlap, clear, the type-7
+  gate per victim +0x70 byte — 0 for the props, 8 for walls and
+  Object0D, 0xA accepted — and no struck/target latch). `cmake
+  --build build -j8`; `ctest -R
+  "aos_object0d|aos_object19|aos_enemy|aos_soul"`: 58/58, plus
+  `aos_wall|aos_object0e|aos_object0f|aos_breakable`: 6/6.
+- **Remaining gaps.** The native double-size OBJ placement is
+  unmodelled for every affine sprite (SDL rotation about the
+  anchor instead); Chaos ORB2's mirror/vertical-flip affine
+  arguments, the `sub_080A62B8` limb affine channels, palette
+  fades, mosaic and the SetPlayerInput/story-write gates stay
+  unported; Object19's `sub_080421AC` attack-slot read feeding
+  its draw call remains open; the + 0x13110/+ 0x1311C entity-slot
+  attack paths (result bits 0x1/0x4/0x2 and their
+  `sub_08041D54`/`sub_08041BDC`/entity-record callbacks), the
+  per-bit secondary callback pass and entity-vs-entity contact
+  damage stay unmodelled — `aos_enemy_soul_attack_hit` covers
+  only the two soul lists; the breakable props' mask & 0x1E also
+  admits the entity-slot bits the port does not produce; no
+  emulator comparison was run.
+
 ## Patch 1244 - Attack-slot audit: type-5/6 cooldown bytes, type-7 victim gate, first-strike latch
 
 - **Scope.** `src/runtime/aos/core/aos_combat.c/.h`,

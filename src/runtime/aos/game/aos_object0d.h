@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "../core/aos_combat.h"
+
 /* Object0D (sUnk_084F0DF8[13] / sUnk_084F0ED8[13]): the swinging
  * object — a rotating prop (blade/pendulum) drawn through the
  * sub_0803E058 affine path. Create loads tiles 0x081CBE74, palette
@@ -26,8 +28,8 @@
  * 0x10 and accumulates, < 0 steps it up, == 0 takes + 0x1C; a sign
  * crossing drops + 0x20 by 0x20 while nonzero; + 0x1C clamps to
  * -+0x20 and + 0x18 to -+0x1000. The affine draw consumes + 0x18
- * and the + 0x58 low-5 flip bits — approximated by the static
- * special_13 animation in the runtime. */
+ * and the + 0x58 low-5 flip bits; draw_special_objects rotates the
+ * special_13 frame by + 0x18 (no flip natively). */
 
 typedef struct {
     uint8_t param0, param1;
@@ -38,6 +40,7 @@ typedef struct {
     int32_t angle;          /* +0x18: integrated angle, clamped -+0x1000 */
     int32_t speed;          /* +0x20: swing amplitude, -0x20 per crossing */
     int song;               /* PlaySong request, -1 none */
+    AosCombat combat;       /* + 0x70: type 8, + 0x72 = 1 (gates clear) */
 } AosObject0d;
 
 /* Object0DCreate: the resource load is covered by the exported
@@ -46,9 +49,10 @@ void aos_object0d_create(AosObject0d *o, int param0, int param1,
                          bool *deleted);
 
 /* Object0DUpdate. `screen_y` is + 0x46, `focused` is the + 0x13190
- * pointer compare, `attacked` the sub_080421AC bits-0x1A match and
- * `soma_left` the Soma + 0x40 < entity + 0x40 compare for the swing
- * direction. */
+ * pointer compare, `attacked` the sub_080421AC bits-0x1A match (the
+ * caller lands it through the combat record's recent-hit slots like
+ * Object08Update's blows) and `soma_left` the Soma + 0x40 < entity
+ * + 0x40 compare for the swing direction. */
 void aos_object0d_update(AosObject0d *o, int16_t screen_y, bool focused,
                          bool attacked, bool soma_left);
 #endif

@@ -67,7 +67,8 @@ bool aos_wall_create(AosWall *wall, AosCollision *layer, int x, int y, int param
     wall->event = (int16_t)param1;
     wall->object09 = object09;
     wall->combat.type = AOS_TYPE_ENEMY;
-    wall->combat.attack_off = true;       /* + 0x72 bit 1 */
+    /* sub_0804277C(entity, 8, 0, 0) writes + 0x72 = 1: the attack
+     * (bit 1) and hurt (bit 2) gates stay clear. */
     wall->hp = 3;
     if (layer) set_blocks(wall, layer, true);
     return true;

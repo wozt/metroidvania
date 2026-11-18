@@ -11942,6 +11942,30 @@ static void soul_attack_tests(void) {
     hit = aos_enemy_update(&special, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
                            never_zero);
     assert(hit.enemy_hit && special.hp < 30 && ghost.struck && ghost.target == &special);
+    /* sub_080421AC's + 0x13124/+ 0x13144 scans also serve non-enemy
+     * victims: sub_08045F9C (breakable props, mask & 0x1E),
+     * Object08Update and Object0DUpdate (mask & 0x1A). The query
+     * reports the attacker type without latching struck/target. */
+    {
+        AosSoulAttack axe = {{90, 80, 110, 104}, 10, 0, false, NULL,
+                             AOS_TYPE_SOUL};
+        AosSoulAttack spirit = {{90, 80, 110, 104}, 10, 0, false, NULL, 7};
+        AosRect overlap = {100, 90, 120, 120};
+        AosRect clear = {200, 200, 220, 220};
+        aos_enemy_set_soul_attacks(&axe, 1);
+        assert(aos_enemy_soul_attack_hit(overlap, 0) == AOS_TYPE_SOUL);
+        assert(aos_enemy_soul_attack_hit(clear, 0) == 0);
+        assert(!axe.struck && axe.target == NULL);
+        /* The blue list's type-7 -> type-0xA gate applies to the
+         * victim's + 0x70 byte: props (0) and walls (8) refuse it. */
+        aos_enemy_set_soul_attacks(&spirit, 1);
+        assert(aos_enemy_soul_attack_hit(overlap, 0) == 0);
+        assert(aos_enemy_soul_attack_hit(overlap, 8) == 0);
+        assert(aos_enemy_soul_attack_hit(overlap, 0x0A) == 7);
+        assert(!spirit.struck && spirit.target == NULL);
+        aos_enemy_set_soul_attacks(NULL, 0);
+        assert(aos_enemy_soul_attack_hit(overlap, 0) == 0);
+    }
     aos_enemy_set_soul_attacks(NULL, 0);
     /* sub_08042A54/sub_08041864: types 5 and 6 take their recent-hit
      * cooldown from the gEwramData bytes, not the 0x080E33F0 table. */

@@ -41,6 +41,31 @@ void aos_enemy_soul_attack_contact(int index, int *x, int *y) {
     *y = ok ? soul_contact[index][1] : 0;
 }
 
+/* sub_080421AC's + 0x13124/+ 0x13144 scans for a non-enemy victim:
+ * sub_08045F9C (the breakable props) reads result mask & 0x1E and
+ * Object08Update / Object0DUpdate read mask & 0x1A, both covering the
+ * two soul lists. Returns the attacker type (+ 0x70, AOS_TYPE_SOUL
+ * when the record leaves it 0) of the first attack whose inclusive
+ * rect overlaps `target`, else 0. `victim_type` is the victim's
+ * + 0x70 byte for the blue list's type-7 -> type-0xA gate (0 for the
+ * props, 8 for walls and Object0D). The victim's recent-hit slots and
+ * the attacker/victim hit callbacks are not consumed here; callers
+ * keeping an AosCombat apply aos_combat_can_take/take themselves. */
+uint8_t aos_enemy_soul_attack_hit(AosRect target, uint8_t victim_type) {
+    if (!soul_attacks) return 0;
+    for (int i = 0; i < soul_attack_count; ++i) {
+        AosSoulAttack *attack = &soul_attacks[i];
+        uint8_t type = attack->type ? attack->type : AOS_TYPE_SOUL;
+        /* The blue-soul list (+ 0x13144) tests a type-7 attacker only
+         * against type-0xA victims; the red-soul list has no gate. */
+        if (type == 7 && victim_type != 0x0A) continue;
+        if (attack->rect.x1 <= target.x2 && target.x1 <= attack->rect.x2 &&
+            attack->rect.y1 <= target.y2 && target.y1 <= attack->rect.y2)
+            return type;
+    }
+    return 0;
+}
+
 void aos_enemy_set_flag_8e_40(bool set) {
     flag_8e_40 = set;
 }

@@ -25,7 +25,12 @@
  * state 3 ascends 22.0, looping. A zero record lifetime falls
  * back to param0 << 16; the collapsed mirror negates the
  * horizontal velocity. + 0x18 counts the leg down by 0x10000
- * a frame and + 0x40/+ 0x44 integrate the velocity. */
+ * a frame and + 0x40/+ 0x44 integrate the velocity.
+ *
+ * Every near update also ends in sub_0803E058(+ 0x14, 0x10000,
+ * 0x10000, + 0x58 bit 6, ...): the sprite turns by the + 0x14
+ * angle at unit scale, horizontally flipped on the mirror —
+ * draw_special_objects applies that rotation. */
 typedef struct {
     int32_t param0;         /* +0x30 s16: param0 + 0xE, the
                              * horizontal leg length */

@@ -7,6 +7,9 @@ void aos_object0d_create(AosObject0d *o, int param0, int param1,
     o->param0 = (uint8_t)param0;
     o->param1 = (uint8_t)param1;
     o->song = -1;
+    /* sub_0804277C(entity, 8, 0, 0): type 8 and + 0x72 = 1 — the
+     * attack (bit 1) and hurt (bit 2) gates stay clear. */
+    o->combat.type = AOS_TYPE_ENEMY;
     /* sub_0806E0D0(0x081CBE74, 0x08209F54, 0x0821017C) + the
      * sub_0803E654 variant pick: covered by the exported special_13
      * art; the native failure path deletes the entity. */
@@ -58,4 +61,6 @@ void aos_object0d_update(AosObject0d *o, int16_t screen_y, bool focused,
     else if (o->swing < -o->speed) o->swing = -o->speed;
     if (o->angle > 0x1000) o->angle = 0x1000;
     else if (o->angle < -0x1000) o->angle = -0x1000;
+    /* sub_080426B0: the recent-hit cooldowns tick once per frame. */
+    aos_combat_tick(&o->combat);
 }

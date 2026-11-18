@@ -2861,6 +2861,25 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (!aos_wall_alive(&e->wall)) continue;
             bool struck = aos_wall_weapon_hit(&e->wall, combat->weapon, soma,
                                               combat->weapon_frames);
+            /* Object08Update's sub_080421AC mask & 0x1A also covers the
+             * + 0x13124/+ 0x13144 soul lists (sub_08041864): a soul
+             * attack overlapping the wall's box lands a blow through
+             * the same recent-hit slots. */
+            {
+                const AosWallEntry *entry = &aos_wall_entries[e->wall.index];
+                AosBox wbox = {(int8_t)-(entry->w / 2), (int8_t)-(entry->h / 2),
+                               entry->w, entry->h};
+                AosRect wtarget = aos_entity_rect(wbox, e->wall.x >> 16,
+                                                e->wall.y >> 16, false, false);
+                uint8_t soul_type = aos_enemy_soul_attack_hit(wtarget,
+                                                            e->wall.combat.type);
+                if (soul_type &&
+                    aos_combat_can_take(&e->wall.combat, soul_type)) {
+                    aos_combat_take(&e->wall.combat, soul_type,
+                                    aos_combat_cooldown(soul_type, 0));
+                    struck = true;
+                }
+            }
             AosWallReport report = {0};
             aos_wall_update(&e->wall, layer, aria_events,
                             combat->progress ? combat->progress->flags : 0, struck, aos_random,
@@ -3329,6 +3348,15 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                        ww > 1 && wh > 1 &&
                        !(wx + ww - 1 < e->x - 8 || e->x + 8 < wx ||
                          wy + wh - 1 < e->y - 16 || e->y < wy);
+            /* sub_08045F9C reads sub_080421AC's result mask & 0x1E:
+             * result bits 0x2 (+ 0x1311C attack entity), 0x4 (the
+             * + 0x13110 entity's sub_08041BDC path), 0x8 and 0x10
+             * (the + 0x13124/+ 0x13144 soul lists) all break the prop
+             * (its + 0x70 type is 0). */
+            if (!hit)
+                hit = aos_enemy_soul_attack_hit(
+                    (AosRect){(int16_t)(e->x - 8), (int16_t)(e->y - 16),
+                              (int16_t)(e->x + 8), (int16_t)e->y}, 0) != 0;
             /* sub_08046100's bounce gate: gEwramData word 0 bit 1 is
              * the whip-swing flag — approximated by the live weapon. */
             bool mp_full_soma = combat->progress &&
@@ -3706,6 +3734,15 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                        ww > 1 && wh > 1 &&
                        !(wx + ww - 1 < e->x - 8 || e->x + 8 < wx ||
                          wy + wh - 1 < e->y - 16 || e->y < wy);
+            /* sub_08045F9C reads sub_080421AC's result mask & 0x1E:
+             * result bits 0x2 (+ 0x1311C attack entity), 0x4 (the
+             * + 0x13110 entity's sub_08041BDC path), 0x8 and 0x10
+             * (the + 0x13124/+ 0x13144 soul lists) all break the prop
+             * (its + 0x70 type is 0). */
+            if (!hit)
+                hit = aos_enemy_soul_attack_hit(
+                    (AosRect){(int16_t)(e->x - 8), (int16_t)(e->y - 16),
+                              (int16_t)(e->x + 8), (int16_t)e->y}, 0) != 0;
             aos_object0f_update(&e->object0f, near, hit,
                                 ((int32_t)e->x) << 16, ((int32_t)e->y) << 16,
                                 aos_random);
@@ -3747,6 +3784,22 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                             ww > 1 && wh > 1 &&
                             !(wx + ww - 1 < e->x - 8 || e->x + 8 < wx ||
                               wy + wh - 1 < e->y - 16 || e->y < wy);
+            /* Object0DUpdate's sub_080421AC mask & 0x1A also covers the
+             * + 0x13124/+ 0x13144 soul lists: a soul attack overlapping
+             * the prop's box re-arms the swing through the same
+             * recent-hit slots. */
+            {
+                AosRect otarget = {(int16_t)(e->x - 8), (int16_t)(e->y - 16),
+                                   (int16_t)(e->x + 8), (int16_t)e->y};
+                uint8_t soul_type =
+                    aos_enemy_soul_attack_hit(otarget, e->object0d.combat.type);
+                if (soul_type &&
+                    aos_combat_can_take(&e->object0d.combat, soul_type)) {
+                    aos_combat_take(&e->object0d.combat, soul_type,
+                                    aos_combat_cooldown(soul_type, 0));
+                    attacked = true;
+                }
+            }
             aos_object0d_update(&e->object0d, (int16_t)osy, focused,
                                 attacked, soma->x < ((int32_t)e->x) << 16);
             if (e->object0d.song >= 0) {
@@ -3785,6 +3838,15 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                        ww > 1 && wh > 1 &&
                        !(wx + ww - 1 < e->x - 8 || e->x + 8 < wx ||
                          wy + wh - 1 < e->y - 16 || e->y < wy);
+            /* sub_08045F9C reads sub_080421AC's result mask & 0x1E:
+             * result bits 0x2 (+ 0x1311C attack entity), 0x4 (the
+             * + 0x13110 entity's sub_08041BDC path), 0x8 and 0x10
+             * (the + 0x13124/+ 0x13144 soul lists) all break the prop
+             * (its + 0x70 type is 0). */
+            if (!hit)
+                hit = aos_enemy_soul_attack_hit(
+                    (AosRect){(int16_t)(e->x - 8), (int16_t)(e->y - 16),
+                              (int16_t)(e->x + 8), (int16_t)e->y}, 0) != 0;
             aos_object0e_update(&e->object0e, near, hit,
                                 ((int32_t)e->x) << 16,
                                 ((int32_t)e->y) << 16);
@@ -3996,9 +4058,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 25) {
             /* Object19Update (sUnk_084F0ED8[25]; Object19Create's
              * sprite attach is the special_sprites coverage): the
-             * four-leg patrol machine. The sub_0803E058 affine
-             * rotation draw and the sub_080421AC attack-slot read
-             * are approximated by the static animation. */
+             * four-leg patrol machine. draw_special_objects applies
+             * its sub_0803E058 affine turn (+ 0x14 angle, + 0x58
+             * bit-6 flip); the sub_080421AC attack-slot read stays
+             * unported. */
             if (!e->spawned) {
                 if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;

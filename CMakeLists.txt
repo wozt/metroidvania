@@ -1709,7 +1709,8 @@ if(BUILD_TESTING)
     add_test(NAME aos_object0f COMMAND fusion_aos_object0f_tests)
 
     add_executable(fusion_aos_object0d_tests tests/test_aos_object0d.c
-                   src/runtime/aos/game/aos_object0d.c)
+                   src/runtime/aos/game/aos_object0d.c
+                   src/runtime/aos/core/aos_combat.c)
     target_include_directories(fusion_aos_object0d_tests PRIVATE src/runtime)
     target_link_libraries(fusion_aos_object0d_tests PRIVATE m)
     fusion_enable_warnings(fusion_aos_object0d_tests)

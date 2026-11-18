@@ -228,6 +228,23 @@ void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObject
             rect.w = w;
             rect.h = h;
         }
+        if (e->enemy.role == AOS_ROLE_MANTLE_ORBIT) {
+            /* sub_080BB0F0's affine tail passes the child's + 0x1C as
+             * both scale arguments (walk_timer here): the orbit blade
+             * grows 0x1000 a frame to ~1.06, holds and shrinks
+             * 0x2000 a frame. sub_0803E058 leaves a scale of 0x400 or
+             * less with an out-of-range matrix (nothing shown);
+             * uniform scale about the entity position, like the
+             * rotation below. */
+            if (e->enemy.walk_timer <= 0x400) continue;
+            float s = (float)e->enemy.walk_timer / 65536.0f;
+            float px = (float)ex - (float)cam_x;
+            float py = (float)ey - (float)cam_y;
+            rect.x = px + (rect.x - px) * s;
+            rect.y = py + (rect.y - py) * s;
+            rect.w *= s;
+            rect.h *= s;
+        }
         SDL_FlipMode mode = (SDL_FlipMode)((flip ? SDL_FLIP_HORIZONTAL : 0) |
                                            (e->enemy.vflip ? SDL_FLIP_VERTICAL : 0));
         /* A spinning child (the axe): its affine angle, 0x10000 per turn.
@@ -268,6 +285,23 @@ void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObject
          * spawn; 0x10000 per turn like the shared spins. */
         if (e->enemy.id == AOS_ENEMY_TRITON && e->enemy.role == AOS_ROLE_TRITON_HEAD)
             degrees = (double)(e->enemy.tr_angle & 0xFFFF) * 360.0 / 65536.0;
+        /* Chaos's ORB ember (sub_080A6D88): every update calls
+         * sub_0803E058(+ 0x18, 0x10000, 0x10000, + 0x58 bit 6, ...)
+         * — the sprite turns by its + 0x18 spin accumulator
+         * (ch2_rot here, advanced by the + 0x50 ax increment) at
+         * unit scale; the palette-variant + 0x58 bits that feed
+         * the native flip arguments are not modelled (the spawn
+         * consumed them as the sub_0803E654 roll). */
+        if (e->enemy.role == AOS_ROLE_CHAOS_ORB)
+            degrees = (double)e->enemy.ch2_rot * 360.0 / 65536.0;
+        /* Bael's + 0x14 affine angle: the func_080CD144 walk driver
+         * adds speed >> 6 and the func_080CCDDC death tail adds the
+         * decaying spin the same way; sub_0803E058 turns the body
+         * by it. The native death splits the spin onto the
+         * companion's affine — the port documents carrying it on
+         * the body (angle here). */
+        if (e->enemy.id == AOS_ENEMY_BAEL && e->enemy.role == AOS_ROLE_ENEMY)
+            degrees = (double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;
         /* + 0x5A bits 1-2 = 2: a semi-transparent OBJ; the room's blend
          * coefficients are not traced, half alpha stands for them. */
         if (e->enemy.translucent) SDL_SetTextureAlphaMod(frame->texture, 128);
@@ -1037,7 +1071,36 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         int ex = e->x, ey = e->y;
         SDL_FRect rect = {(float)(ex + frame->offset_x - cam_x),
                           (float)(ey + frame->offset_y - cam_y), frame->w, frame->h};
-        SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+        /* Object19Update (id 25) ends every near update with
+         * sub_0803E058(+ 0x14, 0x10000, 0x10000, + 0x58 bit 6, ...):
+         * the patrol prop turns by its + 0x14 angle (the + 0x16
+         * rate, negated on the mirror) at unit scale and flips
+         * horizontally with the mirror. Object0DUpdate (id 13)
+         * calls sub_0803E058(+ 0x18, 0x10000, 0x10000, 0, ...)
+         * with the +-0x1000-clamped swing angle and no flip.
+         * Both pivot on the entity position like the enemy spins
+         * (0x10000 per turn, SDL degrees clockwise); the native
+         * double-size OBJ placement is not modelled. */
+        double degrees = 0;
+        SDL_FlipMode smode = SDL_FLIP_NONE;
+        bool affine = false;
+        if (e->id == 25) {
+            degrees = (double)e->object19.angle * 360.0 / 65536.0;
+            smode = e->object19.mirror ? SDL_FLIP_HORIZONTAL
+                                       : SDL_FLIP_NONE;
+            affine = true;
+        } else if (e->id == 13) {
+            degrees = (double)e->object0d.angle * 360.0 / 65536.0;
+            affine = true;
+        }
+        if (affine) {
+            SDL_FPoint centre = {(float)ex - rect.x - (float)cam_x,
+                                 (float)ey - rect.y - (float)cam_y};
+            SDL_RenderTextureRotated(renderer, frame->texture, NULL,
+                                     &rect, degrees, &centre, smode);
+        } else {
+            SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+        }
     }
 }
 

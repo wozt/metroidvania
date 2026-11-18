@@ -832,8 +832,9 @@ static void ch2_turret_update(AosEnemy *e, AosSoma *soma,
 static void ch2_orb_update(AosEnemy *e, const AosEnemyKind *kind,
                            int cam_x, int cam_y) {
     /* + 0x18 is a u16: the spin accumulator + 0x50 adds into it
-     * (strh), then sub_0803E058 would affine-rotate — the affine
-     * channel is unported, so only the angle bookkeeping remains. */
+     * (strh); draw_enemies turns the ORB sprite by it through the
+     * sub_0803E058 affine angle (unit scale, + 0x58 flips
+     * unmodelled). */
     e->ch2_rot = (uint16_t)(e->ch2_rot + (uint16_t)e->ax);
     e->x += e->vx;
     e->y += e->vy;

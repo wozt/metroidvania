@@ -1094,6 +1094,13 @@ void aos_enemy_set_soul_attacks(AosSoulAttack *attacks, int count);
 /* sub_0806B658: the centre of the overlap of soul attack `index` (as set
  * by aos_enemy_set_soul_attacks) with the last hurtbox that took it. */
 void aos_enemy_soul_attack_contact(int index, int *x, int *y);
+/* sub_080421AC's + 0x13124/+ 0x13144 soul-attack scans read by
+ * non-enemy victims (sub_08045F9C's breakable props, Object08Update,
+ * Object0DUpdate): the attacker type of the first attack overlapping
+ * `target`, else 0. `victim_type` is the victim's + 0x70 byte for the
+ * blue list's type-7 -> type-0xA gate. Does not latch `struck` /
+ * `target` or consume the victim's recent-hit slots. */
+uint8_t aos_enemy_soul_attack_hit(AosRect target, uint8_t victim_type);
 /* sub_0806CAF8 for another entity carried in an AosEnemy (x, y, vx, vy,
  * ax, ay, mirrored, ground): one walker step at `speed` toward its facing
  * with the probe table; mode bit 0 (face the player) is not available

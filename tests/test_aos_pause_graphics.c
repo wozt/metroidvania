@@ -219,7 +219,8 @@ int main(int argc, char **argv) {
     AosPauseHubValues values = {
         .hp = 320, .mp = 80, .max_hp = 320, .max_mp = 80,
         .stats = {10, 12, 11, 9}, .attack = 15, .defence = 11,
-        .level = 1, .experience = 84, .next_experience = 0,
+        .level = 1, .experience = 12345678, .next_experience = 87654321,
+        .gold = 654321,
         .play_frames = 60 * 3723,
     };
     assert(aos_pause_graphics_render_hub(&graphics, &values, 0,
@@ -227,6 +228,15 @@ int main(int argc, char **argv) {
     assert((graphics.bg0_map[12 * 32 + 2] & 0xF000) == 0x3000);
     assert((graphics.bg0_map[13 * 32 + 2] & 0xF000) == 0x7000);
     assert(graphics.bg0_map[2 * 32 + 14] == 0x3300);
+    /* sub_08047520: GOLD is the six-digit row 10, total EXP is row 12,
+     * and sub_08033E10's remaining NEXT value is row 13. Distinct digit
+     * patterns prevent the three native fields from being permuted. */
+    assert(graphics.bg0_map[10 * 32 + 21] == 0x3306);
+    assert(graphics.bg0_map[10 * 32 + 26] == 0x3301);
+    assert(graphics.bg0_map[12 * 32 + 18] == 0x3301);
+    assert(graphics.bg0_map[12 * 32 + 25] == 0x3308);
+    assert(graphics.bg0_map[13 * 32 + 18] == 0x3308);
+    assert(graphics.bg0_map[13 * 32 + 25] == 0x3301);
     uint16_t *hub_map = malloc(sizeof graphics.bg0_map);
     uint8_t *hub_chars = malloc(sizeof graphics.bg0_chars);
     assert(hub_map && hub_chars);

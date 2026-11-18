@@ -1,3 +1,42 @@
+## Patch 1254 - Native EXP/NEXT hub rows and linked Skeleton parts
+
+- **Scope.** `src/runtime/aos/menus/aos_pause_graphics.c`,
+  `src/runtime/aria_entities.c`, the `--simulate` entity diagnostic in
+  `src/runtime/aria_runtime.c`, the pause and headless integration tests,
+  and the existing progression/Skeleton registries. The unrelated
+  interrupted `aria_entity_dead.h` and palette-script drafts remain
+  untracked and were not adopted.
+- **EXP/NEXT correction.** The progression core was already native: the
+  total threshold is `x(x+1)(3x+8)`, `sub_08033E10` returns the remaining
+  amount to the next threshold, and each loaded enemy record supplies its
+  own reward. The visible defect was the hub mapping. `sub_08047520` reads
+  stats `+0x34` (gold) into the six-digit row 10, stats `+0x30` (total EXP)
+  into row 12, then draws `sub_08033E10`'s remaining NEXT value on row 13.
+  The port had permuted those three fields; it now follows those exact
+  source reads and coordinates. Distinct eight/six-digit fixtures lock the
+  mapping in `test_aos_pause_graphics`.
+- **Enemy reward evidence.** The ROM-derived schema-v4 table contains 113
+  records, 58 distinct experience values and only three records worth one
+  point. A headless real-room test now kills the early Skeleton through the
+  production weapon/collision/death path and verifies 3 total EXP with 81
+  NEXT at level 1; the existing Cockatrice path still verifies 120 total
+  EXP, level 2 and 84 NEXT. Boss records retain their native values (for
+  example Death 4444, Legion 12000 and Balore 16000); the zero-valued
+  Belmont, Graham and Chaos records are not assigned invented rewards.
+- **Skeleton head correction.** `EnemySkeletonUpdate` already emitted the
+  separate head, held bone and thrown bone children, and their update roles
+  require a live body pointer. The room bridge's linked-child update list
+  knew those roles, but its spawn-side owner list omitted all three, leaving
+  `parent == NULL`; the head therefore removed itself on its first update.
+  The three roles now retain the producer slot. The new room-0/6 integration
+  runs five native Skeletons for five frames and proves five live linked
+  heads plus five live held bones at their body-derived positions.
+- **Verification and status.** Targeted pause, XP and Skeleton-part tests
+  pass. EXP row placement is source-exact and both rewards/child links are
+  exercised through real runtime paths; no new synchronized emulator menu
+  comparison was made, so the menu and progression parity rows remain
+  `partial`, while the already-functional Skeleton row is not promoted.
+
 ## Patch 1253 - Opening dialogue transitions and Soma position ownership
 
 - **Scope.** `src/runtime/aos/title/aos_opening_event.c/.h`,

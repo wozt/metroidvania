@@ -11,6 +11,7 @@ cd "$root"
 bin="${FUSION_ARIA_RUNTIME:-build/fusion_aria_runtime}"
 
 need="assets/extracted/aria/rooms/runtime/area_05_room_001/room.tsv
+assets/extracted/aria/rooms/runtime/area_00_room_006/room.tsv
 assets/extracted/aria/sprites/soma/runtime/runtime_index.tsv
 assets/extracted/aria/sprites/objects/runtime/runtime_index.tsv
 assets/extracted/aria/sprites/weapons/runtime/runtime_index.tsv
@@ -27,6 +28,28 @@ if [ ! -x "$bin" ]; then
     echo "aria simulate XP skipped: $bin missing" >&2
     exit 77
 fi
+
+# The early-route Skeleton is the first useful guard against a one-XP
+# fallback: enemy id 2's ROM record awards exactly 3 XP. Spawn within the
+# ordinary short-sword hitbox and use the same production collision/reward
+# path as the Cockatrice case below.
+early=$("$bin" --simulate 60 --simulate-hold 2 \
+        --area 0 --room 6 --spawn 112 191 --weapon 1 --atk 9999 --mute \
+        2>/dev/null)
+printf '%s\n' "$early"
+printf '%s\n' "$early" | grep -q "skeleton hit: .* killed" || {
+    echo "FAIL: early-route Skeleton was not killed through the weapon path" >&2
+    exit 1
+}
+printf '%s\n' "$early" | grep -q "Experience 3 (next level in 81)" || {
+    echo "FAIL: Skeleton did not award its exact 3-XP ROM record" >&2
+    exit 1
+}
+printf '%s\n' "$early" | grep -q \
+    "Aria simulate: level 1, experience 3, next 81" || {
+    echo "FAIL: Skeleton reward did not persist as total EXP and remaining NEXT" >&2
+    exit 1
+}
 
 # Spawn 32 pixels left of the native Cockatrice record and press B. The high
 # diagnostic ATK shortens the fight but the ordinary Soma -> weapon entity ->
@@ -53,4 +76,4 @@ printf '%s\n' "$out" | grep -q \
     echo "FAIL: final progress summary does not retain the exact reward" >&2
     exit 1
 }
-echo "aria simulate XP: OK (Cockatrice 120 XP -> level 2)"
+echo "aria simulate XP: OK (Skeleton 3 XP; Cockatrice 120 XP -> level 2)"

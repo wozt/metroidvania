@@ -1598,6 +1598,12 @@ if(BUILD_TESTING)
                      sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_entity_pool.sh")
     set_tests_properties(aria_simulate_entity_pool PROPERTIES SKIP_RETURN_CODE 77)
 
+    add_test(NAME aria_simulate_skeleton_parts
+             COMMAND ${CMAKE_COMMAND} -E env
+                     FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>
+                     sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_skeleton_parts.sh")
+    set_tests_properties(aria_simulate_skeleton_parts PROPERTIES SKIP_RETURN_CODE 77)
+
     # Headless Object35 carrier-child contract: room 10/1's param0 == 0
     # sequence actor fires sub_0805A50C's EntityCreateInRange(0x49, 0xCF)
     # child; the unified pool must append it once and keep it inert.

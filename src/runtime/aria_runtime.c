@@ -2111,9 +2111,11 @@ int aria_runtime_main(int argc, char **argv) {
             for (size_t k = 0; k < room.entity_count; ++k) {
                 const AriaEntity *e = &room.entities[k];
                 if (!e->spawned) continue;
-                printf("  ent%02zu kind=%d id=%d pos=%d,%d state=%d step=%d hp=%d\n",
+                printf("  ent%02zu kind=%d id=%d pos=%d,%d state=%d step=%d hp=%d "
+                       "role=%u parent=%d removed=%d\n",
                        k, e->kind, e->id, (int)(e->enemy.x >> 16), (int)(e->enemy.y >> 16),
-                       e->enemy.state, e->enemy.step, e->enemy.hp);
+                       e->enemy.state, e->enemy.step, e->enemy.hp,
+                       e->enemy.role, e->spawner, e->enemy.removed);
             }
         }
         free(sim_dirs);

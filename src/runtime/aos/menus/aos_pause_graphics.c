@@ -791,9 +791,12 @@ bool aos_pause_graphics_render_hub(AosPauseGraphics *graphics,
     put_number(graphics, 25, 8, (int32_t)(seconds / 60 % 60), 2, 0x3300, true);
     put_number(graphics, 22, 8, (int32_t)(seconds / 3600), 2, 0x3300, true);
     put_large_number(graphics, 5, 9, values->level, 2, 3);
-    put_number(graphics, 26, 10, (int32_t)values->experience, 6, 0x3300, false);
-    put_number(graphics, 25, 12, (int32_t)values->next_experience, 8, 0x3300, false);
-    put_number(graphics, 25, 13, (int32_t)values->gold, 8, 0x3300, false);
+    /* sub_08047520 reads stats +0x34 (gold) for the six-digit row 10,
+     * stats +0x30 (total experience) for row 12, then sub_08033E10's
+     * remaining experience to the next level for row 13. */
+    put_number(graphics, 26, 10, (int32_t)values->gold, 6, 0x3300, false);
+    put_number(graphics, 25, 12, (int32_t)values->experience, 8, 0x3300, false);
+    put_number(graphics, 25, 13, (int32_t)values->next_experience, 8, 0x3300, false);
     /* sub_080471E4: normal/poison/curse/stone status is a four-tile word. */
     unsigned status_variant = values->status & 1 ? 2
                               : values->status & 2 ? 3

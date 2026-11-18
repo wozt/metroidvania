@@ -3321,6 +3321,9 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                        hit.children[c].role == AOS_ROLE_HEADHUNTER_HEAD ||
                                        hit.children[c].role == AOS_ROLE_PEEPING_SEGMENT ||
                                        hit.children[c].role == AOS_ROLE_BONE_PILLAR_SEGMENT ||
+                                       hit.children[c].role == AOS_ROLE_SKELETON_HEAD ||
+                                       hit.children[c].role == AOS_ROLE_SKELETON_HELD ||
+                                       hit.children[c].role == AOS_ROLE_SKELETON_BONE ||
                                        hit.children[c].role == AOS_ROLE_BUER_FIRE ||
                                        hit.children[c].role == AOS_ROLE_WORM_SEGMENT ||
                                        hit.children[c].role == AOS_ROLE_WHITE_DRAGON_PART ||

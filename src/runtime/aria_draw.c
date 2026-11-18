@@ -1692,11 +1692,12 @@ typedef struct {
     AosScroll scroll;
     bool scroll_bound;
     int32_t prev_bg1_x, prev_bg1_y; /* last drawn BG1 offset (px) */
-    uint32_t phase;         /* unk_60.unk_4C8 stand-in, +1/frame */
+    uint32_t phase;         /* unk_60.unk_4C8 stand-in, fed by the
+                               simulation-side tick */
     /* gEwramData->frameCounter stand-in for the CB8C/CC90/31
-     * wave phase terms: global like the native, never reset on a
-     * room change (unk_4C8/phase is the one the transition
-     * clears). */
+     * wave phase terms: global like the native, fed once per
+     * simulation frame by the runtime (unk_4C8/phase is the one
+     * the transition clears). */
     uint32_t frame_counter;
     /* This frame's winning sub_0800D288 hBlankEffect program
      * (aos_scroll_hblank): per-scanline absolute BGxHOFS/BGxVOFS
@@ -1978,25 +1979,33 @@ static bool aria_bg_room_ensure(SDL_Renderer *renderer,
  * through the same request/apply chain the native per-frame
  * camera update runs, so the BG2/BG3 parallax modes
  * (request-scaled, interpolated, direct-write) track BG1
- * exactly. unk_60.unk_4C8 ticks once per rendered frame like
- * aria_scroll_frame_phase. Returns false when the layered path
+ * exactly. unk_60.unk_4C8 and gEwramData->frameCounter arrive
+ * pre-ticked from the simulation side (wave_phase/frame_counter
+ * parameters). Returns false when the layered path
  * is unavailable — the caller then draws the composite
  * background.bmp exactly as before. `bg1_ox`/`bg1_oy` is the
  * accumulated sub_0800ED24 transaction delta
  * (aria_scroll_bg1_offset). */
 bool aria_bg_room_begin(SDL_Renderer *renderer, const AriaRoom *room,
                         int cam_x, int cam_y,
-                        int32_t bg1_ox, int32_t bg1_oy) {
+                        int32_t bg1_ox, int32_t bg1_oy,
+                        uint32_t frame_counter, uint32_t wave_phase) {
     if (!aria_bg_room_ensure(renderer, room, cam_x, cam_y))
         return false;
-    ++aria_bg_room.frame_counter;
+    /* gEwramData->frameCounter and unk_60.unk_4C8 arrive from the
+     * simulation side: main.c increments frameCounter once per
+     * main-loop iteration unconditionally and sub_0800CA40 ticks
+     * unk_4C8 on case-1 frames only — neither follows the rendered
+     * frame count, so the draw path no longer increments its own
+     * copies. */
+    aria_bg_room.frame_counter = frame_counter;
     const int32_t bx = (int32_t)cam_x + bg1_ox;
     const int32_t by = (int32_t)cam_y + bg1_oy;
     const int32_t dx = bx - aria_bg_room.prev_bg1_x;
     const int32_t dy = by - aria_bg_room.prev_bg1_y;
     aria_bg_room.prev_bg1_x = bx;
     aria_bg_room.prev_bg1_y = by;
-    ++aria_bg_room.phase;
+    aria_bg_room.phase = wave_phase;
     /* unk_60.unk_33C[3] is the gEwramData +0x344 event bitfield's
      * word 3 — aria_events[3] (mode 21's 0x02000000 gate is event
      * flag 0x79); unk_4CC_0 stays unmodelled like the entity-side

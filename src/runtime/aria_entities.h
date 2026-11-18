@@ -122,9 +122,18 @@ bool aria_scroll_bg1_pos(const AriaRoom *room, int32_t *x, int32_t *y);
  * camera position the layer was bound at — 0,0 before the first
  * bind. With aria_camera_follow the integrated position IS the
  * camera, so the draw path reads the absolute position through
- * aria_scroll_bg1_pos; this accessor remains for its once-per-
- * frame unk_60.unk_4C8 phase tick and diagnostics. */
+ * aria_scroll_bg1_pos; this accessor remains for diagnostics. */
 void aria_scroll_bg1_offset(const AriaRoom *room, int32_t *x, int32_t *y);
+
+/* sub_0800CA40's unk_60.unk_4C8 += 1: the room loop calls this
+ * once per simulation frame where the native case-1 tail runs it
+ * (unk_64 == PLAY with unk_A074_0 clear after the entity pass).
+ * Cases 3-13 never reach sub_0800CA40 and must not tick. */
+void aria_scroll_frame_tick(void);
+/* The current unk_60.unk_4C8 stand-in value for the draw path's
+ * hblank/affine evaluation (aos_scroll_hblank/aos_scroll_affine
+ * read it through AosScrollWorld). */
+uint32_t aria_scroll_frame_phase_value(void);
 
 /* The gDisplayRegisters.bgOfs[bg] shadow for BG1..BG3: each
  * layer's absolute integer scroll offset in pixels, maintained by

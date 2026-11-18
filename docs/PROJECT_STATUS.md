@@ -1,3 +1,44 @@
+## Patch 1252 - Simulation-tick scroll phase: unk_4C8 and frameCounter off the render clock
+
+- **Scope.** `src/runtime/aria_entities.c/.h`,
+  `src/runtime/aria_runtime.c`, `src/runtime/aria_draw.c/.h`,
+  `data/native_parity/annotations.tsv`, `docs/PROJECT_STATUS.md`.
+- **Defect.** The hblank/affine wave phase `unk_60.unk_4C8` and the
+  `gEwramData->frameCounter` phase terms advanced once per *rendered*
+  room frame — `aria_scroll_bg1_offset` ticked the phase inside the
+  draw path and `aria_bg_room_begin` incremented its own copies.
+  Render cadence is not the native update rule: frames skipped by
+  the accumulator (low FPS), duplicated presents, and every
+  non-PLAY dispatch (banner freeze, transition fade, quick map, warp
+  picker, soul menu, opening) all skewed the wave phase, and
+  `--simulate` never ticked it at all.
+- **Native evidence.** `main.c` increments `frameCounter` once per
+  main-loop iteration unconditionally (every `unk_64` case). The
+  in-game frame counter `unk_60.unk_4C8` is incremented by
+  `sub_0800CA40`, which the case-1 tail calls only when
+  `!unk_A074_0` — the same gate `sub_08000B64`'s entity loop and the
+  exit check use — and cases 3-13 never reach it; the room
+  transition clears it like the native `unk_4C8 = 0` store.
+- **Change.** `aria_entities.c` gains `aria_scroll_frame_tick` /
+  `aria_scroll_frame_phase_value`; `aria_scroll_bg1_offset` is now a
+  read-only offset accessor. Both the SDL loop and `--simulate`
+  capture `unk_64` before `update_entities` and tick after the
+  entity pass + `unk_A074` folds, guarded on
+  `case1_frame && !unk_A074_0`. A per-accumulator-iteration
+  `frame_counter` (unconditional, matching `main.c`) feeds
+  `aria_bg_room_begin`, which now assigns rather than increments
+  `phase`/`frame_counter`. The draw-side wave phase leads the
+  hblank buffer's pre-tick value by one sim frame — a documented
+  sub-frame offset, not a cadence error.
+- **Verification.** Targeted `ctest -R "aos_scroll|aria_simulate"`:
+  11/11 pass, including the 189-frame banner-freeze hold and the
+  warp save round trip. No mGBA wave-phase capture yet; the cadence
+  fix is source-evidence plus integration, not emulator-compared.
+- **Remaining.** Case-1-tail early-`continue` frames (opening
+  branch, map/menu open edges) do not tick — bounded and documented;
+  wave rooms are unaffected in normal play. The `--simulate` path
+  ticks the phase but still has no draw consumer.
+
 ## Patch 1251 - Portable save schema v16: unk_60.unk_378 warp discovery persists
 
 - **Scope.** `src/runtime/aos/game/aos_save.h/.c`,

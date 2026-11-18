@@ -2009,8 +2009,13 @@ int aria_runtime_main(int argc, char **argv) {
             object10_save_ctx = has_active_save ? &active_save : NULL;
             object1c_save_ctx = has_active_save ? &active_save : NULL;
             object1c_save_path = has_active_save ? save_path : NULL;
+            const bool case1_frame =
+                in_game_mode.unk_64 == AOS_INGAME_PLAY;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
                             sim_new_input, sim_held, &room_music);
+            /* sub_0800CA40's case-1 tail, same gate as the SDL loop. */
+            if (case1_frame && !in_game_mode.unk_A074_0)
+                aria_scroll_frame_tick();
             /* sub_0804F7A4 discovery + the sub_08010978/sub_080115D4
              * Object1F writers, same ordering as the SDL loop. */
             warp_room_discovery(&room);
@@ -2676,6 +2681,13 @@ int aria_runtime_main(int argc, char **argv) {
     bool announced_death = false;
     static AosGameOver death;
     long step = 0;
+    /* gEwramData->frameCounter stand-in: main.c increments it once
+     * per main-loop iteration unconditionally (every game mode,
+     * every frame — not per rendered frame). The accumulator loop
+     * below is that iteration; the draw path's wave-phase terms
+     * (aos_scroll_hblank/aos_scroll_affine) read it through
+     * aria_bg_room_begin. */
+    uint32_t frame_counter = 0;
     AosInput aria_input = {0};
     AosGameLifecycle lifecycle;
     /* This executable still requires a room folder, --area/--room or --save,
@@ -2819,6 +2831,7 @@ int aria_runtime_main(int argc, char **argv) {
         }
         while (accumulator >= frame_ns) {
             accumulator -= frame_ns;
+            ++frame_counter;
             /* sub_080104EC: while the transition stage machine runs the
              * game update is suspended and the display stays blanked
              * (dispCnt = 0); the stage-1 tick performs the take_exit
@@ -3899,6 +3912,13 @@ int aria_runtime_main(int argc, char **argv) {
             object10_save_ctx = has_active_save ? &active_save : NULL;
             object1c_save_ctx = has_active_save ? &active_save : NULL;
             object1c_save_path = has_active_save ? save_path : NULL;
+            /* The unk_64 value this frame's dispatch ran: native
+             * reads it once at the switch, so a mid-pass writer
+             * (e.g. Object1F's picker-open latch) takes effect next
+             * frame — capture it before update_entities for the
+             * sub_0800CA40 gate below. */
+            const bool case1_frame =
+                in_game_mode.unk_64 == AOS_INGAME_PLAY;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
                             aria_input.new_input, aria_input.held_input,
                             &room_music);
@@ -3935,6 +3955,14 @@ int aria_runtime_main(int argc, char **argv) {
              * (the write lands, then the flag drops). */
             if (aria_entities_lethal_clear_result())
                 in_game_mode.unk_A074_0 = false;
+            /* sub_0800CA40's case-1 tail: unk_60.unk_4C8 += 1 runs
+             * after sub_08000B64 once the pass cleared — the same
+             * !unk_A074_0 gate the entity loop and the exit check
+             * use. Banner-freeze frames never reach this point
+             * (they skip the pass), and cases 3-13 never run the
+             * case-1 tail at all. */
+            if (case1_frame && !in_game_mode.unk_A074_0)
+                aria_scroll_frame_tick();
             /* sub_0804F7A4's room-load discovery and the
              * sub_08010978/sub_080115D4 writers (Object1F's update
              * seq_end and think picker-open frame) run inside the
@@ -4160,7 +4188,8 @@ aria_render_frame:
          * the previous single-texture path. */
         const bool bg_layered =
             aria_bg_room_begin(renderer, &room, cam_x, cam_y,
-                               bg1_ox, bg1_oy);
+                               bg1_ox, bg1_oy, frame_counter,
+                               aria_scroll_frame_phase_value());
         if (!bg_layered)
         for (int seg_y = 0; seg_y < (bg_y_wrap ? 2 : 1); ++seg_y) {
             const int src_y = seg_y ? 0 : bg_sy;

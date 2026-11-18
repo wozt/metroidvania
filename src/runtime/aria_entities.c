@@ -323,9 +323,10 @@ static void apply_enemy_create_events(const AosEnemy *enemy) {
  * and unk_60.unk_4C8 — the hblank/affine wave phase
  * sub_0800C8C8/sub_0800CA40 increment once per in-game frame and
  * the room transition clears; the port ticks it once per
- * rendered frame through aria_scroll_bg1_offset instead
- * (aria_scroll_frame_phase), an equivalent cadence while a room
- * is on screen. The display effects themselves (hblank buffer +
+ * simulation frame through aria_scroll_frame_tick at the
+ * native case-1 dispatch point (aria_scroll_frame_phase), so
+ * the cadence follows the game update, not the renderer. The
+ * display effects themselves (hblank buffer +
  * REG writes, BgAffineSet on BG2) stay unported: the draw path
  * composites every decoded layer into one static-origin
  * background.bmp, so no per-layer scroll offset, scanline wave
@@ -391,13 +392,30 @@ static bool aria_scroll_bg_ok;
 static uint16_t aria_scroll_bg_display_control;
 static bool aria_scroll_bg_has_display_control;
 /* unk_60.unk_4C8 stand-in: the hblank/affine wave phase the
- * native increments once per in-game frame (sub_0800C8C8 /
- * sub_0800CA40) and clears on the room transition. The port has
- * no per-frame engine tick inside the scroll state, so
- * aria_scroll_bg1_offset — called once per rendered room frame —
- * advances it; object20_scroll_tx feeds it to AosScrollWorld.
- * Reset at each scroll bind (the native clear). */
+ * native increments once per in-game frame through sub_0800CA40
+ * (the case-1 tail's call, gated on !unk_A074_0 like the entity
+ * pass itself) and sub_0800C8C8, and clears on the room
+ * transition. The room loop ticks it through
+ * aria_scroll_frame_tick at that dispatch point on both the SDL
+ * and --simulate paths; object20_scroll_tx/aria_camera_follow
+ * feed the current value to AosScrollWorld and the draw path
+ * reads it back through aria_scroll_frame_phase_value. Reset at
+ * each scroll bind (the native clear). */
 static uint32_t aria_scroll_frame_phase;
+/* sub_0800CA40's unk_60.unk_4C8 += 1: called once per in-game
+ * frame by the room loop where the native case-1 tail runs it —
+ * unk_64 == PLAY with unk_A074_0 clear after the entity pass
+ * (the same gate sub_08000B64's entity loop and the case-1 exit
+ * check use). Cases 3-13 (transition, quick map, fade, menus,
+ * warp picker/commit, link sync) never reach sub_0800CA40 and
+ * must not tick; the room transition clears the phase at the
+ * scroll bind like the native unk_4C8 = 0 store. */
+void aria_scroll_frame_tick(void) {
+    ++aria_scroll_frame_phase;
+}
+uint32_t aria_scroll_frame_phase_value(void) {
+    return aria_scroll_frame_phase;
+}
 /* gEwramData +0x414 byte: the Object20Update prologue's cleared-game
  * transform (word16&8 / word60&2 / !(+0x42C&0x10000)) rewrites it to
  * (b & ~0x10) | 5, and the param0-4/5/6 create paths and the
@@ -1606,17 +1624,11 @@ bool aria_scroll_bg1_pos(const AriaRoom *room, int32_t *x, int32_t *y) {
  * position the layer was bound at. With aria_camera_follow the
  * integrated position IS the camera (cam_x/cam_y track it), so
  * this reports the total scroll since the room bind — kept for
- * the once-per-rendered-frame unk_60.unk_4C8 phase tick and for
  * diagnostics; the draw path reads the absolute position through
  * aria_scroll_bg1_pos instead. Returns 0,0 before the room's
  * first bind or for another room's stale state. */
 void aria_scroll_bg1_offset(const AriaRoom *room, int32_t *x, int32_t *y) {
     *x = *y = 0;
-    /* Once-per-rendered-frame tick for the unk_60.unk_4C8 wave
-     * phase (the draw path calls this exactly once per room
-     * frame; native sub_0800C8C8/sub_0800CA40 increment the same
-     * counter once per in-game update). */
-    ++aria_scroll_frame_phase;
     if (!room || aria_scroll_room_area != room->area ||
         aria_scroll_room_number != room->number)
         return;

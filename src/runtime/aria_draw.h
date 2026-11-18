@@ -111,7 +111,8 @@ void aria_bg_layers_bind(const FusionRom *rom);
  * OBJ priority (-1 = unresolved, keep the sprite in front). */
 bool aria_bg_room_begin(SDL_Renderer *renderer, const AriaRoom *room,
                         int cam_x, int cam_y,
-                        int32_t bg1_ox, int32_t bg1_oy);
+                        int32_t bg1_ox, int32_t bg1_oy,
+                        uint32_t frame_counter, uint32_t wave_phase);
 void aria_bg_draw_priority(SDL_Renderer *renderer, int priority,
                            uint8_t fade_mod);
 int aria_bg_band_priority(uint8_t band);

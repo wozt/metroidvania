@@ -14,10 +14,12 @@
   does not dive. Float flags read `0x41C01802` (head/body special +
   slow-fall). Bit-3 cells are confirmed water (`sub_0806E5FC` tests the
   same bit for enemies).
-- **Port change.** `aos_soma_air` now biases vy upward while both special
-  probes sit in bit-3 cells and the `0x13260 & 0x8000` walk-on-special
-  ability is absent; `collide_special` latches vy to 0 when the head leaves
-  the water, producing the head-at-surface bob. The sim holds Soma at
+- **Port change.** `aos_soma_air` now drives vy to a constant ~-0.75 px/frame
+  rise (per-frame `vy`/`+0x54` mGBA trace shows a flat terminal velocity,
+  not an acceleration) while both special probes sit in bit-3 cells and
+  the `0x13260 & 0x8000` walk-on-special ability is absent;
+  `collide_special` latches vy to 0 when the head leaves the water,
+  producing the head-at-surface bob. The sim holds Soma at
   ~y 425 instead of sinking to the pool floor. Soul-dependent variants
   (bottom walking with water inertia, higher/multi jump, walk-on-water)
   remain unported; `collide_special` still clears `0x800000` for the
@@ -29,10 +31,12 @@
   invincibility/position pokes; no permanent gameplay cheat was added.
 - **Verification.** `tests/test_aria_simulate_water_float.sh` (registered
   in CMake) asserts a deep spawn floats off the floor; `AOS_SIM_TRACE_SOMA`
-  traces pos/vy/flags per frame. The float depth matches the mGBA
-  measurement but the exact native buoyancy routine (inside the large
-  `sub_08018020` player physics, asm-only) is not yet traced, so the
-  mechanism is documented as measured-approximation, not routine-exact.
+  traces pos/vy/flags per frame. The float depth and the constant -0.75
+  rise now match the per-frame `vy`/`+0x54` mGBA trace, but the exact
+  native routine that selects the terminal velocity (likely in the
+  `sub_0801B0D8` state machine or a dedicated water handler, not the
+  traced `sub_08018020` body) is not yet isolated, so the value is
+  documented as trace-measured rather than routine-decoded.
 
 ## Patch 1254 - Native EXP/NEXT hub rows and linked Skeleton parts
 

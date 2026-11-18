@@ -539,15 +539,17 @@ A deep placement (y 440) rises back to ~425, so the float is active buoyancy,
 not a rest on the floor. Horizontal swimming gives vx ~1.5; a jump press is a
 small stroke (vy ~-4.625 under the slow-fall flag) that returns him to the
 same depth, and Down does not dive. During the float the entity flags read
-`0x41C01802` (head/body special + slow-fall). `aos_soma_air` reproduces the
-measured float: while both special probes are in water and the
-walk-on-special ability (`0x13260 & 0x8000`) is absent, vy is biased upward
-until the head leaves the water, where `collide_special` latches vy to 0 —
-the head-at-surface bob. `tests/test_aria_simulate_water_float.sh` checks
-the port holds Soma off the pool floor. Soul-dependent variants (bottom
-walking with water inertia, higher/multi jump, walk-on-water) are not yet
-ported; the walk-on-water ability still clears `0x800000` in
-`collide_special`.
+`0x41C01802` (head/body special + slow-fall). Per-frame `vy`/`+0x54` traces
+show the rise is a **constant ~-0.75 px/frame** terminal velocity (not an
+acceleration) that ends with vy = 0 once the head leaves the water.
+`aos_soma_air` reproduces it: while both special probes are in water and
+the walk-on-special ability (`0x13260 & 0x8000`) is absent, vy is driven to
+-0.75 unless already rising faster (the swim stroke); `collide_special`
+latches vy to 0 at the surface for the head-at-surface bob.
+`tests/test_aria_simulate_water_float.sh` checks the port holds Soma off
+the pool floor. Soul-dependent variants (bottom walking with water
+inertia, higher/multi jump, walk-on-water) are not yet ported; the
+walk-on-water ability still clears `0x800000` in `collide_special`.
 
 Animations. `sub_0803F2C8(entity, id, mode, loop)` starts animation `id`
 of the entity's descriptor (the table the sprite library exports): it

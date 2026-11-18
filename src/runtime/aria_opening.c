@@ -125,16 +125,17 @@ void draw_opening_backdrop(SDL_Renderer *renderer,
                                   const FusionRom *rom,
                                   SDL_Texture **portrait_texture,
                                   uint8_t *portrait_id) {
-    if (!event->active) return;
+    if (!event->active || event->slide_pos == 0) return;
+    uint8_t top, bottom;
+    aos_opening_window_vertical(event->slide_pos, &top, &bottom);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     /* sub_08067804 selects brightness decrease and BLDY=8 inside WIN0.
      * BG1-3, OBJ and the backdrop are targets; BG0 (portrait and text) is
      * deliberately excluded. A half-black veil reproduces that operation. */
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 128);
-    SDL_FRect panel = {AOS_OPENING_TEXT_PANEL_X,
-                       AOS_OPENING_TEXT_PANEL_Y,
+    SDL_FRect panel = {AOS_OPENING_TEXT_PANEL_X, (float)top,
                        AOS_OPENING_TEXT_PANEL_WIDTH,
-                       AOS_OPENING_TEXT_PANEL_HEIGHT};
+                       (float)(bottom - top)};
     SDL_RenderFillRect(renderer, &panel);
     /* sub_080676BC draws the portrait as BG0, using the 12-byte descriptor
      * at 0x08526C78: tiles, palette row 13 and native metatile map. The
@@ -142,13 +143,16 @@ void draw_opening_backdrop(SDL_Renderer *renderer,
      * native portrait resource is drawn; a decode failure is reported once
      * per portrait id instead of substituting gameplay sprites. */
     static uint8_t reported_portrait = 0xFF;
-    bool native_portrait = load_opening_portrait(renderer, rom, event->portrait,
+    uint8_t portrait = event->portrait;
+    bool show_content = event->slide_dir == 0 && event->slide_pos == 0x24;
+    bool native_portrait = show_content &&
+        load_opening_portrait(renderer, rom, portrait,
                                                  portrait_texture, portrait_id);
-    if (!native_portrait && reported_portrait != event->portrait) {
-        reported_portrait = event->portrait;
+    if (show_content && !native_portrait && reported_portrait != portrait) {
+        reported_portrait = portrait;
         fprintf(stderr, "Aria opening portrait 0x%02X unavailable: "
                 "native portrait resource could not be decoded\n",
-                event->portrait);
+                portrait);
     }
     if (native_portrait && portrait_texture && *portrait_texture) {
         /* sub_08067F24 loads the portrait through sub_080676BC, then
@@ -170,7 +174,8 @@ void draw_opening_text(SDL_Renderer *renderer,
                               const AosIntroTextTiles *tiles,
                               const AosWindowFrame *window,
                               uint32_t frame) {
-    if (!event->active) return;
+    if (!event->active || event->slide_dir != 0 ||
+        event->slide_pos != 0x24) return;
     if (!window) return;
     for (unsigned y = 88; y < 160; ++y)
         for (unsigned x = 8; x < 232; ++x) {

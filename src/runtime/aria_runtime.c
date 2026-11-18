@@ -2166,12 +2166,9 @@ int aria_runtime_main(int argc, char **argv) {
     AosIntroFont opening_font = {0};
     AosOpeningEvent opening = {0};
     AosOpeningActors opening_actors = {0};
-    /* Opening-cutscene Soma pose tracking: opening_pan_age counts the
-     * frames spent in +0xB==1's entry pan for the scripted step
-     * excursion, and opening_post_stage walks the post-absorb
+    /* Opening-cutscene Soma pose tracking: opening_post_stage walks the post-absorb
      * CROUCH_DOWN -> CROUCH -> IDLE flourish the native player state
      * machine runs after the obtained-soul window. */
-    uint16_t opening_pan_age = 0;
     uint8_t opening_post_stage = 0;
     AosWindowFrame opening_window = {0};
     AosSoulNotice opening_soul_notice = {0};
@@ -2604,6 +2601,12 @@ int aria_runtime_main(int argc, char **argv) {
         SDL_SetTextureBlendMode(banner_texture, SDL_BLENDMODE_BLEND);
         SDL_SetTextureScaleMode(banner_texture, SDL_SCALEMODE_NEAREST);
     }
+    /* sub_0805CB74's MOSAIC transition: the composed frame renders into
+     * this target while actors->mosaic is nonzero so the depixelation
+     * can be replayed as native block pixels at present time. */
+    SDL_Texture *mosaic_target = SDL_CreateTexture(
+        renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_TARGET,
+        VIEW_W, VIEW_H);
     static uint16_t hud_drawn[AOS_HUD_MAP_SIZE * AOS_HUD_MAP_SIZE];
     uint32_t hud_drawn_revision = 0;
     bool hud_dirty = true;
@@ -3055,29 +3058,23 @@ int aria_runtime_main(int argc, char **argv) {
                  * aos_opening_soma_anim — the full native beat
                  * sequence, not just the spawn/absorb pair. */
                 uint8_t soma_pose = aos_opening_soma_anim(&opening_actors);
-                /* +0xB==1's entry pan carries a scripted ~15px step:
-                 * the native player entity's +0x40 dips left and
-                 * returns while every motion field stays zero, so the
-                 * excursion is a direct position write, not velocity.
-                 * The pan's own duration is not serialized, so the
-                 * port reproduces the observed ~75-frame window with a
-                 * ramp-hold-return envelope keyed to beat1_step==0 and
-                 * snaps back to centre the frame the pan completes. */
-                int32_t soma_world_x = (int32_t)AOS_OPENING_SOMA_X << 16;
-                if (opening_actors.scene_state == 1 &&
-                    opening_actors.beat1_step <= 1) {
-                    if (opening_pan_age < 76) ++opening_pan_age;
-                    const unsigned a = opening_pan_age;
-                    int px;
-                    if (a < 16) px = (int)a;                 /* ramp in  */
-                    else if (a < 60) px = 15;                /* hold     */
-                    else px = 75 - (int)a;                   /* ramp out */
-                    if (px < 0) px = 0;
-                    soma_world_x -= (int32_t)px << 16;
-                } else {
-                    opening_pan_age = 0;
+                /* The spawn pin belongs to the
+                 * story scene only. Once the script's end command lands
+                 * (opening.complete) Object20's +0xA==0x80 tail, the
+                 * return pan and the epilogue proximity talks own the
+                 * player: native keeps the entity wherever it stands,
+                 * so re-pinning soma.x to the spawn word here snapped
+                 * Soma back to x 0xA8 in the middle of an epilogue
+                 * conversation after the player had walked away. */
+                if (!opening.complete) {
+                    int32_t soma_world_x = (int32_t)AOS_OPENING_SOMA_X << 16;
+                    /* sub_0805D410 changes Soma's animation and camera
+                     * modes here but contains no direct +0x40 position
+                     * writer. The former 15-pixel ramp/hold/return was
+                     * an invented host envelope and caused the visible
+                     * backward/right glide reported in this scene. */
+                    soma.x = soma_world_x;
                 }
-                soma.x = soma_world_x;
                 /* +0xB 6,7,8: the post-absorb crouch flourish. Native
                  * runs CROUCH_DOWN -> CROUCH -> IDLE through the player
                  * state machine; the port has no per-sub-state timer
@@ -4123,6 +4120,9 @@ int aria_runtime_main(int argc, char **argv) {
          * screen is black. Later blanked frames never reach here —
          * the stage tick continues the frame loop at its top. */
 aria_render_frame:
+        /* The mosaic target must never leak into a non-mosaic frame:
+         * reset the render target before every clear/draw pass. */
+        SDL_SetRenderTarget(renderer, NULL);
         if (room_transition.active) {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
             SDL_RenderClear(renderer);
@@ -4131,6 +4131,17 @@ aria_render_frame:
         int sx = soma.x >> 16, sy = soma.y >> 16;
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
+        /* sub_0805CB74 writes gDisplayRegisters.mosaic each frame of the
+         * +0xA==1 transition: BG block = (value&15)+1 x ((value>>4)&15)+1.
+         * While it is nonzero the whole composed frame renders into
+         * mosaic_target and is replayed below as native block pixels. */
+        bool mosaic_frame = opening.active && mosaic_target &&
+                            opening_actors.mosaic != 0;
+        if (mosaic_frame) {
+            SDL_SetRenderTarget(renderer, mosaic_target);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderClear(renderer);
+        }
         /* BG1's screen offset: the integrated bgInfo[1] position —
          * native sub_0803FBBC writes its integer halves into
          * gDisplayRegisters.bgOfs[1].hOfs/vOfs and the per-frame
@@ -5260,6 +5271,33 @@ aria_render_frame:
             }
             running = false;
         }
+        if (mosaic_frame) {
+            /* Replay the composed frame through the MOSAIC register's
+             * BG block size: every mw x mh cell shows its top-left
+             * pixel, matching the hardware mosaic the model writes.
+             * Blocks of 2 px or less are visually nil on the native
+             * transitions (the 0x1110 register value) and are drawn
+             * 1:1 rather than emitting thousands of degenerate draws. */
+            SDL_SetRenderTarget(renderer, NULL);
+            unsigned mw = (opening_actors.mosaic & 15u) + 1u;
+            unsigned mh = ((opening_actors.mosaic >> 4) & 15u) + 1u;
+            SDL_SetTextureBlendMode(mosaic_target, SDL_BLENDMODE_NONE);
+            SDL_SetTextureScaleMode(mosaic_target, SDL_SCALEMODE_NEAREST);
+            if (mw <= 2 && mh <= 2) {
+                SDL_FRect whole = {0.0f, 0.0f, (float)VIEW_W,
+                                   (float)VIEW_H};
+                SDL_RenderTexture(renderer, mosaic_target, NULL, &whole);
+            } else {
+                for (unsigned by = 0; by < (unsigned)VIEW_H; by += mh)
+                    for (unsigned bx = 0; bx < (unsigned)VIEW_W; bx += mw) {
+                        SDL_FRect src = {(float)bx, (float)by, 1.0f, 1.0f};
+                        SDL_FRect dst = {(float)bx, (float)by,
+                                         (float)mw, (float)mh};
+                        SDL_RenderTexture(renderer, mosaic_target, &src,
+                                          &dst);
+                    }
+            }
+        }
         SDL_RenderPresent(renderer);
         if (!capture_path) SDL_Delay(1);
     }
@@ -5268,6 +5306,7 @@ cleanup:
     free(capture_dirs);
     if (quick_map_texture) SDL_DestroyTexture(quick_map_texture);
     if (pause_texture) SDL_DestroyTexture(pause_texture);
+    if (mosaic_target) SDL_DestroyTexture(mosaic_target);
     aos_pause_graphics_free(&pause_graphics);
     if (opening_portrait_texture) SDL_DestroyTexture(opening_portrait_texture);
     fusion_rom_close(&opening_rom);

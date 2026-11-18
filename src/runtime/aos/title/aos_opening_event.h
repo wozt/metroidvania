@@ -31,12 +31,12 @@ enum {
      * animation slots; animation indices stay far below this bound. */
     AOS_OPENING_ACTOR_ANIMS = 24,
     /* sub_08067934 writes WIN0H=0x08E8 (x=8..232). sub_08067804 opens
-     * WIN0V around y=124 to y=88..160. sub_08067A04 maps the speaker row
+     * WIN0V around y=124 to y=92..156. sub_08067A04 maps the speaker row
      * at screen y=100 and the dialogue canvas at (40,116). */
     AOS_OPENING_TEXT_PANEL_X = 8,
-    AOS_OPENING_TEXT_PANEL_Y = 88,
+    AOS_OPENING_TEXT_PANEL_Y = 92,
     AOS_OPENING_TEXT_PANEL_WIDTH = 224,
-    AOS_OPENING_TEXT_PANEL_HEIGHT = 72,
+    AOS_OPENING_TEXT_PANEL_HEIGHT = 64,
     AOS_OPENING_SPEAKER_X = 40,
     AOS_OPENING_SPEAKER_Y = 100,
     AOS_OPENING_TEXT_X = 40,
@@ -230,12 +230,10 @@ typedef struct {
     uint8_t portrait;
     uint8_t beat;
     uint8_t beat_count;
-    /* sub_08067A04's page-clear window slide: after a clear command the
-     * native text window retracts its 0x24-unit offset to 0 and extends it
-     * back at 3 units per frame (the same 0x24 clamp and ±3 step
-     * sub_08067804 applies to its window counter), so a page turn costs
-     * 24 update frames before the next glyph. slide_dir is 0 idle,
-     * -1 retracting, +1 extending; slide_pos is the 0..0x24 offset. */
+    /* sub_08067A04's WIN0V animation counter. Command 4 selects case 3,
+     * retracting 0x24 -> 0 at three units per frame. A later portrait
+     * command selects case 2 independently, extending 0 -> 0x24 before
+     * the portrait resources and text map are installed. */
     int8_t slide_dir;
     uint8_t slide_pos;
     AosOpeningCue cue;
@@ -452,6 +450,9 @@ bool aos_opening_event_should_start(uint8_t area, uint16_t room,
                                     bool room_has_controller);
 bool aos_opening_event_init(AosOpeningEvent *event, const uint8_t *script,
                             size_t script_size);
+/* sub_08067804's WIN0V bytes for the 0..0x24 animation counter. */
+void aos_opening_window_vertical(uint8_t slide_pos, uint8_t *top,
+                                 uint8_t *bottom);
 void aos_opening_event_set_resolver(AosOpeningEvent *event,
                                     AosOpeningTextResolver resolve,
                                     void *context);

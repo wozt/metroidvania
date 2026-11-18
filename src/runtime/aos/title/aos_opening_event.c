@@ -35,11 +35,20 @@ bool aos_opening_event_init(AosOpeningEvent *event, const uint8_t *script,
         .position = 2,
         .active = true,
         .dirty = true,
-        /* The window starts fully extended: the first clear command
-         * retracts 0x24 -> 0 before extending back. */
-        .slide_pos = 0x24,
+        /* sub_08067934 clears +0x41B before the first portrait command
+         * enters sub_08067A04 case 2 and opens the window. */
+        .slide_pos = 0,
     };
     return true;
+}
+
+void aos_opening_window_vertical(uint8_t slide_pos, uint8_t *top,
+                                 uint8_t *bottom) {
+    if (slide_pos > 0x24) slide_pos = 0x24;
+    /* Div(+0x41B << 5, 0x24), centered on scanline 124. */
+    unsigned half = ((unsigned)slide_pos << 5) / 0x24u;
+    if (top) *top = (uint8_t)(124u - half);
+    if (bottom) *bottom = (uint8_t)(124u + half);
 }
 
 void aos_opening_event_set_resolver(AosOpeningEvent *event,
@@ -115,15 +124,26 @@ static void run_until_glyph_or_wait(AosOpeningEvent *event) {
             break;
         case 3:
             if (!argument(event, &event->portrait)) return;
+            clear_page(event);
+            /* _08067C34 selects state 2. Its following updates call
+             * sub_08067804(+3); parsing resumes only at 0x24, after
+             * sub_080676BC installs this portrait and its BG0 map. */
+            event->slide_pos = 0;
+            event->slide_dir = 1;
             event->dirty = true;
-            break;
+            return;
         case 4:
+            clear_page(event);
+            /* _08067CD4 selects state 3 and seeds +0x41B with 0x24.
+             * State 3 only closes; state 0 then resumes the script, where
+             * a later portrait command owns the separate opening. */
+            event->slide_pos = 0x24;
+            event->slide_dir = -1;
+            event->dirty = true;
+            return;
         case 9:
             clear_page(event);
-            /* sub_08067A04's clear commands start the window slide and
-             * hold the byte loop until the offset returns to 0x24:
-             * retract 0x24 -> 0, then extend 0 -> 0x24 at 3 units per
-             * update frame. */
+            event->slide_pos = 0x24;
             event->slide_dir = -1;
             event->dirty = true;
             return;
@@ -169,15 +189,15 @@ void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input) {
     event->advanced = false;
     event->cue = AOS_OPENING_CUE_NONE;
     bool advance = (new_input & (AOS_KEY_A | AOS_KEY_START)) != 0;
-    /* sub_08067A04's clear-command window slide runs one 3-unit step per
-     * update frame and holds the parser until the offset returns to
-     * 0x24 (retract 0x24 -> 0, then extend 0 -> 0x24). */
+    /* sub_08067804 clamps both directions inclusively: case 2 completes
+     * at 0x24 and case 3 completes at zero. Parsing resumes on the next
+     * update, never in the middle of either twelve-frame transition. */
     if (event->slide_dir != 0) {
         int pos = (int)event->slide_pos + event->slide_dir * 3;
-        if (pos < 0) {
+        if (pos <= 0) {
             event->slide_pos = 0;
-            event->slide_dir = 1;
-        } else if (pos > 0x24) {
+            event->slide_dir = 0;
+        } else if (pos >= 0x24) {
             event->slide_pos = 0x24;
             event->slide_dir = 0;
         } else {

@@ -1,3 +1,60 @@
+## Patch 1253 - Opening dialogue transitions and Soma position ownership
+
+- **Scope.** `src/runtime/aos/title/aos_opening_event.c/.h`,
+  `src/runtime/aria_opening.c`, the opening-only composition and Soma
+  position code in `src/runtime/aria_runtime.c`,
+  `tests/test_aos_opening_event.c`, the existing opening parity row and
+  this status entry. The interrupted MOSAIC renderer work was retained;
+  the proposed `sub_0805AFC0` strip overlay was removed after source and
+  emulator review showed that coroutine is not the first-room dialogue
+  frame.
+- **Native decode and port.** `sub_08067A04` does not hold the parser for
+  one synthetic 24-frame close/reopen. Script command 4 enters case 3,
+  seeds `+0x41B=0x24`, clears BG0 and calls `sub_08067804(-3)` for twelve
+  polls until zero. Parsing then resumes; command 3 clears the old map,
+  selects the new portrait and enters case 2, whose twelve
+  `sub_08067804(+3)` polls reach `0x24` before `sub_080676BC` installs the
+  portrait map and the text rows. `AosOpeningEvent` now preserves those
+  distinct phases. Its renderer consumes the live counter: the BLDY=8
+  region uses `WIN0H=0x08E8` (x 8..232) and the exact
+  `WIN0V=((124-Div(pos*32,36))<<8)|(124+Div(pos*32,36))`, ending at
+  y 92..156. Portrait, glyphs and wait marker appear only after the open
+  phase completes, matching the native map-install order.
+- **Placeholder/frame correction.** A clean-ROM mGBA checkpoint shows
+  that the apparent dark rectangle is the native WIN0 brightness-decrease
+  band behind the decoded BG0 portrait/text, not generic ornamental host
+  chrome. The interrupted WIP's four pink `sub_0805AFC0` strips belong to
+  the separate case-9 window-manager coroutine and were therefore not
+  composited over this scene. The runtime keeps the ROM-decoded portrait,
+  language font, palette and wait marker and removes no native resource.
+- **Soma glide correction.** The former entry-pan code invented a
+  75-frame, 15-pixel ramp/hold/return write to the player `x` field.
+  `sub_0805D410` changes the player animation and camera mode in that beat
+  but contains no direct `+0x40` position writer. Removing the fabricated
+  envelope stops Soma sliding backward and then right; the cutscene still
+  pins his native spawn position until the story completes, after which
+  the already-fixed epilogue conversations no longer re-pin him.
+- **Emulator evidence.** The ROM was copied to
+  `/tmp/aos_intro_fidelity_20261118/aria_clean.gba` so no adjacent SRAM
+  could contaminate the new-game run. `tests/compare_aos_opening_dialogue.py`
+  created `/tmp/aos_intro_fidelity_clean_20261118/room0.state` with the
+  documented scout schedule. Captures from that checkpoint confirm the
+  stable native band at x 8..232 / y 92..156, the decoded portrait anchor,
+  text coordinates and absence of the proposed ornamental strips. The lab
+  checkpoint landed after the first page had opened, so the close/open
+  sequence itself is source-exact and regression-tested rather than called
+  emulator-matched.
+- **Regression evidence.** `test_aos_opening_event` asserts the separate
+  twelve-poll close and open phases, parser ordering and exact WIN0V values
+  `(124,124)`, `(122,126)`, `(108,140)` and `(92,156)`, in addition to the
+  MOSAIC register sequence. Targeted `aos_opening_event`, `aos_portrait`,
+  `aos_window_frame` and `aos_room_dialogue` tests pass.
+- **Remaining.** The full scene is still `partial`: no synchronized
+  full-frame diff covers every speaker/page transition, the host BLDY and
+  MOSAIC passes approximate GBA hardware composition, OBJ mosaic is folded
+  into the whole-frame replay, and the battle choreography and post-soul
+  timing still require matched emulator sequences.
+
 ## Patch 1252 - Simulation-tick scroll phase: unk_4C8 and frameCounter off the render clock
 
 - **Scope.** `src/runtime/aria_entities.c/.h`,

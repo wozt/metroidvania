@@ -643,24 +643,35 @@ static void test_intro_transition(void) {
 static void test_script_and_commit(void) {
     static const uint8_t script[] = {
         0, 0, 3, 4, 7, 2, 'A', 'B', 6, 'C', 5,
-        4, 7, 8, 'D', 2, 9, 5, 9, 'E', 10,
+        4, 3, 5, 7, 8, 'D', 2, 9, 5, 9, 'E', 10,
     };
     AosOpeningEvent event;
     assert(aos_opening_event_init(&event, script, sizeof script));
     aos_opening_event_update(&event, 0);
-    assert(event.portrait == 4 && event.speaker == 2);
+    assert(event.portrait == 4 && event.speaker == 0);
+    assert(event.slide_dir == 1 && event.slide_pos == 0);
+    for (unsigned frame = 0; frame < 12; ++frame)
+        aos_opening_event_update(&event, 0);
+    assert(event.slide_dir == 0 && event.slide_pos == 0x24);
+    aos_opening_event_update(&event, 0);
+    assert(event.speaker == 2);
     assert(event.glyph_counts[0] == 1 && event.glyphs[0][0] == 'A');
     for (unsigned frame = 0; frame < 16 && !event.waiting; ++frame)
         aos_opening_event_update(&event, 0);
     assert(event.waiting && event.line == 1);
     assert(event.glyph_counts[0] == 2 && event.glyph_counts[1] == 1);
     aos_opening_event_update(&event, AOS_KEY_A);
-    /* The command-4 clear starts sub_08067A04's window slide and holds
-     * the byte loop: 0x24 -> 0 -> 0x24 at 3 units per update frame
-     * before the speaker/beat commands and 'D' are reached. */
+    /* Command 4 selects close state 3 only: twelve -3 polls reach zero,
+     * then the parser resumes. It does not silently reopen the old page. */
     assert(!event.waiting && event.slide_dir == -1 &&
            event.glyph_counts[0] == 0);
-    for (unsigned frame = 0; frame < 40 && event.slide_dir != 0; ++frame)
+    for (unsigned frame = 0; frame < 12; ++frame)
+        aos_opening_event_update(&event, 0);
+    assert(event.slide_dir == 0 && event.slide_pos == 0);
+    aos_opening_event_update(&event, 0);
+    assert(event.portrait == 5 && event.slide_dir == 1 &&
+           event.slide_pos == 0);
+    for (unsigned frame = 0; frame < 12; ++frame)
         aos_opening_event_update(&event, 0);
     assert(event.slide_dir == 0 && event.slide_pos == 0x24);
     for (unsigned frame = 0; frame < 16 && !event.waiting; ++frame)
@@ -685,6 +696,20 @@ static void test_script_and_commit(void) {
     assert(!aos_opening_event_should_start(0, 0, 0, events, true));
     assert(!aos_opening_event_commit(&event, events, &stats));
     assert(aos_souls_total(&stats, AOS_SOUL_RED, 0) == 1);
+}
+
+static void test_window_vertical(void) {
+    uint8_t top = 0, bottom = 0;
+    aos_opening_window_vertical(0, &top, &bottom);
+    assert(top == 124 && bottom == 124);
+    aos_opening_window_vertical(3, &top, &bottom);
+    assert(top == 122 && bottom == 126);
+    aos_opening_window_vertical(18, &top, &bottom);
+    assert(top == 108 && bottom == 140);
+    aos_opening_window_vertical(0x24, &top, &bottom);
+    assert(top == 92 && bottom == 156);
+    aos_opening_window_vertical(0xFF, &top, &bottom);
+    assert(top == 92 && bottom == 156);
 }
 
 static bool resolve_insert(void *context, uint8_t id, const uint8_t **script,
@@ -984,13 +1009,57 @@ static bool resolve_rom_text(void *context, uint8_t id,
     return aos_intro_resources_entry(context, 1, id, script, script_size);
 }
 
+/* sub_0805CB74's MOSAIC register values, verified frame by frame
+ * against asm/code/code_08050A3C.s: case 0 writes 0xFFFF with a 0x40
+ * reload, cases 1-4 write (timer>>2)*0x1111 truncated to 16 bits while
+ * the timer walks 0x40->0x20->0x30->0x10->0x20, and case 5 counts down
+ * by two to the 0xFF wrap that clears the register. */
+static void test_mosaic_register_values(void) {
+    AosOpeningActors actors;
+    aos_opening_actors_init(&actors);
+    int32_t camera_x = 0;
+    while (!actors.reveal_done)
+        aos_opening_actors_update(&actors, NULL, &camera_x, 0);
+    uint16_t sequence[128];
+    unsigned count = 0;
+    while (actors.transition_step < 6 && count < 128) {
+        aos_opening_actors_update(&actors, NULL, &camera_x, 0);
+        if (count < sizeof sequence / sizeof sequence[0])
+            sequence[count] = actors.mosaic;
+        ++count;
+    }
+    /* transition_started consumes the first post-reveal frame. */
+    assert(count >= 105 && count <= 115);
+    /* Case 0 writes 0xFFFF; case 1's first timer 0x40 gives level 16
+     * -> 0x1110 and the next timer 0x3F gives level 15 -> 0xFFFF
+     * again. The transition_started latch may consume one leading
+     * frame depending on which update raised reveal_done, so match
+     * the triple anywhere in the recorded run. */
+    bool saw_full_pixel = false;
+    for (unsigned i = 0; i + 2 < count; ++i)
+        if (sequence[i] == 0xFFFF && sequence[i + 1] == 0x1110 &&
+            sequence[i + 2] == 0xFFFF)
+            saw_full_pixel = true;
+    assert(saw_full_pixel);
+    /* Level 14 (timer 0x3C/0x3D) writes 0xEEEE. */
+    bool saw_eeee = false, saw_8888 = false, saw_cccc = false;
+    for (unsigned i = 0; i < count; ++i) {
+        if (sequence[i] == 0xEEEE) saw_eeee = true;
+        if (sequence[i] == 0x8888) saw_8888 = true;
+        if (sequence[i] == 0xCCCC) saw_cccc = true;
+    }
+    assert(saw_eeee && saw_8888 && saw_cccc);
+    /* The transition ends with the register cleared. */
+    assert(actors.mosaic == 0);
+}
+
 int main(int argc, char **argv) {
     assert(AOS_OPENING_TEXT_PANEL_X * 2 +
                AOS_OPENING_TEXT_PANEL_WIDTH == 240);
     assert(AOS_OPENING_TEXT_PANEL_X == 8 &&
            AOS_OPENING_TEXT_PANEL_X + AOS_OPENING_TEXT_PANEL_WIDTH == 232);
-    assert(AOS_OPENING_TEXT_PANEL_Y == 88 &&
-           AOS_OPENING_TEXT_PANEL_Y + AOS_OPENING_TEXT_PANEL_HEIGHT == 160);
+    assert(AOS_OPENING_TEXT_PANEL_Y == 92 &&
+           AOS_OPENING_TEXT_PANEL_Y + AOS_OPENING_TEXT_PANEL_HEIGHT == 156);
     assert(AOS_OPENING_SPEAKER_X == 40 && AOS_OPENING_SPEAKER_Y == 100);
     assert(AOS_OPENING_TEXT_X == 40 && AOS_OPENING_TEXT_Y == 116);
     assert(AOS_OPENING_PROMPT_X == 216 && AOS_OPENING_PROMPT_Y == 140);
@@ -1005,6 +1074,8 @@ int main(int argc, char **argv) {
     test_soma_anim_map();
     test_trigger();
     test_intro_transition();
+    test_mosaic_register_values();
+    test_window_vertical();
     test_script_and_commit();
     test_insert_and_malformed();
     if (argc == 2) {

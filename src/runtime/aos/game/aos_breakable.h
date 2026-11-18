@@ -3,6 +3,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+/* sub_08046080 stores this byte at entity +0x5C before selecting
+ * animation 3. The room renderer maps it through sub_0803DD14's
+ * band table instead of flattening the prop into the front pass. */
+#define AOS_BREAKABLE_DRAW_BAND 0x14
+
 /* sub_0800F1FC case 3: the generic breakable room record. Every
  * kind-3 record creates the same prop through sub_08046080 —
  * sub_08046148(param0 = entity + 0x30) DMAs the variant tiles out of
@@ -10,7 +15,8 @@
  * param0 changes — the last spawned variant wins natively; the port
  * exports one sprite set per param0 instead), then the shared tile
  * sheet 0x081C15F4 / frames 0x0820ED60 load with animation 3, OBJ
- * palette row 7 and the 0x140CF4FA attack-box preset; + 0x5C = 0x14
+ * palette row 7 and the 0x140CF4FA attack-box preset; + 0x5C =
+ * AOS_BREAKABLE_DRAW_BAND
  * and the drawFunc becomes sub_08046100 (animation step plus the
  * + 0x46 six-pixel bounce while gEwramData word 0 bit 1 holds — the
  * runtime's whip-swing flag, approximated by the caller's `swing`).

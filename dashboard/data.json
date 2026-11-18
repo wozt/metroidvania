@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-18T14:39:15+00:00",
+ "generated_at": "2026-11-18T14:41:39+00:00",
  "git": {
-  "commit": "8eb70cf3",
+  "commit": "482b3ea9",
   "branch": "main",
   "dirty": true
  },
@@ -20325,7 +20325,7 @@
     "sub_08068AD4",
     "PlaySong"
    ],
-   "limitations": "The sub_08068AD4 probe and the sub_08045F9C attack-box match stay caller approximations; entity +0x36 (the drop selector) is unmodelled and reads 0, so only case 0 (heart or full-MP money) drops — cases 1/2 are unreachable; the +0x92 param0 cache's last-variant-wins VRAM fight is drawn per-entity instead; shared sheet 0x081C15F4 now uses palette descriptor 0x082099FC bank 3 for destination OBJ row 7 (live mGBA row-7 bytes match exactly), replacing the erroneous use of alternate graphics 0x0826F8A4 as colours; unk_60.unk_A1_4 uses its new-game value (the sub_080074C0 menu toggle is unported); sub_08032DF0 is reduced to the ==0x3E8 all-souls check; kind-5 id>=5 and kind-6 categories outside 1-4 spawn nothing (native sub_08044054 coverage); the state-1 gore burst remains an effect approximation; palette RAM is emulator-compared, but destruction and drop timing are not. sub_0800F1FC case 3 spawns every kind-3 record through sub_08046080/sub_08045EE0: sub_08046148's per-param0 tile DMA is exported as Object/special_62_v00-v15 animation 3 (0x081C3E00 chunks onto sheet tiles 32-37/48-53) and drawn per record; sub_08045F9C case 0 drops a sub_08043F70 money pickup ((RNG&1)+param1) on full MP Soma or a sub_08043C10 heart (big = param1 != 0) through the AosPickup paths. Cases 5/6 spawn their conditional sub_08044054 placed pickups once on camera-window entry: kind 5 on unk_A1_4 + Soma, kind 6 on Soma + unowned inventory slot + all souls collected. Patch 1234 corrects Object/special_15 rows 6/7/9 and every special_62 breakable variant to shared-effect palette banks 2/3/6; a private room-0/3 runtime capture restores the orange flame and metal instead of an opaque black silhouette.",
+   "limitations": "The sub_08068AD4 probe and the sub_08045F9C attack-box match stay caller approximations; entity +0x36 (the drop selector) is unmodelled and reads 0, so only case 0 (heart or full-MP money) drops — cases 1/2 are unreachable; the +0x92 param0 cache's last-variant-wins VRAM fight is drawn per-entity instead; shared sheet 0x081C15F4 now uses palette descriptor 0x082099FC bank 3 for destination OBJ row 7 (live mGBA row-7 bytes match exactly), replacing the erroneous use of alternate graphics 0x0826F8A4 as colours; unk_60.unk_A1_4 uses its new-game value (the sub_080074C0 menu toggle is unported); sub_08032DF0 is reduced to the ==0x3E8 all-souls check; kind-5 id>=5 and kind-6 categories outside 1-4 spawn nothing (native sub_08044054 coverage); the state-1 gore burst remains an effect approximation; the retained +0x5C band 0x14 now enters the BG/OBJ priority interleave instead of the final front pass, but the overlap is runtime-only and not synchronized with mGBA; palette RAM is emulator-compared, but destruction and drop timing are not. sub_0800F1FC case 3 spawns every kind-3 record through sub_08046080/sub_08045EE0: sub_08046148's per-param0 tile DMA is exported as Object/special_62_v00-v15 animation 3 (0x081C3E00 chunks onto sheet tiles 32-37/48-53) and drawn per record; sub_08045F9C case 0 drops a sub_08043F70 money pickup ((RNG&1)+param1) on full MP Soma or a sub_08043C10 heart (big = param1 != 0) through the AosPickup paths. Cases 5/6 spawn their conditional sub_08044054 placed pickups once on camera-window entry: kind 5 on unk_A1_4 + Soma, kind 6 on Soma + unowned inventory slot + all souls collected. Patch 1234 corrects Object/special_15 rows 6/7/9 and every special_62 breakable variant to shared-effect palette banks 2/3/6; a private room-0/3 runtime capture restores the orange flame and metal instead of an opaque black silhouette. Patch 1238 routes sub_08046080's +0x5C band 0x14 through the shared priority interleave; a forced runtime overlap at (768,128), frame 1, shows Soma composed above the prop.",
    "next_action": "Compare the break animation, pickup spawn and per-frame candle placement against the same native room-0/3 checkpoint; port the +0x36 drop-selector source if found and model the unk_60.unk_A1_4 menu toggle.",
    "evidence": {
     "unit_tests": [
@@ -30741,7 +30741,7 @@
     "assets.aria_rooms"
    ],
    "native_routines": [],
-   "limitations": "Variant DMA is exported per param0 while the native +0x92 last-variant-wins VRAM behaviour is drawn per entity. The chandelier and shared-flame exports now use the live native mapping from palette descriptor 0x082099FC (OBJ row 7 = bank 3) instead of treating alternate graphics 0x0826F8A4 as colours; a private mGBA room-0/3 dump matches all 32 palette bytes and a runtime capture restores the visible flame and metal. Drop selector +0x36 remains unmodelled (case 0 only), unk_60.unk_A1_4 uses its new-game value, and destruction timing is not emulator-compared.",
+   "limitations": "Variant DMA is exported per param0 while the native +0x92 last-variant-wins VRAM behaviour is drawn per entity. The chandelier and shared-flame exports now use the live native mapping from palette descriptor 0x082099FC (OBJ row 7 = bank 3) instead of treating alternate graphics 0x0826F8A4 as colours; a private mGBA room-0/3 dump matches all 32 palette bytes and a runtime capture restores the visible flame and metal. Patch 1238 also retains draw band 0x14, so Soma is composed over an overlapping prop; that forced overlap is runtime-only, not emulator-compared. Drop selector +0x36 remains unmodelled (case 0 only), unk_60.unk_A1_4 uses its new-game value, and destruction timing is not emulator-compared.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -33715,6 +33715,12 @@
  },
  "timeline": [
   {
+   "commit": "482b3ea9",
+   "date": "2026-11-18",
+   "subject": "aria: restore ambient object depth and motion",
+   "scope": "project"
+  },
+  {
    "commit": "8eb70cf3",
    "date": "2026-11-18",
    "subject": "aria: preserve progression across save-room reloads",
@@ -34186,12 +34192,6 @@
    "commit": "4be0ef36",
    "date": "2026-11-16",
    "subject": "aos: port GameModeInGameUpdate cases 5 and 7/8 (fade + warp-pad chain)",
-   "scope": "project"
-  },
-  {
-   "commit": "f7bbd7b4",
-   "date": "2026-11-16",
-   "subject": "tools: parse mgba session key masks as decimal by default",
    "scope": "project"
   }
  ],

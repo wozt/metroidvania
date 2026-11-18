@@ -9,6 +9,10 @@
 #include "aos/game/aos_breakable.h"
 
 int main(void) {
+    /* sub_08046080's retained +0x5C byte is part of presentation
+     * state: the draw path must not regress to an unbanded front pass. */
+    assert(AOS_BREAKABLE_DRAW_BAND == 0x14);
+
     AosBreakable b;
 
     /* sub_08046080: param0/param1 land on + 0x30/+ 0x32, state 0. */

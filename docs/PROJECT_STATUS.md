@@ -1,3 +1,20 @@
+## Patch 1238 - Put Soma in front of room chandeliers
+
+- **Root cause and fix.** `sub_08046080` assigns every kind-3 breakable the
+  native draw band `+0x5C = 0x14`, but `draw_special_objects` discarded it and
+  painted the complete prop in the unbanded final pass, after Soma. The band is
+  now a named `AOS_BREAKABLE_DRAW_BAND` contract and goes through the existing
+  `sub_0803DD14` BG/OBJ priority map. Breakables paint in their native slot;
+  Soma's band `0x0E` is composed afterward when both resolve to the same BG
+  priority, so he passes in front of the chandelier.
+- **Evidence and scope.** `test_aos_breakable` guards the source-derived band.
+  A private runtime room-0/3 capture forced Soma and the param0-1 chandelier to
+  the same `(768,128)` anchor at frame 1 and visibly keeps Soma over the metal
+  and flame. This synthetic overlap proves the portable composition path, not
+  native pixel fidelity; break/destruction timing and a synchronized mGBA
+  overlap remain unvalidated, so `aos.environment.room_breakables` stays
+  `partial`.
+
 ## Patch 1237 - Restore room-0/3 ambient depth and camera-rate motion
 
 - **Root causes.** Object07's native parallax code reads the current 16.16

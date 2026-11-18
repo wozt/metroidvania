@@ -693,9 +693,16 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
              * spawned param0 win for every prop, so the port's
              * per-entity variant is strictly more correct than the
              * shared frame. The special_15_v7 fallback covers an
-             * export without the variant rows. Band + 0x5C = 0x14
-             * draws in the front pass like Object0E. */
-            if (prio_slot >= 0 || e->breakable.finished) continue;
+             * export without the variant rows. sub_08046080's band
+             * +0x5C = 0x14 enters the BG/OBJ priority interleave;
+             * flattening it into the final pass wrongly painted the
+             * prop over Soma. */
+            int breakable_prio =
+                aria_bg_band_priority(AOS_BREAKABLE_DRAW_BAND);
+            if ((prio_slot >= 0 ? breakable_prio != prio_slot
+                                : breakable_prio >= 0) ||
+                e->breakable.finished)
+                continue;
             const __typeof__(objects->special_objects[0]) *art = NULL;
             for (int v = 0; v < SPECIAL_VARIANTS; ++v)
                 if (objects->special_variants[v].id == 62 &&

@@ -106,8 +106,43 @@ int main(void) {
     palette[64 + 0xF * 2] = 0x1F;
     assert(aos_hud_pixel(&hud, tiles, palette, 2 * 8, 19 * 8 - AOS_HUD_SCROLL_Y,
                          &color) && color == 0x001F);
-    /* sub_0800EB04: a scripted clear drops the notice before its timer. */
+    /* A second defeated enemy replaces the first: the map rows are
+     * cleared and only the newest name's frame and tile page remain. */
+    assert(aos_hud_show_enemy(&hud, &font, "AB"));
+    assert(hud.notice_page == 1 && at(26, 19) == 0xE280);
+    assert(aos_hud_show_enemy(&hud, &font, "A"));
+    assert(hud.notice_page == 0);
+    int stale = 0, fresh = 0;
+    for (int y = 18; y <= 20; ++y)
+        for (int x = 0; x < AOS_HUD_MAP_SIZE; ++x) {
+            uint16_t tile = at(x, y) & 0x3FF;
+            if (tile >= 0x280 && tile < 0x2A0) ++stale;
+            if (tile >= 0x2A0 && tile < 0x2C0) ++fresh;
+        }
+    assert(stale == 0 && fresh == 2 && at(26, 19) == 0xE2A0);
+    /* The save prompt's 0x2A0-0x2DF cells (map rows 5-9) overlap the
+     * notice's second tile page; while a notice is active they must
+     * still resolve to the save canvas and the row-14 palette, not
+     * the notice page and the notice palette. */
+    hud.map[5 * AOS_HUD_MAP_SIZE + 10] = 0xE2A0;
+    hud.map[5 * AOS_HUD_MAP_SIZE + 11] = 0xE2C0;
+    save_tiles[0] = 4;
+    save_tiles[0x20 * 32] = 5;
+    palette[32 + 4 * 2 + 1] = 0x7C;
+    palette[32 + 5 * 2 + 1] = 0x1B;
+    aos_hud_set_save_prompt_tiles(&hud, save_tiles);
+    assert(aos_hud_pixel(&hud, tiles, palette, 10 * 8,
+                         5 * 8 - AOS_HUD_SCROLL_Y, &color) &&
+           color == 0x7C00);
+    assert(aos_hud_pixel(&hud, tiles, palette, 11 * 8,
+                         5 * 8 - AOS_HUD_SCROLL_Y, &color) &&
+           color == 0x1B00);
+    /* The notice's own cells still use its page and palette. */
+    assert(aos_hud_pixel(&hud, tiles, palette, 26 * 8,
+                         19 * 8 - AOS_HUD_SCROLL_Y, &color) &&
+           color == 0x03E0);
     aos_hud_clear_notice(&hud);
+    /* sub_0800EB04: a scripted clear drops the notice before its timer. */
     assert(!hud.notice_active && !hud.notice_timer && at(0, 19) == 0);
     puts("Aria HUD tests passed");
     return 0;

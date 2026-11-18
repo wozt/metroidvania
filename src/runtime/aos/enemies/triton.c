@@ -164,6 +164,14 @@ static void tr_spawn_head(AosHitReport *report, AosEnemy *e,
     c->boss_parts_spawned = true;
     c->static_frame = -1;
     c->scaled = true;
+    /* sub_080871C0's tail calls sub_0803E238 with 0x10000 scale
+     * parameters: the + 0x59 |= 0x10 affine draw runs at unit scale
+     * rotated by the + 0x20 whirlpool angle (tr_angle), not the
+     * vertical squash the scaled path applies to the beam skeleton.
+     * scale 0xFFFF is the port's unit marker — without it the draw
+     * pass drops the child on its <= 0x400 guard and the whirlpool
+     * never shows. */
+    c->scale = 0xFFFF;
     c->translucent = false;
     c->combat.attack_off = true;
     c->combat.hurt_off = true;

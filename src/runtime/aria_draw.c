@@ -262,6 +262,12 @@ void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObject
          * taken with the convention of sub_0803E058). */
         if (e->enemy.role == AOS_ROLE_PEEPING_SEGMENT && e->enemy.variant == 5)
             degrees = (double)e->enemy.pe_rotation * 360.0 / 65536.0;
+        /* Triton's whirlpool head (sub_080871C0/sub_08087318): the
+         * sub_0803E238 affine draw turns the sprite by the head's + 0x20
+         * whirlpool angle — tr_angle here — at the unit scale set at
+         * spawn; 0x10000 per turn like the shared spins. */
+        if (e->enemy.id == AOS_ENEMY_TRITON && e->enemy.role == AOS_ROLE_TRITON_HEAD)
+            degrees = (double)(e->enemy.tr_angle & 0xFFFF) * 360.0 / 65536.0;
         /* + 0x5A bits 1-2 = 2: a semi-transparent OBJ; the room's blend
          * coefficients are not traced, half alpha stands for them. */
         if (e->enemy.translucent) SDL_SetTextureAlphaMod(frame->texture, 128);

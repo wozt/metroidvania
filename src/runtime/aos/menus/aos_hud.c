@@ -209,7 +209,17 @@ bool aos_hud_pixel(const AosHud *hud, const uint8_t *tiles, const uint8_t *palet
     if (entry & 0x400) px = 7 - px;
     if (entry & 0x800) py = 7 - py;
     const uint8_t *source = tiles + (tile - 0x200) * 32;
-    if (hud->notice_active && tile >= 0x280 && tile < 0x2C0) {
+    /* The enemy/item notice only ever writes map rows 18-20; the
+     * sub_08054280 save prompt writes rows 5-9 with tile ids
+     * 0x2A0-0x2DF that overlap the notice's second page
+     * (0x2A0-0x2BF). Tile ids alone cannot tell the two dynamic
+     * texts apart, so the notice override is scoped to its own
+     * rows — otherwise a live notice paints its glyphs over the
+     * save prompt's cells (the enemy name appearing a second
+     * time inside the prompt) and hands the prompt the notice
+     * palette. */
+    bool notice_rows = map_y >= 18 * 8 && map_y < 21 * 8;
+    if (hud->notice_active && notice_rows && tile >= 0x280 && tile < 0x2C0) {
         unsigned page = (tile - 0x280) / 0x20;
         source = hud->notice_tiles[page] + (tile & 0x1F) * 32;
     } else if (hud->save_tiles_active && tile >= 0x2A0 && tile < 0x2E0) {
@@ -219,7 +229,7 @@ bool aos_hud_pixel(const AosHud *hud, const uint8_t *tiles, const uint8_t *palet
     unsigned index = px & 1 ? byte >> 4 : byte & 0xF;
     if (!index) return false;
     unsigned row = entry >> 12;
-    size_t palette_offset = row == 0xE && hud->notice_active
+    size_t palette_offset = row == 0xE && hud->notice_active && notice_rows
                                 ? 64 + (size_t)hud->notice_kind * 32
                                 : row == 0xE ? 32 : 0;
     *color = (uint16_t)(palette[palette_offset + index * 2] |

@@ -4665,19 +4665,23 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 /* sub_08054280's palette upload (0x0820C428 records
                  * 0-1 -> BG palette rows 13-14) is already covered by
                  * the HUD asset's palette block, and its three text
-                 * strings render through the room-dialogue window
-                 * stack (draw_object1c_save_prompt). Its seven
+                 * strings render through the shared context-A font
+                 * resources (sync_object1c_save_prompt). Its six
                  * DmaQueue_DirectCopy writes patch BG0's screenblock
                  * — the same 32x32 map the HUD owns — with the
-                 * decoded save-frame tiles; apply them so the HUD
-                 * pixel path draws the native frame from the real
-                 * 0x0827B208 tile graphics. */
+                 * decoded dynamic-text tiles; apply them so the HUD
+                 * pixel path draws the live context-A canvas. */
                 if (combat->hud) {
+                    /* sub_08040FE0 clears the context-A canvas before
+                     * the strings are printed. Do not expose the ROM's
+                     * initial 0x2A0-0x2DF tile bytes while the runtime
+                     * text raster is being prepared. */
+                    aos_hud_set_save_prompt_tiles(combat->hud, NULL);
                     aos_object1c_save_screen_apply(combat->hud->map);
                     combat->hud->revision++;
                 }
                 printf("Object1C %zu: save screen setup "
-                       "(sub_08054280) — host prompt shown\n", i);
+                       "(sub_08054280) — native prompt armed\n", i);
             }
             if (out1c.save_block_refresh)
                 printf("Object1C %zu: +0x60 save block refresh "

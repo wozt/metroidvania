@@ -1,3 +1,25 @@
+## Patch 1229 - Restore the native save-room prompt composition
+
+- **Permanent overlay fixed.** Object1C's marker child starts with entity
+  `+0x58` bit 5 set. The portable draw pass ignored that native hide bit,
+  so the question and both choice sprites covered every save room even when
+  Soma had not interacted with the statue. State 1 now reveals the actual
+  child record and commit/decline hides it again.
+- **BG0 prompt path corrected.** `sub_08054280` performs six DMA copies, not
+  seven: the question uses rows 5-6 and the two choice slices use rows 8-9.
+  The copied ids are dynamic context-A tiles, not immutable HUD graphics.
+  The runtime now rasterizes text 0x34A/0x34B/0x34D with the verified-ROM
+  proportional font into tiles 0x2A0-0x2DF and lets the marker's native
+  frames 0x16/0x17 and 0x18/0x19 show the Yes/No selection. The generic
+  bottom dialogue window and host chevron are removed.
+- **Evidence and remaining gap.** `test_aos_object1c` locks the hide/show
+  bit and all 44 native tilemap writes; `test_aos_hud` locks the dynamic
+  tile override and clear. Private room-0/14 runtime captures cover idle,
+  open prompt and post-save sparkle states. The prompt palette/placement
+  and complete child-effect timing are still source-derived, not yet
+  compared against a native emulator checkpoint, so save rooms remain
+  partial.
+
 ## Patch 1228 - Release player input after a save-room commit
 
 - **Bug reproduced.** In room 0/14, Object1C committed the save but its

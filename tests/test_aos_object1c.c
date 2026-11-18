@@ -123,6 +123,7 @@ int main(void) {
     assert(uo.obj_rows[0].src == 4 && uo.obj_rows[0].count == 1 &&
            uo.obj_rows[0].dst == 0xE);
     assert((o.frame_flags & 0x21) == 0);
+    assert((o.children[0].flags58 & 0x21) == 0);
 
     /* ---- State 2: cursor moves ---- */
     ui.buttons_14 = 0x10;                /* Right */
@@ -146,6 +147,7 @@ int main(void) {
     assert(o.state == 0 && uo.save_mode_set == 0x2 &&
            uo.obj_palettes == 1 && uo.text_resets == 1);
     assert(o.frame_flags & 0x20);
+    assert(o.children[0].flags58 & 0x20);
 
     /* Commit success: A edge + sel != 0 + A|B held. */
     aos_object1c_create(&o, (ci = create_in(), &ci), &co);
@@ -358,6 +360,12 @@ int main(void) {
     assert(o.pos40 == (int32_t)0x78 << 16 &&
            o.pos44 == (int32_t)0x50 << 16);
 
+    /* +0x58 bit 5 hides the marker's three prompt sprites at rest;
+     * the two ambient sparkles still commit. State 1 clears it. */
+    aos_object1c_children_draw(&o, &cout);
+    assert(cout.commits == 2);
+    o.children[0].flags58 &= (uint8_t)~0x20u;
+    o.frame_flags &= (uint8_t)~0x20u;
     /* Marker drawFunc: three commits; +0x16 picks the variant.
      * The two sparkles add one sub_0803B9D0 commit each. */
     aos_object1c_children_draw(&o, &cout);
@@ -505,9 +513,10 @@ int main(void) {
             aos_object1c_children_update(&o, &cin, &cout);
         assert(s->flags59 & 8);
         /* Spark drawFunc sub_080554BC: two commits once state >= 1;
-         * total = marker 3 + 2 sparkles + spark 2. */
+         * the resting marker stays hidden, so only 2 sparkles +
+         * spark 2 commit. */
         aos_object1c_children_draw(&o, &cout);
-        assert(cout.commits == 7);
+        assert(cout.commits == 4);
     }
 
     /* ---- fade child (sub_08054574) ---- */
@@ -612,10 +621,11 @@ int main(void) {
         for (int i = 0; i < 8; ++i)
             aos_object1c_children_update(&o, &cin, &cout);
         /* sparkle commits carry the flat +0x65 (anim0 frames 0-3,
-         * anim4 frames 12-15). */
+         * anim4 frames 12-15); the resting marker contributes none. */
         aos_object1c_children_draw(&o, &cout);
-        assert(cout.commit[3].frame == o.children[1].anim65);
-        assert(cout.commit[4].frame == o.children[2].anim65);
+        assert(cout.commits == 2);
+        assert(cout.commit[0].frame == o.children[1].anim65);
+        assert(cout.commit[1].frame == o.children[2].anim65);
 
         /* Loop wrap: anim0 (4 subs * 6 ticks, one advance per
          * update now) wraps inside 40 updates; accumulate the
@@ -775,26 +785,34 @@ int main(void) {
         memset(map, 0, sizeof map);
         map[0] = 0x1234;                    /* sentinel: untouched */
         unsigned n = aos_object1c_save_screen_apply(map);
-        assert(n == 56);                    /* 7 patches, 46 cells */
+        assert(n == 44);                    /* 6 native DMA copies */
         assert(map[0] == 0x1234);
-        /* Row 6 cols 10-21: the resent 0x2C0-0x2CB row. */
+        /* Question: the two 0x18-byte copies are twelve halfwords
+         * at rows 5 and 6, not rows 8 and 9. */
         for (int i = 0; i < 12; ++i)
-            assert(map[(6 * 32 + 10 + i)] == (uint16_t)(0xE200 | (0x2C0 + i)));
-        /* Row 8: edge tiles survive only at cols 8-9 and 22-24;
-         * cols 10-21 are the later 0x2A0 patch (queue order). */
-        assert(map[8 * 32 + 8] == 0xE2AC && map[8 * 32 + 9] == 0xE2AD);
-        assert(map[8 * 32 + 10] == 0xE2A0 && map[8 * 32 + 21] == 0xE2AB);
-        assert(map[8 * 32 + 22] == 0xE2B4 && map[8 * 32 + 24] == 0xE2B6);
-        /* Row 9 mirrors it with the 0x2CC/0x2D2 edges and 0x2C0 body. */
-        assert(map[9 * 32 + 8] == 0xE2CC && map[9 * 32 + 9] == 0xE2CD);
-        assert(map[9 * 32 + 10] == 0xE2C0 && map[9 * 32 + 21] == 0xE2CB);
-        assert(map[9 * 32 + 22] == 0xE2D4 && map[9 * 32 + 24] == 0xE2D6);
+            assert(map[(5 * 32 + 10 + i)] ==
+                   (uint16_t)(0xE200 | (0x2A0 + i)));
+        for (int i = 0; i < 12; ++i)
+            assert(map[(6 * 32 + 10 + i)] ==
+                   (uint16_t)(0xE200 | (0x2C0 + i)));
+        /* Yes and No reuse slices of those dynamic rows. */
+        for (int i = 0; i < 5; ++i) {
+            assert(map[8 * 32 + 8 + i] ==
+                   (uint16_t)(0xE200 | (0x2AC + i)));
+            assert(map[9 * 32 + 8 + i] ==
+                   (uint16_t)(0xE200 | (0x2CC + i)));
+            assert(map[8 * 32 + 20 + i] ==
+                   (uint16_t)(0xE200 | (0x2B2 + i)));
+            assert(map[9 * 32 + 20 + i] ==
+                   (uint16_t)(0xE200 | (0x2D2 + i)));
+        }
         /* Cells outside the patches stay clear. */
-        assert(map[7 * 32 + 10] == 0 && map[8 * 32 + 25] == 0 &&
+        assert(map[7 * 32 + 10] == 0 && map[8 * 32 + 13] == 0 &&
+               map[8 * 32 + 25] == 0 &&
                map[10 * 32 + 10] == 0);
         /* Idempotent and NULL-safe. */
         assert(aos_object1c_save_screen_apply(NULL) == 0);
-        assert(aos_object1c_save_screen_apply(map) == 56);
+        assert(aos_object1c_save_screen_apply(map) == 44);
     }
 
     puts("aos_object1c: ok");

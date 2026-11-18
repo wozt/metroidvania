@@ -41,6 +41,21 @@ static void disp_push(AosObject1COut *out, unsigned reg, int value) {
     ++out->disp_writes;
 }
 
+/* Parent +0x35 stores the marker child's entity-record index. The port keeps
+ * its +0x58 mirror in frame_flags for traceability, but the draw pass consumes
+ * the child record itself, so every native hide/show write must reach both. */
+static void marker_flags_update(AosObject1C *o, uint8_t clear,
+                                uint8_t set) {
+    o->frame_flags = (uint8_t)((o->frame_flags & ~clear) | set);
+    for (unsigned i = 0; i < o->child_count; ++i)
+        if (o->children[i].active &&
+            o->children[i].kind == AOS_O1C_CHILD_MARKER) {
+            o->children[i].flags58 =
+                (uint8_t)((o->children[i].flags58 & ~clear) | set);
+            break;
+        }
+}
+
 bool aos_object1c_create(AosObject1C *o, const AosObject1CCreateIn *in,
                           AosObject1CCreateOut *out) {
     *o = (AosObject1C){0};
@@ -185,7 +200,7 @@ void aos_object1c_update(AosObject1C *o, const AosObject1CIn *in,
              * sub_0803C7B4(0x0820C384, 4, 1, 0xE) and + 0x58 bits
              * 0/5 cleared on the + 0x35 record. */
             obj_pal_push(out, AOS_O1C_DESC_MAIN, 4, 1, 0xE);
-            o->frame_flags = (uint8_t)(o->frame_flags & ~0x21u);
+            marker_flags_update(o, 0x21, 0);
             o->state = (uint8_t)(o->state + 1);
             break;
 
@@ -203,13 +218,13 @@ void aos_object1c_update(AosObject1C *o, const AosObject1CIn *in,
                         o->flags24 = (uint16_t)(o->flags24 | 0x2);
                         out->song = 0xF3;
                         obj_pal_push(out, AOS_O1C_DESC_SAVE, 5, 1, 0xE);
-                        o->frame_flags |= 0x20;
+                        marker_flags_update(o, 0, 0x20);
                         ++out->text_resets;     /* sub_08040FE0 */
                         out->save_committed = true;
                     } else {
                         out->song = 0xEF;
                         obj_pal_push(out, AOS_O1C_DESC_SAVE, 5, 1, 0xE);
-                        o->frame_flags |= 0x20;
+                        marker_flags_update(o, 0, 0x20);
                         ++out->text_resets;
                         pal_push(out, AOS_O1C_DESC_FLASH, 0, 2, 0xD);
                         out->text_mode = 2;     /* sub_08041304(2) */
@@ -243,7 +258,7 @@ void aos_object1c_update(AosObject1C *o, const AosObject1CIn *in,
             /* _08054B16: restore the save palette, reset the text
              * window, then the _08054B44 exit tail. */
             obj_pal_push(out, AOS_O1C_DESC_SAVE, 5, 1, 0xE);
-            o->frame_flags |= 0x20;
+            marker_flags_update(o, 0, 0x20);
             ++out->text_resets;
             out->save_mode_set |= 0x2;
             o->timer = 0;
@@ -375,7 +390,7 @@ void aos_object1c_update(AosObject1C *o, const AosObject1CIn *in,
         case 99:
             /* _08054D68: dormant re-assert every frame. */
             obj_pal_push(out, AOS_O1C_DESC_SAVE, 5, 1, 0xE);
-            o->frame_flags |= 0x20;
+            marker_flags_update(o, 0, 0x20);
             ++out->text_resets;
             o->flags59 |= 0x8;
             out->save_mode_set |= 0x2;
@@ -513,6 +528,7 @@ int aos_object1c_marker_spawn(AosObject1C *o, const AosObject1CChildEnv *env,
     c->kind = AOS_O1C_CHILD_MARKER;
     c->active = 1;
     c->flags58 |= 0x20;
+    o->frame_flags = c->flags58;
     c->anim5c = 3;
     /* sub_0803B924's param 0xE -> +0x5A bits 3-6 = 0xE (OBJ row
      * 0xE = palette bank 4, the marker's YES/NO art). */
@@ -1109,7 +1125,11 @@ void aos_object1c_children_draw(AosObject1C *o,
     out->pal_index = -1;
     for (unsigned i = 0; i < o->child_count; ++i) {
         AosObject1CChild *c = &o->children[i];
-        if (!c->active)
+        /* Entity +0x58 bit 5 is the common OAM hide bit. The marker
+         * starts hidden and state 1 reveals it; commit/decline hides it
+         * again. Ignoring this bit left all three prompt sprites painted
+         * permanently in every save room. */
+        if (!c->active || (c->flags58 & 0x20))
             continue;
         switch (c->kind) {
         case AOS_O1C_CHILD_MARKER:
@@ -1154,17 +1174,16 @@ void aos_object1c_children_draw(AosObject1C *o,
 }
 
 /* ---- sub_08054280 save-screen BG0 patches --------------------------
- * Decoded from the seven DmaQueue_DirectCopy calls in
+ * Decoded from the six DmaQueue_DirectCopy calls in
  * code_08050A3C.s:7134-7280. Each entry below is one queued write:
  * `row`/`col` the screenblock-28 cell (32 cells/row, matching the
  * AosHud.map layout), `count` the halfword count copied and
  * `first_tile` the first tile index; the written entry is
  * 0xE200 | tile (BG palette row 14, tiles from the HUD tileset
  * 0x0827B208's 0x200-0x2FF range). The queue runs in order, so the
- * later row-8/row-9 col-10 patches overwrite the earlier col-8/20
- * edge tiles exactly like the native DMA order. The seventh write
- * re-sends the previous buffer's first twelve entries (tiles
- * 0x2C0-0x2CB) to row 6 col 10. */
+ * the two 0x18-byte copies contain twelve halfwords each. The first
+ * four writes place the Yes/No slices on rows 8-9; the last two place
+ * the question on rows 5-6. */
 typedef struct {
     uint8_t row, col, count;
     uint16_t first_tile;
@@ -1175,8 +1194,7 @@ static const AosObject1CSavePatch object1c_save_patches[] = {
     {9, 8, 5, 0x2CC},    /* size 0x0A -> VRAM 0x0600E250 */
     {8, 20, 5, 0x2B2},   /* size 0x0A -> VRAM 0x0600E228 */
     {9, 20, 5, 0x2D2},   /* size 0x0A -> VRAM 0x0600E268 */
-    {8, 10, 12, 0x2A0},  /* size 0x18 -> VRAM 0x0600E214 */
-    {9, 10, 12, 0x2C0},  /* size 0x18 -> VRAM 0x0600E254 */
+    {5, 10, 12, 0x2A0},  /* size 0x18 -> VRAM 0x0600E154 */
     {6, 10, 12, 0x2C0},  /* size 0x18 -> VRAM 0x0600E194 */
 };
 

@@ -51,6 +51,27 @@ int main(void) {
     assert(!aos_hud_pixel(&hud, tiles, palette, 1, 0, &color));
     assert(!aos_hud_pixel(&hud, tiles, palette, 200, 100, &color));
 
+    /* sub_08054280 replaces tile ids 0x2A0-0x2DF with the live
+     * context-A canvas. The initial ROM bytes must never bleed through
+     * while that prompt is open or after sub_08040FE0 clears it. */
+    hud.map[5 * AOS_HUD_MAP_SIZE + 10] = 0xE2A0;
+    tiles[(0x2A0 - 0x200) * 32] = 3;
+    palette[32 + 3 * 2] = 0xE0;             /* row 14 colour 3: green */
+    palette[32 + 3 * 2 + 1] = 0x03;
+    assert(aos_hud_pixel(&hud, tiles, palette, 10 * 8,
+                         5 * 8 - AOS_HUD_SCROLL_Y, &color) &&
+           color == 0x03E0);
+    uint8_t save_tiles[AOS_HUD_SAVE_TILE_BYTES] = {0};
+    save_tiles[0] = 4;
+    palette[32 + 4 * 2 + 1] = 0x7C;         /* row 14 colour 4: blue */
+    aos_hud_set_save_prompt_tiles(&hud, save_tiles);
+    assert(aos_hud_pixel(&hud, tiles, palette, 10 * 8,
+                         5 * 8 - AOS_HUD_SCROLL_Y, &color) &&
+           color == 0x7C00);
+    aos_hud_set_save_prompt_tiles(&hud, NULL);
+    assert(!aos_hud_pixel(&hud, tiles, palette, 10 * 8,
+                          5 * 8 - AOS_HUD_SCROLL_Y, &color));
+
     /* sub_0800EA98/sub_0800DE4C: a defeated enemy uses context B's
      * eight-pixel font, alternates the two dynamic tile pages and keeps the
      * right-aligned three-row notice for 0xF0 frames. */

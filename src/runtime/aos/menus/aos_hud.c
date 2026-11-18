@@ -158,6 +158,25 @@ void aos_hud_clear_notice(AosHud *hud) {
     hud->revision++;
 }
 
+void aos_hud_set_save_prompt_tiles(AosHud *hud, const uint8_t *tiles) {
+    if (!hud) return;
+    bool changed = !hud->save_tiles_active;
+    if (tiles) {
+        if (memcmp(hud->save_tiles, tiles, sizeof hud->save_tiles) != 0) {
+            memcpy(hud->save_tiles, tiles, sizeof hud->save_tiles);
+            changed = true;
+        }
+    } else {
+        static const uint8_t blank[AOS_HUD_SAVE_TILE_BYTES];
+        if (memcmp(hud->save_tiles, blank, sizeof hud->save_tiles) != 0) {
+            memset(hud->save_tiles, 0, sizeof hud->save_tiles);
+            changed = true;
+        }
+    }
+    hud->save_tiles_active = true;
+    if (changed) hud->revision++;
+}
+
 /* One step of a shown value toward its target. */
 static bool chase(int16_t *shown, int16_t target) {
     if (*shown == target) return false;
@@ -193,6 +212,8 @@ bool aos_hud_pixel(const AosHud *hud, const uint8_t *tiles, const uint8_t *palet
     if (hud->notice_active && tile >= 0x280 && tile < 0x2C0) {
         unsigned page = (tile - 0x280) / 0x20;
         source = hud->notice_tiles[page] + (tile & 0x1F) * 32;
+    } else if (hud->save_tiles_active && tile >= 0x2A0 && tile < 0x2E0) {
+        source = hud->save_tiles + (tile - 0x2A0) * 32;
     }
     uint8_t byte = source[py * 4 + px / 2];
     unsigned index = px & 1 ? byte >> 4 : byte & 0xF;

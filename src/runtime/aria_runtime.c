@@ -1025,15 +1025,11 @@ void aria_object1c_input_lock(bool locked) {
     object1c_input_lock = locked;
 }
 
-/* Object1C save prompt (sub_08054280): the native routine uploads the
- * window/tile graphics and prints three text-table entries — 0x34A
+/* Object1C save prompt (sub_08054280): the native routine fills the
+ * context-A dynamic tile canvas and prints three text-table entries — 0x34A
  * "Save the game?" at text pos (0,1), 0x34B "Yes " at (0x10,1) and
- * 0x34D " No " at (0x18,1) — then sub_0805444C draws the selection
- * cursor. The tile upload, the +0xA074 mode bytes and the cursor
- * sprites stay unported; this draws the same three native strings
- * through the room-dialogue window stack (6px cells like the native
- * text canvas) and marks +0x16's selection with a host chevron —
- * an honest approximation, not the native hand cursor. */
+ * 0x34D " No " at (0x18,1). The six DMA copies then map slices of
+ * tiles 0x2A0-0x2D7 to the question and choice positions. */
 static bool object1c_save_strings_ready;
 static uint8_t object1c_save_question[64];
 static uint8_t object1c_save_yes[16];
@@ -1043,7 +1039,16 @@ static size_t object1c_save_question_n, object1c_save_yes_n,
 
 static bool object1c_save_strings_load(void) {
     if (object1c_save_strings_ready) return true;
-    if (!room_dialogue_ready) return false;
+    if (!room_dialogue_ready) {
+        /* Object20 normally enters through room_dialogue_resolve, which
+         * performs the lazy resource/font initialization. Object1C can be
+         * the first text user in the room, so force that same path before
+         * decoding its three entries. */
+        const uint8_t *probe = NULL;
+        size_t probe_size = 0;
+        if (!room_dialogue_resolve(NULL, 0x34A, &probe, &probe_size))
+            return false;
+    }
     static const struct {
         uint16_t id;
         uint8_t *out;
@@ -1066,13 +1071,8 @@ static bool object1c_save_strings_load(void) {
     return true;
 }
 
-static void draw_object1c_save_prompt(SDL_Renderer *renderer,
-                                      const AriaRoom *room,
-                                      uint32_t frame) {
-    (void)frame;
-    if (!renderer || !room || !room_dialogue_ready ||
-        !object1c_save_strings_load())
-        return;
+static void sync_object1c_save_prompt(AosHud *hud, const AriaRoom *room) {
+    if (!hud || !room) return;
     const AriaEntity *dlg = NULL;
     for (size_t i = 0; i < room->entity_count; ++i) {
         const AriaEntity *e = &room->entities[i];
@@ -1087,48 +1087,31 @@ static void draw_object1c_save_prompt(SDL_Renderer *renderer,
             break;
         }
     }
-    if (!dlg) return;
+    if (!dlg) {
+        if (hud->save_tiles_active)
+            aos_hud_set_save_prompt_tiles(hud, NULL);
+        return;
+    }
+    if (!object1c_save_strings_load()) return;
     static AosIntroTextTiles tiles;
     aos_intro_text_tiles_clear(&tiles);
     bool ok =
         aos_intro_font_render_span(&room_dialogue_font, &tiles, 0, 12,
-                                   176, 8, object1c_save_question,
+                                   96, 8, object1c_save_question,
                                    object1c_save_question_n) &&
         aos_intro_font_render_span(&room_dialogue_font, &tiles, 96, 12,
-                                   80, 8, object1c_save_yes,
+                                   40, 8, object1c_save_yes,
                                    object1c_save_yes_n) &&
         aos_intro_font_render_span(&room_dialogue_font, &tiles, 144, 12,
-                                   32, 8, object1c_save_no,
+                                   40, 8, object1c_save_no,
                                    object1c_save_no_n);
     if (!ok) {
         fprintf(stderr, "Aria save prompt text render failed\n");
         return;
     }
-    for (unsigned y = 88; y < 160; ++y)
-        for (unsigned x = 8; x < 232; ++x) {
-            uint16_t color;
-            if (!aos_window_frame_dialogue_pixel(&room_dialogue_window,
-                                                 &tiles, x, y, &color))
-                continue;
-            SDL_SetRenderDrawColor(renderer,
-                                   (uint8_t)((color & 31u) * 255u / 31u),
-                                   (uint8_t)(((color >> 5) & 31u) * 255u / 31u),
-                                   (uint8_t)(((color >> 10) & 31u) * 255u / 31u),
-                                   255);
-            SDL_RenderPoint(renderer, (float)x, (float)y);
-        }
-    /* Host selection cursor: a chevron left of the +0x16-selected
-     * word (1 = "Yes ", 0 = " No "). Canvas x 96/144 map to screen
-     * x 136/184 through the dialogue window's +40 offset. */
-    int cx = dlg->object1c.save_sel ? 128 : 176;
-    int cy = 131;
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    for (int t = 0; t < 2; ++t) {
-        SDL_RenderLine(renderer, (float)(cx - 3 + t), (float)(cy - 4),
-                       (float)(cx + 1 + t), (float)cy);
-        SDL_RenderLine(renderer, (float)(cx + 1 + t), (float)cy,
-                       (float)(cx - 3 + t), (float)(cy + 4));
-    }
+    /* Context A row 1 begins at pixel y=12, so its glyphs occupy tile
+     * rows 1-2. Those two rows become BG tile ids 0x2A0-0x2DF. */
+    aos_hud_set_save_prompt_tiles(hud, tiles.data + 32u * 32u);
 }
 
 void room_dialogue_bind(void) {
@@ -4822,6 +4805,10 @@ aria_render_frame:
         /* Object20 owns BG0/BG1 and suppresses the gameplay HUD while its
          * dialogue or obtained-soul window is active. */
         if (hud_texture && !opening.active) {
+            /* sub_08054280 writes into the same dynamic BG0 tile page
+             * the HUD compositor consumes. Synchronize it before the
+             * revision check so the prompt appears in this frame. */
+            sync_object1c_save_prompt(&hud, &room);
             if (hud_dirty || hud_drawn_revision != hud.revision ||
                 memcmp(hud_drawn, hud.map, sizeof hud_drawn)) {
                 static uint8_t pixels[240 * 160 * 4];
@@ -5066,12 +5053,6 @@ aria_render_frame:
                                       : NULL,
                                   (uint32_t)step);
         }
-        /* Object1C's save YES/NO prompt (sub_08054280): same window
-         * stack, no-op while no save statue is mid-sequence — and
-         * suppressed while the pause menu owns the screen, like the
-         * room-dialogue window above. */
-        if (!soul_menu.open)
-            draw_object1c_save_prompt(renderer, &room, (uint32_t)step);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);

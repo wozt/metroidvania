@@ -15,6 +15,9 @@ enum {
     AOS_HUD_FONT_METRIC_BYTES = AOS_HUD_FONT_GLYPHS * 4,
     AOS_HUD_FONT_BITMAP_BYTES = AOS_HUD_FONT_GLYPHS * 10,
     AOS_HUD_NOTICE_TILE_BYTES = 0x400,
+    /* sub_08054280 renders its context-A canvas into dynamic BG tiles
+     * 0x2A0-0x2DF (two 32-tile rows). */
+    AOS_HUD_SAVE_TILE_BYTES = 0x800,
     AOS_HUD_TILE_OFFSET = AOS_HUD_PALETTE_BYTES,
     AOS_HUD_FONT_METRIC_OFFSET = AOS_HUD_TILE_OFFSET + AOS_HUD_TILE_BYTES,
     AOS_HUD_FONT_BITMAP_OFFSET = AOS_HUD_FONT_METRIC_OFFSET + AOS_HUD_FONT_METRIC_BYTES,
@@ -37,10 +40,12 @@ typedef struct {
     uint16_t map[AOS_HUD_MAP_SIZE * AOS_HUD_MAP_SIZE];
     int16_t hp, mp, max_hp, max_mp;     /* unk_404, unk_406, unk_408, unk_40A */
     uint8_t notice_tiles[2][AOS_HUD_NOTICE_TILE_BYTES];
+    uint8_t save_tiles[AOS_HUD_SAVE_TILE_BYTES];
     uint16_t notice_timer;              /* unk_422: 0xF0 frames */
     uint8_t notice_page;                /* unk_424: alternating 0x280/0x2A0 tiles */
     uint8_t notice_kind;                /* resource palette row 4 or 5 */
     bool notice_active;
+    bool save_tiles_active;
     uint32_t revision;                  /* dynamic tiles can change without map changes */
 } AosHud;
 
@@ -68,6 +73,11 @@ void aos_hud_tick(AosHud *hud);
  * scripted-clear paths call it so a notice never crosses a room
  * change or a cutscene takeover. */
 void aos_hud_clear_notice(AosHud *hud);
+/* Installs the two dynamic text-tile rows used by sub_08054280. `tiles`
+ * points at 0x800 bytes for tile ids 0x2A0-0x2DF; NULL makes those tiles
+ * transparent while keeping the override active, as sub_08040FE0 does
+ * when the prompt closes. */
+void aos_hud_set_save_prompt_tiles(AosHud *hud, const uint8_t *tiles);
 /* The BGR555 colour of screen pixel (x, y), false when transparent; tiles
  * holds 0x2000 bytes for tiles 0x200-0x2FF. Palette holds the initial rows
  * 13-14 followed by the row-14 item- and enemy-notice palettes. */

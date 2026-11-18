@@ -119,6 +119,78 @@ static void chronomage_release_audio(const AriaSouls *souls) {
     aos_audio_release(0x16E);
 }
 
+/* sub_08042A54(1, frames): the type-5 recent-hit interval each traced
+ * Use routine writes (gEwramData + 0x1307D, the byte sub_08041864
+ * reads for attacker type 5). Child-entity writers are approximated at
+ * cast time: the spear tip's sub_08025F70 writes 0x14 when it arms and
+ * the minotaur partner blade's sub_08026858 writes 0x3C. Routines with
+ * no traced write (Kyoma Demon, Chronomage, Killer Doll, Nemesis) leave
+ * the byte unchanged, as natively. */
+static void red_soul_attack_interval(uint32_t routine,
+                                     const AosRedSoulRecord *record,
+                                     const AosThrowRecord *throw_record) {
+    uint8_t frames;
+    switch (routine) {
+    case SKILL_BAT_ROUTINE:        frames = 0x0F; break;
+    case SKILL_ARCHER_ROUTINE:     frames = 0x0A; break;
+    case SKILL_THROW_ROUTINE:
+        /* The shared use writes 0x1E, then 0x28 (and the 200-frame
+         * grounded lifetime) when the throw record's + 0x12 bit 0x400
+         * (AOS_THROW_TIMEOUT) stands. */
+        frames = throw_record && (throw_record->flags & AOS_THROW_TIMEOUT) ? 0x28 : 0x1E;
+        break;
+    case SKILL_MERMAN_ROUTINE:     frames = 0x1E; break;
+    case SKILL_AXE_ROUTINE:
+        /* Entity + 0x1E (the record's parameter) zero -> 0xF, else 0x1E. */
+        frames = record->parameter == 0 ? 0x0F : 0x1E;
+        break;
+    case SKILL_SPEAR_ROUTINE:      frames = 0x14; break; /* sub_08025F70 */
+    case SKILL_DURGA_ROUTINE:      frames = 0x1E; break;
+    case SKILL_HARPY_ROUTINE:      frames = 0x14; break;
+    case SKILL_DEVIL_ROUTINE:      frames = 0x14; break;
+    case SKILL_CROW_ROUTINE:       frames = 0x14; break;
+    case SKILL_FLEA_ROUTINE:       frames = 0x14; break;
+    case SKILL_GHOST_ROUTINE:      frames = 0x0F; break;
+    case SKILL_SIREN_ROUTINE:      frames = 0x0A; break;
+    case SKILL_SKULL_ROUTINE:      frames = 0x10; break;
+    case SKILL_LIGHTNING_ROUTINE:  frames = 0x0A; break;
+    case SKILL_VALKYRIE_ROUTINE:   frames = 0x3C; break;
+    case SKILL_NEEDLES_ROUTINE:    frames = 0x0F; break;
+    case SKILL_RIPPER_ROUTINE:
+        /* Entity + 0x1E zero -> 0xA, else 0x14 (the port's parameter <
+         * 2 guard keeps both records reachable). */
+        frames = record->parameter == 0 ? 0x0A : 0x14;
+        break;
+    case SKILL_MILLIONE_ROUTINE:   frames = 0x0C; break;
+    case SKILL_FISH_HEAD_ROUTINE:  frames = 0x14; break;
+    case SKILL_KILLER_FISH_ROUTINE: frames = 0x1E; break;
+    case SKILL_GLADIATOR_ROUTINE:  frames = 0x1E; break;
+    case SKILL_WERE_BEAST_ROUTINE: frames = 0x0F; break;
+    case SKILL_WEREWOLF_ROUTINE:   frames = 0x0C; break;
+    case SKILL_KILLER_MANTLE_ROUTINE: frames = 0x14; break;
+    case SKILL_BIPHRON_ROUTINE:    frames = 0x0C; break;
+    case SKILL_ARACHNE_ROUTINE:    frames = 0x1E; break;
+    case SKILL_FLAME_DEMON_ROUTINE: frames = 0x04; break;
+    case SKILL_COCKATRICE_ROUTINE: frames = 0x3C; break;
+    case SKILL_UKOBACK_ROUTINE:    frames = 0x14; break;
+    case SKILL_ALTAIR_ROUTINE:     frames = 0x1E; break;
+    case SKILL_UNE_ROUTINE:        frames = 0x14; break;
+    case SKILL_MANDRAGORA_ROUTINE: frames = 0x3C; break;
+    case SKILL_NIGHTMARE_ROUTINE:  frames = 0x14; break;
+    case SKILL_MAN_EATER_ROUTINE:  frames = 0x14; break;
+    case SKILL_DEMON_LORD_ROUTINE: frames = 0x0F; break;
+    case SKILL_LEGION_ROUTINE:     frames = 0x0F; break;
+    case SKILL_BALORE_ROUTINE:     frames = 0x3C; break;
+    case SKILL_STUDENT_WITCH_ROUTINE: frames = 0x0A; break;
+    case SKILL_SLIME_ROUTINE:      frames = 0x0F; break;
+    case SKILL_DISC_ARMOR_ROUTINE: frames = 0x0A; break;
+    case SKILL_DRYAD_ROUTINE:      frames = 0x14; break;
+    case SKILL_RED_MINOTAUR_ROUTINE: frames = 0x3C; break; /* sub_08026858 */
+    default: return;
+    }
+    aos_combat_set_attack_interval(1, frames);
+}
+
 /* Soma's cast hook: sub_08019478's guards and bookkeeping, then the skill
  * entity; souls whose routine is not ported are refused rather than
  * spending MP on nothing. */
@@ -250,6 +322,8 @@ int cast_red_soul(void *context) {
     AriaSkill *skill = &souls->skills[slot];
     *skill = (AriaSkill){.alive = true, .kind = kind, .slot = slot,
                          .soul = souls->stats->red_soul};
+    /* The Use routine's sub_08042A54(1, frames) write. */
+    red_soul_attack_interval(routine, record, throw_record);
     /* SkillBatUse: (0, -0x1A); SkillSkullArcherUse: (-0xC, -0x18). */
     if (kind == SKILL_BAT)
         place(skill, souls->soma->x, souls->soma->y, souls->soma->facing_left, 0, -0x1A);
@@ -581,6 +655,26 @@ void start_guardian(void *context) {
                          (stats->challenge_flags & 0x200000u) && stats->blue_soul > 3,
                          &guardian->soma->flags)) {
         guardian->routine = routine;
+        /* sub_08042A54(2, frames): the type-6 recent-hit interval each
+         * traced guardian Use routine writes (gEwramData + 0x1307E).
+         * Routines without a traced write leave the byte unchanged. */
+        switch (routine) {
+        case GUARDIAN_PANTHER_ROUTINE:       aos_combat_set_attack_interval(2, 0x3C); break;
+        case GUARDIAN_CAGNAZZO_ROUTINE:      aos_combat_set_attack_interval(2, 0x14); break;
+        case GUARDIAN_PILLAR_ROUTINE:        aos_combat_set_attack_interval(2, 0x0F); break;
+        case GUARDIAN_TRANSFORM_ROUTINE:     aos_combat_set_attack_interval(2, 0x0F); break;
+        case GUARDIAN_IMP_ROUTINE:           aos_combat_set_attack_interval(2, 0x3C); break;
+        case GUARDIAN_GHOST_ROUTINE:         aos_combat_set_attack_interval(2, 0x0A); break;
+        case GUARDIAN_DEATH_ROUTINE:         aos_combat_set_attack_interval(2, 0x14); break;
+        case GUARDIAN_PERSEPHONE_ROUTINE:    aos_combat_set_attack_interval(2, 0x14); break;
+        case GUARDIAN_CREAKING_SKULL_ROUTINE: aos_combat_set_attack_interval(2, 0x1E); break;
+        case GUARDIAN_ALASTOR_ROUTINE:       aos_combat_set_attack_interval(2, 0x3C); break;
+        case GUARDIAN_SHADOW_KNIGHT_ROUTINE: aos_combat_set_attack_interval(2, 0x3C); break;
+        case GUARDIAN_BIG_GOLEM_ROUTINE:     aos_combat_set_attack_interval(2, 0x3C); break;
+        case GUARDIAN_BUER_ROUTINE:          aos_combat_set_attack_interval(2, 0x18); break;
+        case GUARDIAN_CATOBLEPAS_ROUTINE:    aos_combat_set_attack_interval(2, 0x1E); break;
+        default: break;
+        }
         guardian->medusa = (AosMedusaGuardian){0};
         guardian->cagnazzo = (AosCagnazzoGuardian){0};
         guardian->buer = (AosBuerGuardian){0};

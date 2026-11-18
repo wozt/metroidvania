@@ -1,3 +1,103 @@
+## Patch 1244 - Attack-slot audit: type-5/6 cooldown bytes, type-7 victim gate, first-strike latch
+
+- **Scope.** `src/runtime/aos/core/aos_combat.c/.h`,
+  `src/runtime/aos/core/aos_enemy.c`, `src/runtime/aria_skills.c`,
+  `tests/test_aos_enemy.c`, `data/native_parity/annotations.tsv`
+  and this file. Focused audit of the native attack-record model
+  (`sub_080421AC`, `sub_08041864`, `sub_080426B0`, `sub_0804277C`,
+  `sub_08042A54` in `third_party/cvaos/asm/code/code_08040A38.s`
+  and `code_080211F0.s`) against the port's `AosCombat`,
+  `aos_enemy_collide` and the transient `AosSoulAttack` list.
+- **Native evidence.** The recent-hit cooldown byte is not the
+  `0x080E33F0` table for attacker types 3, 5, 6 and 9:
+  `sub_08041864` reads `gEwramData + 0x1307C..0x1307F`, the bytes
+  `sub_08042A54(index, frames)` writes — every ported red-soul Use
+  routine writes index 1 (e.g. `SkillBatUse` 0x0F,
+  `SkillSkullArcherUse` 0x0A, `SkillDurgaUse` 0x1E,
+  `SkillCockatriceUse` 0x3C) and the traced guardian Use routines
+  write index 2 (Imp/Panther/Alastor/BigGolem/ShadowKnight 0x3C,
+  Buer 0x18, Catoblepas/CreakingSkull 0x1E, Cagnazzo/Death/
+  Persephone 0x14, Pillar/Transform/Curly 0x0F, Ghost 0x0A).
+  `sub_080426B0` ticks the slots; `sub_080421AC`'s blue-soul list
+  tests a type-7 attacker (the ghost guardian's body,
+  `sub_0804277C(e, 7, sub_0802F8CC)`) only against type-0x0A
+  victims, and each enemy's hit callback latches on the first
+  overlapped victim.
+- **Fix.** `aos_combat_set_attack_interval(index, frames)` models
+  the four `gEwramData` bytes; `aos_combat_cooldown` returns them
+  for types 5/6/9 (type 3 keeps the weapon interval parameter).
+  `cast_red_soul` writes index 1 per traced Use routine —
+  conditional writes reproduced (throw 0x1E/0x28 under flag
+  0x400, axe and ripper on entity + 0x1E, spear tip's
+  `sub_08025F70` 0x14 and minotaur blade's `sub_08026858` 0x3C
+  approximated at cast) — and `start_guardian` writes index 2 per
+  traced guardian routine. `aos_enemy_collide` gates type-7
+  attacks to type-0x0A victims and keeps the first struck enemy
+  in `attack->target`/contact instead of the last.
+- **Tests.** `soul_attack_tests` in `tests/test_aos_enemy.c` now
+  covers the first-victim latch across two overlapped enemies, the
+  type-7/type-0x0A gate both ways, and the interval-driven
+  cooldown expiry (0x14 stored + 1 ticks before re-hit).
+  `ctest -R "aos_enemy|aos_soul|aos_wall|aos_collision"`: 58/58.
+- **Remaining gaps.** Native writers inside child/helper entities
+  (`sub_08023E50`, `sub_08024530`, the axe's `sub_080240A0`
+  afterimages) and the four non-Use index-2 value-4 writers
+  (`sub_080221CC`, `sub_080224BC`, `sub_08022A54`, `sub_08022DEC`)
+  are not separately modelled; routines without a traced
+  `sub_08042A54` call (Kyoma Demon, Chronomage, Killer Doll,
+  Nemesis, Medusa, Flying Armor, Sky Fish, Giant Bat, Final Guard,
+  Great Armor, Alura Une) leave the byte unchanged, as natively.
+  The generic entity-to-entity callback graph of `sub_080421AC`
+  stays approximated by the transient per-frame attack list, and
+  the homing list (`gEwramData + 0x13194`) remains unrelated to
+  attack-record lifetime, as audited.
+
+## Patch 1243 - Audit + 0x13114/+ 0x13118 companion slots and the + 0x4CC bit-6 writer: unreachable, documentation corrected
+
+- **Scope.** `src/runtime/aria_entities.c` (comment only),
+  `data/native_parity/annotations.tsv` and this file. Re-audit of
+  the companion entity slots and the cinematic bit against
+  `third_party/cvaos`; no behavior change.
+- **What the slots are.** `gEwramData + 0x13114/+ 0x13118` hold two
+  entity pointers created by `sub_08033EA0` at player init —
+  entity (0, 1) with update `sub_08033F58` and entity (0x11, 0x11)
+  with update `sub_080344E4`, both outside the decompiled corpus.
+  Its sole caller is the player-init tail of `code_0800B700.c`
+  (~line 1267), which invokes it **only while `unk_4CC_6` is
+  set**; in ordinary play the slots stay NULL. The earlier notes'
+  "always non-NULL" claim is corrected in the registry and the
+  `aria_entities.c` Object03 comment.
+- **Feeder and consumers, all bit-6 gated.** `sub_0803427C`
+  (game-mode cases 3 and 11-14, the link state machine entered via
+  `unk_64 = 0xB` only from the bit-6 init path) writes the
+  companions' `+ 0x524/+ 0x528` screen offsets each frame —
+  `+ 0x13114` tracks the player, `+ 0x13118` the `+ 0x13224`
+  ring-buffer history (`+ 0x13228/+ 0x13238`, `+ 0x64 == 0xE`
+  delayed-camera variant) or the `+ 0x13220` escort's screen pos.
+  Readers: Object03Update's state-0 partner probes (`entity + 0x42`
+  screen words, `code_08040A38.s` ~0x0804E61A), the ~20 position
+  accessors of `code_08060B98.s` (`sub_0806BAC8` through
+  `sub_0806E3B0`: `+ 0x4CC & 0x40` -> `+ 0x13118` entity's
+  `+ 0x40/+ 0x44`, else `+ 0x13168` decoy, else the caller's own
+  field — the port's `aos_enemy` decoy/self target model is exact
+  while bit 6 is clear), and `sub_0806C1B0`/`sub_0806E29C` passing
+  the companion entity to `sub_08068AD4`.
+- **Bit-6 writer verdict (unchanged, re-verified).** The
+  decompiled corpus assigns `unk_4CC_6` only clears
+  (`code_08002454.c:399`) and reads; no `strb`/`orr 0x40` write to
+  `gEwramData + 0x4CC` exists in the recompilation corpus. The
+  bit belongs to the SIO link/cinematic mode family (the
+  `sub_080D7F28/7F48/7F78/7FB8/7FD0` link-comm calls in game-mode
+  cases 11-14), unreachable in the supported runtime; the port's
+  `aria_ewram_cine_4cc` stays clear by construction.
+- **Conclusion.** No reachable consumer exists: every native reader
+  of the companion slots or of bit-6-gated state sits behind the
+  unported link/cinematic mode. The port's approximations
+  (Object03 sentinel partner probes, decoy/self aim targets,
+  `sub_0803427C` unported) are exact on all reachable paths.
+  Documented, not faked; no test added (no headlessly reachable
+  behavior to pin).
+
 ## Patch 1241 - Port the Object35 sub_0805A50C carrier child
 
 - **Native path.** `Object35Create` (0x0805A18C) fires `sub_0805A50C`

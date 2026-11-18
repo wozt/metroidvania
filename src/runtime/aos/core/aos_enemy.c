@@ -2760,25 +2760,36 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
     for (int i = 0; hurt_on && !struck && i < soul_attack_count; ++i) {
         AosSoulAttack *attack = &soul_attacks[i];
         uint8_t type = attack->type ? attack->type : AOS_TYPE_SOUL;
+        /* sub_080421AC's blue-soul list (+ 0x13144): a type-7 attacker
+         * (the ghost guardian's body, sub_0804277C(e, 7, sub_0802F8CC))
+         * is tested only against type-0xA victims; the red-soul list
+         * (+ 0x13124) has no such gate, and only the ghost emits type 7. */
+        if (type == 7 && enemy->combat.type != 0x0A) continue;
         if (!aos_combat_can_take(&enemy->combat, type)) continue;
         if (attack->rect.x1 <= target.x2 && target.x1 <= attack->rect.x2 &&
             attack->rect.y1 <= target.y2 && target.y1 <= attack->rect.y2) {
             aos_combat_take(&enemy->combat, type, aos_combat_cooldown(type, 0));
             struck = true;
             attacker = type;
-            attack->struck = true;
-            attack->target = enemy;
             {
                 int16_t x1 = attack->rect.x1 > target.x1 ? attack->rect.x1 : target.x1;
                 int16_t x2 = attack->rect.x2 < target.x2 ? attack->rect.x2 : target.x2;
                 int16_t y1 = attack->rect.y1 > target.y1 ? attack->rect.y1 : target.y1;
                 int16_t y2 = attack->rect.y2 < target.y2 ? attack->rect.y2 : target.y2;
-                if (i < SOUL_ATTACK_CONTACTS) {
-                    soul_contact[i][0] = (int16_t)((x1 + x2) / 2);
-                    soul_contact[i][1] = (int16_t)((y1 + y2) / 2);
-                }
                 contact_x = (x1 + x2) / 2;
                 contact_y = (y1 + y2) / 2;
+                /* The record keeps the first victim of the frame: the
+                 * native hit callback fires per enemy in entity order
+                 * and the attach consumers (sub_0802D9BC's + 0x20) latch
+                 * on the first. */
+                if (!attack->struck) {
+                    attack->struck = true;
+                    attack->target = enemy;
+                    if (i < SOUL_ATTACK_CONTACTS) {
+                        soul_contact[i][0] = (int16_t)contact_x;
+                        soul_contact[i][1] = (int16_t)contact_y;
+                    }
+                }
             }
             power = attack->power;
             elements = attack->elements;

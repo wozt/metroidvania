@@ -73,8 +73,22 @@ void aos_combat_tick(AosCombat *combat) {
         if (combat->cooldown[i] && !--combat->cooldown[i]) combat->recent[i] = 0;
 }
 
+/* gEwramData + 0x1307C..0x1307F: the per-attacker-type recent-hit
+ * cooldown bytes sub_08042A54(index, frames) writes. Zero at boot like
+ * the native EWRAM. */
+static uint8_t attack_intervals[4];
+
+void aos_combat_set_attack_interval(unsigned index, uint8_t frames) {
+    if (index < 4) attack_intervals[index] = frames;
+}
+
 uint8_t aos_combat_cooldown(uint8_t attacker_type, uint8_t weapon_interval) {
     if (attacker_type == AOS_TYPE_WEAPON) return weapon_interval;
+    /* sub_08041864 reads the gEwramData byte for types 3, 5, 6 and 9
+     * instead of 0x080E33F0. */
+    if (attacker_type == AOS_TYPE_SOUL) return attack_intervals[1];
+    if (attacker_type == AOS_TYPE_GUARDIAN) return attack_intervals[2];
+    if (attacker_type == 9) return attack_intervals[3];
     return attacker_type < 12 ? type_cooldowns[attacker_type] : 0;
 }
 

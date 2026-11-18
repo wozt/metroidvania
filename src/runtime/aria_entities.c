@@ -3477,13 +3477,15 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * the column is always sealed at create; state 0 waits on
              * the + 0x13220 escort pointer and the + 0x4CC bit-6
              * cinematic flag — both live session globals now. The
-             * + 0x13114/+ 0x13118 partner probes stay approximated:
-             * natively they are the two companion entities
+             * + 0x13114/+ 0x13118 companion probes stay approximated:
+             * natively they are the two link-mode companion entities
              * sub_08033EA0 creates at player init (updates
              * sub_08033F58/sub_080344E4, outside the decompiled
-             * corpus), always non-NULL — but their + 0x42 screen
-             * words are unmodelled, and the whole gate is
-             * unreachable while + 0x4CC bit 6 stays clear. */
+             * corpus) — its sole caller (code_0800B700.c's init
+             * tail) gates on unk_4CC_6, so the slots stay NULL in
+             * ordinary play and every native reader gates on the
+             * bit first; the whole gate is unreachable while
+             * + 0x4CC bit 6 stays clear. */
             if (!e->spawned) {
                 if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;

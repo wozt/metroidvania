@@ -58,9 +58,17 @@ bool aos_combat_can_take(const AosCombat *victim, uint8_t attacker_type);
 void aos_combat_take(AosCombat *victim, uint8_t attacker_type, uint8_t cooldown);
 /* sub_080426B0, once per frame after the entity update. */
 void aos_combat_tick(AosCombat *combat);
-/* Cooldown of an attacker type: 0x080E33F0[type], or for the weapon type
- * the weapon's record + 0x17 (written to gEwramData + 0x1307C). */
+/* Cooldown of an attacker type: 0x080E33F0[type], except types 3, 5, 6
+ * and 9 whose box tests (sub_08041864) read the gEwramData + 0x1307C..
+ * 0x1307F bytes sub_08042A54(index, frames) writes; type 3's byte is the
+ * weapon record + 0x17, passed as `weapon_interval`. */
 uint8_t aos_combat_cooldown(uint8_t attacker_type, uint8_t weapon_interval);
+/* sub_08042A54(index, frames): the recent-hit cooldown byte for attacker
+ * types 3, 5, 6 and 9 (index 0..3 -> gEwramData + 0x1307C..0x1307F).
+ * Index 0 is fed by the weapon path's interval; the runtime writes 1
+ * (red soul skills) and 2 (blue soul guardians) at the native call
+ * sites. Indices >= 4 are ignored. */
+void aos_combat_set_attack_interval(unsigned index, uint8_t frames);
 /* sub_0806B7D8: power after element rules, minus half the defence, scaled
  * by (256 - defence) / 256, at least 1. */
 int aos_enemy_damage(int power, int defence, uint16_t weak, uint16_t resist,

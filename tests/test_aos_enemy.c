@@ -11910,7 +11910,59 @@ static void soul_attack_tests(void) {
     aos_enemy_set_soul_attacks(&strong, 1);
     hit = aos_enemy_update(&apart, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0, never_zero);
     assert(hit.killed && apart.defeated);
+    /* The record keeps the first victim of the frame: the native hit
+     * callback latches on the first enemy its box meets (sub_0802D9BC's
+     * + 0x20), while every overlapped enemy still takes the hit. */
+    AosEnemy first, second;
+    assert(aos_enemy_create(&first, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    assert(aos_enemy_create(&second, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    AosSoulAttack pair = {{90, 80, 110, 104}, 10, 0, false, NULL, AOS_TYPE_SOUL};
+    aos_enemy_set_soul_attacks(&pair, 1);
+    hit = aos_enemy_update(&first, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           never_zero);
+    hit = aos_enemy_update(&second, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           never_zero);
+    assert(hit.enemy_hit && second.hp < 30 && pair.struck && pair.target == &first);
+    /* sub_080421AC's blue-soul list: a type-7 attacker (the ghost
+     * guardian's body, AOS_GHOST_ATTACK_TYPE in aos_soul_blue_ghost.h)
+     * is tested only against type-0xA victims. */
+    AosSoulAttack ghost = {{90, 80, 110, 104}, 10, 0, false, NULL, 7};
+    AosEnemy plain, special;
+    assert(aos_enemy_create(&plain, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    assert(aos_enemy_create(&special, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    special.combat.type = 0x0A;
+    aos_enemy_set_soul_attacks(&ghost, 1);
+    hit = aos_enemy_update(&plain, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           never_zero);
+    assert(!hit.enemy_hit && plain.hp == 30 && !ghost.struck);
+    hit = aos_enemy_update(&special, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           never_zero);
+    assert(hit.enemy_hit && special.hp < 30 && ghost.struck && ghost.target == &special);
     aos_enemy_set_soul_attacks(NULL, 0);
+    /* sub_08042A54/sub_08041864: types 5 and 6 take their recent-hit
+     * cooldown from the gEwramData bytes, not the 0x080E33F0 table. */
+    assert(aos_combat_cooldown(AOS_TYPE_SOUL, 0) == 0);
+    aos_combat_set_attack_interval(1, 0x14);
+    aos_combat_set_attack_interval(2, 0x3C);
+    assert(aos_combat_cooldown(AOS_TYPE_SOUL, 0) == 0x14);
+    assert(aos_combat_cooldown(AOS_TYPE_GUARDIAN, 0) == 0x3C);
+    /* A struck enemy refuses the same attacker type until the stored
+     * interval + 1 ticks down (sub_080426B0). */
+    AosCombat victim = {.type = AOS_TYPE_ENEMY};
+    aos_combat_take(&victim, AOS_TYPE_SOUL, aos_combat_cooldown(AOS_TYPE_SOUL, 0));
+    for (int t = 0; t < 0x14; ++t) {
+        assert(!aos_combat_can_take(&victim, AOS_TYPE_SOUL));
+        aos_combat_tick(&victim);
+    }
+    assert(!aos_combat_can_take(&victim, AOS_TYPE_SOUL));
+    aos_combat_tick(&victim);
+    assert(aos_combat_can_take(&victim, AOS_TYPE_SOUL));
+    aos_combat_set_attack_interval(1, 0);
+    aos_combat_set_attack_interval(2, 0);
     memset(cells, 0, sizeof cells);
 }
 

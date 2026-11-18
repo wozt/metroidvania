@@ -50,6 +50,36 @@ decode both games' data), so target it while working and run it in full only onc
 - A failing test is fixed and its targeted test rerun; repeat the full run
   only if the fix touched code that other tests cover.
 
+## Gameplay Fidelity, Vertical-Slice Development and Regression Gates
+
+These rules are permanent and apply to every gameplay development cycle.
+
+1. Measure progress by validated gameplay scenarios, not by translated-routine,
+   file, object or feature counts.
+2. Give every gameplay change a reproducible behavioral acceptance scenario
+   with a defined start state, input schedule and observable result.
+3. Compare against the native game before claiming fidelity; reconstruction
+   sources and ROM-derived tests alone do not prove runtime behavior.
+4. Treat unit tests as component evidence only. Integration requires the real
+   runtime path, authoritative state and dependencies.
+5. Keep simulation timing deterministic and independent from rendering,
+   capture rate and host performance.
+6. Add regression protection for every validated scenario before moving to the
+   next gameplay slice.
+7. Prioritize blockers in saves, movement, collision, progression and other
+   core loops over breadth or cosmetic feature count.
+8. Respect existing state ownership, update order and module boundaries when
+   fixing a slice; do not bypass the architecture to make a scenario pass.
+9. Do not use silent approximations, duplicate systems, fake state or arbitrary
+   constants. Document any evidenced limitation and keep its status partial.
+10. Preserve previously validated behavior and rerun the relevant regression
+    gates whenever shared code or state changes.
+11. Match completion and fidelity claims to the strongest available evidence;
+    distinguish translated, unit-tested, integrated and emulator-compared work.
+12. Keep each cycle focused, measurable and reviewable: one bounded objective,
+    its root cause, its evidence, its regression test and its honest remaining
+    gaps.
+
 ## Native Emulator Comparison Workflow (Aria of Sorrow)
 
 Use the headless emulator laboratory whenever Aria behavior or rendering is

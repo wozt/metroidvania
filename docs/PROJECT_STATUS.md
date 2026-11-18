@@ -1,3 +1,39 @@
+## Patch 1235 - Make vertical gameplay slices the permanent development gate
+
+- **Progress is now scenario-based.** The root repository rules require every
+  gameplay cycle to define one reproducible acceptance scenario, trace its root
+  cause, exercise the real runtime path and protect the result with a regression
+  gate. Routine and feature counts are no longer acceptable progress evidence.
+- **Fidelity claims require the native oracle.** The new permanent section
+  distinguishes source translation, unit evidence, integration and live native
+  comparison. It also requires deterministic simulation timing, preservation
+  of already validated behavior and honest partial status for every remaining
+  approximation.
+- **Priority stays on playable blockers.** Save/load, movement, collision and
+  progression failures take precedence over breadth. Each future cycle is
+  bounded to one measurable vertical slice instead of accumulating unrelated
+  fixes under one completion claim.
+
+## Patch 1234 - Restore breakable-chandelier colours
+
+- **Exporter address role fixed.** `sub_0803AFB8` substitutes graphics
+  `0x0826F8A4` (or `0x082718A8`) for the shared tile sheet
+  `0x081C15F4`; those addresses were incorrectly decoded as palette
+  descriptors, leaving generic breakables and Object0F shared flames black.
+  The exporter now maps destination OBJ rows 6, 7 and 9 to banks 2, 3 and 6
+  of the shared-effect palette descriptor `0x082099FC`. Every
+  `special_62_v00-v15` chandelier variant uses bank 3, as
+  `sub_08046080` selects OBJ row 7.
+- **Native and runtime evidence.** Starting from the private
+  `/tmp/aos_trans/post.state` room-0/3 checkpoint, a one-frame headless mGBA
+  run with no input dumped OBJ palette row 7. All 32 bytes equal ROM
+  descriptor `0x082099FC` bank 3. After rebuilding private `aria_objects`, a
+  runtime room-0/3 capture at spawn `(256,176)`, frame 2, shows the orange
+  flame and light metal instead of the opaque black silhouette. The updated
+  native golden fixture guards every changed object BMP and the runtime
+  index. Break animation, pickup timing and complete frame placement remain
+  partial until they are compared as a synchronized native sequence.
+
 ## Patch 1233 - Opening dialogue portrait restored to its native BG0 anchor
 
 - **Four-pixel portrait offset fixed.** `draw_opening_backdrop`
@@ -112,26 +148,6 @@
   the 0/0 -> 0/3 -> 0/5 route and skips without the private ROM;
   `tests/test_aria_simulate_levelup_room.sh` (new,
   `aria_simulate_levelup_room`) sweeps room 0/3's zombies to level 2.
-
-## Patch 1234 - Restore breakable-chandelier colours
-
-- **Exporter address role fixed.** `sub_0803AFB8` substitutes graphics
-  `0x0826F8A4` (or `0x082718A8`) for the shared tile sheet
-  `0x081C15F4`; those addresses were incorrectly decoded as palette
-  descriptors, leaving generic breakables and Object0F shared flames black.
-  The exporter now maps destination OBJ rows 6, 7 and 9 to banks 2, 3 and 6
-  of the shared-effect palette descriptor `0x082099FC`. Every
-  `special_62_v00-v15` chandelier variant uses bank 3, as
-  `sub_08046080` selects OBJ row 7.
-- **Native and runtime evidence.** Starting from the private
-  `/tmp/aos_trans/post.state` room-0/3 checkpoint, a one-frame headless mGBA
-  run with no input dumped OBJ palette row 7. All 32 bytes equal ROM
-  descriptor `0x082099FC` bank 3. After rebuilding private `aria_objects`, a
-  runtime room-0/3 capture at spawn `(256,176)`, frame 2, shows the orange
-  flame and light metal instead of the opaque black silhouette. The updated
-  native golden fixture guards every changed object BMP and the runtime
-  index. Break animation, pickup timing and complete frame placement remain
-  partial until they are compared as a synchronized native sequence.
 
 ## Patch 1229 - Restore the native save-room prompt composition
 

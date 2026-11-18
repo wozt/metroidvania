@@ -41,7 +41,7 @@ static void dump_peek(const AosPeekResult *peek) {
 int main(int argc, char **argv) {
     const char *rom = NULL, *shot = NULL, *state_out = NULL,
                *state_in = NULL, *keys_spec = NULL, *capture_spec = NULL,
-               *peek_spec = NULL, *log_path = NULL;
+               *peek_spec = NULL, *poke_spec = NULL, *log_path = NULL;
     int frames = 60;
     for (int i = 1; i < argc; ++i) {
         const char *arg = argv[i];
@@ -54,6 +54,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(arg, "--state-out") && value) { state_out = value; ++i; }
         else if (!strcmp(arg, "--state-in") && value) { state_in = value; ++i; }
         else if (!strcmp(arg, "--peek") && value) { peek_spec = value; ++i; }
+        else if (!strcmp(arg, "--poke") && value) { poke_spec = value; ++i; }
         else if (!strcmp(arg, "--log") && value) { log_path = value; ++i; }
         else {
             fprintf(stderr, "unknown argument %s\n", arg);
@@ -82,12 +83,16 @@ int main(int argc, char **argv) {
     AosKeyEvent *keys = aos_mgba_parse_keys(keys_spec, &key_count);
     int *capture = aos_mgba_parse_frames(capture_spec, &capture_count);
     AosPeekRequest *peeks = aos_mgba_parse_peeks(peek_spec, &peek_count);
+    int poke_count = 0;
+    AosPokeEvent *pokes = aos_mgba_parse_pokes(poke_spec, &poke_count);
     spec.keys = keys;
     spec.key_count = key_count;
     spec.capture_frames = capture;
     spec.capture_count = capture_count;
     spec.peeks = peeks;
     spec.peek_count = peek_count;
+    spec.pokes = pokes;
+    spec.poke_count = poke_count;
 
     /* --peek-at F:ADDR:SIZE entries must fire mid-run; the session API
      * samples peeks after the run, so map them onto end-of-run reads
@@ -109,6 +114,7 @@ int main(int argc, char **argv) {
     aos_mgba_free_keys(keys);
     aos_mgba_free_frames(capture);
     aos_mgba_free_peeks(peeks);
+    aos_mgba_free_pokes(pokes, poke_count);
     aos_mgba_close(session);
     return 0;
 }

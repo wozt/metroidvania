@@ -337,8 +337,9 @@ the integer room position (X, Y = feet):
    `+0x16` counts down.
 5. Bit-3 cells at (X+/-5, Y-8) set `0x1000000` (entering with vy > 1.5 calls
    `sub_0803319C(0)`; with `0x13260 & 0x8000`, vy /= 4); bit-3 cells at
-   (X+/-5, Y-25) set `0xC00000` (and `0x800` without one at (X, Y-26)). This
-   matches water but is not confirmed.
+   (X+/-5, Y-25) set `0xC00000` (and `0x800` without one at (X, Y-26)). Bit 3
+   is water: the enemy probe `sub_0806E5FC` tests the same bit for water, and
+   mGBA runs in room 0/5's pool show these flags while floating.
 6. Walking: `+0x1C` = 1 when a floor slope is within 4 pixels ahead at Y+1.
 7. Not grounded (`0x100000` clear) with vy <= 0: a solid or slope cell at the
    feet pushes Y up (platforms `0x01` let Soma rise through). Then vy < 0 or
@@ -489,7 +490,7 @@ Earlier revisions called the slide a "probable backdash" and the case
 vx kept only while airborne), and state 0 handles both ground and air.
 An earlier revision of this table read the impulse flag as `0x400000`; the
 assembly builds it as `0x80 << 0x13` = `0x4000000`, and `0x400000` is the
-separate slow-fall flag. Its meaning (probably water) is unconfirmed.
+separate slow-fall flag, set while Soma is in water cells (see below).
 Friction stops on a sign change only: a vx that lands exactly on zero keeps
 its friction term for one more frame.
 
@@ -530,6 +531,23 @@ attacks, recoil, hurtboxes, effects and moving platforms
 (`gEwramData + 0x1316C`, `+ 0x131B4`);
 `tests/test_aos_soma.c` checks them without a ROM (a held jump rises about
 56.7 pixels over 56 frames, a tapped jump about 9.7 pixels).
+
+Water (bit-3 cells). mGBA runs in room 0/5's pool (cells y 400-447, floor
+~448) with no souls show the default stance: Soma sinks briefly on entry,
+then floats with the head probe at the surface (~world y 425, "arm level").
+A deep placement (y 440) rises back to ~425, so the float is active buoyancy,
+not a rest on the floor. Horizontal swimming gives vx ~1.5; a jump press is a
+small stroke (vy ~-4.625 under the slow-fall flag) that returns him to the
+same depth, and Down does not dive. During the float the entity flags read
+`0x41C01802` (head/body special + slow-fall). `aos_soma_air` reproduces the
+measured float: while both special probes are in water and the
+walk-on-special ability (`0x13260 & 0x8000`) is absent, vy is biased upward
+until the head leaves the water, where `collide_special` latches vy to 0 —
+the head-at-surface bob. `tests/test_aria_simulate_water_float.sh` checks
+the port holds Soma off the pool floor. Soul-dependent variants (bottom
+walking with water inertia, higher/multi jump, walk-on-water) are not yet
+ported; the walk-on-water ability still clears `0x800000` in
+`collide_special`.
 
 Animations. `sub_0803F2C8(entity, id, mode, loop)` starts animation `id`
 of the entity's descriptor (the table the sprite library exports): it

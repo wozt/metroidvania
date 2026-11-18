@@ -1598,6 +1598,14 @@ if(BUILD_TESTING)
                      sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_entity_pool.sh")
     set_tests_properties(aria_simulate_entity_pool PROPERTIES SKIP_RETURN_CODE 77)
 
+    # Headless water-buoyancy contract: room 0/5's pool (bit-3 cells) must
+    # float Soma at head-at-surface depth instead of sinking to the floor.
+    add_test(NAME aria_simulate_water_float
+             COMMAND ${CMAKE_COMMAND} -E env
+                     FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>
+                     sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_water_float.sh")
+    set_tests_properties(aria_simulate_water_float PROPERTIES SKIP_RETURN_CODE 77)
+
     add_test(NAME aria_simulate_skeleton_parts
              COMMAND ${CMAKE_COMMAND} -E env
                      FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>

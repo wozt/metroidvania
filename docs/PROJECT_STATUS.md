@@ -1,3 +1,39 @@
+## Patch 1255 - Default water buoyancy and the mGBA --poke lab hook
+
+- **Scope.** `src/runtime/aos/core/aos_soma.c`,
+  `src/runtime/aria_runtime.c` (`AOS_SIM_TRACE_SOMA` diagnostic),
+  `src/tools/aos_mgba_session.{c,h}` and `src/tools/aos_mgba_lab.c`
+  (new `--poke` option), `tests/test_aria_simulate_water_float.sh`,
+  `docs/AOS_SOMA.md`, and the `aos.player.soma_controller` annotation.
+- **Native evidence (mGBA, room 0/5 pool).** With no souls, Soma sinks
+  briefly on entry then floats with the head probe at the surface
+  (~world y 425, "arm level"); a deep placement (y 440) rises back to ~425,
+  so the float is active buoyancy rather than a rest on the floor.
+  Horizontal swimming gives vx ~1.5, a jump press is a small stroke
+  (vy ~-4.625 under slow-fall) that returns to the same depth, and Down
+  does not dive. Float flags read `0x41C01802` (head/body special +
+  slow-fall). Bit-3 cells are confirmed water (`sub_0806E5FC` tests the
+  same bit for enemies).
+- **Port change.** `aos_soma_air` now biases vy upward while both special
+  probes sit in bit-3 cells and the `0x13260 & 0x8000` walk-on-special
+  ability is absent; `collide_special` latches vy to 0 when the head leaves
+  the water, producing the head-at-surface bob. The sim holds Soma at
+  ~y 425 instead of sinking to the pool floor. Soul-dependent variants
+  (bottom walking with water inertia, higher/multi jump, walk-on-water)
+  remain unported; `collide_special` still clears `0x800000` for the
+  walk-on-special ability.
+- **Lab tooling.** `aos_mgba_lab` gains `--poke F:ADDR:HEXBYTES` (comma
+  list, level-triggered WRAM writes via `mCoreGetMemoryBlock` after
+  `runFrame`), used to place Soma in the pool and read entity memory for
+  the measurements above. It is the general mechanism for test-only
+  invincibility/position pokes; no permanent gameplay cheat was added.
+- **Verification.** `tests/test_aria_simulate_water_float.sh` (registered
+  in CMake) asserts a deep spawn floats off the floor; `AOS_SIM_TRACE_SOMA`
+  traces pos/vy/flags per frame. The float depth matches the mGBA
+  measurement but the exact native buoyancy routine (inside the large
+  `sub_08018020` player physics, asm-only) is not yet traced, so the
+  mechanism is documented as measured-approximation, not routine-exact.
+
 ## Patch 1254 - Native EXP/NEXT hub rows and linked Skeleton parts
 
 - **Scope.** `src/runtime/aos/menus/aos_pause_graphics.c`,

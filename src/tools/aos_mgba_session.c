@@ -196,7 +196,7 @@ static void run_on_thread(struct mCoreThread *thread) {
     const AosRunSpec *spec = g_ctx.spec;
     struct mCore *core = thread->core;
     uint32_t keys = 0;
-    int key_index = 0;
+    int key_index = 0, poke_index = 0;
 
     if (spec->state_in &&
         !load_state_file_on_thread(core, spec->state_in))
@@ -222,6 +222,15 @@ static void run_on_thread(struct mCoreThread *thread) {
         }
         core->setKeys(core, keys);
         core->runFrame(core);
+        while (poke_index < spec->poke_count &&
+               spec->pokes[poke_index].frame == frame) {
+            const AosPokeEvent *pk = &spec->pokes[poke_index];
+            size_t avail = 0;
+            void *block = mCoreGetMemoryBlock(core, pk->address, &avail);
+            if (block && pk->size <= avail)
+                memcpy(block, pk->data, pk->size);
+            ++poke_index;
+        }
         if (frame == 0 && g_ctx.result && !g_ctx.result->fb_first) {
             g_ctx.result->fb_first = malloc(AOS_MGBA_WIDTH *
                                             AOS_MGBA_HEIGHT *
@@ -497,3 +506,66 @@ AosPeekRequest *aos_mgba_parse_peeks(const char *spec, int *count) {
 }
 
 void aos_mgba_free_peeks(AosPeekRequest *peeks) { free(peeks); }
+
+static int hexval(int c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+AosPokeEvent *aos_mgba_parse_pokes(const char *spec, int *count) {
+    *count = 0;
+    if (!spec || !*spec) return NULL;
+    int capacity = 8;
+    AosPokeEvent *list = malloc(capacity * sizeof *list);
+    char *copy = strdup(spec);
+    char *save = NULL;
+    for (char *tok = strtok_r(copy, ",", &save); tok;
+         tok = strtok_r(NULL, ",", &save)) {
+        /* "frame:addr:hexbytes" — hexbytes is a plain byte string
+         * ("0a0b0c" or "0A0B0C"); odd trailing nibble is rejected. */
+        char *c1 = strchr(tok, ':');
+        if (!c1) continue;
+        char *c2 = strchr(c1 + 1, ':');
+        if (!c2) continue;
+        *c1 = '\0';
+        *c2 = '\0';
+        char *end = NULL;
+        long frame = strtol(tok, &end, 10);
+        if (end == tok) continue;
+        unsigned long addr = strtoul(c1 + 1, &end, 16);
+        if (end == c1 + 1) continue;
+        const char *hex = c2 + 1;
+        size_t nibbles = strlen(hex);
+        if (nibbles % 2) continue;
+        uint32_t size = (uint32_t)(nibbles / 2);
+        if (!size) continue;
+        uint8_t *data = malloc(size);
+        if (!data) continue;
+        bool ok = true;
+        for (uint32_t i = 0; i < size; ++i) {
+            int hi = hexval(hex[2 * i]), lo = hexval(hex[2 * i + 1]);
+            if (hi < 0 || lo < 0) { ok = false; break; }
+            data[i] = (uint8_t)((hi << 4) | lo);
+        }
+        if (!ok) { free(data); continue; }
+        if (*count == capacity) {
+            capacity *= 2;
+            list = realloc(list, capacity * sizeof *list);
+        }
+        list[*count].frame = (int)frame;
+        list[*count].address = (uint32_t)addr;
+        list[*count].data = data;
+        list[*count].size = size;
+        ++*count;
+    }
+    free(copy);
+    return list;
+}
+
+void aos_mgba_free_pokes(AosPokeEvent *pokes, int count) {
+    if (!pokes) return;
+    for (int i = 0; i < count; ++i) free(pokes[i].data);
+    free(pokes);
+}

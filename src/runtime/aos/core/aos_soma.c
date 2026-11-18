@@ -291,6 +291,15 @@ void aos_soma_air(AosSoma *soma, const AosCollision *layer, uint16_t held) {
              (soma->flags & AOS_FLAG_SLOW_FALL)) && soma->vy > 0x2800)
             soma->vy += (int32_t)0xFFFFD800;               /* -0.15625 */
         if (soma->abilities & AOS_ABILITY_ZERO_FALL) soma->vy = soma->gravity_mod = 0;
+        /* Water buoyancy (mGBA-measured, room 0/5 pool): while the head
+         * and body probes sit in bit-3 cells and the walk-on-special
+         * ability is absent, Soma rises until the head leaves the water;
+         * collide_special then latches vy to 0 at the surface, which
+         * produces the float-at-arm-depth bob. */
+        if ((soma->flags & (AOS_FLAG_BODY_SPECIAL | AOS_FLAG_HEAD_SPECIAL)) ==
+                (AOS_FLAG_BODY_SPECIAL | AOS_FLAG_HEAD_SPECIAL) &&
+            !(soma->abilities & AOS_ABILITY_SPECIAL_WALK) && soma->vy > (int32_t)0xFFFF8000)
+            soma->vy -= 0x2000;                            /* -0.125/frame */
     }
     air_routine(soma, layer);
 }

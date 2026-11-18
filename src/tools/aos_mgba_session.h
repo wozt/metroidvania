@@ -42,6 +42,14 @@ typedef struct {
     uint32_t size;  /* bytes actually returned */
 } AosPeekResult;
 
+/* level-triggered memory write applied after `frame`'s runFrame */
+typedef struct {
+    int frame;
+    uint32_t address;
+    uint8_t *data;  /* malloc'd raw bytes, caller frees */
+    uint32_t size;
+} AosPokeEvent;
+
 typedef struct {
     int frames;
     const AosKeyEvent *keys;
@@ -53,6 +61,8 @@ typedef struct {
     const char *state_out;     /* path, may be NULL */
     const AosPeekRequest *peeks;
     int peek_count;
+    const AosPokeEvent *pokes;
+    int poke_count;
     double fps_cap;           /* max emulated fps; 0 = unthrottled */
     /* Optional live framebuffer mirror (W*H u32, 0xAABBGGRR) plus a
      * sequence counter bumped on every copy; both may be NULL. */
@@ -106,6 +116,10 @@ void aos_mgba_free_frames(int *frames);
 /* Parse "ADDR:SIZE" or "F:ADDR:SIZE" comma list. */
 AosPeekRequest *aos_mgba_parse_peeks(const char *spec, int *count);
 void aos_mgba_free_peeks(AosPeekRequest *peeks);
+
+/* Parse "F:ADDR:HEXBYTES" comma list (hex byte string, e.g. 0a0b0c). */
+AosPokeEvent *aos_mgba_parse_pokes(const char *spec, int *count);
+void aos_mgba_free_pokes(AosPokeEvent *pokes, int count);
 
 #ifdef __cplusplus
 }

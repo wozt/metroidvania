@@ -1,3 +1,17 @@
+## Patch 1227 - Add a reproducible continuous-play Aria route contract
+
+- **Evidence added.** The headless route now starts in room 0/0, crosses the
+  native exit into room 0/3, kills two zombies through the exported weapon
+  entity and collision path (XP 1 then XP 2), and continues through the next
+  exit into room 0/5.
+- **Test.** `aria_simulate_route` generates its input script in a private
+  temporary directory and asserts both room transitions, the exact XP
+  messages and the final two-transition summary. It uses no committed ROM,
+  save or capture artifacts.
+- **Scope.** This proves a continuous runtime gameplay segment only. START,
+  save, quit and reload remain outside `--simulate` and are not claimed by
+  this contract; native emulator comparison is still pending.
+
 ## Patch 1226 - Recycle deleted Aria enemy slots in continuous room play
 
 - **Gap found during Phase D route proof.** A 500-frame room 0/3 run grew

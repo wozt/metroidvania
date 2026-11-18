@@ -675,8 +675,11 @@ static int room_transition_tick(AriaRoomTransition *t,
         }
         t->settle_left = room_transition_settle_frames;
         /* The camera re-settles on the arrival like the normal
-         * exit path's follow_camera did on the swap frame. */
+         * exit path's follow_camera did on the swap frame. The
+         * scroll reseed covers a transition whose target keeps the
+         * same room identity (the native reload reseeds bgInfo). */
         follow_camera(room, soma->x >> 16, soma->y >> 16, cam_x, cam_y);
+        aria_camera_reseed(room, *cam_x, *cam_y);
         return 1;
     }
     if (t->stage == 2) {
@@ -788,6 +791,9 @@ static int warp_commit_load(SDL_Renderer *renderer, AriaRoom *room,
     if (*background) SDL_DestroyTexture(*background);
     *background = texture;
     follow_camera(room, soma->x >> 16, soma->y >> 16, cam_x, cam_y);
+    /* A warp reload reseeds bgInfo[1] natively; cover the
+     * same-room warp the room-identity check would skip. */
+    aria_camera_reseed(room, *cam_x, *cam_y);
     return 1;
 }
 
@@ -1966,7 +1972,15 @@ int aria_runtime_main(int argc, char **argv) {
                 player_stats.hp = soma.hp;
             }
             aos_combat_tick(&soma.combat);
-            follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
+            /* The per-frame camera request the player update tails
+             * issue natively (sub_0800ED24(0, ...) through
+             * aos_scroll_camera_follow): BG1 glides at the 8 px/frame
+             * cap toward the +0x13214/+0x13216 anchor instead of
+             * snapping to the follow_camera settle target. The
+             * fallback only covers an unbound scroll layer. */
+            if (!aria_camera_follow(&room, soma.x, soma.y, &cam_x, &cam_y))
+                follow_camera(&room, soma.x >> 16, soma.y >> 16,
+                              &cam_x, &cam_y);
             /* The native entity order places the equipped weapon before the
              * room enemies. Headless simulation now consumes the same input,
              * animation and hitbox records as the interactive loop, without
@@ -2771,6 +2785,10 @@ int aria_runtime_main(int argc, char **argv) {
                     layer = room_layer(&room);
                     save_room = (AosSaveRoom){0};
                     follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
+                    /* Same-room reseed: without it the scroll layer
+                     * keeps its stale bgInfo[1] position and the
+                     * next camera tick drags the view back. */
+                    aria_camera_reseed(&room, cam_x, cam_y);
                 }
                 break;
             default: break;
@@ -3808,7 +3826,15 @@ int aria_runtime_main(int argc, char **argv) {
             }
             /* sub_080426B0 after the player update. */
             aos_combat_tick(&soma.combat);
-            follow_camera(&room, soma.x >> 16, soma.y >> 16, &cam_x, &cam_y);
+            /* The per-frame camera request the player update tails
+             * issue natively (sub_0800ED24(0, ...) through
+             * aos_scroll_camera_follow): BG1 glides at the 8 px/frame
+             * cap toward the +0x13214/+0x13216 anchor instead of
+             * snapping to the follow_camera settle target. The
+             * fallback only covers an unbound scroll layer. */
+            if (!aria_camera_follow(&room, soma.x, soma.y, &cam_x, &cam_y))
+                follow_camera(&room, soma.x >> 16, soma.y >> 16,
+                              &cam_x, &cam_y);
             /* Entity slots: the weapon entity updates before the enemies. */
             if (weapon_loaded) {
                 aos_weapon_update(&weapon_entity, &soma, &weapon_sprite.data, &layer, aos_random);
@@ -4049,15 +4075,23 @@ aria_render_frame:
         int sx = soma.x >> 16, sy = soma.y >> 16;
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
-        /* BG1's screen offset: the camera position plus the scroll
-         * transactions' accumulated delta. Native sub_0803FBBC writes
-         * bgInfo[1].xPos/yPos integer halves into
+        /* BG1's screen offset: the integrated bgInfo[1] position —
+         * native sub_0803FBBC writes its integer halves into
          * gDisplayRegisters.bgOfs[1].hOfs/vOfs and the per-frame
-         * camera request and scripted sub_0800ED24 transactions
-         * compose on that one accumulator; entities keep cam_x/cam_y
-         * (only +0x59-bit-1 records shift, sub_08000F60). */
+         * camera request (aria_camera_follow) and scripted
+         * sub_0800ED24 transactions compose on that one accumulator.
+         * cam_x/cam_y already track it through the camera tick, so
+         * the offset passed on is the residual same-frame
+         * transaction delta (scroll pos minus cam). The
+         * aria_scroll_bg1_offset call stays for its once-per-frame
+         * unk_60.unk_4C8 phase tick. */
         int32_t bg1_ox = 0, bg1_oy = 0;
         aria_scroll_bg1_offset(&room, &bg1_ox, &bg1_oy);
+        int32_t scroll_x = 0, scroll_y = 0;
+        if (aria_scroll_bg1_pos(&room, &scroll_x, &scroll_y)) {
+            bg1_ox = scroll_x - (int32_t)cam_x;
+            bg1_oy = scroll_y - (int32_t)cam_y;
+        }
         /* The bitmap covers the whole room map: the exporter writes
          * width_screens x height_screens screen blocks of 256 px
          * (verified against every exported background.bmp). The GBA

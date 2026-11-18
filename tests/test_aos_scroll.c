@@ -1183,6 +1183,58 @@ int main(void) {
         }
     }
 
+    /* ---- aos_scroll_camera_follow: the per-frame camera request
+     * the player update tails issue through sub_0800ED24(0, vx, vy)
+     * — vx/vy are the scroll-relative fine position integer halves
+     * minus the +0x13214/+0x13216 anchors (0x78/0x6F), so BG1
+     * glides at the native 8 px/frame cap toward the settle
+     * position instead of snapping. */
+    {
+        memset(&s, 0, sizeof s);
+        /* A 4x4-screen room; BG1 seeded at x = 0, y = 0x30 (the
+         * native y pin). Player stands 20 px right of and 20 px
+         * below the anchor on screen. */
+        aos_scroll_bind(&s, 1, 4, 4, 0, 0, 0, 0, 0x30 << 16);
+        memset(&out, 0, sizeof out);
+        /* Frame 1: screen pos (140, 131) -> request (+20, +20) px,
+         * capped to +8 px each axis. */
+        int32_t px = (int32_t)140 << 16, py = (int32_t)179 << 16;
+        assert(aos_scroll_camera_follow(&s, 0, px, py, NULL, &out) == 1);
+        assert(s.bg[1].x_pos == (int32_t)8 << 16);
+        assert(s.bg[1].y_pos == ((int32_t)0x30 << 16) + (8 << 16));
+        /* Frames 2-3 keep gliding at the cap while the residual
+         * request stays above 8 px; frame 4 lands the 4 px
+         * remainder and frame 5 requests zero. */
+        assert(aos_scroll_camera_follow(&s, 0, px, py, NULL, &out) == 1);
+        assert(s.bg[1].x_pos == (int32_t)16 << 16);
+        assert(s.bg[1].y_pos == ((int32_t)0x30 << 16) + (16 << 16));
+        assert(aos_scroll_camera_follow(&s, 0, px, py, NULL, &out) == 1);
+        assert(s.bg[1].x_pos == (int32_t)20 << 16);
+        assert(s.bg[1].y_pos == ((int32_t)0x30 << 16) + (20 << 16));
+        assert(aos_scroll_camera_follow(&s, 0, px, py, NULL, &out) == 1);
+        assert(s.bg[1].x_pos == (int32_t)20 << 16);
+        assert(s.bg[1].x_vel == 0 && s.bg[1].y_vel == 0);
+        assert(s.disp_h[1] == 20 && s.disp_v[1] == 0x30 + 20);
+        /* A +5 px player step requests +5 px — under the cap the
+         * glide is proportional, not stepped. */
+        px = (int32_t)145 << 16;
+        assert(aos_scroll_camera_follow(&s, 0, px, py, NULL, &out) == 1);
+        assert(s.bg[1].x_pos == (int32_t)25 << 16);
+        assert(aos_scroll_camera_follow(&s, 0, px, py, NULL, &out) == 1);
+        assert(s.bg[1].x_pos == (int32_t)25 << 16);
+        /* Moving the player 30 px left of the anchor requests
+         * -30 px, capped at -8 px per frame. */
+        px = (int32_t)(25 + 120 - 30) << 16;   /* screen x = 90 */
+        assert(aos_scroll_camera_follow(&s, 0, px, py, NULL, &out) == 1);
+        assert(s.bg[1].x_pos == (int32_t)17 << 16);
+        assert(s.bg[1].x_vel == -0x80000);
+        /* The ED24 gate suppresses the whole transaction while
+         * +0x427 exceeds param0 0 — position and velocity hold. */
+        int32_t held_x = s.bg[1].x_pos, held_y = s.bg[1].y_pos;
+        assert(aos_scroll_camera_follow(&s, 1, px, py, NULL, &out) == 0);
+        assert(s.bg[1].x_pos == held_x && s.bg[1].y_pos == held_y);
+    }
+
     puts("aos_scroll: ok");
     return 0;
 }

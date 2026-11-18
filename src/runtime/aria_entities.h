@@ -86,11 +86,44 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     AriaCombat *combat, uint16_t new_input,
                     uint16_t held_input, AosRoomMusic *room_music);
 
-/* The BG1 scroll offset accumulated by the ported sub_0800ED24
- * transactions (aos/core/aos_scroll), as a delta in integer pixels
- * from the camera position the layer was bound at — 0,0 before the
- * room's first transaction. The draw path adds it to cam_x/cam_y
- * for the BG1 source rect only; entities keep cam_x/cam_y. */
+/* The per-frame camera-follow request the player entity updates
+ * issue natively through sub_0800ED24(0, vx, vy) (the
+ * sub_0801B0D8/sub_0801FEF8 tails): runs the gated BG1 scroll
+ * transaction once per frame so cam_x/cam_y track the integrated
+ * bgInfo[1] position and glide at the native 8 px/frame cap
+ * instead of snapping to the follow_camera settle target.
+ * player_x/player_y are Soma's 16.16 world position; cam_x/cam_y
+ * are the integer-pixel camera in/out — on return they hold
+ * bgInfo[1]'s integrated integer position. Returns false only
+ * when the scroll layer is not bound to this room (the caller
+ * keeps follow_camera's settle target). */
+bool aria_camera_follow(AriaRoom *room, int32_t player_x,
+                        int32_t player_y, int *cam_x, int *cam_y);
+
+/* Forces the scroll layer to reseed at the current camera like a
+ * native room (re)load: object20_scroll_ensure only rebinds when
+ * the room identity changes, so a same-room reseed (the debug
+ * teleport) would otherwise leave bgInfo[1] at its stale position
+ * and the next camera tick would drag the view back across the
+ * map. Runs the same bind + sub_0800D288 load tail. */
+void aria_camera_reseed(AriaRoom *room, int cam_x, int cam_y);
+
+/* The integrated BG1 scroll position (bgInfo[1]'s integer halves
+ * — the bgOfs[1] values sub_0803FBBC writes back), in integer
+ * pixels, when the scroll layer is bound to `room`. This is the
+ * absolute BG1 draw offset: it already includes the camera glide
+ * and every scripted transaction. Returns false before the room's
+ * first camera tick/transaction or for another room's stale
+ * state. */
+bool aria_scroll_bg1_pos(const AriaRoom *room, int32_t *x, int32_t *y);
+
+/* The BG1 scroll offset accumulated since the room's scroll bind
+ * (aos/core/aos_scroll), as a delta in integer pixels from the
+ * camera position the layer was bound at — 0,0 before the first
+ * bind. With aria_camera_follow the integrated position IS the
+ * camera, so the draw path reads the absolute position through
+ * aria_scroll_bg1_pos; this accessor remains for its once-per-
+ * frame unk_60.unk_4C8 phase tick and diagnostics. */
 void aria_scroll_bg1_offset(const AriaRoom *room, int32_t *x, int32_t *y);
 
 /* The gDisplayRegisters.bgOfs[bg] shadow for BG1..BG3: each

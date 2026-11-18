@@ -50,7 +50,19 @@ void aos_enemy_soul_attack_contact(int index, int *x, int *y) {
  * + 0x70 byte for the blue list's type-7 -> type-0xA gate (0 for the
  * props, 8 for walls and Object0D). The victim's recent-hit slots and
  * the attacker/victim hit callbacks are not consumed here; callers
- * keeping an AosCombat apply aos_combat_can_take/take themselves. */
+ * keeping an AosCombat apply aos_combat_can_take/take themselves.
+ *
+ * The other three attacker sources of the same mask stay with their
+ * owners: bit 0x1 (sub_08041D54, the victim's attack box — or its hurt
+ * box when + 0x71 == 0, the sub_080427B8 registration — against the
+ * + 0x13110 player entity's hurt rectangle at 0x03001A50) and the
+ * weapon-side bit 0x2 (sub_08041864 over the + 0x1311C attack-entity
+ * slot, the weapon entity) are approximated by aos_enemy_collide and
+ * the breakable/Object0D callers' live weapon hitbox; bit 0x4
+ * (sub_08041BDC, the victim's hurt box against the + 0x13110 entity's
+ * attack rectangle at 0x03001A48) has no ported counterpart because
+ * the player's per-state attack hitbox (sub_08042848 writes) is not
+ * modelled. */
 uint8_t aos_enemy_soul_attack_hit(AosRect target, uint8_t victim_type) {
     if (!soul_attacks) return 0;
     for (int i = 0; i < soul_attack_count; ++i) {

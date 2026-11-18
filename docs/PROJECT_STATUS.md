@@ -1,3 +1,109 @@
+## Patch 1247 - Per-frame camera follow: native ED24 request replaces the stateless snap
+
+- **Scope.** `src/runtime/aos/core/aos_scroll.c/.h`,
+  `src/runtime/aria_entities.c/.h`, `src/runtime/aria_runtime.c`,
+  `tests/test_aos_scroll.c`, `data/native_parity/annotations.tsv`
+  and this file.
+- **Native evidence.** The player entity updates
+  `sub_0801B0D8`/`sub_0801FEF8` tail every frame with
+  `sub_0800ED24(0, vx, vy)` where `vx`/`vy` are the scroll-relative
+  fine position (`+0x524`/`+0x528` integer halves) minus the
+  `gEwramData + 0x13214`/`+0x13216` camera anchors — `0x78`/`0x6F`,
+  seeded by `sub_0801487C` (`code_08014548.s:443-451`). `sub_0800ED24`
+  (`code_0800CB00.c`) gates on `+0x427 > param0`, then runs
+  `sub_0803FBBC(1, vx, vy)` + `sub_08000F60(1)` + `sub_0800D288()`.
+  `sub_0803FBBC`'s positive/negative helpers (`sub_0803F3F8`/
+  `sub_0803F4C8`/`sub_0803F580`/`sub_0803F650`,
+  `code_08039340.s:12649+`) store the per-frame velocity capped at
+  `0x80000` (8 px/call), clamped to the `pBgMetadata` map edge, and
+  integrate `bgInfo[1].xPos/yPos` — so the camera glides instead of
+  snapping. The camera-mode request at `code_08036B40.c:289`
+  (`player - 0x78/0x60`) and the transition settle at
+  `code_0800F1FC.c:1330` confirm the same request shape.
+- **Change.** New `aos_scroll_camera_follow` reproduces the ED24(0)
+  request: it derives the scroll-relative screen position from the
+  player's 16.16 world position minus `bgInfo[1]`'s integrated
+  position and issues the anchor-delta request through the existing
+  gated transaction (request + entity shift + layer propagation).
+  `aria_camera_follow` (`aria_entities.c`) binds the room's scroll
+  layers on first use — seeded at the camera like the native room
+  load — runs the request once per frame, and writes `cam_x`/`cam_y`
+  back from the integrated `bgInfo[1]` integer position, so every
+  consumer (entity draw, spawn windows, A094 view, BG1 draw offset)
+  sees the native scroll position. Both normal-play camera ticks
+  (`aria_runtime.c` sim loop and SDL loop) call it with a
+  `follow_camera` fallback only for an unbound scroll layer;
+  `follow_camera` remains the room-entry settle seed for the
+  transition/warp/spawn paths, which now also call the new
+  `aria_camera_reseed` so a same-room warp/teleport/transition
+  reseeds `bgInfo[1]` like the native reload instead of letting the
+  next tick drag the view back. `aria_scroll_bg1_pos` exposes the
+  absolute integrated BG1 offset; the draw path composes
+  `cam_x + (scroll_pos - cam_x)` so the residual same-frame
+  transaction delta still reaches `aria_bg_room_begin` without
+  double-counting the camera motion.
+- **Supported subset.** Only the normal-play follow mode is
+  ported: fixed anchors `0x78`/`0x6F` and the `+0x427` gate with
+  `param0 = 0`. The `code_08036B40.c` GameMode camera states
+  (debug viewer families using anchor `0x60`, scripted pan modes)
+  and case-5's direct ungated `sub_0803FBBC` stay unported — case 5
+  approximates through the shared gated request. Anchor rewrites by
+  unported camera modes are not modelled.
+- **Tests.** `tests/test_aos_scroll.c` pins the glide: a 20 px
+  target delta advances exactly 8 px/frame, lands the remainder,
+  requests proportionally under the cap, clamps negative motion at
+  -8 px/frame, and the `+0x427` gate holds position and velocity.
+  `cmake --build build -j8` clean; `ctest -R
+  "aos_scroll|aria_simulate"` 10/10 pass.
+- **Remaining gaps.** No native-capture comparison of the glide yet;
+  the per-frame camera request and scripted `sub_0800ED24`
+  transactions on the same frame still resolve BG1's velocity
+  sequentially like the ported transaction order rather than a
+  native single accumulator.
+
+## Patch 1246 - sub_080421AC attacker-source audit: +0x13110/+0x1311C identities resolved
+
+- **Scope.** `src/runtime/aos/core/aos_enemy.c` (doc comment on
+  `aos_enemy_soul_attack_hit`), `data/native_parity/annotations.tsv`
+  and this file. Documentation-only audit of the remaining
+  `sub_080421AC` attacker sources; no behavior change.
+- **Native evidence.** `gEwramData + 0x13110` is the primary
+  player entity: startup code in `code_08014548.s` creates it,
+  stores the pointer at `+ 0x13110` and mirrors it at `+ 0x13168`,
+  and `sub_0804277C(e, 1, sub_080211F4, 0)` gives its `+ 0x70` type
+  byte 1. Each frame `sub_08042584` rewrites its two world
+  rectangles — the attack rect at `0x03001A48` and the hurt rect
+  at `0x03001A50` — from its per-slot hitbox pair (`entity + 0x73`
+  indexes the IWRAM table at `0x03001A58`, 8 bytes per entity
+  slot, written by `sub_08042848`/`sub_080428B4`/`sub_08042884`/
+  `sub_080428F0` and cleared by the `sub_08042754` DMA fill).
+  `+ 0x1311C` is the attack-entity slot (a four-pointer array
+  indexed by the entity's `+ 0x28` byte): weapon/attack entity
+  updates in `code_080211F0.s` (e.g. `sub_080224BC`) store their
+  entity there and clear it on delete or terminal update state;
+  result bit 0x2 (`sub_08041864` + `sub_080415A8` + the
+  entity-record callbacks) reads it.
+- **Verdict.** Bit 0x1 (`sub_08041D54`: the victim's attack box —
+  or its hurt box when `+ 0x71 == 0`, the `sub_080427B8`
+  registration used by many enemy files — against the player hurt
+  rect) is approximated by `aos_enemy_collide`'s enemy attack box
+  vs `soma->hurtbox` test, including the `aos_combat_take`
+  recent-slot write; the `+ 0x71 == 0` hurt-box fallback stays
+  unmodelled. Bit 0x2 is approximated by the live
+  `aos_weapon_hitbox` overlap in `aos_enemy_collide` and the
+  breakable/Object08/Object0D/Object0F callers. Bit 0x4
+  (`sub_08041BDC`: the victim's hurt box against the player
+  attack rect and its `0x03001A5C` records) has no ported
+  counterpart: the player's per-state attack hitbox written by
+  `sub_08042848` (e.g. the `0x080E1314`/`0x080E1318` records) has
+  no model in `aos_soma`, so producing it would invent data. The
+  entity-record callbacks and the per-bit secondary pass remain
+  unmodelled. `annotations.tsv` rows `aos.souls.red_soul_use`,
+  `aos.souls.blue_soul_use`, `aos.environment.room_breakables` and
+  `aos.objects.destructible_prop` record the same verdict.
+- **Tests.** No behavior change (comment and registry updates
+  only); `cmake --build build -j8` clean.
+
 ## Patch 1245 - Affine draw audit + sub_080421AC non-enemy victim dispatch
 
 - **Scope.** `src/runtime/aria_draw.c`,

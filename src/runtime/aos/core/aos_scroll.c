@@ -565,6 +565,29 @@ int aos_scroll_transaction(AosScroll *s, uint8_t gate_byte, int param0,
     return 1;
 }
 
+int aos_scroll_camera_follow(AosScroll *s, uint8_t gate_byte,
+                             int32_t player_x, int32_t player_y,
+                             const AosScrollWorld *world,
+                             AosScrollOut *out) {
+    /* The player's +0x524/+0x528 fine position is scroll-relative:
+     * world minus bgInfo[1]'s 16.16 position. The native reads its
+     * integer half as a u16 cast to s16 (floor semantics on the
+     * 16.16 value, matching the >>16 arithmetic shift). */
+    int32_t fx = player_x - s->bg[1].x_pos;
+    int32_t fy = player_y - s->bg[1].y_pos;
+    int sx = (int16_t)(uint16_t)((uint32_t)fx >> 16);
+    int sy = (int16_t)(uint16_t)((uint32_t)fy >> 16);
+    /* sub_0801487C's anchors: gEwramData +0x13214 = 0x78,
+     * +0x13216 = 0x6F. The <<16 shifts wrap like the native s32
+     * lsl (the deltas are small; the u32 form keeps it defined). */
+    int32_t vx = (int32_t)((uint32_t)(sx - 0x78) << 16);
+    int32_t vy = (int32_t)((uint32_t)(sy - 0x6F) << 16);
+    /* sub_0800ED24(0, vx, vy): the same gated transaction every
+     * per-frame camera request runs — request(1) + sub_08000F60
+     * + sub_0800D288. */
+    return aos_scroll_transaction(s, gate_byte, 0, vx, vy, world, out);
+}
+
 /* ---- sub_0800D288's hBlankEffect wave programs ----
  * Ports of the scanline writers in third_party/cvaos
  * src/code_0800CB00.c that fill gEwramData->hBlankEffect.

@@ -361,10 +361,13 @@ int audit_transitions(void) {
     return unmatched || outside ? 1 : 0;
 }
 
-/* Camera: BG1 follows Soma at screen (0x78, 0x6F), the settle target of
- * the room transition (gEwramData + 0x13214 / 0x13216); BG1 stays within the
- * room, with y >= 0x30 and one-screen axes pinned like sub_0803FBBC. Scroll
- * speed limits are not modelled. */
+/* Camera settle target: BG1 aims for Soma at screen (0x78, 0x6F), the
+ * gEwramData + 0x13214 / + 0x13216 anchors sub_0801487C seeds; BG1 stays
+ * within the room, with y >= 0x30 and one-screen axes pinned like
+ * sub_0803FBBC's pBgMetadata gates. Per-frame motion no longer snaps to
+ * this target — aria_camera_follow issues the native sub_0800ED24(0)
+ * request and BG1 glides at the 8 px/frame cap — so this helper only
+ * seeds room entries, warps, teleports and the transition settle math. */
 void follow_camera(const AriaRoom *room, int32_t x, int32_t y, int *cam_x, int *cam_y) {
     int cx = x - 0x78, cy = y - 0x6F;
     int max_x = (room->width_screens << 8) - VIEW_W;

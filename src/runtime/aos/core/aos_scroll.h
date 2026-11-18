@@ -379,6 +379,37 @@ int aos_scroll_transaction(AosScroll *s, uint8_t gate_byte, int param0,
                            int32_t vx, int32_t vy,
                            const AosScrollWorld *world, AosScrollOut *out);
 
+/* The per-frame camera-follow request the ported rooms need: the
+ * tail of the player entity updates sub_0801B0D8/sub_0801FEF8
+ * (the two character variants selected through
+ * sUnk_084F10B4[currentCharacter]) issues
+ * sub_0800ED24(0, vx, vy) once per update with
+ *   vx = ((s16)player_unk_524_int - unk_13214) << 16
+ *   vy = ((s16)player_unk_528_int - unk_13216) << 16
+ * (the same shape as code_0800F1FC.c:1330's sub_080104EC stage-2
+ * settle and code_08036B40.c:289's debug viewer). +0x524/+0x528
+ * are the player's 16.16 fine position RELATIVE TO THE SCROLL
+ * ORIGIN, so the request is the distance between the player's
+ * screen position integer half and the gEwramData +0x13214/
+ * +0x13216 camera anchors — 0x78/0x6F seeded by sub_0801487C
+ * (code_08014548.s:443-451). sub_0803FBBC then caps the request
+ * at +/-8 px per call and clamps it to the room edges, so BG1
+ * glides toward the settle position instead of snapping — the
+ * native camera motion the ported follow_camera approximated
+ * statelessly. player_x/player_y are the player's 16.16 WORLD
+ * position; the scroll-relative fine position is derived here
+ * against bgInfo[1]. The ED24 gate applies with param0 = 0:
+ * gate_byte > 0 suppresses the request like every other
+ * transaction. Returns the aos_scroll_transaction result. The
+ * camera-mode requests of the unported GameMode* camera states
+ * (sub_08036B40.c's debug viewer families, scripted pan modes)
+ * stay out of scope — the ported path only needs this follow
+ * mode. */
+int aos_scroll_camera_follow(AosScroll *s, uint8_t gate_byte,
+                             int32_t player_x, int32_t player_y,
+                             const AosScrollWorld *world,
+                             AosScrollOut *out);
+
 /* One source/destination rectangle of a wrapped text-BG blit: the
  * layer bitmap is sampled at (src_x, src_y) for w*h pixels and
  * drawn at (dst_x, dst_y) inside the view. Host draw-path helper,

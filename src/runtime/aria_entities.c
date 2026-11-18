@@ -295,13 +295,18 @@ static void apply_enemy_create_events(const AosEnemy *enemy) {
  * instead of only being reported. BG1 rebinds once per room to
  * the room's screen counts (the pBgMetadata->unk_0/unk_1 map-size
  * gates — the same counts follow_camera clamps against) and the
- * follow_camera position, which is the runtime's BG1-scroll
- * approximation; transaction deltas then accumulate on it.
- * Still unmodelled and reported through AosScrollOut: the
- * per-frame camera-follow scroll (follow_camera recomputes
- * cam_x/cam_y statelessly; the draw path adds this layer's
- * accumulated transaction delta on top through
- * aria_scroll_bg1_offset). The BG2/BG3 layer records
+ * follow_camera position, which seeds the layer until the first
+ * per-frame camera request; transaction deltas then accumulate on
+ * it. The per-frame camera-follow scroll IS modelled: the player
+ * update tails' sub_0800ED24(0, vx, vy) request runs once per
+ * frame through aria_camera_follow (aos_scroll_camera_follow —
+ * the scroll-relative fine position minus the +0x13214/+0x13216
+ * anchors, capped at the native 8 px/frame by sub_0803FBBC), so
+ * cam_x/cam_y track the integrated bgInfo[1] position and glide
+ * at the native cap instead of snapping to the follow_camera
+ * settle target (which still seeds room entries). The draw path
+ * reads the integrated position through aria_scroll_bg1_pos (the
+ * same bgOfs[1] value entities see through cam_x/cam_y). The BG2/BG3 layer records
  * (unk_18/unk_14/unk_16 plus the pBgMetadata dimension bytes)
  * bind per room from the room descriptor's background table
  * when a ROM is bound (aria_scroll_layers_refresh); without one
@@ -1497,7 +1502,10 @@ static void object20_scroll_tx(AriaRoom *room, int cam_x, int cam_y,
     AosScrollWorld sw = { 0, false, aria_scroll_frame_phase,
                           aria_scroll_entities, ARIA_ENTITY_DATA_RECORDS,
                           room ? room->number : -1 };
+    /* The gated ED24 early-out leaves `out` untouched — zero it so
+     * the fx/rebuild reads below stay defined. */
     AosScrollOut sx;
+    memset(&sx, 0, sizeof sx);
     int ran = aos_scroll_transaction(&aria_scroll, object20_ewram_427,
                                      param0, arg1, 0, &sw, &sx);
     /* sub_0800D288's mode-19/21 else-branch writes
@@ -1518,20 +1526,90 @@ static void object20_scroll_tx(AriaRoom *room, int cam_x, int cam_y,
                id, sx.rebuild_x.word_count, sx.rebuild_y.word_count);
 }
 
-/* The BG1 scroll offset the ported sub_0800ED24 transactions have
+/* The per-frame camera-follow request the player entity updates
+ * issue natively (sub_0801B0D8/sub_0801FEF8 tails:
+ * sub_0800ED24(0, vx, vy) with vx/vy the scroll-relative fine
+ * position minus the +0x13214/+0x13216 anchors). Runs once per
+ * frame where the runtime's follow_camera used to recompute the
+ * settle target statelessly: the scroll layer binds on first use
+ * (seeded at the current camera, like the native room load), the
+ * gated transaction integrates BG1 at the native 8 px/frame cap
+ * and clamps, sub_08000F60 shifts the flagged entityData records
+ * and sub_0800D288 propagates BG1's velocity to BG2/BG3 — all
+ * inside aos_scroll_camera_follow/aos_scroll_transaction.
+ * player_x/player_y are Soma's 16.16 world position (soma.x/y);
+ * cam_x/cam_y are the integer-pixel camera in/out: on return they
+ * hold bgInfo[1]'s integrated integer position — the value every
+ * cam_x/cam_y consumer (entity draw, spawn windows, the A094
+ * view) should see, matching the native scroll-relative entity
+ * positions. Returns false only when the scroll layer is not
+ * bound to this room (the caller then keeps follow_camera's
+ * settle target). The +0x427 gate suppresses the request exactly
+ * like the native ED24(0, ...) call while it holds. */
+bool aria_camera_follow(AriaRoom *room, int32_t player_x,
+                        int32_t player_y, int *cam_x, int *cam_y) {
+    object20_scroll_ensure(room, *cam_x, *cam_y);
+    if (aria_scroll_room_area != room->area ||
+        aria_scroll_room_number != room->number)
+        return false;
+    object20_scroll_entities_refresh();
+    /* unk_60.unk_4C8: the wave phase the hblank/affine cases read;
+     * same binding as object20_scroll_tx. */
+    AosScrollWorld sw = { 0, false, aria_scroll_frame_phase,
+                          aria_scroll_entities, ARIA_ENTITY_DATA_RECORDS,
+                          room->number };
+    /* Same gated early-out as object20_scroll_tx: keep `sx`
+     * defined when +0x427 suppresses the request. */
+    AosScrollOut sx;
+    memset(&sx, 0, sizeof sx);
+    int ran = aos_scroll_camera_follow(&aria_scroll, object20_ewram_427,
+                                       player_x, player_y, &sw, &sx);
+    (void)ran;   /* the native caller discards ED24's return too */
+    if (sx.fx & AOS_SCROLL_FX_BG2_DISABLE)
+        object20_disp_cnt &= ~0x0400u;
+    const AosBgLayer *b1 = &aria_scroll.bg[1];
+    *cam_x = (int)(b1->x_pos >> 16);
+    *cam_y = (int)(b1->y_pos >> 16);
+    return true;
+}
+
+void aria_camera_reseed(AriaRoom *room, int cam_x, int cam_y) {
+    /* Drop the bound-room marker so object20_scroll_ensure runs its
+     * full bind + load tail again at the new camera seed — the
+     * native room-load reseed of bgInfo[1] (sub_0800F9EC stores the
+     * scroll origin, sub_0800D288 propagates the zero velocity). */
+    aria_scroll_room_area = -1;
+    aria_scroll_room_number = -1;
+    object20_scroll_ensure(room, cam_x, cam_y);
+}
+
+/* The integrated BG1 scroll position (bgInfo[1].xPos/yPos integer
+ * halves — the gDisplayRegisters.bgOfs[1] values sub_0803FBBC
+ * writes back), in integer pixels, when the scroll layer is bound
+ * to `room`. This is the absolute BG1 draw offset: it already
+ * includes the per-frame camera glide and every scripted
+ * transaction, so the draw path must NOT add the
+ * aria_scroll_bg1_offset delta on top. Returns false before the
+ * room's first camera tick/transaction or for another room's
+ * stale state. */
+bool aria_scroll_bg1_pos(const AriaRoom *room, int32_t *x, int32_t *y) {
+    if (!room || aria_scroll_room_area != room->area ||
+        aria_scroll_room_number != room->number)
+        return false;
+    *x = aria_scroll.bg[1].x_pos >> 16;
+    *y = aria_scroll.bg[1].y_pos >> 16;
+    return true;
+}
+
+/* The BG1 scroll offset the ported scroll requests have
  * accumulated, as a delta in integer pixels from the camera
- * position the layer was bound at. Native sub_0803FBBC writes
- * bgInfo[1].xPos/yPos integer halves straight into
- * gDisplayRegisters.bgOfs[1].hOfs/vOfs (gDisplayRegisters+0x8/+0xA),
- * and the per-frame camera-follow request and every scripted
- * transaction compose on that one accumulator — so the visible BG1
- * offset is the camera position plus this delta. Entities keep
- * cam_x/cam_y for draw and gameplay; only the entityData records
- * with +0x59 bit 1 carry the sub_08000F60 compensation, accumulated
- * in their scroll_dx/scroll_dy and composed into pos40/pos44
- * (native shifts the authoritative +0x40/+0x44 position itself).
- * Returns 0,0 before the room's first transaction or for another
- * room's stale state. */
+ * position the layer was bound at. With aria_camera_follow the
+ * integrated position IS the camera (cam_x/cam_y track it), so
+ * this reports the total scroll since the room bind — kept for
+ * the once-per-rendered-frame unk_60.unk_4C8 phase tick and for
+ * diagnostics; the draw path reads the absolute position through
+ * aria_scroll_bg1_pos instead. Returns 0,0 before the room's
+ * first bind or for another room's stale state. */
 void aria_scroll_bg1_offset(const AriaRoom *room, int32_t *x, int32_t *y) {
     *x = *y = 0;
     /* Once-per-rendered-frame tick for the unk_60.unk_4C8 wave

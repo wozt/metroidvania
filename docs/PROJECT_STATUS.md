@@ -1,3 +1,104 @@
+## Patch 1249 - Player body attack hitbox: sub_08041BDC (sub_080421AC bit 0x4) ported
+
+- **Scope.** `src/runtime/aos/core/aos_soma.c/.h`,
+  `src/runtime/aos/core/aos_combat.c/.h`, `src/runtime/aos/core/aos_enemy.c`,
+  `tests/test_aos_soma.c`, `tests/test_aos_enemy.c`.
+- **Native evidence.** `sub_080421AC`'s result bit `0x4` runs
+  `sub_08041BDC`: the victim's hurt rectangle against the player
+  attack rectangle at `0x03001A48`, which `sub_08042584` rebuilds
+  every frame from the `+0x73` slot's first four bytes of the
+  `0x03001A58` table. All four player-side `sub_08042848` call sites
+  are traced and ported: `sub_08017D90` (the dive kick, combat type
+  2, attack records `0x080E1314` `{6,-8,20,16}` for |vx| > 1.0 and
+  `0x080E1318` `{-6,-4,12,16}` otherwise) and the two slide starts
+  (state-0 and state-4 tails, combat type 4, record `0x080E130C`
+  `{4,-12,22,12}`). The `+0x72` bit-1 off switch is set by the update
+  prologue (`_0801B122`) and cleared every frame by the state-3 tail
+  (`_0801C8F4`) and `sub_08017F94`, so the body attack is live for
+  the whole slide and dive but not on their entry frames. A hit runs
+  the player's `+0x7C` callback `sub_080211F4` (`+0x10 |= 0x80000`,
+  the port's `AOS_FLAG_KICK_HIT`) and `sub_0806E218` with
+  `sub_08021530(type)` = `STR * 0x080E1320[type] >> 4` (8 for the
+  dive kick, 15 for the slide) and the `0x080E33F0` cooldowns (8 and
+  30 frames). Enemy reactions documented as "attacker `+0x70` = 3 or
+  4" (mudman, werewolf, werejaguar/weretiger, valkyrie) now also
+  accept `AOS_TYPE_SLIDE`.
+- **Divergence fixed.** Both `sub_08017D90` branches write the hurt
+  record `0x080E12FC` (`{-6,-32,12,28}`, the stand box) through
+  `sub_080428B4`; the port used the low box for the dive kick and
+  dive drop.
+- **Verification.** `cmake --build build -j8` clean;
+  `ctest --test-dir build -R "aos_soma|aos_enemy|aos_weapon"` 3/3
+  pass. `test_aos_soma` asserts the type/box writes, the `+0x72`
+  bit-1 lifecycle and both dive variants; `test_aos_enemy`'s new
+  `soma_body_attack_tests` covers the hit, the type-scaled damage,
+  the kick-hit flag, the recent-hit cooldown and the `attack_off` /
+  type-1 gates.
+- **Remaining gaps.** The melee attack states still resolve through
+  the separate weapon-entity hitbox path (the native weapon entity
+  is a different attacker, type 3); the player attack box only
+  covers the body attacks, matching native. `sub_08021530`'s
+  trailing `unk_60.unk_A1_4 & 0xF0` damage factor is unported (the
+  field is never set by the runtime), and the `sub_08045F9C`
+  breakable/destructible-prop matchers still do not consume bit
+  `0x4`. No emulator comparison was taken.
+
+## Patch 1248 - Opening post-scene audit: sub_0805F008 actor rebind and state-10 talk tail ported
+
+- **Scope.** Audit of everything `sub_0805CED0` (Object20 param0-3's
+  update) does after the `sub_08067A04` dialogue script reports done,
+  plus the two reachable divergences it exposed:
+  `src/runtime/aos/title/aos_opening_event.c`,
+  `src/runtime/aria_runtime.c` and `tests/test_aos_opening_event.c`.
+- **Native evidence.** `sub_0805CED0`'s `+0xA` jump table
+  (`code_08050A3C.s:24862`) runs case 2's `sub_08067A04` until the
+  script ends, then executes the shared `+0xA==0x80` tail:
+  `SoulInventory_AddAmountToSoulTotal(0,1,2)`, the `0x1325C+0xD`
+  obtained mark, the `+0x427` window-flag clear, the player `+0x5A
+  &= ~0x79` attribute clear, `sub_0805F008`, `sub_0805B66C(0)`,
+  `sub_08012048(0x20)`, parent `+0x20 |= 4` and
+  `sub_08013EEC(0x26)`, after which `+0xA` becomes `0xA`. Case 10
+  (`_0805D076`) then loops the post-scene: two `sub_08068AD4`
+  0x40-pixel box probes — child `+0x18` (Arikado, text `0xE`) before
+  child `+0x14` (Mina, text `0xD`) — gated on `gEwramData+0x16 & 0x42`
+  and `+0x4BE == 0`; on a hit it zeroes the player entity's `+0x48`
+  and `+0x50`, clamps `+0x4C` at 0, sets `+0x42C` bit 0, opens the
+  window through `sub_08067934`, rewrites `+0x18`'s `+0x58` as
+  `(old & ~0x41) | (player.x > child.x ? 0x40 : 0)` — always the
+  Arikado child even when Mina's text fired, a native quirk — and
+  enters `+0xA==0xB`. Case 11 (`_0805D168`) runs `sub_08067A04` on
+  the talk script until done, re-enters the same `+0x80` tail
+  (`sub_0805B66C(0)` included) and returns `+0xA` to `0xA`, so every
+  qualifying input edge re-opens the chatter.
+- **Gaps found and fixed.** (1) `sub_0805F008` (`code_08050A3C.s:29093`)
+  was not modeled: it rebinds Mina (`+0x14`) to animation 5 only
+  while her `+0x6D` differs — she has been on 5 since `+0xB==3`
+  sub-state 3, so the guard normally skips — unconditionally rebinds
+  Arikado (`+0x18`) to looping animation 1, and sets the scripted
+  skeleton's `+0x59` bit 3. The port left Arikado frozen on the
+  `+0xB==4` animation-3 last frame for the entire post-scene;
+  `AOS_OPENING_CUE_COMPLETE` now runs the same pass (it fires on the
+  script-end frame and again on every state-11 talk end, matching
+  the shared `+0x80` tail). (2) The epilogue talk trigger skipped the
+  `_0805D076` tail: the runtime now zeroes `soma.vx`/`soma.friction`,
+  clamps `soma.vy` at 0 and rewrites `actor_flags58[1]` with the
+  native `(old & ~0x41) | facing` expression on the trigger frame.
+- **Verification.** `ctest --test-dir build -R
+  "aos_opening|aos_object20|aos_intro|aos_portrait|aria_simulate|aria_pause"`
+  22/22 pass; `test_trigger` now asserts the `sub_0805F008` rebind
+  (Mina's `+0x6D` guard skips her chain reset, Arikado's loop rebinds
+  on every `+0x80` tail) and the skeleton delete. No new emulator
+  comparison was taken.
+- **Remaining gaps (unchanged partials).** The state-3 enemy-appears /
+  attack choreography (`+0xB==3`/`+0xB==4`) and the whole post-scene
+  loop are still not emulator-compared; the player `+0x5A &= ~0x79`
+  attribute clear has no portable field (the cutscene's player
+  visibility is owned by the `soma_hidden`/pose path); the `sub_0805F0B0`
+  soul touch check stays a 0x10-pixel box approximation; the WIN0V
+  open-slide geometry stays unported; the BLDY=8 brightness
+  approximation and the rejected language-sheet strips remain as
+  previously documented.
+
 ## Patch 1247 - Per-frame camera follow: native ED24 request replaces the stateless snap
 
 - **Scope.** `src/runtime/aos/core/aos_scroll.c/.h`,

@@ -30,7 +30,11 @@ typedef struct {
 /* Collision types (entity + 0x70). */
 enum {
     AOS_TYPE_PLAYER = 1,
+    /* The player's own body attacks, written to + 0x70 by the slide
+     * (state 3 start) and the dive kick (sub_08017D90) starts. */
+    AOS_TYPE_DIVE_KICK = 2,
     AOS_TYPE_WEAPON = 3,
+    AOS_TYPE_SLIDE = 4,
     AOS_TYPE_SOUL = 5,      /* red soul skills (sub_0804277C(entity, 5, ...)) */
     AOS_TYPE_GUARDIAN = 6,  /* blue soul guardians (sub_0804277C(entity, 6, ...)) */
     AOS_TYPE_ENEMY = 8
@@ -75,6 +79,11 @@ int aos_enemy_damage(int power, int defence, uint16_t weak, uint16_t resist,
                      uint16_t attack_elements);
 /* sub_08021654, normal mode: (attack * 4 - DEF * 2) / 2, at least 1. */
 int aos_player_damage(int attack, int defence);
+/* sub_08021530's default damage scale (the u16 table at 0x080E1320):
+ * strength * scale[type] >> 4. Only the ported body-attack types reach
+ * it; the special cases 3/5/6/7 and the trailing x8/x10 factor stay with
+ * their own callers. */
+int aos_attack_power(uint8_t type, int strength);
 /* RandomNumberGenerator: r = (r >> 8) * 0x3243F6AD + 0x1B0CB175. */
 uint32_t aos_random(void);
 void aos_random_seed(uint32_t seed);

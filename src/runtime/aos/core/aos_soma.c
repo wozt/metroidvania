@@ -10,6 +10,9 @@
 const AosBox aos_soma_stand_box = {-6, -32, 12, 28};
 const AosBox aos_soma_low_box = {-5, -16, 12, 14};
 const AosBox aos_soma_slide_box = {-8, -12, 16, 12};
+const AosBox aos_soma_slide_attack_box = {4, -12, 22, 12};    /* 0x080E130C */
+const AosBox aos_soma_dive_attack_box = {6, -8, 20, 16};      /* 0x080E1314 */
+const AosBox aos_soma_dive_drop_attack_box = {-6, -4, 12, 16};/* 0x080E1318 */
 #define STAND (&aos_soma_stand_box)
 #define LOW (&aos_soma_low_box)
 #define SLIDE (&aos_soma_slide_box)
@@ -100,8 +103,16 @@ static void dive_kick(AosSoma *soma, uint16_t held, uint16_t pressed) {
         soma->friction = soma->vx >= 0 ? -AOS_FRICTION : AOS_FRICTION;
     }
     int32_t speed = soma->vx < 0 ? -soma->vx : soma->vx;
-    if (speed > 0x10000) play(soma, AOS_SOMA_ANIM_DIVE_KICK, true, LOW);
-    else play(soma, AOS_SOMA_ANIM_DIVE_DROP, true, LOW);
+    /* sub_08017D90's tail: combat type 2 and the attack box of the dive
+     * (fast, record 0x080E1314) or the drop (slow, 0x080E1318), picked by
+     * the same |vx| > 1.0 test as the animation. */
+    soma->combat.type = AOS_TYPE_DIVE_KICK;
+    soma->attack_box = speed > 0x10000 ? aos_soma_dive_attack_box
+                                      : aos_soma_dive_drop_attack_box;
+    /* Both branches write the hurt record 0x080E12FC ({-6,-32,12,28},
+     * the stand box) through sub_080428B4, not the low box. */
+    if (speed > 0x10000) play(soma, AOS_SOMA_ANIM_DIVE_KICK, true, STAND);
+    else play(soma, AOS_SOMA_ANIM_DIVE_DROP, true, STAND);
     soma->air_anim_locked = true;
 }
 
@@ -672,8 +683,11 @@ static void normal_state(AosSoma *soma, const AosCollision *layer, uint16_t held
     attack_start(soma, pressed);
     if ((soma->moves & AOS_MOVE_SLIDE) && !(soma->flags & 0x1122u) &&
         (held & AOS_KEY_DOWN) && (pressed & AOS_KEY_JUMP)) {
-        /* Slide (ability 1, state 3, sound 0xBD). */
+        /* Slide (ability 1, state 3, sound 0xBD): combat type 4 and the
+         * attack box 0x080E130C of the slide-start writes (sub_08042848). */
         soma->state = 3;
+        soma->combat.type = AOS_TYPE_SLIDE;
+        soma->attack_box = aos_soma_slide_attack_box;
         aos_audio_play_song(0xBD);
         soma->anim_request = AOS_ANIM_NONE;
         play(soma, AOS_SOMA_ANIM_SLIDE, false, SLIDE);
@@ -696,8 +710,11 @@ static void play_keeping_frame(AosSoma *soma, unsigned id, const AosBox *hurtbox
     soma->anim.tick = tick;
 }
 
-/* sub_0801B0D8 case 3 (_0801C7BC): slide for 32 frames, or until airborne. */
+/* sub_0801B0D8 case 3 (_0801C7BC): slide for 32 frames, or until airborne.
+ * Its tail clears + 0x72 bit 1 every frame (_0801C8F4): the body attack
+ * of sub_08041BDC stays live for the whole slide. */
 static void slide_state(AosSoma *soma, const AosCollision *layer) {
+    soma->combat.attack_off = false;
     if (((soma->flags & AOS_FLAG_SLOPE_LEFT) && soma->slope_step == 1 && !soma->facing_left) ||
         ((soma->flags & AOS_FLAG_SLOPE_RIGHT) && soma->slope_step == 1 && soma->facing_left))
         play_keeping_frame(soma, AOS_SOMA_ANIM_SLIDE_DOWNHILL, SLIDE);
@@ -798,6 +815,9 @@ static void high_jump_state(AosSoma *soma, const AosCollision *layer, uint16_t h
 /* Case 7 (_0801CBD4, sub_08017F94): dive kick; a hit (flag 0x80000)
  * bounces Soma back up. */
 static void dive_kick_state(AosSoma *soma, const AosCollision *layer) {
+    /* sub_08017F94 clears + 0x72 bit 1 on every frame that does not exit
+     * through the 0x400000 flag: the dive's body attack stays live. */
+    if (!(soma->flags & AOS_FLAG_SLOW_FALL)) soma->combat.attack_off = false;
     if (soma->flags & AOS_FLAG_SLOW_FALL) {
         soma->state = 0;
     } else if (soma->flags & AOS_FLAG_KICK_HIT) {
@@ -982,6 +1002,7 @@ AosSoma aos_soma_spawn(int32_t x, int32_t y, const AosAnimSet *anims) {
         .anim_request = AOS_ANIM_NONE,
         .air_probes = {4, -8, -12, -20, -28},
         .hurtbox = {-6, -32, 12, 28},
+        .attack_box = {0, 0, 1, 1},
         .combat = {.type = AOS_TYPE_PLAYER, .attack_off = true},
         .hp = 1, .max_hp = 1,
         .anims = anims,
@@ -1261,8 +1282,11 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
                            uint16_t pressed) {
     soma->held = held;
     soma->pressed = pressed;
-    /* _0801B100 */
+    /* _0801B100 / _0801B122: the per-frame flag drops, then + 0x72 bit 1
+     * (the body attack's off switch) is set again; the slide and dive
+     * kick states clear it every frame. */
     soma->flags &= ~0x00240000u;
+    soma->combat.attack_off = true;
     if (soma->anim.flags & AOS_ANIM_ENDED)
         soma->flags = (soma->flags | AOS_FLAG_ANIM_DONE) & ~(uint32_t)AOS_FLAG_BACKDASH;
     aos_soma_integrate(soma);

@@ -3380,6 +3380,21 @@ int aria_runtime_main(int argc, char **argv) {
                         aos_opening_event_set_resolver(
                             &opening, resolve_opening_text, &opening_resources);
                         opening_actors.soma_animation = AOS_SOMA_ANIM_IDLE;
+                        /* _0805D076's tail on the trigger frame: the
+                         * player entity's +0x48 and +0x50 (vx and the
+                         * friction word) are zeroed and +0x4C (vy) is
+                         * clamped at 0, then child +0x18 - Arikado,
+                         * on EITHER proximity text, a native quirk -
+                         * gets +0x58 = (old & ~0x41) | (player right
+                         * of him ? 0x40 : 0): bit 0 clears and bit 6
+                         * becomes the face-the-player flip. */
+                        soma.vx = 0;
+                        soma.friction = 0;
+                        if (soma.vy < 0) soma.vy = 0;
+                        opening_actors.actor_flags58[1] = (uint8_t)(
+                            (opening_actors.actor_flags58[1] &
+                             (uint8_t)~0x41) |
+                            (soma.x > opening_actors.x[1] ? 0x40 : 0));
                         /* sub_08067934's synchronous half ran on
                          * this frame (window registers + the
                          * +0x42C input lock the frozen-player skip

@@ -11837,6 +11837,73 @@ static void needles_tests(void) {
 /* Type-5 soul attacks reach the enemy hit path after the weapon: damage
  * from their own power and elements, the defeated flag at 0 HP, and no
  * hit when the box misses. */
+static void soma_body_attack_tests(void) {
+    /* sub_08041BDC (sub_080421AC result bit 0x4): the player's own
+     * attack box — the slide's (combat type 4) and the dive kick's
+     * (type 2) — against the enemy hurt box, live while + 0x72 bit 1
+     * is clear. */
+    static const uint8_t ticks[] = {2, 2};
+    const AosAnimDef defs[4] = {{2, ticks}, {2, ticks}, {2, ticks}, {2, ticks}};
+    const AosAnimSet anims = {defs, 4};
+    AosEnemyKind kind = {.anims = &anims};
+    for (int a = 0; a < 4; ++a)
+        for (int f = 0; f < 2; ++f) {
+            kind.modes[a][f] = 1;
+            kind.hurt[a][f] = kind.attack[a][f] = (AosBox){-8, -16, 16, 16};
+        }
+    const AosEnemyStats stats = {100, 16, 2, 0, 0, 0};
+    memset(cells, 0, sizeof cells);
+    for (int y = 13; y < H; ++y)
+        for (int x = 0; x < W; ++x) cells[y * W + x] = 0x03;
+    AosSoma soma = aos_soma_spawn(AOS_FIXED(100), AOS_FIXED(100), NULL);
+    soma.facing_left = false;
+    /* The slide attack live: type 4, + 0x72 bit 1 clear, box 0x080E130C
+     * (rect 104..125 x 88..99 against the hurt rect 92..107 x 84..99). */
+    soma.combat.type = AOS_TYPE_SLIDE;
+    soma.combat.attack_off = false;
+    soma.attack_box = aos_soma_slide_attack_box;
+    AosEnemy e;
+    assert(aos_enemy_create(&e, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    /* sub_08021530(4): STR * 15 >> 4; without stats the ATK input (10)
+     * stands in for STR. */
+    int expected = aos_enemy_damage(aos_attack_power(AOS_TYPE_SLIDE, 10),
+                                    stats.defence, 0, 0, 0);
+    AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                                        0, 0, never_zero);
+    assert(hit.enemy_hit && hit.enemy_damage == expected && e.hp == 100 - expected);
+    /* The player's + 0x7C callback (sub_080211F4) sets + 0x10 bit 0x80000. */
+    assert(soma.flags & AOS_FLAG_KICK_HIT);
+    /* The type-4 recent-hit slot (cooldown 30) blocks the next frame. */
+    AosHitReport again = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL, 10, 4,
+                                          0, 0, never_zero);
+    assert(!again.enemy_hit);
+    /* + 0x72 bit 1 set: the same box is ignored. */
+    AosEnemy gated;
+    assert(aos_enemy_create(&gated, AOS_ENEMY_SKELETON, 100, 100, 0, 0, &soma, &layer,
+                            &kind, &stats));
+    soma.combat.attack_off = true;
+    hit = aos_enemy_update(&gated, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           never_zero);
+    assert(!hit.enemy_hit && gated.hp == 100);
+    /* Type back to the player's own 1: no body attack either. */
+    soma.combat.attack_off = false;
+    soma.combat.type = AOS_TYPE_PLAYER;
+    hit = aos_enemy_update(&gated, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           never_zero);
+    assert(!hit.enemy_hit && gated.hp == 100);
+    /* The dive kick: type 2, box 0x080E1314 (rect 106..125 x 92..107)
+     * overlaps the hurt rect's edge; sub_08021530(2) = STR * 8 >> 4. */
+    soma.combat.type = AOS_TYPE_DIVE_KICK;
+    soma.attack_box = aos_soma_dive_attack_box;
+    hit = aos_enemy_update(&gated, &soma, &layer, &kind, NULL, NULL, 10, 4, 0, 0,
+                           never_zero);
+    expected = aos_enemy_damage(aos_attack_power(AOS_TYPE_DIVE_KICK, 10),
+                                stats.defence, 0, 0, 0);
+    assert(hit.enemy_hit && hit.enemy_damage == expected &&
+           gated.hp == 100 - expected);
+}
+
 static void soul_attack_tests(void) {
     static const uint8_t ticks[] = {2, 2};
     const AosAnimDef defs[4] = {{2, ticks}, {2, ticks}, {2, ticks}, {2, ticks}};
@@ -14423,6 +14490,7 @@ int main(void) {
     peeping_eye_tests();
     skeleton_bone_tests();
     soul_attack_tests();
+    soma_body_attack_tests();
     death_sound_tests();
     /* sub_080009E4 */
     assert(aos_sine(0) == 0 && aos_sine(0x4000) == 0x10000 && aos_sine(0xC000) == -0x10000);

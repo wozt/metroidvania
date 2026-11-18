@@ -1185,6 +1185,17 @@ void aos_opening_actors_trigger(AosOpeningActors *actors, AosOpeningCue cue) {
             actors->emitted[i].active = false;
             actors->emitted[i].hidden = true;
         }
+        /* sub_0805F008, the +0xA==0x80 tail's actor pass: it runs on
+         * the script-end frame and again on every state-11 talk end.
+         * Mina rebinds animation 5 only while her +0x6D differs — she
+         * has been on 5 since +0xB==3 sub-state 3, so the guard
+         * normally skips — while Arikado unconditionally returns to
+         * looping animation 1 (idle) instead of keeping the +0xB==4
+         * attack pose's last frame. The scripted skeleton's +0x59
+         * bit-3 delete is already latched below. */
+        if (actors->animation[0] != 5)
+            actor_animation(actors, 0, 5, false);
+        actor_animation(actors, 1, 1, true);
         actors->skeleton_state = 5;
         actors->skeleton_death = 0;
         actors->visible[2] = false;

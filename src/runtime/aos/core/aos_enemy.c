@@ -2760,8 +2760,6 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
             report.soma_hit = true;
         }
     }
-    /* The weapon's attack box against the enemy's hurtbox (sub_08041864),
-     * then the red soul skills' boxes (type 5); both reach sub_0806E218. */
     int wx, wy, ww, wh;
     bool struck = false;
     uint8_t attacker = 0;
@@ -2769,6 +2767,42 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
     uint16_t elements = 0;
     int contact_x = ex, contact_y = ey;
     AosRect target = aos_entity_rect(hurt, ex, ey, enemy->mirrored, enemy->vflip);
+    /* The player's own attack box against the enemy's hurtbox
+     * (sub_08041BDC, sub_080421AC result bit 0x4): the slide's and the
+     * dive kick's body attack, live while + 0x72 bit 1 is clear and the
+     * + 0x70 type byte reads above 1. It runs before the weapon check,
+     * like the native bit order. */
+    if (hurt_on && !soma->combat.attack_off && soma->combat.type > 1 &&
+        soma->attack_box.w > 1 && soma->attack_box.h > 1 &&
+        aos_combat_can_take(&enemy->combat, soma->combat.type)) {
+        AosRect blade = aos_player_rect(soma->attack_box, soma->x >> 16,
+                                        soma->y >> 16, soma->facing_left, false);
+        if (blade.x1 <= target.x2 && target.x1 <= blade.x2 &&
+            blade.y1 <= target.y2 && target.y1 <= blade.y2) {
+            aos_combat_take(&enemy->combat, soma->combat.type,
+                            aos_combat_cooldown(soma->combat.type, 0));
+            /* The player's + 0x7C callback (sub_080211F4): + 0x10 |= 0x80000. */
+            soma->flags |= AOS_FLAG_KICK_HIT;
+            struck = true;
+            attacker = soma->combat.type;
+            /* sub_08021530(type): STR * 0x080E1320[type] >> 4; without a
+             * stats record the ATK input stands in for STR. */
+            int strength = soma->stats ? soma->stats->current[AOS_STAT_STR]
+                                       : soma_atk;
+            power = aos_attack_power(soma->combat.type, strength);
+            elements = 0;
+            {
+                int x1 = blade.x1 > target.x1 ? blade.x1 : target.x1;
+                int x2 = blade.x2 < target.x2 ? blade.x2 : target.x2;
+                int y1 = blade.y1 > target.y1 ? blade.y1 : target.y1;
+                int y2 = blade.y2 < target.y2 ? blade.y2 : target.y2;
+                contact_x = (x1 + x2) / 2;
+                contact_y = (y1 + y2) / 2;
+            }
+        }
+    }
+    /* The weapon's attack box against the enemy's hurtbox (sub_08041864),
+     * then the red soul skills' boxes (type 5); both reach sub_0806E218. */
     if (hurt_on && weapon && weapon_frames &&
         aos_combat_can_take(&enemy->combat, AOS_TYPE_WEAPON) &&
         aos_weapon_hitbox(weapon, soma, weapon_frames, &wx, &wy, &ww, &wh)) {
@@ -2964,7 +2998,8 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 enemy->step = enemy->substep = 0;
                 enemy->timer = 0;
             }
-            if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON &&
+            if (enemy->hp > 0 && (attacker == AOS_TYPE_WEAPON ||
+                attacker == AOS_TYPE_SLIDE) &&
                 enemy->id == AOS_ENEMY_MUDMAN &&
                 enemy->role == AOS_ROLE_ENEMY &&
                 (enemy->state == 0 || enemy->state == 1)) {
@@ -2976,7 +3011,8 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 enemy->state = 3;
                 enemy->step = enemy->substep = 0;
             }
-            if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON &&
+            if (enemy->hp > 0 && (attacker == AOS_TYPE_WEAPON ||
+                attacker == AOS_TYPE_SLIDE) &&
                 enemy->id == AOS_ENEMY_WEREWOLF &&
                 enemy->role == AOS_ROLE_ENEMY && enemy->state == 1 &&
                 enemy->step <= 1) {
@@ -2987,7 +3023,8 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 enemy->state = 3;
                 enemy->step = enemy->substep = 0;
             }
-            if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON &&
+            if (enemy->hp > 0 && (attacker == AOS_TYPE_WEAPON ||
+                attacker == AOS_TYPE_SLIDE) &&
                 (enemy->id == AOS_ENEMY_WEREJAGUAR ||
                  enemy->id == AOS_ENEMY_WERETIGER) &&
                 enemy->role == AOS_ROLE_ENEMY && enemy->state == 1 &&
@@ -3019,7 +3056,8 @@ AosHitReport aos_enemy_collide(AosEnemy *enemy, AosSoma *soma,
                 /* The damage walk stores the attack element's low
                  * nibble at + 0x2C for the hurt's + 0x5A draw group. */
                 enemy->kd_atk = (uint8_t)(elements & 0xF);
-            if (enemy->hp > 0 && attacker == AOS_TYPE_WEAPON && enemy->id == AOS_ENEMY_VALKYRIE &&
+            if (enemy->hp > 0 && (attacker == AOS_TYPE_WEAPON ||
+                attacker == AOS_TYPE_SLIDE) && enemy->id == AOS_ENEMY_VALKYRIE &&
                 enemy->state == 1) {
                 /* sub_0806EBDC: struck by a weapon (attacker type 3 or 4)
                  * during its attack, it recoils (state 3). */

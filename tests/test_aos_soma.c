@@ -350,14 +350,29 @@ static void ability_tests(void) {
            aos_audio_requested(AOS_AUDIO_START_SONG, 0xBD) == 1);
     assert(soma.vx == 0x32000 && (soma.flags & 0x20u) && (soma.flags & AOS_FLAG_CROUCH));
     assert(soma.vy == 0 && (soma.flags & AOS_FLAG_GROUNDED));
+    /* The slide start writes combat type 4 and attack box 0x080E130C;
+     * + 0x72 bit 1 is still set on the entry frame. */
+    assert(soma.combat.type == AOS_TYPE_SLIDE &&
+           soma.attack_box.x == 4 && soma.attack_box.y == -12 &&
+           soma.attack_box.w == 22 && soma.attack_box.h == 12);
+    assert(soma.combat.attack_off);
     int slide = 1;
+    bool body_live = false;
     while (soma.state == 3 && slide < 100) {
         frame(&soma, AOS_KEY_DOWN, 0);
         ++slide;
+        /* State 3 clears + 0x72 bit 1 every frame: the body attack of
+         * sub_08041BDC stays live for the whole slide. */
+        if (!soma.combat.attack_off) body_live = true;
     }
     /* The start frame, then 32 frames in state 3; Soma stays crouched. */
     assert(slide == 33 && soma.vx == 0x32000 - 32 * 0x1800 && !(soma.flags & 0x20u));
     assert(soma.state == 0 && (soma.flags & AOS_FLAG_CROUCH));
+    assert(body_live);
+    /* The frame that left state 3 still had + 0x72 bit 1 clear; the next
+     * update's prologue sets it again. */
+    frame(&soma, 0, 0);
+    assert(soma.combat.attack_off);
 
     /* High jump: Up + L, -10.0, state 5 until falling, flag 0x10 clears
      * once falling faster than 1.125. */
@@ -415,10 +430,37 @@ static void ability_tests(void) {
     frame(&soma, AOS_KEY_DOWN | AOS_KEY_RIGHT | AOS_KEY_JUMP, AOS_KEY_JUMP);
     assert(soma.state == 7 && soma.vx == 0x40000);
     assert(soma.anim.id == AOS_SOMA_ANIM_DIVE_KICK);
+    /* sub_08017D90's tail: combat type 2 and the fast attack box
+     * 0x080E1314; + 0x72 bit 1 is still set on the entry frame. */
+    assert(soma.combat.type == AOS_TYPE_DIVE_KICK &&
+           soma.attack_box.x == 6 && soma.attack_box.y == -8 &&
+           soma.attack_box.w == 20 && soma.attack_box.h == 16);
+    assert(soma.combat.attack_off);
     AosLanding landing = AOS_LANDING_NONE;
-    for (int i = 0; i < 60 && landing == AOS_LANDING_NONE; ++i)
+    body_live = false;
+    for (int i = 0; i < 60 && landing == AOS_LANDING_NONE; ++i) {
         landing = frame(&soma, AOS_KEY_DOWN | AOS_KEY_RIGHT, 0);
+        /* sub_08017F94 clears + 0x72 bit 1 on every state-7 frame that
+         * does not exit through the 0x400000 flag. */
+        if (!soma.combat.attack_off) body_live = true;
+    }
     assert(landing == AOS_LANDING_HARD && soma.state == 4 && soma.y == AOS_FIXED(159));
+    assert(body_live);
+
+    /* The slow dive (no direction held): type 2 with the drop attack
+     * box 0x080E1318 and the DIVE_DROP animation. Like the fast dive it
+     * needs the mid-air jump's flag 0x4 first. */
+    soma = at(100, 159, AOS_FLAG_GROUNDED);
+    soma.moves = all;
+    frame(&soma, AOS_KEY_JUMP, AOS_KEY_JUMP);
+    for (int i = 0; i < 10; ++i) frame(&soma, AOS_KEY_JUMP, 0);
+    frame(&soma, AOS_KEY_JUMP, AOS_KEY_JUMP);        /* mid-air jump */
+    assert(soma.flags & 4u);
+    frame(&soma, AOS_KEY_DOWN | AOS_KEY_JUMP, AOS_KEY_JUMP);
+    assert(soma.state == 7 && soma.vx == 0 &&
+           soma.anim.id == AOS_SOMA_ANIM_DIVE_DROP);
+    assert(soma.attack_box.x == -6 && soma.attack_box.y == -4 &&
+           soma.attack_box.w == 12 && soma.attack_box.h == 16);
     memset(cells, 0, sizeof(cells));
 }
 

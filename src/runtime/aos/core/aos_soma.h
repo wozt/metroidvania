@@ -144,7 +144,14 @@ typedef struct {
     AosWeapon weapon;
     bool weapon_active;     /* gEwramData + 0x1311C: the weapon entity exists */
     AosBox hurtbox;         /* set by sub_080428B4 with each animation change */
-    AosCombat combat;       /* + 0x70: type 1 */
+    /* The attack half of the hitbox slot pair (sub_08042848): written
+     * once when the slide (state 3, record 0x080E130C) or the dive kick
+     * (state 7, records 0x080E1314 / 0x080E1318) starts, then kept like
+     * the native IWRAM table. It only matters while combat.type reads
+     * above 1 and combat.attack_off is clear — the states that write it
+     * clear + 0x72 bit 1 every frame, the update prologue sets it. */
+    AosBox attack_box;
+    AosCombat combat;       /* + 0x70: type 1, 2 (dive kick) or 4 (slide) */
     int16_t hp, max_hp;     /* gEwramData + 0x1327A / + 0x1327E */
     int16_t pending_damage; /* gEwramData + 0x131D6 */
     uint8_t pending_type;   /* + 0x131D4: 0 normal, 1 strong, 3 scripted
@@ -187,8 +194,15 @@ typedef struct {
 
 /* Soma's hurtboxes (sub_080428B4 arguments). */
 extern const AosBox aos_soma_stand_box;   /* 0x080E12F8: -6, -32, 12 x 28 */
-extern const AosBox aos_soma_low_box;     /* 0x080E12FC / 0x080E1300: -5, -16, 12 x 14 */
+extern const AosBox aos_soma_low_box;     /* 0x080E1300: -5, -16, 12 x 14 */
 extern const AosBox aos_soma_slide_box;   /* 0x080E1304: -8, -12, 16 x 12 */
+
+/* Soma's body attack boxes (sub_08042848 arguments): the slide's
+ * (state 3 start in cases 0 and 4) and the dive kick's (sub_08017D90),
+ * the fast and slow variants picked by |vx| > 1.0. */
+extern const AosBox aos_soma_slide_attack_box;    /* 0x080E130C: 4, -12, 22 x 12 */
+extern const AosBox aos_soma_dive_attack_box;     /* 0x080E1314: 6, -8, 20 x 16 */
+extern const AosBox aos_soma_dive_drop_attack_box;/* 0x080E1318: -6, -4, 12 x 16 */
 
 /* Soma animation ids requested by the ported code (descriptor indices). */
 enum {

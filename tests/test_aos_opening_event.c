@@ -551,6 +551,28 @@ static void test_trigger(void) {
                AOS_OPENING_CUE_NONE);
     }
     assert(actors.scene_step == 1 && !aos_opening_actors_blocks_script(&actors));
+
+    /* sub_08067A04's end command finishes the script; the +0xA==0x80
+     * tail's sub_0805F008 then rebinds the actors: Mina keeps
+     * animation 5 through the +0x6D guard (no chain reset), Arikado
+     * unconditionally returns to looping animation 1, and the scripted
+     * skeleton is deleted. This is the pose the post-scene proximity
+     * conversations (states 10/11) leave on screen. */
+    uint16_t mina_age = actors.animation_age[0];
+    assert(actors.animation[0] == 5 && actors.animation[1] == 3);
+    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_COMPLETE);
+    assert(actors.animation[0] == 5 && actors.animation_age[0] == mina_age &&
+           !actors.anim_loop[0]);
+    assert(actors.animation[1] == 1 && actors.anim_loop[1] &&
+           actors.animation_age[1] == 0);
+    assert(!actors.visible[2] && actors.skeleton_state == 5);
+    /* Every state-11 talk end reruns the same tail: Arikado's loop
+     * rebinds again while Mina's guard still skips. */
+    for (unsigned frame = 0; frame < 8; ++frame)
+        aos_opening_actors_update(&actors, durations, &camera_x, 0);
+    actors.animation_age[1] = 7;
+    aos_opening_actors_trigger(&actors, AOS_OPENING_CUE_COMPLETE);
+    assert(actors.animation[1] == 1 && actors.animation_age[1] == 0);
     assert(AOS_SOMA_ANIM_OPENING_LYING == 0x51);
     assert(!strcmp(aos_opening_event_speaker_name(1), "Soma Cruz"));
     assert(!strcmp(aos_opening_event_speaker_name(2), "Mina Hakuba"));

@@ -108,6 +108,16 @@ int aos_enemy_damage(int power, int defence, uint16_t weak, uint16_t resist,
     return damage > 0 ? damage : 1;
 }
 
+/* 0x080E1320: sub_08021530's per-attacker-type scale, indexed by the
+ * attacker's + 0x70 type byte. Only types 2 (dive kick, 8) and 4 (slide,
+ * 15) are reachable through the ported body attack; the other entries
+ * belong to the unported special cases. */
+static const uint16_t attack_scales[12] = {0, 0, 8, 16, 15};
+
+int aos_attack_power(uint8_t type, int strength) {
+    return type < 12 ? (strength * attack_scales[type]) >> 4 : 0;
+}
+
 int aos_player_damage(int attack, int defence) {
     int damage = (attack * 4 - defence * 2) >> 1;
     return damage > 0 ? damage : 1;

@@ -161,13 +161,15 @@ static const EntitySpec entities[] = {
      * (0x15-0x1B, 0x08528952). */
     {"skeleton", 0x081F424C, 0x0820BE3C, 0, 0x0824C910, 0x08528948, 0, 0, 8,
      {0x12, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B}},
-    ENTITY("merman", 0x081CBF3C, 0x0820A464, 0, 0x08212FB4),
+    /* EnemyMermanCreate calls sub_0807188C, whose resource triplet is
+     * distinct from the nearby Killer Fish helper sub_08070AC4. */
+    ENTITY("merman", 0x081CBF44, 0x0820A488, 0, 0x082133F4),
     /* The Peeping Eye's direct frames: the eyelid (0-10, + 0x19), the
      * segments (11-14), the eyeball (15) and the pupil (16). */
     STATIC("peeping_eye", 0x081CBFEC, 0x0820A86C, 0, 0x0821D7B4, 17, 0, 1, 2, 3, 4, 5, 6, 7, 8,
            9, 10, 11, 12, 13, 14, 15, 16),
-    /* The Killer Fish (the Merman's descriptor): its bubbles show sprite
-     * frames 15 and 16, bursting one frame lower (14). */
+    /* The Killer Fish bubbles show sprite frames 15 and 16, bursting one
+     * frame lower (14). */
     STATIC("killer_fish", 0x081CBF3C, 0x0820A464, 0, 0x08212FB4, 3, 14, 15, 16),
     ENTITY("bone_pillar", 0x081E41D4, 0x0820B8E8, 0, 0x08242F8C),
     /* EnemyFishHeadCreate (0x080B3F34) calls sub_080B3BAC with variant

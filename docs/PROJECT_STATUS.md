@@ -1,3 +1,27 @@
+## Patch 1239 - Restore the native Merman art in room 0/5
+
+- **Root cause and native correction.** The room record already identifies
+  enemy `0x03` (Merman), but `src/assets/aos/objects.c` assigned that identity
+  the Killer Fish resource triplet from `sub_08070AC4`
+  (`0x081CBF3C / 0x0820A464 / 0x08212FB4`). `EnemyMermanCreate` instead calls
+  `sub_0807188C`, which loads tiles `0x081CBF44`, palette `0x0820A488` and
+  animation records `0x082133F4`. The exporter now follows that routine, while
+  Killer Fish keeps its separate original entry.
+- **Runtime and regression evidence.** Rebuilding the private `aria_objects`
+  library changes Merman from the fish sheet's 16 frames in three animations
+  to 35 native frames in seven animations, including attack animation 3 and
+  shot animation 6. A portable room-0/5 capture from spawn `(120,464)` at
+  frame 360 shows two complete humanoid Mermen at the water surface instead of
+  fish sprites. The reviewed AOS native-golden fixture now guards all 19 newly
+  reachable unique BMP digests, `enemy_frames.tsv` and `runtime_index.tsv`;
+  no extracted graphics are committed.
+- **Honest comparison scope.** The resource addresses are exact against
+  `sub_0807188C` and the real runtime path is exercised, but the room capture
+  was not synchronized or pixel-diffed against an mGBA room-0/5 checkpoint.
+  Water-surface timing, producer coordinates and palette callbacks therefore
+  remain `partial`; this patch validates the monster identity and decoded art,
+  not complete Merman fidelity.
+
 ## Patch 1238 - Put Soma in front of room chandeliers
 
 - **Root cause and fix.** `sub_08046080` assigns every kind-3 breakable the

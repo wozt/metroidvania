@@ -1665,10 +1665,13 @@ int aria_runtime_main(int argc, char **argv) {
             .hud_font = NULL,
             .derive_atk = !atk_override,
             .derive_def = !def_override,
-            /* sub_0800F1FC case 5's unk_60.unk_A1_4 gate: the
-             * file-select/menu toggle is unported, so the
-             * new-game value sub_08008750 installs (1). */
-            .unk60_a1_4 = 1,
+            /* sub_0800F1FC case 5's unk_60.unk_A1_4 gate: the high
+             * nibble of + 0xA1 is the boss-rush / alternate-mode flag
+             * (GameModeBossRushMenuUpdate sub_08008750 installs it;
+             * the sub_080074C0 file-select toggle is unported). Boss
+             * rush is not ported, so it stays clear as in normal
+             * play — matching the drop path's soul_flag_a1 = false. */
+            .unk60_a1_4 = 0,
         };
         if (objects.money_loaded) combat.money = objects.money;
         for (int k = 0; objects_ok && k < AOS_EFFECT_KINDS; ++k)
@@ -2566,10 +2569,13 @@ int aria_runtime_main(int argc, char **argv) {
         .hud_font = have_hud ? &hud_font : NULL,
         .derive_atk = !atk_override,
         .derive_def = !def_override,
-        /* sub_0800F1FC case 5's unk_60.unk_A1_4 gate: the
-         * file-select/menu toggle is unported, so the
-         * new-game value sub_08008750 installs (1). */
-        .unk60_a1_4 = 1,
+        /* sub_0800F1FC case 5's unk_60.unk_A1_4 gate: the high
+         * nibble of + 0xA1 is the boss-rush / alternate-mode flag
+         * (GameModeBossRushMenuUpdate sub_08008750 installs it;
+         * the sub_080074C0 file-select toggle is unported). Boss
+         * rush is not ported, so it stays clear as in normal
+         * play — matching the drop path's soul_flag_a1 = false. */
+        .unk60_a1_4 = 0,
         .soul_notice = aria_gameplay_soul_notice,
         .soul_notice_ctx = &soul_notice_ctx,
     };

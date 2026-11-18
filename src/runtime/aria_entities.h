@@ -52,9 +52,12 @@ typedef struct {
     AosHud *hud;                                 /* sub_0800EA98 enemy-name notice */
     const AosHudFont *hud_font;
     bool derive_atk, derive_def;                 /* false under --atk / --def */
-    /* gEwramData unk_60.unk_A1_4 (sub_0800F1FC case 5's gate): the
-     * file-select/menu toggle of sub_080074C0 is not ported, so the
-     * caller passes the new-game value sub_08008750 installs (1). */
+    /* gEwramData unk_60.unk_A1_4 (sub_0800F1FC case 5's gate and the
+     * sub_08021654 / sub_08021530 alternate damage formulas): the high
+     * nibble of + 0xA1 is installed by GameModeBossRushMenuUpdate
+     * (sub_08008750) and the unported sub_080074C0 file-select toggle.
+     * Boss rush is not ported, so the caller passes the clear normal
+     * -play value 0. */
     uint8_t unk60_a1_4;
     /* sub_0800E708 on every soul collection (sub_080441F8 tail): the
      * obtained-soul banner plus sub_0800E540's description when the

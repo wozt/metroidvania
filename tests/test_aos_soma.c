@@ -883,6 +883,30 @@ static void status_tests(void) {
     hp = soma.hp;
     for (int k = 0; k < 8; ++k)
         assert(aos_soma_take_elemental_hit(&soma, 10, 4, 0, 0, 0) == 16);
+    /* sub_08021654's lethal branch runs sub_08021E50(7): a killing hit
+     * clears the poison, curse and stone bits and their timers before
+     * the pending fields are stored. */
+    stats = (AosStats){0};
+    stats.status = 7;
+    stats.status_timers[0] = 5;
+    stats.status_timers[1] = 6;
+    stats.status_timers[2] = 0xF;
+    soma = caster(100, 159, AOS_FLAG_GROUNDED);
+    soma.hp = 5;
+    soma.max_hp = 320;
+    soma.stats = &stats;
+    assert(aos_soma_take_elemental_hit(&soma, 50, 0, 0, 0, 0) > 0 && soma.hp <= 0);
+    assert(stats.status == 0 && stats.status_timers[0] == 0 &&
+           stats.status_timers[1] == 0 && stats.status_timers[2] == 0);
+    /* The status block is gated on currentCharacter == 0: Julius takes
+     * the damage but never the poison, curse or stone bits. */
+    stats = (AosStats){0};
+    stats.character = 1;
+    soma = caster(100, 159, AOS_FLAG_GROUNDED);
+    soma.hp = soma.max_hp = 320;
+    soma.stats = &stats;
+    assert(aos_soma_take_elemental_hit(&soma, 10, 4, 0, 0, 0x1C0) == 16);
+    assert(stats.status == 0 && stats.status_timers[2] == 0);
 }
 
 int main(void) {

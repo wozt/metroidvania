@@ -26190,3 +26190,46 @@ No automatic reciprocal link or native engine encoder is implemented.
   checklist and dashboard were refreshed, the single full dashboard
   CTest run passed 232/232 tests and `fusion_check_generated` reported
   every derived document fresh.
+
+## Patch 0265 - Aria player damage path: status gates, lethal cure and the boss-rush flag audit
+
+- **Damage path re-traced against the decompile.** `sub_08021654`
+  (`code_080211F0.s`) confirms the port's order in
+  `aos_soma_take_elemental_hit`: invulnerability early-out, raw =
+  attack*4 - defence*2, resistance word `+ 0x131FA` (ORed from armor
+  and accessory records only, populated by `sub_0804AD9C`) cutting the
+  normal `raw >> 1` to `raw >> 2`, the stone bit doubling, the >= 1
+  clamp, then the `armor == 0x17` Blocking Mail quarter proc and the
+  flag-0x2000 soul guard before the HP write.
+- **Two missing native details ported.** The status-infliction block is
+  now gated on `currentCharacter == 0` (Julius never takes poison,
+  curse or stone) in addition to the `+ 0x13276` stone-mash counter, and
+  the lethal branch runs the equivalent of `sub_08021E50(7)` — the three
+  status bits and their timers clear before the pending-hit fields are
+  stored, so the same-hit status block can still re-inflict exactly as
+  the native order does.
+- **`unk_60.unk_A1_4` corrected to 0.** The flag the comment called the
+  "new-game value" is installed by `GameModeBossRushMenuUpdate`
+  (`sub_08008750`) and the unported file-select toggle `sub_080074C0`;
+  with boss rush unported, normal play keeps it clear — which is also
+  what the drop path already assumed (`soul_flag_a1 = false`). The old
+  value 1 wrongly enabled the sub_0800F1FC case-5 pickups and would
+  have selected the `*5 + equip*4/maxHP` damage variant of
+  `sub_08021654`/`sub_08021530` had that path been wired. Both
+  `AriaCombat` initializers now pass 0.
+- **Equipment audit result.** All record fields the tables export are
+  consumed: ATK/DEF and the signed STR/CON/INT/LCK modifiers feed
+  `aos_stats_refresh` (matching `sub_0804ACD4`/`sub_0804AD9C`), the
+  armor/accessory resistance word is ORed into `stats->resist` and
+  gates both directions of elemental damage, and every ported
+  record-index effect (Blocking Mail, MP-regen / full-MP / walking-XP /
+  drop-table accessories) already had a consumer. INT feeds the
+  red-soul power term and LCK the drop-roll luck term, so no equipped
+  stat is display-only. Remaining gaps stay partial: weapon records'
+  unexported fields (attack elements, +0x10 movement flags, swing
+  sprite/sound indices) belong to the unported weapon entities, and the
+  boss-rush `unk_A1_4` damage variant stays unreachable.
+- **Tests.** `tests/test_aos_soma.c` gained lethal status-clear and
+  Julius status-gate assertions. `cmake --build build -j8`, the
+  `aos_stats|aos_soma|aos_soul*|aos_enemy|aos_save` CTest selection and
+  the generated-document refreshes are reported in the commit.

@@ -1016,12 +1016,24 @@ int aos_soma_take_elemental_hit(AosSoma *soma, int attack, int defence, int32_t 
         return 0;
     }
     soma->hp = (int16_t)(soma->hp - damage > 0 ? soma->hp - damage : 0);
+    if (soma->hp <= 0 && stats) {
+        /* sub_08021654's lethal branch runs sub_08021E50(7): the
+         * poison, curse and stone status bits and their + 0x13272 /
+         * + 0x13274 / + 0x13276 timers clear before the pending-hit
+         * fields are stored (and before the status block below, which
+         * can then re-inflict like the native order does). */
+        stats->status &= (uint16_t)~7u;
+        for (int bit = 0; bit < 3; ++bit) stats->status_timers[bit] = 0;
+    }
     soma->pending_damage = (int16_t)damage;
     soma->pending_source_x = source_x;
     soma->pending_type = knockback_type;
     if (soma->pending_type == 0 && damage > (soma->max_hp >> 2)) soma->pending_type = 1;
     aos_audio_play_song(0xB3);
-    if (stats && stats->status_timers[2] == 0) {
+    /* sub_08021654 gates the status block on currentCharacter == 0
+     * (Julius never takes poison, curse or stone) and unk_13276 == 0
+     * (the stone-mash counter, status_timers[2]). */
+    if (stats && stats->character == 0 && stats->status_timers[2] == 0) {
         /* 0x080E1338: each status's timer and sound. */
         static const int16_t timers[3] = {0x258, 0x258, 0xF};
         static const uint16_t songs[3] = {0xAE, 0xAD, 0xB1};

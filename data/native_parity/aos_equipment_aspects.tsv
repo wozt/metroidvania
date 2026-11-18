@@ -12,16 +12,16 @@ equipment	stats	behavior	icon	notes
 18	ported	missing	ported	Elfin Robe: armor record 18; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
 19	ported	missing	ported	Death's Robe: armor record 19; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
 2	ported	missing	ported	Gym Clothes: armor record 2; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
-20	ported	missing	ported	Demon's Mail: armor record 20; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
-21	ported	missing	ported	Armor of Fire: armor record 21; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
-22	ported	missing	ported	Armor of Water: armor record 22; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
-23	ported	missing	ported	Blocking Mail: armor record 23; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
-24	ported	missing	ported	Army Jacket: armor record 24; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+20	ported	partial	ported	Demon's Mail: armor record 20; elemental resistance 0x0010 ORed into stats->resist and quartering resisted hits in aos_soma_take_elemental_hit (source-derived, unit-tested, not emulator-compared).
+21	ported	partial	ported	Armor of Fire: armor record 21; elemental resistance 0x0002 (fire) ORed into stats->resist and quartering resisted hits in aos_soma_take_elemental_hit (source-derived, unit-tested, not emulator-compared).
+22	ported	partial	ported	Armor of Water: armor record 22; elemental resistance 0x0004 (water) ORed into stats->resist and quartering resisted hits in aos_soma_take_elemental_hit (source-derived, unit-tested, not emulator-compared).
+23	ported	partial	ported	Blocking Mail: armor record 23; Blocking Mail: armor index 0x17 gives a 25% full evasion (RandomNumberGenerator() & 0xF <= 3) in aos_soma_take_elemental_hit (source-derived, unit-tested, not emulator-compared).
+24	ported	partial	ported	Army Jacket: armor record 24; elemental resistance 0x0001 ORed into stats->resist and quartering resisted hits in aos_soma_take_elemental_hit (source-derived, unit-tested, not emulator-compared).
 25	ported	missing	ported	Cape: accessory record 25; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
 26	ported	missing	ported	Crimson Cloak: accessory record 26; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
 27	ported	missing	ported	Black Cloak: accessory record 27; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
 28	ported	missing	ported	Pendant: accessory record 28; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
-29	ported	missing	ported	Heart Pendant: accessory record 29; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+29	ported	partial	ported	Heart Pendant: accessory record 29; Heart Pendant: accessory 0x1D raises the drop-roll variant threshold 7 -> 0x3F in aos_stats_roll_drop (source-derived, unit-tested, not emulator-compared).
 3	ported	missing	ported	War Fatigues: armor record 3; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
 30	ported	missing	ported	Scarf: accessory record 30; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
 31	ported	missing	ported	Red Scarf: accessory record 31; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
@@ -32,13 +32,13 @@ equipment	stats	behavior	icon	notes
 36	ported	missing	ported	Satan's Ring: accessory record 36; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
 37	ported	missing	ported	Tear Of Blood: accessory record 37; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
 38	ported	missing	ported	Lucky Charm: accessory record 38; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
-39	ported	missing	ported	Rare Ring: accessory record 39; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+39	ported	partial	ported	Rare Ring: accessory record 39; Rare Ring: accessory 0x27 raises the rare-drop and item-drop chances in aos_stats_roll_drop (source-derived, unit-tested, not emulator-compared).
 4	ported	missing	ported	Ninja Suit: armor record 4; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
-40	ported	missing	ported	Soul Eater Ring: accessory record 40; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
-41	ported	missing	ported	Rune Ring: accessory record 41; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
-42	ported	missing	ported	Sherman Ring: accessory record 42; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
-43	ported	missing	ported	Gold Ring: accessory record 43; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
-44	ported	missing	ported	Chaos Ring: accessory record 44; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
+40	ported	partial	ported	Soul Eater Ring: accessory record 40; Soul Eater Ring: accessory 0x28 adds +8 to the soul-drop chance in aos_stats_roll_drop (source-derived, unit-tested, not emulator-compared).
+41	ported	partial	ported	Rune Ring: accessory record 41; Rune Ring: accessory 0x29 changes the status-resistance mask 0x3F -> 0xF and the MP regen cadence in the soul status path (source-derived, unit-tested, not emulator-compared).
+42	ported	partial	ported	Sherman Ring: accessory record 42; Sherman Ring: accessory 0x2A grants walking experience in aria_runtime.c (source-derived, unit-tested, not emulator-compared).
+43	ported	partial	ported	Gold Ring: accessory record 43; Gold Ring: accessory 0x2B sets the soul-drop base 0 -> 3 in aos_stats_roll_drop (source-derived, unit-tested, not emulator-compared).
+44	ported	partial	ported	Chaos Ring: accessory record 44; Chaos Ring: accessory 0x2C restores full MP while cursed in the soul status path (source-derived, unit-tested, not emulator-compared).
 5	ported	missing	ported	Soldier Uniform: armor record 5; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
 6	ported	missing	ported	Pitch Black Suit: armor record 6; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.
 7	ported	missing	ported	Olrox's Suit: armor record 7; ATK/DEF stats exported and applied through aos_stats, passive behavior effects (resistances, blocking, procs) not ported.

@@ -852,10 +852,12 @@ static const EntitySpec special42_variants[] = {
 };
 
 /* Id 15 (Object0FCreate): a shared-flame object. sub_0803AFB8 resolves
- * the palette slot of tile sheet 0x081C15F4 to the 16-bank palette
- * 0x0826F8A4 (the state-3 alternative 0x082718A8 is not selected for
- * Soma; divergence noted) and sub_0803B924 draws frames 0x0820ED60 with
- * OBJ palette row param0 >> 8, defaulting to 7 when the high byte is 0.
+ * tile sheet 0x081C15F4 to the alternate GRAPHICS data at 0x0826F8A4
+ * (or 0x082718A8 in state 3); those addresses are not palettes.
+ * sub_0803B924 draws frames 0x0820ED60 with OBJ palette row param0 >> 8,
+ * defaulting to 7 when the high byte is 0. The persistent shared-effect
+ * palette maps source descriptor 0x082099FC banks 2, 3 and 6 onto OBJ
+ * rows 6, 7 and 9 respectively (also observed in live OBJ palette RAM).
  * The variant suffix carries the resolved row, not the raw param0: the
  * runtime compares (param0 >> 8) ?: 7 for this id. Rows seen in rooms:
  * 6 (param0 0x600), 7 (param0 0 and low-byte variants) and 9 (0x900). */
@@ -872,9 +874,9 @@ static const EntitySpec special07_variants[] = {
 };
 
 static const EntitySpec special15_variants[] = {
-    ENTITY("special_15_v6", 0x081C15F4, 0x0826F8A4, 6, 0x0820ED60),
-    ENTITY("special_15_v7", 0x081C15F4, 0x0826F8A4, 7, 0x0820ED60),
-    ENTITY("special_15_v9", 0x081C15F4, 0x0826F8A4, 9, 0x0820ED60),
+    ENTITY("special_15_v6", 0x081C15F4, 0x082099FC, 2, 0x0820ED60),
+    ENTITY("special_15_v7", 0x081C15F4, 0x082099FC, 3, 0x0820ED60),
+    ENTITY("special_15_v9", 0x081C15F4, 0x082099FC, 6, 0x0820ED60),
 };
 
 /* Id 29 (Object1DCreate, 0x080554F0): param0 (+ 0x30) selects between
@@ -2351,7 +2353,10 @@ static bool export_breakable_variants(const FusionRom *rom,
     TileSheet sheet;
     if (!load_tile_sheet(rom, 0x081C15F4, &sheet, error, error_size))
         return false;
-    const uint8_t *palette = load_palette(rom, 0x0826F8A4, 7,
+    /* sub_08046080 passes destination OBJ row 7 to sub_0803B924.
+     * The live row contains bank 3 of the shared-effect palette
+     * descriptor, not bytes from sub_0803AFB8's alternate graphics. */
+    const uint8_t *palette = load_palette(rom, 0x082099FC, 3,
                                           error, error_size);
     const uint8_t *descriptor = palette
         ? slice(rom, 0x0820ED60, 16, "breakable frame descriptor",

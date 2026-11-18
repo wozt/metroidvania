@@ -113,6 +113,26 @@
   `tests/test_aria_simulate_levelup_room.sh` (new,
   `aria_simulate_levelup_room`) sweeps room 0/3's zombies to level 2.
 
+## Patch 1234 - Restore breakable-chandelier colours
+
+- **Exporter address role fixed.** `sub_0803AFB8` substitutes graphics
+  `0x0826F8A4` (or `0x082718A8`) for the shared tile sheet
+  `0x081C15F4`; those addresses were incorrectly decoded as palette
+  descriptors, leaving generic breakables and Object0F shared flames black.
+  The exporter now maps destination OBJ rows 6, 7 and 9 to banks 2, 3 and 6
+  of the shared-effect palette descriptor `0x082099FC`. Every
+  `special_62_v00-v15` chandelier variant uses bank 3, as
+  `sub_08046080` selects OBJ row 7.
+- **Native and runtime evidence.** Starting from the private
+  `/tmp/aos_trans/post.state` room-0/3 checkpoint, a one-frame headless mGBA
+  run with no input dumped OBJ palette row 7. All 32 bytes equal ROM
+  descriptor `0x082099FC` bank 3. After rebuilding private `aria_objects`, a
+  runtime room-0/3 capture at spawn `(256,176)`, frame 2, shows the orange
+  flame and light metal instead of the opaque black silhouette. The updated
+  native golden fixture guards every changed object BMP and the runtime
+  index. Break animation, pickup timing and complete frame placement remain
+  partial until they are compared as a synchronized native sequence.
+
 ## Patch 1229 - Restore the native save-room prompt composition
 
 - **Permanent overlay fixed.** Object1C's marker child starts with entity

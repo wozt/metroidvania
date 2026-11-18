@@ -2812,18 +2812,18 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     for (size_t i = room->entity_count; i < ARIA_ENTITY_DATA_RECORDS - 1; ++i)
         memset(&aria_entity_data[i + 1], 0,
                sizeof aria_entity_data[i + 1]);
-    /* gEwramData + 0xA094 (bgInfo[1]) for the enemy-side
-     * room-record readers — Chaos's sub_080A57BC copies the
-     * +6/+0xA u16 low bytes into the crawler body's +0x18/+0x19
-     * spawn-origin fields. Same view object20_fill_in feeds the
-     * Object20 In block: the bound scroll accumulator,
-     * camera-seeded until the room's first transaction. */
-    {
-        int32_t a094_x, a094_y;
-        object20_a094_view(room, cam_x, cam_y, &a094_x, &a094_y);
-        aos_enemy_set_room_origin((int32_t)(uint16_t)(a094_x >> 16),
-                                  (int32_t)(uint16_t)(a094_y >> 16));
-    }
+    /* gEwramData + 0xA094 (bgInfo[1]) view for this frame's entity
+     * pass: the bound scroll accumulator once the room's first
+     * transaction binds it, camera-seeded until then — the same
+     * view object20_fill_in feeds the Object20 In block. Every
+     * native reader of the +6/+0xA integer halves (or the +4/+8
+     * whole words) below consumes this one view. */
+    int32_t a094_x, a094_y;
+    object20_a094_view(room, cam_x, cam_y, &a094_x, &a094_y);
+    /* Chaos's sub_080A57BC copies the +6/+0xA u16 low bytes into
+     * the crawler body's +0x18/+0x19 spawn-origin fields. */
+    aos_enemy_set_room_origin((int32_t)(uint16_t)(a094_x >> 16),
+                              (int32_t)(uint16_t)(a094_y >> 16));
     for (size_t i = 0; !entities_frozen && i < room->entity_count; ++i) {
         AriaEntity *e = &room->entities[i];
         entity_data_sync(e, i);
@@ -3953,8 +3953,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 .linked_self = false,
                 .player_x = soma ? soma->x : 0,
                 .player_y = soma ? soma->y : 0,
-                .room_ox = (uint16_t)cam_x,
-                .room_oy = (uint16_t)cam_y,
+                .room_ox = (uint16_t)(a094_x >> 16),
+                .room_oy = (uint16_t)(a094_y >> 16),
                 .rng_a = aos_random(),
                 .rng_b = aos_random(),
                 .palette_slot = 0,
@@ -4123,8 +4123,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * sUnk_084F0ED8[23]): the vertical pan director. Create's
              * sprite attach stays under special_sprites (special_23);
              * the variant pick, position and nineteen counted
-             * children run in the module. The A094 room fields pass
-             * as 0 (runtime rooms carry no world offset), the
+             * children run in the module. The A094 + 6 / + 0xA
+             * integer halves pass this frame's bgInfo[1] view, the
              * sub_08021304 gate is approximated clear, the + 0x1C
              * flags the held Up/Down approximation and the
              * sub_08068AD4 probe a player-near window. */
@@ -4132,7 +4132,9 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 aos_object17_create(&e->object17,
-                                    (int)(soma->y >> 16), 0, 0);
+                                    (int)(soma->y >> 16),
+                                    (uint16_t)(a094_x >> 16),
+                                    (uint16_t)(a094_y >> 16));
                 continue;
             }
             int fsx = (int)(soma->x >> 16) - 0x20;
@@ -4142,8 +4144,11 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             uint16_t flags = 0;
             if (input->held & AOS_KEY_UP) flags |= 0x80;
             if (input->held & AOS_KEY_DOWN) flags |= 0x40;
+            /* room_y16 is the A094 + 8 yPos whole word the
+             * state-2 bound compare adds; room_oy the + 0xA
+             * integer half. */
             aos_object17_update(&e->object17, false, near, flags,
-                                0, 0);
+                                a094_y, (uint16_t)(a094_y >> 16));
             if (e->object17.locked)
                 input->held = 0;
             /* song is sub_08013D60 for 0x116 (the pan director's hold)
@@ -4422,6 +4427,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * triple exports as special_53; the + 0x344 global
              * bitfield and + 0x13190 link are approximated and the
              * sub_0806D9CC particles become counted effects. */
+            if (e->link_parent) continue;   /* sub_0805A50C carrier
+                * child: its updateFunc is the sub_0805A5BC bx-lr
+                * stub, so the record is inert — it only holds the
+                * shared special_53 sprite for the draw pass. */
             if (!e->spawned) {
                 if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
@@ -4430,7 +4439,28 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                     (int16_t)e->param1, e->x << 16,
                                     e->y << 16, false, false, true,
                                     &deleted);
-                if (deleted) e->spawned = false;
+                if (deleted) {
+                    e->spawned = false;
+                } else if (e->object35.child_count) {
+                    /* Object35Create's param0 == 0 path fires
+                     * sub_0805A50C: EntityCreateInRange(0x49, 0xCF,
+                     * sub_0805A5BC) makes a carrier child at the
+                     * parent's + 0x40/+ 0x44 with + 0x5C = parent -
+                     * 1 (0x11), + 0x65 = 3, the + 0x72 bits 1-2 and
+                     * the + 0x20 parent link, sharing the same
+                     * special_53 tiles/frames through sub_0803B924.
+                     * The unified pool approximates the native
+                     * 0x49..0xCF range; link_parent keeps the
+                     * index-based parent reference. */
+                    size_t child_slot = entity_reserve_slot(room);
+                    if (child_slot < MAX_ENTITIES) {
+                        AriaEntity *child = &room->entities[child_slot];
+                        *child = (AriaEntity){.kind = ARIA_KIND_SPECIAL,
+                            .id = 53, .x = e->x, .y = e->y,
+                            .spawned = true,
+                            .link_parent = (int)(e - room->entities) + 1};
+                    }
+                }
                 continue;
             }
             aos_object35_update(&e->object35, false, false);
@@ -4823,21 +4853,25 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             /* Object21Create / Object21Update (sUnk_084F0DF8[33] /
              * sUnk_084F0ED8[33]): the cyclic lift. Create's sprite
              * attach exports as special_33 (same tiles/frames as
-             * special_35, palette bank 1). The A094 room fields
-             * pass as 0, the + 0x3C camera byte as param1, the
-             * + 0x6D collision flag as 0 and the sub_0806D460
-             * physics runs inside the module; the + 0x44 y
-             * position writes back to e->y. */
+             * special_35, palette bank 1). The A094 + 6 / + 0xA
+             * integer halves pass this frame's bgInfo[1] view, the
+             * + 0x3C camera byte as param1, the + 0x6D collision
+             * flag as 0 and the sub_0806D460 physics runs inside
+             * the module; the + 0x44 y position writes back to
+             * e->y. */
             if (!e->spawned) {
                 if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
                 bool deleted;
-                aos_object21_create(&e->object21, 0, 0, e->param1,
-                                    &deleted);
+                aos_object21_create(&e->object21,
+                                    (uint16_t)(a094_x >> 16),
+                                    (uint16_t)(a094_y >> 16),
+                                    e->param1, &deleted);
                 if (deleted) e->spawned = false;
                 continue;
             }
-            aos_object21_update(&e->object21, 0, 0);
+            aos_object21_update(&e->object21,
+                                (int16_t)(a094_y >> 16), 0);
             if (e->object21.song >= 0) {
                 sound = e->object21.song;
                 printf("Object21 %zu: song 0x%X\n", i,
@@ -4873,7 +4907,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * mark decrements the parent's + 0x18 once. The
              * + 0x4CC gate passes 0 (unmodelled global), the
              * + 0x37E bit 0x20 is aria_pickup_state.special bit
-             * 5, the A094 room origin passes 0, the + 0x59
+             * 5, the A094 + 4 / + 8 whole words pass this frame's
+             * bgInfo[1] view, the + 0x59
              * bit-0 engine mark approximates an on-screen window
              * and sub_0806AF98's tile depenetration is skipped.
              * The hurt callback takes the weapon hitbox against
@@ -4907,8 +4942,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                       wy + wh - 1 < e->y - 24 || e->y + 8 < wy))
                     aos_object25_hurt(&e->object25, combat->player->atk);
             }
-            aos_object25_update(&e->object25, active, layer, 0, 0,
-                                aos_random);
+            aos_object25_update(&e->object25, active, layer,
+                                a094_x, a094_y, aos_random);
             e->x = (int)(e->object25.pos_x >> 16);
             e->y = (int)(e->object25.pos_y >> 16);
             if (e->object25.spawn_pending) {

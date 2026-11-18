@@ -44,7 +44,12 @@
  * display placements and the gUnk_03002CB0 flash bit become
  * outputs, the + 0x344 bitfield and + 0x13190 link are
  * inputs, the collision box stays under special_sprites and
- * there is no emulator comparison. */
+ * there is no emulator comparison. The sub_0805A50C carrier
+ * child is spawned by the runtime as a real SPECIAL id-53
+ * entity record (entity_reserve_slot, link_parent = parent)
+ * whose inert sub_0805A5BC update is skipped by the id-53
+ * dispatch; child_count only reports that native create
+ * fired it. */
 typedef struct {
     uint8_t state;          /* +0xB: 0-12 */
     uint8_t flag_a;         /* +0xA: gates the machine */

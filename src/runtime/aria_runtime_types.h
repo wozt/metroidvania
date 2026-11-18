@@ -257,7 +257,10 @@ typedef struct {
     AosEnemy enemy;
     uint8_t reward_flags;   /* the entity's + 0x3E guard of sub_080683BC */
     bool secret_mark;       /* a broken wall's pending secret-room mark */
-    int link_parent;        /* Object26 child: parent entity index + 1, 0 = none */
+    int link_parent;        /* spawned-child parent entity index + 1
+                             * (Object26 orbs, Object25 state-1
+                             * children, Object35's sub_0805A50C
+                             * carrier); 0 = none */
 } AriaEntity;
 
 /* Host model of one gEwramData + 0x4E4 entityData[] record

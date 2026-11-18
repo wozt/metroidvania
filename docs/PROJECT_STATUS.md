@@ -1,3 +1,83 @@
+## Patch 1241 - Port the Object35 sub_0805A50C carrier child
+
+- **Native path.** `Object35Create` (0x0805A18C) fires `sub_0805A50C`
+  on its param0 == 0 branch: `EntityCreateInRange(0x49, 0xCF,
+  sub_0805A5BC)` allocates a carrier child in the generic dynamic
+  slot range, copies the parent's + 0x40/+ 0x44, sets + 0x5C =
+  parent - 1 (0x11), + 0x65 = 3, + 0x72 bits 1-2, loads the same
+  special_53 tiles/frames through `sub_0803B924`/`sub_0803AFB8`,
+  installs drawFunc `sub_0803B9D0` and stores the parent pointer at
+  + 0x20. Its updateFunc `sub_0805A5BC` is a `bx lr` stub — the
+  child is inert for the room's lifetime.
+- **Reachability.** Room `area_10_room_001` places two SPECIAL id-53
+  (object 0x35) records; the param0 == 0 one takes the carrier path,
+  so the child is reachable from a ported room and is now spawned as
+  a real `ARIA_KIND_SPECIAL`/id-53 `AriaEntity` through
+  `entity_reserve_slot` — the same reuse-before-extend pool the
+  Object25 children and enemy spawns use (the documented unified-pool
+  approximation of the native 0x49..0xCF range is unchanged). The
+  + 0x20 parent link maps to `link_parent`, which also keeps the
+  parent slot reference-safe for the recycler.
+- **Update and draw.** The id-53 dispatch skips records with
+  `link_parent` set, matching the bx-lr stub; the generic
+  `draw_special_objects` fallback already draws `special_objects[53]`
+  at the child's create-time position. The child's + 0x5C = 0x11 /
+  + 0x65 = 3 band and `sub_0803B9D0` drawFunc collapse into that
+  fallback — same art, no per-frame parent tracking (the native
+  child keeps its spawn-time + 0x40/+ 0x44 while the parent can
+  still rise in state 1).
+- **Evidence.** `tests/test_aria_simulate_object35_child.sh` (ctest
+  `aria_simulate_object35_child`) runs room 10/1 headless and
+  requires the id-53 coverage line to report 3 records / 3 spawned
+  with a stable 3-entity high-water mark over 2000 frames;
+  `aos_object35`, `aria_simulate_entity_pool` and the other
+  `aria_simulate_*` contracts stay green. Runtime integration
+  evidence, not an emulator comparison.
+
+## Patch 1242 - Feed the real bgInfo[1] room origin to the A094 entity readers
+
+- **Audit result.** `gEwramData + 0xA094` is `bgInfo[1]`
+  (`EwramData_unkA078`, stride 0x1C from + 0xA078): + 4/+ 8 the
+  xPos/yPos 16.16 whole words, + 6/+ 0xA their integer halves.
+  The port already owns the accumulator in `aos_scroll.bg[1]`
+  (sub_0803FBBC/sub_0803F8A8/sub_0800F9EC binds and the gated
+  sub_0800ED24 transactions) and `object20_a094_view` exposes it
+  camera-seeded until the room's first transaction. What was
+  missing: four entity-side native readers still received `0` or
+  the camera approximation instead of that view.
+- **Wired readers.** `update_entities` now computes the A094 view
+  once per frame and feeds it to every remaining consumer:
+  Object14's env `room_ox`/`room_oy` (was `cam_x`/`cam_y`, now the
+  real + 6/+ 0xA halves), Object17Create/Object17Update (was `0,0`
+  for both the create placement `0x78 - A094[6]` /
+  `table[+ 0xB] - A094[0xA]` and the state-2 `(pos44 + speed +
+  A094[8]) >> 16` bound compare, which now receives the + 8 whole
+  word), Object21Create/Object21Update (was `0,0` for the
+  `0x40 - A094[6]` / `0x18 - A094[0xA]` placement and the
+  `0x7F - A094[0xA]` bound) and Object25Update (was `0,0` for the
+  + 4/+ 8 16.16 origin the spawn tables subtract and the
+  `pos_x + A094[4] <= 0xD00000` bound adds back). Object25's
+  state-1 children hit the same branch and get the same view.
+- **Stale comments corrected.** The "runtime rooms carry no world
+  offset" rationale was written before the scroll accumulator was
+  bound; it is removed at all three sites.
+- **Evidence.** `cmake --build build -j8` clean;
+  `ctest -R "object17|object21|object25|object14|scroll|entities|aria"`
+  16/16 pass (the module tests inject their own room fields, so
+  only the dispatch wiring changed). `annotations.tsv` rows
+  `aos.objects.cyclic_lift` and `aos.objects.vertical_pan_director`
+  updated to record the real feed; `aos.objects.soul_carrier`'s
+  divergence list needed no change (it never claimed the zero).
+- **Remaining gaps (unchanged).** `follow_camera` is still the
+  documented stateless approximation of the native per-frame
+  sub_0803FBBC camera request (code_08036B40.c camera modes the
+  host does not run), so cam_x/cam_y — and therefore the A094
+  camera seed — snap to the settle target rather than gliding at
+  the native 8 px/frame cap; `a094_0` stays approximated by
+  `room->width_screens`; Object17's `+ 0x44` accumulator still
+  seeds at 0 (native spawn-side init unidentified); the Object25
+  `+ 0x4CC`/`+ 0x59` bit-0 gates remain approximations.
+
 ## Patch 1240 - Complete the entity slot recycler for Object25 children
 
 - **Interrupted refactor completed.** An in-progress change had replaced the

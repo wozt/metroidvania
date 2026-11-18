@@ -6,7 +6,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v15"
+#define AOS_SAVE_SCHEMA "metroidvania-aos-save-v16"
+#define AOS_SAVE_SCHEMA_V15 "metroidvania-aos-save-v15"
 #define AOS_SAVE_SCHEMA_V14 "metroidvania-aos-save-v14"
 #define AOS_SAVE_SCHEMA_V13 "metroidvania-aos-save-v13"
 #define AOS_SAVE_SCHEMA_V12 "metroidvania-aos-save-v12"
@@ -98,6 +99,13 @@ typedef struct {
      * is read in menu/inventory paths. Older files load 0, the
      * fresh-state value. */
     uint32_t progress_flags;
+    /* Schema v16: gEwramData + 0x60, EwramData_unk60.unk_378 — the
+     * warp-point discovery bitmask sub_0804F7A4 sets inside
+     * sub_0800F9EC's room load when the entered room is one of the
+     * eight sUnk_08525FBC warp rooms, and sub_080114FC's picker
+     * cycles only over set bits. Bits 0-7 cover the shipped table.
+     * Older files load 0, the fresh-state value. */
+    uint8_t warp_discovered;
 } AosSaveData;
 
 void aos_save_init_new(AosSaveData *save, unsigned slot);

@@ -1633,6 +1633,15 @@ if(BUILD_TESTING)
                      sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_save_room_route.sh")
     set_tests_properties(aria_simulate_save_room_route PROPERTIES SKIP_RETURN_CODE 77)
 
+    # Headless warp-discovery persistence: the fixture save's unk_378
+    # mask restores into AosMapWarp, the Object1C commit rewrites the
+    # file at schema v16 and a second process reloads the same mask.
+    add_test(NAME aria_simulate_warp_save
+             COMMAND ${CMAKE_COMMAND} -E env
+                     FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>
+                     sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_warp_save.sh")
+    set_tests_properties(aria_simulate_warp_save PROPERTIES SKIP_RETURN_CODE 77)
+
     # START pause-gate contract in a later room: room 0/19 spawns a
     # passive Object00 door; native Object00Create only reports
     # sub_0800C5A8(0) when Soma is near, so a far spawn must leave

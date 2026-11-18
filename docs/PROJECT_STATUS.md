@@ -1,3 +1,43 @@
+## Patch 1251 - Portable save schema v16: unk_60.unk_378 warp discovery persists
+
+- **Scope.** `src/runtime/aos/game/aos_save.h/.c`,
+  `src/runtime/aria_runtime.c`, `src/runtime/aria_assets.h`,
+  `src/runtime/aria_entities.c`, `tests/test_aos_save.c`,
+  `tests/test_aria_simulate_warp_save.sh`, `CMakeLists.txt`,
+  `data/native_parity/annotations.tsv`, `data/dashboard/features.tsv`,
+  `docs/PROJECT_STATUS.md`.
+- **Defect.** The native warp-room discovery mask
+  `unk_60.unk_378` — set by `sub_0804F7A4` inside every
+  `sub_0800F9EC` room load and cycled by `sub_080114FC`'s picker —
+  lived only in the session-local `AosMapWarp.discovered`. Every
+  save -> quit -> load cycle silently reset it, so the Object1F warp
+  picker forgot every discovered castle warp room until Soma walked
+  into each one again.
+- **Change.** Schema v16 appends `warp_discovered=` after
+  `progress_flags=`; `AosSaveData.warp_discovered` carries the
+  eight-entry `sUnk_08525FBC` mask. The parser accepts v1-v15 files
+  (mask defaults to 0, the fresh-state value) and the serializer
+  chain gained `payload_v15`/`payload_v16` like every earlier
+  version step. `AosMapWarp.discovered` stays the single live mask:
+  both load paths (SDL runtime and `--simulate`) restore it from the
+  save, the save-point and quicksave commits in `aria_runtime.c`
+  plus the Object1C `SaveData_SaveSlotToSram` refresh in
+  `aria_entities.c` rewrite it through the new
+  `aria_runtime_warp_discovered` bridge, and the simulate summary
+  prints the mask for headless checks.
+- **Verification.** `tests/test_aos_save.c` round-trips mask 0xA5
+  and proves a v15 file loads it as 0; the new
+  `aria_simulate_warp_save` CTest drives the real Object1C save
+  commit in room 0/14: the fixture mask restores (`warp_discovered
+  a5` in the summary), the committed file is schema v16 containing
+  `warp_discovered=a5`, and a second process reloading that file
+  reports the same mask — the full save -> store -> restart -> load
+  loop. `ctest -R "aos_save|warp_save|save_room"` 4/4 pass.
+- **Remaining gaps.** `unk_60.unk_37C` (area-banner shown bits) and
+  the `unk_1325C` status-effect words are still session-local; the
+  mask covers only the eight shipped warp points, matching the
+  native table; no emulator SRAM comparison was taken.
+
 ## Patch 1250 - Breakable/prop matchers consume sub_080421AC bit 0x4
 
 - **Scope.** `src/runtime/aos/core/aos_soma.c/.h`,

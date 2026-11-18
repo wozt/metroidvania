@@ -4950,9 +4950,12 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  * schema on that same authoritative confirmation edge; the
                  * older room-level Up detector is not a substitute because it
                  * snapshots before the player confirms the prompt. */
-                if (object1c_save_ctx && combat->progress)
+                if (object1c_save_ctx && combat->progress) {
                     aria_runtime_to_save(object1c_save_ctx, room, soma,
                                          combat->progress);
+                    object1c_save_ctx->warp_discovered =
+                        aria_runtime_warp_discovered();
+                }
                 printf("Object1C %zu: +0x60 save block refresh "
                        "(sub_08012688/0x080135C0)\n", i);
             }

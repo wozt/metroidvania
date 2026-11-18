@@ -392,6 +392,10 @@ static AosInGameMode in_game_mode = { .unk_64 = AOS_INGAME_PLAY,
 static AosMapWarp map_warp = { .selected = -1, .song = -1 };
 static bool map_warp_available;
 
+uint8_t aria_runtime_warp_discovered(void) {
+    return map_warp.discovered;
+}
+
 /* sub_0800FCB8 through the runtime's map data: the banner pick for
  * the room the transition just committed. The native routine reads
  * bgInfo[1].xPos.part8.integer1 (scroll px >> 8) and shifts it >> 8
@@ -1806,6 +1810,12 @@ int aria_runtime_main(int argc, char **argv) {
         map_warp_available = sim_have_quick_map &&
             aos_map_warp_init(&map_warp, &room_dialogue_rom,
                               sim_error, sizeof sim_error);
+        /* unk_60.unk_378 restore: the portable save's warp_discovered
+         * field lands on the same mask sub_0804F7A4 maintains; with
+         * no --rom the picker cannot open anyway, like the absent
+         * native unk_88 map data. */
+        if (has_active_save)
+            map_warp.discovered = active_save.warp_discovered;
         (void)load_room_music(DEFAULT_ROOM_MUSIC);
         for (long frame = 0; frame < simulate_frames; ++frame) {
             /* sub_080104EC: while the transition stage machine runs the
@@ -2058,10 +2068,10 @@ int aria_runtime_main(int argc, char **argv) {
             aos_enemy_set_soul_attacks(NULL, 0);
         }
         int spawned_special = 0, active_special = 0, enemies_alive = 0;
-        printf("Aria simulate: %ld frames, room %d/%d, spawn %d,%d, Soma %d,%d hp %d/%d, room changes %ld\n",
+        printf("Aria simulate: %ld frames, room %d/%d, spawn %d,%d, Soma %d,%d hp %d/%d, room changes %ld, warp_discovered %02x\n",
                simulate_frames, room.area, room.number, spawn_x, spawn_y,
                (int)(soma.x >> 16), (int)(soma.y >> 16), soma.hp, soma.max_hp,
-               sim_room_changes);
+               sim_room_changes, map_warp.discovered);
         if (use_sim_script)
             printf("Aria simulate: script %s: %zu directives, final held 0x%x\n",
                    simulate_script_path, sim_dir_count, sim_held);
@@ -2342,6 +2352,7 @@ int aria_runtime_main(int argc, char **argv) {
         if (has_active_save) {
             aos_quick_map_unpack_explored(&quick_map, active_save.map_explored);
             quick_map.secret_rooms = active_save.secret_rooms;
+            map_warp.discovered = active_save.warp_discovered;
         }
         quick_map_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
                                               SDL_TEXTUREACCESS_STREAMING,
@@ -3276,6 +3287,7 @@ int aria_runtime_main(int argc, char **argv) {
                     aos_save_quick_path(quick_path, sizeof quick_path, save_path);
                 if (saved) {
                     aria_runtime_to_save(&active_save, &room, &soma, &progress);
+                    active_save.warp_discovered = map_warp.discovered;
                     if (have_quick_map) {
                         aos_quick_map_pack_explored(&quick_map,
                                                     active_save.map_explored);
@@ -3823,6 +3835,7 @@ int aria_runtime_main(int argc, char **argv) {
                 player_stats.hp = soma.hp;
                 if (has_active_save) {
                     aria_runtime_to_save(&active_save, &room, &soma, &progress);
+                    active_save.warp_discovered = map_warp.discovered;
                     if (have_quick_map) {
                         aos_quick_map_pack_explored(&quick_map,
                                                     active_save.map_explored);

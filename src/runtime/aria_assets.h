@@ -47,5 +47,9 @@ void aria_runtime_from_save(AosStats *stats, const AosSaveData *save);
 void aria_souls_from_save(AosStats *stats, const AosSaveData *save);
 void aria_runtime_to_save(AosSaveData *save, const AriaRoom *room,
                           const AosSoma *soma, const AosStats *progress);
+/* unk_60.unk_378 bridge: AosMapWarp owns the live discovery mask but the
+ * save conversion in aria_entities.c cannot see the runtime's static
+ * map_warp, so the host exposes its current bits here. */
+uint8_t aria_runtime_warp_discovered(void);
 
 #endif

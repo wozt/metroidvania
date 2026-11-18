@@ -240,16 +240,31 @@ static int payload_v14(char *out, size_t size, const AosSaveData *save) {
 /* v15 keeps the v14 payload and appends the gEwramData + 0x60
  * progress-flags word (SRAM save slot 6) as progress_flags= after
  * the secret-room bits. */
-static int payload(char *out, size_t size, const AosSaveData *save) {
+static int payload_v15(char *out, size_t size, const AosSaveData *save) {
     char v14[AOS_SAVE_TEXT_MAX];
     int used = payload_v14(v14, sizeof v14, save);
     if (used < 0) return -1;
     const char *rest = strchr(v14, '\n');
     if (!rest) return -1;
-    int total = snprintf(out, size, "%s%s", AOS_SAVE_SCHEMA, rest);
+    int total = snprintf(out, size, "%s%s", AOS_SAVE_SCHEMA_V15, rest);
     if (total < 0 || (size_t)total + 32 >= size) return -1;
     total += snprintf(out + total, size - (size_t)total,
                       "progress_flags=%08" PRIx32 "\n", save->progress_flags);
+    return total;
+}
+
+/* v16 keeps the v15 payload and appends the unk_60.unk_378 warp
+ * discovery bitmask as warp_discovered= after progress_flags=. */
+static int payload(char *out, size_t size, const AosSaveData *save) {
+    char v15[AOS_SAVE_TEXT_MAX];
+    int used = payload_v15(v15, sizeof v15, save);
+    if (used < 0) return -1;
+    const char *rest = strchr(v15, '\n');
+    if (!rest) return -1;
+    int total = snprintf(out, size, "%s%s", AOS_SAVE_SCHEMA, rest);
+    if (total < 0 || (size_t)total + 32 >= size) return -1;
+    total += snprintf(out + total, size - (size_t)total,
+                      "warp_discovered=%02x\n", save->warp_discovered);
     return total;
 }
 
@@ -324,18 +339,27 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                        sizeof(AOS_SAVE_SCHEMA_V13)) == 0 ||
                strncmp(text, AOS_SAVE_SCHEMA_V14 "\n",
                        sizeof(AOS_SAVE_SCHEMA_V14)) == 0 ||
+               strncmp(text, AOS_SAVE_SCHEMA_V15 "\n",
+                       sizeof(AOS_SAVE_SCHEMA_V15)) == 0 ||
                strncmp(text, AOS_SAVE_SCHEMA "\n",
                        sizeof(AOS_SAVE_SCHEMA)) == 0;
     bool v14 = strncmp(text, AOS_SAVE_SCHEMA_V14 "\n",
                        sizeof(AOS_SAVE_SCHEMA_V14)) == 0 ||
+               strncmp(text, AOS_SAVE_SCHEMA_V15 "\n",
+                       sizeof(AOS_SAVE_SCHEMA_V15)) == 0 ||
                strncmp(text, AOS_SAVE_SCHEMA "\n",
                        sizeof(AOS_SAVE_SCHEMA)) == 0;
-    bool v15 = strncmp(text, AOS_SAVE_SCHEMA "\n",
+    bool v15 = strncmp(text, AOS_SAVE_SCHEMA_V15 "\n",
+                       sizeof(AOS_SAVE_SCHEMA_V15)) == 0 ||
+               strncmp(text, AOS_SAVE_SCHEMA "\n",
+                       sizeof(AOS_SAVE_SCHEMA)) == 0;
+    bool v16 = strncmp(text, AOS_SAVE_SCHEMA "\n",
                        sizeof(AOS_SAVE_SCHEMA)) == 0;
     uint32_t events[8] = {0};
     uint32_t placed_items[AOS_SAVE_PLACED_ITEM_WORDS] = {0};
     uint32_t special_souls = 0;
     uint32_t progress_flags = 0;
+    unsigned warp_discovered = 0;
     unsigned secrets = 0;
     unsigned red = 0, blue = 0, yellow = 0;
     unsigned buttons[4] = {1, 0, 3, 2};
@@ -482,6 +506,34 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                      &events[5], &events[6], &events[7],
                      &placed_items[0], &placed_items[1], &placed_items[2],
                      &placed_items[3], &placed_items[4], &placed_items[5], &expected, &tail)
+            : consumed > 0 && v16
+            ? sscanf(text + consumed, "souls=%246[0-9a-f]\nsouls_collected=%u"
+                                      "\nsouls_equipped=%u,%u,%u\nmp=%d"
+                                      "\nbuttons=%u,%u,%u,%u"
+                                      "\nbestiary=%" SCNx32 ",%" SCNx32 ",%" SCNx32 ",%" SCNx32
+                                      "\ndrops=%" SCNx32 ",%" SCNx32 ",%" SCNx32 ",%" SCNx32
+                                      ",%" SCNx32 ",%" SCNx32 ",%" SCNx32 ",%" SCNx32
+                                      "\nevents=%" SCNx32 ",%" SCNx32 ",%" SCNx32 ",%" SCNx32
+                                      ",%" SCNx32 ",%" SCNx32 ",%" SCNx32 ",%" SCNx32
+                                      "\nplaced_items=%" SCNx32 ",%" SCNx32 ",%" SCNx32
+                                      ",%" SCNx32 ",%" SCNx32 ",%" SCNx32
+                                      "\nspecial_souls=%" SCNx32
+                                      "\nmap=%560[0-9a-f]"
+                                      "\nsecrets=%x"
+                                      "\nprogress_flags=%" SCNx32
+                                      "\nwarp_discovered=%x"
+                                      "\nchecksum=%" SCNx32 "\n%n",
+                     souls, &souls_collected, &red, &blue, &yellow, &mp,
+                     &buttons[0], &buttons[1], &buttons[2], &buttons[3],
+                     &defeated[0], &defeated[1], &defeated[2], &defeated[3],
+                     &dropped[0][0], &dropped[0][1], &dropped[0][2], &dropped[0][3],
+                     &dropped[1][0], &dropped[1][1], &dropped[1][2], &dropped[1][3],
+                     &events[0], &events[1], &events[2], &events[3], &events[4],
+                     &events[5], &events[6], &events[7],
+                     &placed_items[0], &placed_items[1], &placed_items[2],
+                     &placed_items[3], &placed_items[4], &placed_items[5],
+                     &special_souls, map_hex, &secrets, &progress_flags,
+                     &warp_discovered, &expected, &tail)
             : consumed > 0 && v15
             ? sscanf(text + consumed, "souls=%246[0-9a-f]\nsouls_collected=%u"
                                       "\nsouls_equipped=%u,%u,%u\nmp=%d"
@@ -584,7 +636,7 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
             : consumed > 0 ? sscanf(text + consumed, "checksum=%" SCNx32 "\n%n", &expected, &tail)
                            : 0;
         if (read == (v5 ? 1 : v6 ? 3 : v7 ? 7 : v8 ? 11 : v9 ? 23 : v10 ? 31
-                             : v11 ? 37 : v12 ? 38 : v15 ? 41 : v14 ? 40 : 39) &&
+                             : v11 ? 37 : v12 ? 38 : v16 ? 42 : v15 ? 41 : v14 ? 40 : 39) &&
             tail > 0) {
             matched += read;
             consumed += tail;
@@ -596,7 +648,7 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
     }
     int expected_matches = legacy ? 10 : v2 ? 20 : v3 ? 22 : v4 ? 25 : v5 ? 26
                            : v6 ? 28 : v7 ? 32 : v8 ? 36 : v9 ? 48 : v10 ? 56
-                           : v11 ? 62 : v12 ? 63 : v15 ? 66 : v14 ? 65 : 64;
+                           : v11 ? 62 : v12 ? 63 : v16 ? 67 : v15 ? 66 : v14 ? 65 : 64;
     if (expected_matches >= 26 && matched == expected_matches &&
         (strlen(inventory) != AOS_SAVE_INVENTORY ||
          (!v5 && strlen(souls) != 2 * AOS_SAVE_SOUL_BYTES))) {
@@ -713,6 +765,13 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
             parsed.secret_rooms = (uint16_t)secrets;
         }
         if (v15) parsed.progress_flags = progress_flags;
+        if (v16) {
+            if (warp_discovered > 0xFF) {
+                set_error(error, error_size, "save contents are out of range");
+                return false;
+            }
+            parsed.warp_discovered = (uint8_t)warp_discovered;
+        }
     }
     char canonical[AOS_SAVE_TEXT_MAX];
     int canonical_size = legacy ? payload_v1(canonical, sizeof canonical, &parsed)
@@ -727,7 +786,8 @@ bool aos_save_load(const char *path, AosSaveData *save, char *error, size_t erro
                          : v10  ? payload_v10(canonical, sizeof canonical, &parsed)
                          : v11  ? payload_v11(canonical, sizeof canonical, &parsed)
                          : v12  ? payload_v12(canonical, sizeof canonical, &parsed)
-                         : v15  ? payload(canonical, sizeof canonical, &parsed)
+                         : v16  ? payload(canonical, sizeof canonical, &parsed)
+                         : v15  ? payload_v15(canonical, sizeof canonical, &parsed)
                          : v14  ? payload_v14(canonical, sizeof canonical, &parsed)
                                 : payload_v13(canonical, sizeof canonical, &parsed);
     if (!valid(&parsed) || canonical_size < 0 || (size_t)canonical_size >= sizeof canonical ||

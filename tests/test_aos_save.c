@@ -45,6 +45,7 @@ static int write_runtime_fixture(const char *path) {
     save.placed_items[2] = 1u << 26;
     save.special_souls = 1u << 1;
     save.progress_flags = 3;
+    save.warp_discovered = 0xA5;
     if (!aos_save_store(path, &save, error, sizeof error)) {
         fprintf(stderr, "cannot write runtime save fixture: %s\n", error);
         return 1;
@@ -124,6 +125,8 @@ int main(int argc, char **argv) {
     source.secret_rooms = 0x1555;
     /* Schema v15: the gEwramData + 0x60 progress-flags word (SRAM slot 6). */
     source.progress_flags = 3;
+    /* Schema v16: unk_60.unk_378 warp discovery bits 0, 2, 5 and 7. */
+    source.warp_discovered = 0xA5;
     assert(aos_save_store(path, &source, error, sizeof error));
 
     AosSaveData loaded = {0};
@@ -143,7 +146,8 @@ int main(int argc, char **argv) {
                            "00000000\n") &&
                strstr(all, "special_souls=0042\n") &&
                strstr(all, "secrets=1555\n") &&
-               strstr(all, "progress_flags=00000003\n"));
+               strstr(all, "progress_flags=00000003\n") &&
+               strstr(all, "warp_discovered=a5\n"));
         /* Schema v11 keeps placed items but initializes special souls empty. */
         char v11[2048];
         int v11_size = snprintf(v11, sizeof v11, "%s\n", AOS_SAVE_SCHEMA_V11);
@@ -207,7 +211,25 @@ int main(int argc, char **argv) {
         AosSaveData previous_v14 = {0};
         assert(aos_save_load(path, &previous_v14, error, sizeof error));
         assert(previous_v14.secret_rooms == source.secret_rooms &&
-               previous_v14.progress_flags == 0);
+               previous_v14.progress_flags == 0 &&
+               previous_v14.warp_discovered == 0);
+
+        /* The same data as schema v15 (no warp-discovery line) keeps its
+         * progress flags and loads the fresh-state mask 0. */
+        char v15[2048];
+        int v15_size = snprintf(v15, sizeof v15, "%s\n", AOS_SAVE_SCHEMA_V15);
+        const char *warps = strstr(all, "warp_discovered=");
+        memcpy(v15 + v15_size, body, (size_t)(warps - body));
+        v15_size += (int)(warps - body);
+        v15_size += snprintf(v15 + v15_size, sizeof v15 - (size_t)v15_size,
+                             "checksum=%08x\n", test_checksum(v15, (size_t)v15_size));
+        FILE *v15_file = fopen(path, "wb");
+        assert(v15_file && fwrite(v15, 1, (size_t)v15_size, v15_file) == (size_t)v15_size);
+        assert(fclose(v15_file) == 0);
+        AosSaveData previous_v15 = {0};
+        assert(aos_save_load(path, &previous_v15, error, sizeof error));
+        assert(previous_v15.progress_flags == source.progress_flags &&
+               previous_v15.warp_discovered == 0);
     }
 
     FILE *bad = fopen(bad_path, "wb");

@@ -1,3 +1,21 @@
+## Patch 1226 - Recycle deleted Aria enemy slots in continuous room play
+
+- **Gap found during Phase D route proof.** A 500-frame room 0/3 run grew
+  from the eight static records to 25 entities because zombie-spawner
+  children, drips, puddles and gore were appended permanently after their
+  native deletion state. The same path reached 71 entries during a combat
+  route, exhausting the fixed host pool even though the native
+  `EntityCreateInRange` pool reuses deleted slots.
+- **Fix.** `update_entities` now reserves a deleted enemy slot before
+  extending `AriaRoom.entity_count`. Slots still referenced by a linked
+  child remain reserved, preserving the index-based parent links used by the
+  runtime. Zombie child and spawner creation both use this path.
+- **Evidence.** The new headless `aria_simulate_entity_pool` contract runs
+  room 0/3 for 500 frames with the real exported room/enemy path and holds
+  the table at 16 entries (eight static records plus the producer's eight
+  live-child cap). This is runtime integration evidence, not an emulator
+  comparison; native slot reuse order remains documented as partial.
+
 ## Patch 1225 - Eight ported red souls now emit their native attack boxes
 
 - **Gap found by audit.** `soul_attacks` (aria_skills.c) converts live

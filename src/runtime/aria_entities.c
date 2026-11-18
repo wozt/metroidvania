@@ -785,6 +785,35 @@ static void entity_data_sync(const AriaEntity *e, size_t i) {
         rec->state = object20_state_byte(e);
 }
 
+/* EntityCreateInRange reuses a deleted room slot before extending the live
+ * list.  The host table is a fixed array as well, so appending every short-
+ * lived child would eventually make a zombie spawner hit MAX_ENTITIES even
+ * though its native slots are already free.  A deleted slot may still be
+ * referenced by a linked child; keep those slots until the owner chain has
+ * drained, preserving the index-based parent links used by this port. */
+static bool entity_slot_referenced(const AriaRoom *room, size_t slot) {
+    for (size_t i = 0; i < room->entity_count; ++i) {
+        const AriaEntity *e = &room->entities[i];
+        if (e->spawner == (int)slot ||
+            (e->link_parent > 0 && (size_t)(e->link_parent - 1) == slot))
+            return true;
+    }
+    return false;
+}
+
+/* Return a reusable slot or MAX_ENTITIES when the native pool is full. */
+static size_t entity_reserve_slot(AriaRoom *room) {
+    for (size_t i = 0; i < room->entity_count; ++i) {
+        AriaEntity *e = &room->entities[i];
+        if (e->kind == ARIA_KIND_ENEMY && e->spawned && e->enemy.removed &&
+            !entity_slot_referenced(room, i))
+            return i;
+    }
+    if (room->entity_count >= MAX_ENTITIES)
+        return MAX_ENTITIES;
+    return room->entity_count++;
+}
+
 /* sub_0800F4F8 / sub_0800F1FC: records whose X is within the camera window
  * spawn once per room visit; native enemies include hidden producers such
  * as the Ghost's, whose children retain their producer slot. */
@@ -3104,8 +3133,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 room->damage_popups[room->damage_popup_count++] = hit.damage_popup;
             /* Child entities of this kind (grenades, axes, arrows, debris). */
             AosEnemy *escort_child = NULL;
-            for (int c = 0; c < hit.child_count && room->entity_count < MAX_ENTITIES; ++c) {
-                room->entities[room->entity_count++] = (AriaEntity){
+            for (int c = 0; c < hit.child_count; ++c) {
+                size_t child_slot = entity_reserve_slot(room);
+                if (child_slot >= MAX_ENTITIES) break;
+                room->entities[child_slot] = (AriaEntity){
                     .kind = ARIA_KIND_ENEMY, .id = e->id, .x = hit.children[c].x >> 16,
                     .y = hit.children[c].y >> 16, .spawned = true,
                     /* Needles pieces count down their parent's + 0x13; a
@@ -3172,7 +3203,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     .band5c = e->band5c,
                     .enemy = hit.children[c]};
                 if (hit.escort_op == 3 && c == hit.escort_child)
-                    escort_child = &room->entities[room->entity_count - 1].enemy;
+                    escort_child = &room->entities[child_slot].enemy;
             }
             /* sub_080A4408's sub_08034498 registers the new phase-2
              * body entity itself; escort_op 3 lands it on the
@@ -3184,8 +3215,10 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 AosEnemy *mimic = &room->entities[e->spawner].enemy;
                 if (mimic->state == 0 && mimic->step == 0) mimic->step++;
             }
-            if (hit.spawn && room->entity_count < MAX_ENTITIES) {
-                AriaEntity *child = &room->entities[room->entity_count];
+            if (hit.spawn) {
+                size_t child_slot = entity_reserve_slot(room);
+                if (child_slot >= MAX_ENTITIES) continue;
+                AriaEntity *child = &room->entities[child_slot];
                 *child = (AriaEntity){.kind = ARIA_KIND_ENEMY, .id = e->id, .x = hit.spawn_x,
                                       .y = hit.spawn_y, .param1 = hit.spawn_param1,
                                       .spawned = true, .spawner = (int)i,
@@ -3196,11 +3229,11 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  * children, selecting their 60-frame submerged wait. Ghost
                  * producer children keep both parameters at zero. */
                 int16_t child_param0 = e->id == AOS_ENEMY_MERMAN ? 1 : 0;
-                if (aos_enemy_create(&child->enemy, (uint8_t)e->id, hit.spawn_x, hit.spawn_y,
-                                     child_param0,
-                                     hit.spawn_param1,
-                                     soma, layer, kind, combat->stats[e->id]))
-                    room->entity_count++;
+                bool created = aos_enemy_create(&child->enemy, (uint8_t)e->id, hit.spawn_x,
+                                                hit.spawn_y, child_param0, hit.spawn_param1,
+                                                soma, layer, kind, combat->stats[e->id]);
+                if (!created && child_slot + 1 == room->entity_count)
+                    room->entity_count--;
                 apply_enemy_create_events(&child->enemy);
             }
             if (hit.enemy_hit)

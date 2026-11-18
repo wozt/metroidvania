@@ -1567,6 +1567,15 @@ if(BUILD_TESTING)
                      sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_xp.sh")
     set_tests_properties(aria_simulate_xp_levelup PROPERTIES SKIP_RETURN_CODE 77)
 
+    # Headless entity-pool integration: the room 0/3 zombie spawner creates
+    # short-lived children and must reuse deleted slots instead of exhausting
+    # the fixed native EntityCreateInRange pool.
+    add_test(NAME aria_simulate_entity_pool
+             COMMAND ${CMAKE_COMMAND} -E env
+                     FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>
+                     sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_entity_pool.sh")
+    set_tests_properties(aria_simulate_entity_pool PROPERTIES SKIP_RETURN_CODE 77)
+
     # START pause-gate contract in a later room: room 0/19 spawns a
     # passive Object00 door; native Object00Create only reports
     # sub_0800C5A8(0) when Soma is near, so a far spawn must leave

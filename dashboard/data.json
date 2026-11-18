@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-18T00:08:27+00:00",
+ "generated_at": "2026-11-18T03:32:14+00:00",
  "git": {
-  "commit": "16f1db49",
+  "commit": "a72c4bf5",
   "branch": "main",
   "dirty": true
  },
@@ -19932,7 +19932,8 @@
    "tests": [
     "tests/test_aos_enemy.c",
     "tests/test_native_golden.c",
-    "tests/test_aos_damage_popup.c"
+    "tests/test_aos_damage_popup.c",
+    "tests/test_aria_simulate_entity_pool.sh"
    ],
    "dependencies": [],
    "native_routines": [
@@ -19959,13 +19960,14 @@
     "sub_08042DE8",
     "sub_0804301C"
    ],
-   "limitations": "Palette bits, the tracking list of sub_08021924, sub_080683BC and the global pause 0x4BE are not ported; children and effects are updated after the enemies of their frame (native slot order not traced). Spawner records, rise, burst walking with its drips and puddles, sinking, the hit stun of sub_0806AD24, the generic death with flames and two gore pieces, despawn margins, and state 2 under gEwramData + 0x8E bit 0x40 are ported. Its death (sub_0807B0DC) plays 0x70 before the gore; unit-tested. The shared hit callback now selects all seven 0x08526D0C effect and sound records from attack elements, weakness and resistance, places the effect at the weapon or soul intersection, and preserves it through specialized controller reports. A normal knife hit on a non-weak Zombie produces animation 13 on OBJ row 8 (blood) and sound 0x9E. Source-derived and unit-tested, not emulator-compared. The same collision now creates sub_08042B8C damage numbers with the native digit encoding, zero-damage guard art, half-pixel rise, blink and lifetime; the runtime draws the ROM-derived glyph frames exported by aria_objects v63.",
+   "limitations": "Palette bits, the tracking list of sub_08021924, sub_080683BC and the global pause 0x4BE are not ported; children and effects are updated after the enemies of their frame (native slot order not traced). Spawner records, rise, burst walking with its drips and puddles, sinking, the hit stun of sub_0806AD24, the generic death with flames and two gore pieces, despawn margins, and state 2 under gEwramData + 0x8E bit 0x40 are ported. Its death (sub_0807B0DC) plays 0x70 before the gore; unit-tested. The shared hit callback now selects all seven 0x08526D0C effect and sound records from attack elements, weakness and resistance, places the effect at the weapon or soul intersection, and preserves it through specialized controller reports. A normal knife hit on a non-weak Zombie produces animation 13 on OBJ row 8 (blood) and sound 0x9E. Source-derived and unit-tested, not emulator-compared. The same collision now creates sub_08042B8C damage numbers with the native digit encoding, zero-damage guard art, half-pixel rise, blink and lifetime; the runtime draws the ROM-derived glyph frames exported by aria_objects v63. The runtime now reuses deleted enemy slots for short-lived zombie children and spawner outputs; the bounded room-pool path is covered by the headless entity-pool contract, while native slot reuse order remains unverified.",
    "next_action": "Compare the generic hit art, sound, damage-number timing and Zombie death timing against an emulator.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_enemy.c",
      "tests/test_native_golden.c",
-     "tests/test_aos_damage_popup.c"
+     "tests/test_aos_damage_popup.c",
+     "tests/test_aria_simulate_entity_pool.sh"
     ],
     "in_game_check": [
      "aria area_00_room_003: zombies walking with drips and puddles, kill at frame 169 (--spawn 160 176 --atk 80 --repeat 2, buttons 0x12) with gore and flames at frames 175 and 189"
@@ -20006,6 +20008,16 @@
       "registered": true,
       "ctest": [
        "aos_damage_popup"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aria_simulate_entity_pool.sh",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aria_simulate_entity_pool"
       ],
       "outcome": "passed",
       "exists": true
@@ -32972,6 +32984,13 @@
     "outcome": "passed"
    },
    {
+    "name": "aria_simulate_entity_pool",
+    "files": [
+     "tests/test_aria_simulate_entity_pool.sh"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aria_pause_late_room",
     "files": [
      "tests/test_aria_pause_late_room.sh"
@@ -33470,12 +33489,18 @@
    }
   ],
   "summary": {
-   "passed": 232,
+   "passed": 233,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "a72c4bf5",
+   "date": "2026-11-18",
+   "subject": "aos: complete the player damage path's status gates and correct the boss-rush flag",
+   "scope": "project"
+  },
   {
    "commit": "16f1db49",
    "date": "2026-11-18",
@@ -33948,12 +33973,6 @@
    "commit": "db735283",
    "date": "2026-11-15",
    "subject": "aria: interleave retained OBJ bands with layered BG priorities",
-   "scope": "project"
-  },
-  {
-   "commit": "a6e870f3",
-   "date": "2026-11-15",
-   "subject": "aos: forward Object20 sub_08013CF0 reports through aos_room_music_change",
    "scope": "project"
   }
  ],
@@ -36397,7 +36416,8 @@
        "unit_tests": [
         "tests/test_aos_enemy.c",
         "tests/test_native_golden.c",
-        "tests/test_aos_damage_popup.c"
+        "tests/test_aos_damage_popup.c",
+        "tests/test_aria_simulate_entity_pool.sh"
        ],
        "in_game_check": [
         "aria area_00_room_003: zombies walking with drips and puddles, kill at frame 169 (--spawn 160 176 --atk 80 --repeat 2, buttons 0x12) with gore and flames at frames 175 and 189"

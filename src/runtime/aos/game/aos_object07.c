@@ -40,6 +40,11 @@ static int32_t object07_sine(uint32_t angle) {
 static const uint16_t ambient_counts[] = {12, 15, 12, 12, 12, 2};
 /* 0x0852559C[layer]: BG-scroll parallax factors (>> 8). */
 static const int32_t parallax[4] = {192, 160, 96, 48};
+/* The four sub_0803F2C8(layer, 0, 1) animation sequences in
+ * 0x0820FE44/0x08210DB0. The two resources share their timing. */
+static const uint8_t mote_anim_count[4] = {3, 3, 3, 2};
+static const uint8_t mote_anim_ticks[4][3] = {
+    {12, 14, 10}, {9, 11, 7}, {6, 9, 6}, {4, 4, 0}};
 /* 0x085255DC: the four anchored-child records {x bias, y bias, aux}. */
 static const uint8_t anchor_rec[4][3] = {
     {16, 80, 11}, {128, 88, 12}, {48, 72, 13}, {96, 56, 14}};
@@ -121,6 +126,8 @@ void aos_object07_create(AosObject07 *o, int param0, int param1,
     memset(o, 0, sizeof(*o));
     o->param0 = (uint8_t)param0;
     o->param1 = (uint8_t)param1;
+    o->last_cam_x = cam_x;
+    o->last_cam_y = cam_y;
     o->win48 = 0xE4;             /* gDisplayRegisters + 0x48 = 0xE40 */
     switch (param0) {
     case 0:
@@ -142,6 +149,19 @@ void aos_object07_create(AosObject07 *o, int param0, int param1,
         break;
     default:
         break;
+    }
+}
+
+/* sub_0803F17C for Object07's mode-0 sprite scripts. The state-0
+ * setup seeds +0x6E with RNG&1 before its first step; subsequent
+ * active frames step once after movement. */
+static void update_mote_anim(AosObject07Mote *m) {
+    uint8_t layer = m->layer < 4 ? m->layer : 0;
+    uint8_t count = mote_anim_count[layer];
+    if (m->anim_frame >= count) m->anim_frame = 0;
+    if (++m->anim_tick >= mote_anim_ticks[layer][m->anim_frame]) {
+        m->anim_tick = 0;
+        m->anim_frame = (uint8_t)((m->anim_frame + 1) % count);
     }
 }
 
@@ -167,10 +187,15 @@ static void update_anim(AosObject07 *o) {
 }
 
 void aos_object07_update(AosObject07 *o, int32_t cam_x, int32_t cam_y,
-                         int32_t scroll_x, int32_t scroll_y,
                          uint32_t (*rng)(void)) {
-    (void)cam_x;
-    (void)cam_y;
+    /* gEwramData + 0xA0A0/+0xA0A4 are per-frame 16.16 scroll
+     * velocities, not the absolute BG1 position. Feeding the absolute
+     * camera here made every mote re-apply the whole camera offset on
+     * every frame and race across the room. */
+    int32_t scroll_x = (int32_t)((uint32_t)(cam_x - o->last_cam_x) << 16);
+    int32_t scroll_y = (int32_t)((uint32_t)(cam_y - o->last_cam_y) << 16);
+    o->last_cam_x = cam_x;
+    o->last_cam_y = cam_y;
     if (o->param0 == 1) {
         update_anim(o);
         return;                 /* native still writes + 0x48 = 0xE40 */
@@ -180,7 +205,13 @@ void aos_object07_update(AosObject07 *o, int32_t cam_x, int32_t cam_y,
     for (int i = 0; i < o->ambient_count; ++i) {
         AosObject07Mote *m = &o->motes[i];
         if (!m->alive) continue;
-        if (m->state == 0) { m->state = 1; continue; }
+        if (m->state == 0) {
+            m->state = 1;
+            m->anim_frame = (uint8_t)(rnd(rng) & 1);
+            m->anim_tick = 0;
+            update_mote_anim(m);
+            continue;
+        }
         /* sub_0804F160 state 1 (_0804F224). The native gate
          * gEwramData + 0x4BE != 0 skips only the integrate/anim step
          * below; the parallax and wrap still run — the port has no
@@ -215,6 +246,7 @@ void aos_object07_update(AosObject07 *o, int32_t cam_x, int32_t cam_y,
          * already 16.16, so the position words take them verbatim. */
         m->fx += m->vx;
         m->fy += m->vy;
+        update_mote_anim(m);
         /* Parallax (_0804F2BA): + 0x40 -= (scroll * factor[layer])
          * >> 8 with the ROM's 32-bit muls wrap and the + 0xFF
          * negative-product adjust — again truncation toward zero. */

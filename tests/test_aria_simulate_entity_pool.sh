@@ -26,10 +26,17 @@ out=$(AOS_SIM_DUMP_ENTS=1 "$bin" --simulate 500 --area 0 --room 3 \
       --spawn 128 191 --mute 2>/dev/null)
 printf '%s\n' "$out"
 
-# The room has eight static records and the native zombie producer allows at
-# most eight live children.  A larger count indicates deleted slots leaked.
-printf '%s\n' "$out" | grep -q "Aria simulate: 16 entities," || {
-    echo "FAIL: deleted zombie slots were not reused" >&2
+# Entity count is the pool's high-water mark, not the number of live zombies:
+# zombie drips and puddles use native entity slots too. Object07 now consumes
+# the native animation-seed RNG draws, so the deterministic high-water mark is
+# 19 rather than the old 16. Run far past every child lifetime and require the
+# mark to stay fixed; a leaking append-only pool keeps growing.
+count=$(printf '%s\n' "$out" | sed -n 's/^Aria simulate: \([0-9][0-9]*\) entities,.*/\1/p')
+long_out=$("$bin" --simulate 2000 --area 0 --room 3 \
+           --spawn 128 191 --mute 2>/dev/null)
+long_count=$(printf '%s\n' "$long_out" | sed -n 's/^Aria simulate: \([0-9][0-9]*\) entities,.*/\1/p')
+if [ "$count" != 19 ] || [ "$long_count" != "$count" ]; then
+    echo "FAIL: entity pool high-water mark grew ($count -> $long_count)" >&2
     exit 1
-}
-echo "aria simulate entity pool: OK (deleted slots reused)"
+fi
+echo "aria simulate entity pool: OK (high-water mark $count, deleted slots reused)"

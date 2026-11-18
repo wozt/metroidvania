@@ -1,3 +1,33 @@
+## Patch 1237 - Restore room-0/3 ambient depth and camera-rate motion
+
+- **Root causes.** Object07's native parallax code reads the current 16.16
+  BG1 scroll velocity at `gEwramData+0xA0A0/+0xA0A4`. The runtime instead
+  passed the absolute camera position every frame, repeatedly subtracting the
+  whole offset and making the room-0/3 ambient creatures race and wrap. Its
+  draw path also ignored `sub_0804F374`'s per-child `+0x5C` bands
+  `0x19/0x1A/0x1D`, flattened every child over Soma and every background, and
+  forced all four native `sub_0803F2C8(layer,0,1)` sequences to animation 0.
+- **Native state restored.** `AosObject07` now derives the velocity from the
+  per-frame camera delta, retains each mode-0 animation's `+0x6E/+0x6F` state
+  with the ROM sequence timings, and the renderer selects the sequence by
+  layer. Ambient and anchored children enter the existing BG/OBJ priority
+  interleave through their native bands (anchored children use `0x1E`) instead
+  of the unbanded front pass. A regression holds the camera stationary after a
+  one-pixel move and proves that only the child's native `+0x80` drift remains;
+  it also covers the layer-1 frame-duration edge. Restoring the twelve native
+  animation-seed RNG draws changes room 0/3's deterministic entity-pool
+  high-water mark from 16 to 19 because zombie drips and puddles occupy the
+  same pool. The integration regression now runs 500 and 2000 frames and
+  requires that mark to remain 19, proving deleted slots are still reused.
+- **Comparison scope and remaining gap.** A private mGBA run from
+  `/tmp/aos_trans/post.state`, no input, captured frames 0/30/60/90/120 and
+  confirmed the idle native scroll-velocity words are zero. Runtime captures
+  at the same observation frames show that the four depth variants now pass
+  behind the corresponding BG planes instead of over Soma. The checkpoints do
+  not share identical RNG/entity state, so this is not a pixel-match claim.
+  Object07 param0 1's `sub_0803C918` background-tile DMA and the anchored
+  children selectors 11-14 remain unported; the feature stays `partial`.
+
 ## Patch 1236 - Preserve complete progression across a save-room restart
 
 - **Reproduced defect.** The SDL runtime and `--simulate` path initialized

@@ -38,7 +38,7 @@ int main(void) {
     aos_object07_create(&o, 1, 0, 0, 0, rng);
     assert(o.ambient_count == 0 && o.anchor_count == 0);
     uint8_t fi = o.frame_index; uint16_t si = o.sub_index;
-    aos_object07_update(&o, 0, 0, 0, 0, rng);
+    aos_object07_update(&o, 0, 0, rng);
     assert(o.frame_index != fi || o.sub_index != si);
 
     /* param0 == 3: the global writes. */
@@ -54,18 +54,23 @@ int main(void) {
     /* Mote drift: state 0 -> 1 then pos += vel, parallax applied. */
     aos_object07_create(&o, 0, 0, 0, 0, rng);
     int32_t fx0 = o.motes[0].fx, fy0 = o.motes[0].fy;
-    aos_object07_update(&o, 0, 0, 0, 0, rng);   /* state 0 -> 1 */
-    aos_object07_update(&o, 0, 0, 0x10000, 0x8000, rng);
+    aos_object07_update(&o, 0, 0, rng);   /* state 0 -> 1 */
+    aos_object07_update(&o, 1, 0, rng);
     assert(o.motes[0].state == 1);
     assert(o.motes[0].fx != fx0 || o.motes[0].fy != fy0);
 
     /* Anchored drift: + 0x40 += + 0x48 verbatim (vel 0x80 is already
      * 16.16 — no << 16), scroll/0xC subtracted. */
     int64_t ax = o.anchors[0].fx;
-    aos_object07_update(&o, 0, 0, 0xC00 << 16, 0, rng);
-    aos_object07_update(&o, 0, 0, 0xC00 << 16, 0, rng);
-    /* two drift frames: +0x80 - (0xC00<<16)/0xC each */
-    assert(o.anchors[0].fx == ax + 2 * (0x80 - (int32_t)((0xC00 << 16) / 0xC)));
+    aos_object07_update(&o, 2, 0, rng);
+    aos_object07_update(&o, 3, 0, rng);
+    /* two drift frames: +0x80 - one pixel of 16.16 scroll / 0xC. */
+    assert(o.anchors[0].fx == ax + 2 * (0x80 - (0x10000 / 0xC)));
+    ax = o.anchors[0].fx;
+    aos_object07_update(&o, 3, 0, rng);
+    /* A stationary camera contributes no parallax. This guards the old
+     * integration bug that subtracted the absolute camera every frame. */
+    assert(o.anchors[0].fx == ax + 0x80);
 
     /* --- sub_0804F160 state 1: sine velocities and the anchor wrap
      * on a hand-built single mote (speeds zeroed so only the wrap
@@ -87,11 +92,16 @@ int main(void) {
     m->timer = 0;
     m->fx = 0x40 * 0x10000;
     m->fy = 0x80 * 0x10000;
+    m->anim_frame = 0;
+    m->anim_tick = 8;
+    aos_object07_update(&o, 0, 0, rng);
+    assert(m->anim_frame == 1 && m->anim_tick == 0); /* layer-1 tick 9 */
+    m->timer = 0;
     int32_t vy_min = 0x7FFFFFFF, vy_max = (int32_t)0x80000000;
     int distinct_vy = 0;
     int32_t prev_vy = 0x7FFFFFFF;
     for (int f = 0; f < 40; ++f) {
-        aos_object07_update(&o, 0, 0, 0, 0, rng);
+        aos_object07_update(&o, 0, 0, rng);
         assert(m->vx == m->speed_x);           /* x stays constant */
         if (m->vy < vy_min) vy_min = m->vy;
         if (m->vy > vy_max) vy_max = m->vy;
@@ -113,7 +123,7 @@ int main(void) {
     int vx_varies = 0;
     int32_t last_vx = 0x7FFFFFFF;
     for (int f = 0; f < 40; ++f) {
-        aos_object07_update(&o, 0, 0, 0, 0, rng);
+        aos_object07_update(&o, 0, 0, rng);
         if (m->vx != last_vx) ++vx_varies;
         last_vx = m->vx;
     }
@@ -133,7 +143,7 @@ int main(void) {
     uint32_t rs = rng_state;
     uint32_t draw = (rs * 1103515245u + 12345u) >> 16;
     int expect_py = (int)(draw & 0x7F) + 1;
-    aos_object07_update(&o, 0, 0, 0, 0, rng);
+    aos_object07_update(&o, 0, 0, rng);
     assert((int16_t)(m->fx >> 16) == -0x20);
     assert((m->fx & 0xFFFF) == 0x1234);
     assert((int16_t)(m->fy >> 16) == expect_py);
@@ -146,7 +156,7 @@ int main(void) {
     rs = rng_state;
     draw = (rs * 1103515245u + 12345u) >> 16;
     expect_py = (int)(draw & 0x7F) + 1;
-    aos_object07_update(&o, 0, 0, 0, 0, rng);
+    aos_object07_update(&o, 0, 0, rng);
     assert((int16_t)(m->fx >> 16) == 0x110);
     assert((m->fx & 0xFFFF) == 0x1111);
     assert((int16_t)(m->fy >> 16) == expect_py);
@@ -157,7 +167,7 @@ int main(void) {
     rs = rng_state;
     draw = (rs * 1103515245u + 12345u) >> 16;
     int expect_px = (int)(draw & 0xBF);
-    aos_object07_update(&o, 0, 0, 0, 0, rng);
+    aos_object07_update(&o, 0, 0, rng);
     assert((int16_t)(m->fy >> 16) == -0x10);
     assert((m->fy & 0xFFFF) == 0x3333);
     assert((int16_t)(m->fx >> 16) == expect_px);
@@ -169,7 +179,7 @@ int main(void) {
     rs = rng_state;
     draw = (rs * 1103515245u + 12345u) >> 16;
     expect_px = (int)(draw & 0xBF);
-    aos_object07_update(&o, 0, 0, 0, 0, rng);
+    aos_object07_update(&o, 0, 0, rng);
     assert((int16_t)(m->fy >> 16) == 0xB0);
     assert((int16_t)(m->fx >> 16) == expect_px);
 
@@ -178,14 +188,14 @@ int main(void) {
     m->fx = 0x110 * 0x10000 | 0x4444;
     m->fy = 0xC0 * 0x10000 | 0x5555;
     rs = rng_state;
-    aos_object07_update(&o, 0, 0, 0, 0, rng);
+    aos_object07_update(&o, 0, 0, rng);
     assert(rng_state == rs);   /* boundary values: no wrap, no rng */
     assert((int16_t)(m->fx >> 16) == 0x110);
     assert((int16_t)(m->fy >> 16) == 0xC0);
     m->fx = -0x20 * 0x10000;
     m->fy = -0x20 * 0x10000;
     rs = rng_state;
-    aos_object07_update(&o, 0, 0, 0, 0, rng);
+    aos_object07_update(&o, 0, 0, rng);
     assert(rng_state == rs);   /* boundary values: no wrap, no rng */
     assert((int16_t)(m->fx >> 16) == -0x20);
     assert((int16_t)(m->fy >> 16) == -0x20);
@@ -197,7 +207,7 @@ int main(void) {
     rs = rng_state;
     draw = (rs * 1103515245u + 12345u) >> 16;
     expect_py = (int)(draw & 0x7F) + 1;
-    aos_object07_update(&o, 0, 0, 0, 0, rng);
+    aos_object07_update(&o, 0, 0, rng);
     assert((int16_t)(m->fx >> 16) == -0x20);
     assert((int16_t)(m->fy >> 16) == expect_py);
 

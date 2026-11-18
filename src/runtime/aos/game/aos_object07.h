@@ -58,7 +58,7 @@
 typedef struct {
     uint8_t layer;          /* +0x1C: parallax layer 0-3 (index into 0x0852559C) */
     uint8_t state;          /* +0xA: 0 init, 1 active */
-    uint8_t variant;        /* +0x5C palette hint / +0x18 layer-3 timer seed */
+    uint8_t variant;        /* +0x5C native OAM draw band */
     bool alive;
     int32_t fx, fy;         /* +0x40/+0x44 fixed-point position (16.16) */
     int32_t vx, vy;         /* +0x48/+0x4C */
@@ -67,6 +67,8 @@ typedef struct {
     uint32_t timer;         /* +0x14: (rng & 0x1F) << 0xC phase, += 0x800/frame */
     uint32_t phase2;        /* +0x18: layer-3 only, (rng & 0x1F) << 0xC, += 0xA00/frame */
     uint8_t kind3;          /* +0x1C == 3: camera-relative anchor mode */
+    uint8_t anim_frame;     /* +0x6E: current sub_0803F17C frame */
+    uint8_t anim_tick;      /* +0x6F: ticks spent on that frame */
 } AosObject07Mote;
 
 typedef struct {
@@ -86,6 +88,8 @@ typedef struct {
     bool clear_4c4;         /* param0 == 3: gEwramData + 0x4C4 = 0 */
     bool set_42c_800;       /* param0 == 3: + 0x42C |= 0x800 */
     bool call_13eec;        /* param0 == 4 && param1 != 0: sub_08013EEC */
+    int32_t last_cam_x;     /* previous BG1 integer scroll, for +0xA0A0 */
+    int32_t last_cam_y;     /* previous BG1 integer scroll, for +0xA0A4 */
     int ambient_count;      /* spawned motes */
     AosObject07Mote motes[AOS_OBJECT07_MAX_AMBIENT];
     int anchor_count;
@@ -99,11 +103,10 @@ void aos_object07_create(AosObject07 *o, int param0, int param1,
                          int32_t cam_x, int32_t cam_y,
                          uint32_t (*rng)(void));
 
-/* Object07Update; `cam_x`/`cam_y` the BG1 scroll, `scroll_x`/`scroll_y`
- * the + 0xA094 + 0xC/+ 0x10 fixed-point (16.16) scroll the parallax
- * and the anchored drift use. Anchor/mote draw positions are
- * fx >> 16 / fy >> 16 screen pixels. */
+/* Object07Update; `cam_x`/`cam_y` are the current BG1 integer scroll.
+ * The object retains the previous pair and derives the host-equivalent
+ * 16.16 velocities from their per-frame delta; native children read
+ * those velocities at gEwramData + 0xA0A0/+0xA0A4. */
 void aos_object07_update(AosObject07 *o, int32_t cam_x, int32_t cam_y,
-                         int32_t scroll_x, int32_t scroll_y,
                          uint32_t (*rng)(void));
 #endif

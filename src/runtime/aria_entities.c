@@ -3604,8 +3604,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     aria_pickup_state.global_flags |= 0x800;
                 continue;
             }
-            aos_object07_update(&e->object07, cam_x, cam_y,
-                                cam_x << 16, cam_y << 16, aos_random);
+            aos_object07_update(&e->object07, cam_x, cam_y, aos_random);
             continue;
         }
         if (e->kind == ARIA_KIND_SPECIAL && e->id == 12) {

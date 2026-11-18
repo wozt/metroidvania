@@ -669,8 +669,8 @@ static void draw_object20_entity(SDL_Renderer *renderer,
 /* `prio_slot` is the native OBJ-priority interleave slot the
  * caller is drawing (0 front .. 3 back): only drawable units
  * whose retained +0x5C band resolves to that priority through
- * aria_bg_band_priority draw — today that is Object1F's
- * per-child band5c alone. prio_slot < 0 is the front pass:
+ * aria_bg_band_priority draw — today that is Object07's children
+ * and Object1F's per-child band5c. prio_slot < 0 is the front pass:
  * every unit without a resolved band draws there, preserving
  * the pre-priority all-on-top order. */
 void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
@@ -730,10 +730,10 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
             SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
             continue;
         }
-        /* Every special object but Object1F lacks a retained
+        /* Every special object but Object07 and Object1F lacks a retained
          * +0x5C band, so a priority slot skips them outright;
          * they all draw in the front pass. */
-        if (prio_slot >= 0 && e->id != 31) continue;
+        if (prio_slot >= 0 && e->id != 7 && e->id != 31) continue;
         if (e->id == 2 && e->object02.deleted) continue;
         if (e->id == 4 && e->object04.deleted) continue;
         if (e->id == 15 && e->object0f.finished) continue;
@@ -927,20 +927,20 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                     child_art = &objects->special_variants[v];
                     break;
                 }
-            if (!child_art || !child_art->defs[0].count) continue;
-            unsigned total = 0;
-            for (unsigned f = 0; f < child_art->defs[0].count; ++f)
-                total += child_art->ticks[0][f];
-            if (!total) continue;
-            unsigned t = (step / 4) % total, index = 0;
-            while (index + 1 < child_art->defs[0].count &&
-                   t >= child_art->ticks[0][index])
-                t -= child_art->ticks[0][index++];
-            const AriaFrame *frame = &child_art->frames[0][index];
-            if (!frame->texture) continue;
+            if (!child_art) continue;
             for (int c = 0; c < e->object07.ambient_count; ++c) {
                 const AosObject07Mote *m = &e->object07.motes[c];
                 if (!m->alive) continue;
+                int mote_prio = aria_bg_band_priority(m->variant);
+                if (prio_slot >= 0 ? mote_prio != prio_slot
+                                   : mote_prio >= 0)
+                    continue;
+                unsigned anim = m->layer < 4 ? m->layer : 0;
+                if (!child_art->defs[anim].count) continue;
+                unsigned index = m->anim_frame;
+                if (index >= child_art->defs[anim].count) index = 0;
+                const AriaFrame *frame = &child_art->frames[anim][index];
+                if (!frame->texture) continue;
                 SDL_FRect rect = {(float)((m->fx >> 16) + frame->offset_x),
                                   (float)((m->fy >> 16) + frame->offset_y),
                                   frame->w, frame->h};
@@ -949,6 +949,24 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
             for (int c = 0; c < e->object07.anchor_count; ++c) {
                 const AosObject07Anchor *a = &e->object07.anchors[c];
                 if (!a->alive) continue;
+                int anchor_prio = aria_bg_band_priority(0x1E);
+                if (prio_slot >= 0 ? anchor_prio != prio_slot
+                                   : anchor_prio >= 0)
+                    continue;
+                /* sub_0804F504 fixes +0x5C at 0x1E. Its +0x65
+                 * auxiliary selectors 11-14 are not exported yet;
+                 * animation 0 remains the documented fallback. */
+                if (!child_art->defs[0].count) continue;
+                unsigned total = 0;
+                for (unsigned f = 0; f < child_art->defs[0].count; ++f)
+                    total += child_art->ticks[0][f];
+                if (!total) continue;
+                unsigned t = (step / 4) % total, index = 0;
+                while (index + 1 < child_art->defs[0].count &&
+                       t >= child_art->ticks[0][index])
+                    t -= child_art->ticks[0][index++];
+                const AriaFrame *frame = &child_art->frames[0][index];
+                if (!frame->texture) continue;
                 SDL_FRect rect = {(float)((a->fx >> 16) + frame->offset_x),
                                   (float)((a->fy >> 16) + frame->offset_y),
                                   frame->w, frame->h};

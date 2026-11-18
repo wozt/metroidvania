@@ -395,7 +395,10 @@ int main(void) {
     o.children[1].anim6e = 0;
     o.children[1].flags59 |= 1;
     o.sync30 = 0;
-    for (int i = 0; i < 4; ++i)
+    o.sync31 = 0;
+    aos_object1c_children_update(&o, &cin, &cout);
+    assert(o.sync31 == 1 && o.children[1].timer == 3);
+    for (int i = 1; i < 4; ++i)
         aos_object1c_children_update(&o, &cin, &cout);
     assert(o.sync30 == 1 && (o.children[1].flags59 & 8));
     /* Sparkle draw is the single sub_0803B9D0 commit. */

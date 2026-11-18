@@ -1,3 +1,18 @@
+## Patch 1228 - Release player input after a save-room commit
+
+- **Bug reproduced.** In room 0/14, Object1C committed the save but its
+  post-save state `0x14` could remain locked forever. A sparkle sequence that
+  reached its terminal frame before the exact native `+0x6E == 2` check never
+  wrote the parent `+0x31` sync byte, so Soma could not move again.
+- **Fix.** The sparkle update preserves the native exact-index path and also
+  reports the parent sync when the host sequence is already terminal. This
+  lets the beam/fade tail reach the dormant state and releases the player-only
+  input lock.
+- **Evidence.** `aria_simulate_save_room` confirms a real Object1C save
+  commit and checks that RIGHT moves Soma beyond the statue afterward. The
+  save-room prompt/window art, native DMA/window registers and exact child
+  frame timing remain partial and still need emulator comparison.
+
 ## Patch 1227 - Add a reproducible continuous-play Aria route contract
 
 - **Evidence added.** The headless route now starts in room 0/0, crosses the

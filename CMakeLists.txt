@@ -1584,6 +1584,14 @@ if(BUILD_TESTING)
                      sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_route.sh")
     set_tests_properties(aria_simulate_route PROPERTIES SKIP_RETURN_CODE 77)
 
+    # Headless save-room integration: confirms Object1C and verifies that the
+    # post-save animation releases Soma's player-only input lock.
+    add_test(NAME aria_simulate_save_room
+             COMMAND ${CMAKE_COMMAND} -E env
+                     FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>
+                     sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_save_room.sh")
+    set_tests_properties(aria_simulate_save_room PROPERTIES SKIP_RETURN_CODE 77)
+
     # START pause-gate contract in a later room: room 0/19 spawns a
     # passive Object00 door; native Object00Create only reports
     # sub_0800C5A8(0) when Soma is near, so a far spawn must leave

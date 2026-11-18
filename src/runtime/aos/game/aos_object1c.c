@@ -859,6 +859,12 @@ static void child_sparkle_update(AosObject1C *o, AosObject1CChild *c,
             if (c->anim6e == 2) {
                 o->sync31 = 1;
             } else if (c->flags59 & 1) {
+                /* The native frame-advance tail reaches +0x6E == 2 before
+                 * consuming the deletion mark.  A short terminal host
+                 * sequence can set the mark in that same update instead;
+                 * preserve the parent sync, then still run the native
+                 * expiry below so +0x30 and child deletion are not lost. */
+                o->sync31 = 1;
                 c->timer = (uint8_t)(c->timer - 1);
                 if (c->timer == 0) {
                     c->flags59 |= 8;

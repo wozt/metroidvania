@@ -193,3 +193,26 @@ These rules are permanent and apply to every development cycle.
     before a feature is called faithful or validated.
 13. **Never remove or rewrite working systems** without an
     architectural justification and regression checks.
+
+## Gameplay Fidelity, Vertical-Slice Development and Regression Gates
+
+These rules are permanent and apply to every development cycle.
+
+1. Development progress is measured by validated gameplay, not
+   translated routine counts.
+2. Every feature requires a reproducible behavioral acceptance
+   scenario.
+3. Native comparison is mandatory for fidelity claims.
+4. Unit-test success does not imply gameplay integration.
+5. Simulation timing must not depend on rendering frequency.
+6. Validated gameplay scenarios require regression protection.
+7. Core gameplay blockers take priority over unrelated new content.
+8. Every change must respect native state ownership and existing
+   architecture.
+9. No silent approximations, duplicate functional owners or fake
+   native state.
+10. Every completed cycle must preserve previously validated
+    gameplay behavior.
+11. Feature completion claims must match the evidence.
+12. Development cycles must remain focused, measurable and
+    reviewable.

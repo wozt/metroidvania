@@ -1637,18 +1637,11 @@ int aria_runtime_main(int argc, char **argv) {
         else if (!enemies_ok)
             fprintf(stderr, "No enemy data: ./build/fusion_rebuild --task aria_objects\n");
         static AosStats progress;
-        progress.character = 0;
-        aos_stats_init(&progress);
-        aos_button_config_default(&progress.buttons);
-        memset(aria_events, 0, sizeof aria_events);
+        aria_runtime_from_save(&progress, has_active_save ? &active_save : NULL);
         aos_object01_reset();
-        memset(&aria_pickup_state, 0, sizeof aria_pickup_state);
         aria_ewram_pause_4be = 0;
         aria_ewram_cine_4cc = 0;
         aria_ewram_escort_13220 = NULL;
-        aos_stats_new_game_equipment(&progress);
-        aos_stats_new_game_inventory(&progress);
-        aos_stats_level_up(&progress);
         static AosEquipmentTables equipment;
         bool have_equipment = aria_load_equipment(DEFAULT_EQUIPMENT, &equipment);
         static AosItemUseRecord item_use[AOS_ITEM_RECORDS];
@@ -1682,7 +1675,11 @@ int aria_runtime_main(int argc, char **argv) {
                 !aos_souls_total(&progress, AOS_SOUL_YELLOW, yellow_soul_override - 1))
                 aos_souls_add(&progress, AOS_SOUL_YELLOW, yellow_soul_override - 1, 1);
         }
-        progress.mp = (int16_t)progress.max_mp;
+        progress.mp = has_active_save && active_save.mp >= 0
+                          ? active_save.mp
+                          : (int16_t)progress.max_mp;
+        if (progress.mp > (int16_t)progress.max_mp)
+            progress.mp = (int16_t)progress.max_mp;
         static AosRedSoulRecord red_souls[AOS_RED_SOUL_RECORDS];
         aria_load_red_souls(DEFAULT_RED_SOULS, red_souls);
         static AosThrowRecord skill_throws[AOS_THROW_RECORDS];
@@ -1756,9 +1753,9 @@ int aria_runtime_main(int argc, char **argv) {
         AosRoomMusic room_music = {0};
         AosSaveRoom save_room = {0};
         homing_room = &room;
-        object10_save_ctx = NULL;
-        object1c_save_ctx = NULL;
-        object1c_save_path = NULL;
+        object10_save_ctx = has_active_save ? &active_save : NULL;
+        object1c_save_ctx = has_active_save ? &active_save : NULL;
+        object1c_save_path = has_active_save ? save_path : NULL;
         /* --simulate-script replaces the constant --simulate-hold mask with a
          * per-frame held value walked from the parsed directives. */
         AriaSimDirective *sim_dirs = NULL;
@@ -1985,9 +1982,9 @@ int aria_runtime_main(int argc, char **argv) {
                             weapon_entity.effects[k];
             }
             homing_room = &room;
-            object10_save_ctx = NULL;
-            object1c_save_ctx = NULL;
-            object1c_save_path = NULL;
+            object10_save_ctx = has_active_save ? &active_save : NULL;
+            object1c_save_ctx = has_active_save ? &active_save : NULL;
+            object1c_save_path = has_active_save ? save_path : NULL;
             update_entities(&room, &layer, &soma, cam_x, cam_y, &forced, &combat,
                             sim_new_input, sim_held, &room_music);
             /* sub_0804F7A4 discovery + the sub_08010978/sub_080115D4
@@ -2075,9 +2072,12 @@ int aria_runtime_main(int argc, char **argv) {
         }
         printf("Aria simulate: SPECIAL %d/%d spawned, %d enemies alive\n",
                spawned_special, active_special, enemies_alive);
-        printf("Aria simulate: level %u, experience %u, next %d\n",
+        printf("Aria simulate: level %u, experience %u, next %d, gold %u, "
+               "equipment %u/%u/%u, souls %u/%u/%u\n",
                progress.level, progress.experience,
-               aos_stats_experience_to_next(&progress));
+               aos_stats_experience_to_next(&progress), progress.gold,
+               progress.weapon, progress.armor, progress.accessory,
+               progress.red_soul, progress.blue_soul, progress.yellow_soul);
         if (getenv("AOS_SIM_DUMP_ENTS")) {
             for (size_t k = 0; k < room.entity_count; ++k) {
                 const AriaEntity *e = &room.entities[k];
@@ -2208,49 +2208,14 @@ int aria_runtime_main(int argc, char **argv) {
     /* The level and its stats follow from the saved experience
      * (sub_08033DA4 then sub_08033CAC, as sub_08033E38 rebuilds them). */
     static AosStats progress;
-    progress.character = has_active_save ? active_save.character : 0;
-    aos_stats_init(&progress);
-    aos_button_config_default(&progress.buttons);
-    memset(aria_events, 0, sizeof aria_events);
+    aria_runtime_from_save(&progress, has_active_save ? &active_save : NULL);
     aos_object01_reset();   /* the + 0x1316C claim is per-room here */
-    memset(&aria_pickup_state, 0, sizeof aria_pickup_state);
     aria_ewram_pause_4be = 0;
     aria_ewram_cine_4cc = 0;
     aria_ewram_escort_13220 = NULL;
-    if (has_active_save) {
-        progress.experience = active_save.experience;
-        progress.gold = active_save.gold;
-        memcpy(progress.defeated, active_save.defeated, sizeof progress.defeated);
-        memcpy(progress.dropped, active_save.dropped, sizeof progress.dropped);
-        memcpy(aria_events, active_save.events, sizeof aria_events);
-        memcpy(aria_pickup_state.placed, active_save.placed_items,
-               sizeof aria_pickup_state.placed);
-        aria_pickup_state.special = active_save.special_souls;
-        for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
-            progress.buttons.action[action] =
-                aos_button_config_button(active_save.buttons[action]);
-    }
-    aos_stats_level_up(&progress);
     /* Equipment: the file's (sub_08014548's new-game set for older files),
      * or the --weapon choice. The equipment records give ATK and DEF
      * (sub_0804AD9C) unless --atk / --def ask for diagnostic values. */
-    aos_stats_new_game_equipment(&progress);
-    aos_stats_new_game_inventory(&progress);
-    if (has_active_save) {
-        progress.weapon = active_save.weapon;
-        progress.armor = active_save.armor;
-        progress.accessory = active_save.accessory;
-        memcpy(progress.item_counts, active_save.inventory, sizeof progress.item_counts);
-        memcpy(progress.weapon_counts, active_save.inventory + AOS_SAVE_WEAPONS,
-               sizeof progress.weapon_counts);
-        memcpy(progress.armor_counts, active_save.inventory + AOS_SAVE_ARMOR,
-               sizeof progress.armor_counts);
-        aria_souls_from_save(&progress, &active_save);
-        progress.red_soul = active_save.red_soul;
-        progress.blue_soul = active_save.blue_soul;
-        progress.yellow_soul = active_save.yellow_soul;
-        progress.challenge_flags = active_save.challenge_flags & 0x300000u;
-    }
     static char save_weapon_name[8];
     if (weapon_override)
         progress.weapon = strcmp(weapon_name, "none") ? (uint8_t)atoi(weapon_name)

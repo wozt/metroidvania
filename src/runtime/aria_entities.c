@@ -4719,9 +4719,18 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 printf("Object1C %zu: save screen setup "
                        "(sub_08054280) — native prompt armed\n", i);
             }
-            if (out1c.save_block_refresh)
+            if (out1c.save_block_refresh) {
+                /* sub_08012688 then sub_080135C0 refresh the live save block
+                 * immediately before SaveData_SaveSlotToSram. Keep the host
+                 * schema on that same authoritative confirmation edge; the
+                 * older room-level Up detector is not a substitute because it
+                 * snapshots before the player confirms the prompt. */
+                if (object1c_save_ctx && combat->progress)
+                    aria_runtime_to_save(object1c_save_ctx, room, soma,
+                                         combat->progress);
                 printf("Object1C %zu: +0x60 save block refresh "
                        "(sub_08012688/0x080135C0)\n", i);
+            }
             if (out1c.save_write) {
                 /* SaveData_SaveSlotToSram(+0x428): the portable
                  * store writes the live save; the result feeds the
@@ -4732,9 +4741,6 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     result = aos_save_store(object1c_save_path,
                                             object1c_save_ctx, error,
                                             sizeof error) ? 0 : -1;
-                else
-                    result = 0;    /* no save context (e.g. --simulate):
-                                    * report the commit, skip the file */
                 e->object1c_save_result = result;
                 printf("Object1C %zu: SaveData_SaveSlotToSram -> %d\n",
                        i, result);

@@ -40,8 +40,10 @@ const AosEffect *aria_burst_effects(size_t *count);
 /* metadata/equipment.tsv and item_use.tsv record loaders. */
 bool aria_load_equipment(const char *path, AosEquipmentTables *tables);
 bool aria_load_item_use(const char *path, AosItemUseRecord items[AOS_ITEM_RECORDS]);
-/* Save-data marshalling: the soul inventories/abilities block and the
- * runtime -> AosSaveData fill (reads aria_events/aria_pickup_state). */
+/* Save-data marshalling: one authoritative persistent-state restore for both
+ * runtime frontends, the soul inventories/abilities block, and the runtime ->
+ * AosSaveData fill (reads aria_events/aria_pickup_state). */
+void aria_runtime_from_save(AosStats *stats, const AosSaveData *save);
 void aria_souls_from_save(AosStats *stats, const AosSaveData *save);
 void aria_runtime_to_save(AosSaveData *save, const AriaRoom *room,
                           const AosSoma *soma, const AosStats *progress);

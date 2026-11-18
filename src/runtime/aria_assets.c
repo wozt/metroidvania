@@ -7,6 +7,7 @@
 
 #include "aos/core/aos_wall.h"
 #include "aos/game/aos_pickup.h"
+#include "aos/menus/aos_button_config.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -411,6 +412,45 @@ void aria_souls_from_save(AosStats *stats, const AosSaveData *save) {
     bytes += sizeof stats->ability_souls;
     memcpy(stats->abilities, bytes, sizeof stats->abilities);
     stats->souls_collected = save->souls_collected;
+}
+
+void aria_runtime_from_save(AosStats *stats, const AosSaveData *save) {
+    stats->character = save ? save->character : 0;
+    aos_stats_init(stats);
+    aos_button_config_default(&stats->buttons);
+    aos_stats_new_game_equipment(stats);
+    aos_stats_new_game_inventory(stats);
+    memset(aria_events, 0, sizeof aria_events);
+    memset(&aria_pickup_state, 0, sizeof aria_pickup_state);
+    if (save) {
+        stats->experience = save->experience;
+        stats->gold = save->gold;
+        memcpy(stats->defeated, save->defeated, sizeof stats->defeated);
+        memcpy(stats->dropped, save->dropped, sizeof stats->dropped);
+        memcpy(aria_events, save->events, sizeof aria_events);
+        memcpy(aria_pickup_state.placed, save->placed_items,
+               sizeof aria_pickup_state.placed);
+        aria_pickup_state.special = save->special_souls;
+        for (int action = 0; action < AOS_BUTTON_ACTIONS; ++action)
+            stats->buttons.action[action] =
+                aos_button_config_button(save->buttons[action]);
+        stats->weapon = save->weapon;
+        stats->armor = save->armor;
+        stats->accessory = save->accessory;
+        memcpy(stats->item_counts, save->inventory, sizeof stats->item_counts);
+        memcpy(stats->weapon_counts, save->inventory + AOS_SAVE_WEAPONS,
+               sizeof stats->weapon_counts);
+        memcpy(stats->armor_counts, save->inventory + AOS_SAVE_ARMOR,
+               sizeof stats->armor_counts);
+        aria_souls_from_save(stats, save);
+        stats->red_soul = save->red_soul;
+        stats->blue_soul = save->blue_soul;
+        stats->yellow_soul = save->yellow_soul;
+        stats->challenge_flags = save->challenge_flags & 0x300000u;
+    }
+    /* sub_08033E38 reconstructs level and base stats from experience after
+     * SaveData_LoadSlotFromSram restores the persistent fields. */
+    aos_stats_level_up(stats);
 }
 
 static void souls_to_save(AosSaveData *save, const AosStats *stats) {

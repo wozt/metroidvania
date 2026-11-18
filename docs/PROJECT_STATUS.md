@@ -1,3 +1,29 @@
+## Patch 1236 - Preserve complete progression across a save-room restart
+
+- **Reproduced defect.** The SDL runtime and `--simulate` path initialized
+  persistent state separately. A headless load restored the room, spawn, HP
+  and movement mask before discarding XP, gold, equipment, inventories, souls,
+  event words, placed-item words and button configuration. Object1C also
+  reported a successful SRAM write with no active file and treated its native
+  `save_block_refresh` output as a diagnostic only.
+- **One restore and one confirmation snapshot.** `aria_runtime_from_save` now
+  owns the complete schema-v15 restore used by both frontends. On Object1C's
+  confirmation edge, `aria_entities.c` snapshots the live room, Soma and
+  progression into `AosSaveData` before calling `aos_save_store`; a missing
+  save context now returns failure instead of pretending that a file was
+  written. This follows the native order at `0x08054A16`:
+  `sub_08012688`, `sub_080135C0`, then `SaveData_SaveSlotToSram`.
+- **Process-restart regression.** `test_aria_simulate_save_room.sh` creates a
+  production-format fixture through `aos_save_store`, loads XP 120, gold 7890,
+  equipment 12/5/40 and equipped souls 2/3/18, confirms Object1C, exits, then
+  launches a second runtime process from the written file and asserts the same
+  progression plus room 0/14. The longer exit/return route now uses a real
+  active file too; the former no-file success path can no longer satisfy either
+  test. Targeted `aos_save`, `aria_simulate_save_room` and
+  `aria_simulate_save_room_route` tests pass. The portable schema and native
+  call order are source-derived; no live mGBA save-room checkpoint was compared,
+  so the feature remains `partial`.
+
 ## Patch 1235 - Make vertical gameplay slices the permanent development gate
 
 - **Progress is now scenario-based.** The root repository rules require every

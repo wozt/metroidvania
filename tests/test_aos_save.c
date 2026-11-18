@@ -14,7 +14,47 @@ static uint32_t test_checksum(const char *text, size_t size) {
     return hash;
 }
 
-int main(void) {
+static int write_runtime_fixture(const char *path) {
+    AosSaveData save;
+    char error[160];
+    aos_save_init_new(&save, 0);
+    save.area = 0;
+    save.room = 14;
+    save.spawn_x = 120;
+    save.spawn_y = 80;
+    save.hp = 211;
+    save.max_hp = 332;
+    save.moves = 7;
+    save.experience = 120;
+    save.gold = 7890;
+    save.weapon = 12;
+    save.armor = 5;
+    save.accessory = 0x28;
+    save.inventory[AOS_SAVE_WEAPONS + 12] = 1;
+    save.inventory[AOS_SAVE_ARMOR + 5] = 1;
+    save.inventory[AOS_SAVE_ARMOR + 0x28] = 1;
+    save.souls[0] = 0x21;
+    save.souls[8] = 0x03;
+    save.souls[16] = 0x02;
+    save.souls_collected = 4;
+    save.red_soul = 2;
+    save.blue_soul = 3;
+    save.yellow_soul = 18;
+    save.mp = 37;
+    save.events[1] = 1u;
+    save.placed_items[2] = 1u << 26;
+    save.special_souls = 1u << 1;
+    save.progress_flags = 3;
+    if (!aos_save_store(path, &save, error, sizeof error)) {
+        fprintf(stderr, "cannot write runtime save fixture: %s\n", error);
+        return 1;
+    }
+    return 0;
+}
+
+int main(int argc, char **argv) {
+    if (argc == 3 && !strcmp(argv[1], "--write-runtime-fixture"))
+        return write_runtime_fixture(argv[2]);
     const char *path = "aos-save-test.sav";
     const char *bad_path = "aos-save-test-bad.sav";
     const char *legacy_path = "aos-save-test-v1.sav";

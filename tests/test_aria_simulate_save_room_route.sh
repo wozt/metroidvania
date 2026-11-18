@@ -15,6 +15,7 @@ set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$root"
 bin="${FUSION_ARIA_RUNTIME:-build/fusion_aria_runtime}"
+fixture_bin="${FUSION_AOS_SAVE_FIXTURE:-build/fusion_aos_save_tests}"
 
 need="assets/extracted/aria/rooms/runtime/area_00_room_036/room.tsv
 assets/extracted/aria/rooms/runtime/area_00_room_005/room.tsv
@@ -30,10 +31,16 @@ if [ ! -x "$bin" ]; then
     echo "aria simulate save-room route skipped: $bin missing" >&2
     exit 77
 fi
+if [ ! -x "$fixture_bin" ]; then
+    echo "aria simulate save-room route skipped: $fixture_bin missing" >&2
+    exit 77
+fi
 
 tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/aria-save-route.XXXXXX")
 trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
 script="$tmp_dir/route.txt"
+save="$tmp_dir/aria-slot-1.sav"
+"$fixture_bin" --write-runtime-fixture "$save"
 cat > "$script" <<'EOF'
 wait 60
 hold 64 20
@@ -47,7 +54,7 @@ hold 32 500
 EOF
 
 out=$("$bin" --simulate 2600 --simulate-script "$script" \
-      --area 0 --room 36 --spawn 120 80 --mute 2>/dev/null)
+      --save "$save" --area 0 --room 36 --spawn 120 80 --mute 2>/dev/null)
 printf '%s\n' "$out"
 
 printf '%s\n' "$out" | grep -q "SaveData_SaveSlotToSram -> 0" || {

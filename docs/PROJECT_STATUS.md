@@ -1,3 +1,39 @@
+## Patch 1233 - Opening dialogue portrait restored to its native BG0 anchor
+
+- **Four-pixel portrait offset fixed.** `draw_opening_backdrop`
+  (`src/runtime/aria_opening.c`) cropped the first four rows of the
+  decoded portrait texture at composition time, an empirical hedge
+  added in c6cd2557 against a reference JPEG. Re-reading the native
+  path shows the decode is already register-exact:
+  `sub_08067F24` calls `sub_080676BC` for the BG0 portrait and then
+  writes `BG0HOFS = scroll_h * 8` and `BG0VOFS = scroll_v * 8 - 4`
+  (`0x08067F40`-`0x08067F56`; the scroll pair table `0x08526CE4`
+  reads `01 07` for all eight portraits, giving HOFS 8 / VOFS 52),
+  and `aos_portrait_decode` maps tile rows through exactly that
+  offset (`scroll[1] * 8 - 4`). The texture is therefore the native
+  BG0 framebuffer 1:1 and the extra crop shifted every speaker
+  portrait four pixels above its native anchor. The backdrop now
+  draws the full texture with a NULL source rect; the decoded
+  resource and the window/text passes are unchanged.
+- **Evidence.** Fresh xvfb `--capture-script cap_a60.txt` runs with
+  `ARIA_OPENING_TRACE=1` and a private save complete the story at
+  trace frame 4708 (unchanged); the skeleton approach still lands
+  at the native screen position (world x stop 0xCA, y floor snap)
+  and all actor/beat timings match the previously recorded trace.
+  A mid-dialogue `--capture 700` BMP shows the uncropped portrait;
+  no fresh synchronized mGBA portrait frame was diffed this cycle,
+  so the opening scene stays `partial`.
+- **Registries.** `annotations.tsv` `aos.events.opening_scene` and
+  `features.tsv` `story.aria_opening_event` divergences/sources now
+  record `src/runtime/aria_opening.[ch]` and the uncropped
+  composition; the rejected language-sheet strips, the BLDY=8
+  brightness approximation and the un-emulator-compared state-3 /
+  post-scene behavior remain documented partials.
+- **Tests.** `ctest --test-dir build -R
+  "aos_opening|aos_object20|aos_intro|aos_portrait"` 12/12 pass; the
+  draw change is render-side only, covered by the build and the
+  capture smoke run rather than a unit test.
+
 ## Patch 1232 - Fix the save-room exit crash and wire Object1C's +0xA074 byte
 
 - **Dead-edge transition crash fixed.** The one-screen save rooms

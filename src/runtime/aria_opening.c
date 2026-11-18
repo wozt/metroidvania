@@ -151,12 +151,16 @@ void draw_opening_backdrop(SDL_Renderer *renderer,
                 event->portrait);
     }
     if (native_portrait && portrait_texture && *portrait_texture) {
-        /* The decoded map already includes BG0VOFS. Crop its first four
-         * output rows at composition time to match screenshots/dialogue.jpeg's
-         * visible portrait anchor without altering the reusable resource. */
-        SDL_FRect source = {0, 4, VIEW_W, VIEW_H - 4};
-        SDL_FRect destination = {0, 0, VIEW_W, VIEW_H - 4};
-        SDL_RenderTexture(renderer, *portrait_texture, &source, &destination);
+        /* sub_08067F24 loads the portrait through sub_080676BC, then
+         * writes BG0HOFS = scroll_h * 8 and BG0VOFS = scroll_v * 8 - 4
+         * (0x08067F40-0x08067F56, scroll pair at 0x08526CE4 = {1,7},
+         * so HOFS 8 / VOFS 52). aos_portrait_decode already maps the
+         * tile rows through that exact offset, so the decoded texture
+         * is the native BG0 framebuffer 1:1 — draw it uncropped. The
+         * previous four-row source crop shifted the portrait four
+         * pixels above its native anchor. */
+        SDL_FRect destination = {0, 0, VIEW_W, VIEW_H};
+        SDL_RenderTexture(renderer, *portrait_texture, NULL, &destination);
     }
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }

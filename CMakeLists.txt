@@ -1558,6 +1558,28 @@ if(BUILD_TESTING)
                      sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_transition.sh")
     set_tests_properties(aria_simulate_room_transition PROPERTIES SKIP_RETURN_CODE 77)
 
+    # Headless banner-gated load-delay contract: the fixed
+    # AOS_ROOM_TRANSITION_LOAD_FRAMES blanked span arms only when the
+    # destination's sub_0800FCB8 pick lands in [0, 0xC].  Room
+    # 0/0 -> 0/3 banners and keeps the measured delay; the follow-on
+    # 0/3 -> 0/5 swap does not and commits on the first stage-1 frame.
+    # Needs the ROM's castle map cells; the script exits 77 without
+    # them like the other private-input tests.
+    add_test(NAME aria_simulate_banner_transition
+             COMMAND ${CMAKE_COMMAND} -E env
+                     FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>
+                     sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_transition_banner.sh")
+    set_tests_properties(aria_simulate_banner_transition PROPERTIES SKIP_RETURN_CODE 77)
+
+    # Headless later-room level-up regression: room 0/3's recycled
+    # zombie children pay native XP through the ordinary weapon kill
+    # path and the 84-XP threshold arms the sub_080455BC display.
+    add_test(NAME aria_simulate_levelup_room
+             COMMAND ${CMAKE_COMMAND} -E env
+                     FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>
+                     sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_levelup_room.sh")
+    set_tests_properties(aria_simulate_levelup_room PROPERTIES SKIP_RETURN_CODE 77)
+
     # Headless combat integration: real input starts an exported weapon entity,
     # kills room 5/1's Cockatrice, awards its exact 120 native XP and crosses
     # the new-game level-2 threshold. Private extracted assets are optional.

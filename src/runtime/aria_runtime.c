@@ -358,7 +358,12 @@ typedef struct {
  * duration is data-dependent natively (it tracks the room's
  * compressed payload); the runtime performs the same take_exit
  * commit synchronously, so a fixed measured span stands in — a
- * documented approximation, not a native constant. */
+ * documented approximation, not a native constant. The span is
+ * armed only when the destination room will run the sub_0800FFCC
+ * area-name banner (sub_080104EC's unk_65 == 2 FCB8 pick in
+ * [0, 0xC]): the measurement came from a banner transition, and
+ * banner-less swaps commit on the first stage-1 frame like the
+ * native single-frame unk_65 == 1 branch. */
 #define AOS_ROOM_TRANSITION_LOAD_FRAMES 9
 static AriaRoomTransition room_transition;
 /* GameModeInGameUpdate's unk_60.unk_64/+0x65 dispatch channel
@@ -406,7 +411,7 @@ static bool map_warp_available;
  * the checked cell is always the room descriptor's
  * (map_x, map_y) anchor. Returns false when the ROM/quick-map
  * data needed for the descriptor is unavailable. */
-static bool room_map_anchor_cell(const AriaRoom *room,
+static bool room_map_anchor_cell(int area, int number,
                                  const FusionRom *rom,
                                  AosQuickMap *quick_map,
                                  bool have_quick_map,
@@ -425,8 +430,8 @@ static bool room_map_anchor_cell(const AriaRoom *room,
     FusionAosRoomDescriptor descriptor;
     char error[160];
     if (!fusion_aos_read_room_descriptor(rom, &quick_map->directory,
-                                       (size_t)room->area,
-                                       (size_t)room->number, &descriptor,
+                                       (size_t)area,
+                                       (size_t)number, &descriptor,
                                        error, sizeof error))
         return false;
     int cx = descriptor.map_x, cy = descriptor.map_y;
@@ -437,15 +442,15 @@ static bool room_map_anchor_cell(const AriaRoom *room,
     return true;
 }
 
-static int room_area_banner(const AriaRoom *room, const FusionRom *rom,
+static int room_area_banner(int area, int number, const FusionRom *rom,
                             AosQuickMap *quick_map,
                             bool have_quick_map) {
     if (getenv("AOS_BANNER_DEBUG"))
         fprintf(stderr, "banner-check room %d/%d have_qm=%d rom=%p qm=%p\n",
-                room->area, room->number, have_quick_map,
+                area, number, have_quick_map,
                 (const void *)rom, (const void *)quick_map);
     uint16_t cell;
-    if (!room_map_anchor_cell(room, rom, quick_map, have_quick_map,
+    if (!room_map_anchor_cell(area, number, rom, quick_map, have_quick_map,
                               &cell)) {
         if (getenv("AOS_BANNER_DEBUG"))
             fprintf(stderr, "banner-check anchor cell unavailable\n");
@@ -457,10 +462,10 @@ static int room_area_banner(const AriaRoom *room, const FusionRom *rom,
      * is keyed by the room's own (area, number); the anchor cell
      * decodes to that same room. */
     bool transition = false, save = false, warp = false;
-    if (room->area >= 0 && room->area < MUSIC_AREAS &&
-        room->number >= 0 && room->number < MUSIC_ROOMS) {
+    if (area >= 0 && area < MUSIC_AREAS &&
+        number >= 0 && number < MUSIC_ROOMS) {
         const AosRoomMusicFlags *flags =
-            &room_music_flags[room->area][room->number];
+            &room_music_flags[area][number];
         transition = flags->transition;
         save = flags->save || (cell & 0x8000) != 0;
         warp = flags->warp || (cell & 0x4000) != 0;
@@ -473,7 +478,7 @@ static int room_area_banner(const AriaRoom *room, const FusionRom *rom,
     if (getenv("AOS_BANNER_DEBUG"))
         fprintf(stderr, "banner-check room %d/%d cell %04x -> %d "
                 "(t%d s%d w%d shown %04x)\n",
-                room->area, room->number, cell, banner_dbg,
+                area, number, cell, banner_dbg,
                 transition, save, warp, in_game_mode.unk_37C);
     return banner_dbg;
 }
@@ -500,8 +505,8 @@ static bool room_music_flags_for(const AriaRoom *room,
                     room->number >= 0 && room->number < MUSIC_ROOMS;
     if (!have_row) {
         uint16_t cell;
-        if (!room_map_anchor_cell(room, rom, quick_map, have_quick_map,
-                                  &cell))
+        if (!room_map_anchor_cell(room->area, room->number, rom,
+                                  quick_map, have_quick_map, &cell))
             return false;
         /* No tsv row for the transition bit; the anchor cell's
          * own (area, room) decodes to this room, whose row — when
@@ -518,8 +523,8 @@ static bool room_music_flags_for(const AriaRoom *room,
     }
     *out = room_music_flags[room->area][room->number];
     uint16_t cell;
-    if (room_map_anchor_cell(room, rom, quick_map, have_quick_map,
-                             &cell)) {
+    if (room_map_anchor_cell(room->area, room->number, rom,
+                             quick_map, have_quick_map, &cell)) {
         out->save = (cell & 0x8000) != 0;
         out->warp = (cell & 0x4000) != 0;
     }
@@ -527,12 +532,47 @@ static bool room_music_flags_for(const AriaRoom *room,
 }
 
 static void room_transition_begin(AriaRoomTransition *t,
-                                  const AosProjectDoor *door) {
+                                  const AosProjectDoor *door,
+                                  const AriaRoom *room, const AosSoma *soma,
+                                  const FusionRom *rom,
+                                  AosQuickMap *quick_map,
+                                  bool have_quick_map) {
     memset(t, 0, sizeof *t);
     t->active = true;
     t->stage = 1;           /* stage 0 (fade + cleanup) ran inline */
     t->settle_left = 1;
-    t->load_left = AOS_ROOM_TRANSITION_LOAD_FRAMES;
+    /* The stage-1 blanked load span stands in for sub_0800F9EC's
+     * streaming only when the destination will run the
+     * sub_0800FFCC area-name banner: the 9-frame figure was
+     * measured on the real ROM's 0/0 -> 0/3 banner transition, and
+     * applying it to every door added a fixed black delay native
+     * does not spend on banner-less swaps (the stage-1 commit is
+     * a single native frame otherwise). The target room's banner
+     * pick is resolved here exactly like take_exit will — the
+     * editor door's target or the exit under Soma — because the
+     * pick needs only (area, room): the map-anchor castle cell,
+     * the room_music.tsv flags and the unk_37C shown mask, none
+     * of which change while the display stays blanked. */
+    int target_area = -1, target_room = -1;
+    if (door) {
+        target_area = door->target_area;
+        target_room = door->target_room;
+    } else {
+        const AosTransition *exit = aos_room_find_exit(
+            room->transitions, room->transition_count,
+            room->width_screens, room->height_screens,
+            soma->x >> 16, soma->y >> 16);
+        if (exit) {
+            target_area = exit->area;
+            target_room = exit->room;
+        }
+    }
+    int banner = target_area >= 0
+        ? room_area_banner(target_area, target_room, rom, quick_map,
+                           have_quick_map)
+        : -1;
+    t->load_left = banner >= 0 && banner <= 0xC
+        ? AOS_ROOM_TRANSITION_LOAD_FRAMES : 0;
     /* sub_08010244's prologue: an armed area banner is aborted
      * through sub_08010144 before unk_64 = 3 latches. */
     aos_in_game_mode_area_banner_cancel(&in_game_mode);
@@ -575,7 +615,8 @@ static int room_transition_tick(AriaRoomTransition *t,
          * the settle stage; the port's take_exit commit is
          * synchronous, so the blanked frames are modelled as a
          * countdown ahead of it (data-dependent natively, fixed
-         * approximation here). */
+         * approximation here, armed only for banner destinations —
+         * see room_transition_begin). */
         if (t->load_left > 0) {
             --t->load_left;
             return 0;
@@ -607,7 +648,8 @@ static int room_transition_tick(AriaRoomTransition *t,
          * 0x80 — sub_0800FFCC then owns the ~190-frame entity
          * freeze on the case-1 frames that follow. */
         aos_in_game_mode_arm_area_banner(
-            &in_game_mode, room_area_banner(room, rom, quick_map,
+            &in_game_mode, room_area_banner(room->area, room->number,
+                                            rom, quick_map,
                                             have_quick_map));
         t->stage = 3;
         return 0;
@@ -1862,7 +1904,11 @@ int aria_runtime_main(int argc, char **argv) {
                 in_game_mode.unk_64 == AOS_INGAME_PLAY &&
                 (sim_leaving || sim_door)) {
                 room_transition_begin(&room_transition,
-                                      sim_leaving ? NULL : sim_door);
+                                      sim_leaving ? NULL : sim_door,
+                                      &room, &soma, &room_dialogue_rom,
+                                      sim_have_quick_map ? &sim_quick_map
+                                                         : NULL,
+                                      sim_have_quick_map);
                 /* unk_65 == 0 cleanup: the room's effects die with the
                  * stage; entities are replaced by the stage-1 load. */
                 room.effect_count = 0;
@@ -3710,7 +3756,10 @@ int aria_runtime_main(int argc, char **argv) {
                 in_game_mode.unk_64 == AOS_INGAME_PLAY &&
                 (leaving || project_door)) {
                 room_transition_begin(&room_transition,
-                                      leaving ? NULL : project_door);
+                                      leaving ? NULL : project_door,
+                                      &room, &soma, &opening_rom,
+                                      have_quick_map ? &quick_map : NULL,
+                                      have_quick_map);
                 /* unk_65 == 0 cleanup: the room's effects die with the
                  * stage; entities are replaced by the stage-1 load. */
                 room.effect_count = 0;

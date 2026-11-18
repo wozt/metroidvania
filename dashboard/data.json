@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-18T04:12:14+00:00",
+ "generated_at": "2026-11-18T06:19:05+00:00",
  "git": {
-  "commit": "c44a7463",
+  "commit": "36d2f06f",
   "branch": "main",
   "dirty": true
  },
@@ -20302,7 +20302,8 @@
     "src/runtime/aos/game/aos_pickup.c"
    ],
    "tests": [
-    "tests/test_aos_breakable.c"
+    "tests/test_aos_breakable.c",
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "aos.items.money_pickups",
@@ -20324,11 +20325,12 @@
     "sub_08068AD4",
     "PlaySong"
    ],
-   "limitations": "The sub_08068AD4 probe and the sub_08045F9C attack-box match stay caller approximations; entity +0x36 (the drop selector) is unmodelled and reads 0, so only case 0 (heart or full-MP money) drops — cases 1/2 are unreachable; the +0x92 param0 cache's last-variant-wins VRAM fight is drawn per-entity instead; unk_60.unk_A1_4 uses its new-game value (the sub_080074C0 menu toggle is unported); sub_08032DF0 is reduced to the ==0x3E8 all-souls check; kind-5 id>=5 and kind-6 categories outside 1-4 spawn nothing (native sub_08044054 coverage); the state-1 gore burst remains an effect approximation; no emulator comparison. sub_0800F1FC case 3 spawns every kind-3 record through sub_08046080/sub_08045EE0: sub_08046148's per-param0 tile DMA is exported as Object/special_62_v00-v15 animation 3 (0x081C3E00 chunks onto sheet tiles 32-37/48-53) and drawn per record; sub_08045F9C case 0 drops a sub_08043F70 money pickup ((RNG&1)+param1) on full MP Soma or a sub_08043C10 heart (big = param1 != 0) through the AosPickup paths. Cases 5/6 spawn their conditional sub_08044054 placed pickups once on camera-window entry: kind 5 on unk_A1_4 + Soma, kind 6 on Soma + unowned inventory slot + all souls collected.",
-   "next_action": "Port the +0x36 drop-selector source if a record field is found, model the unk_60.unk_A1_4 menu toggle, and compare a breakable room against an emulator.",
+   "limitations": "The sub_08068AD4 probe and the sub_08045F9C attack-box match stay caller approximations; entity +0x36 (the drop selector) is unmodelled and reads 0, so only case 0 (heart or full-MP money) drops — cases 1/2 are unreachable; the +0x92 param0 cache's last-variant-wins VRAM fight is drawn per-entity instead; shared sheet 0x081C15F4 now uses palette descriptor 0x082099FC bank 3 for destination OBJ row 7 (live mGBA row-7 bytes match exactly), replacing the erroneous use of alternate graphics 0x0826F8A4 as colours; unk_60.unk_A1_4 uses its new-game value (the sub_080074C0 menu toggle is unported); sub_08032DF0 is reduced to the ==0x3E8 all-souls check; kind-5 id>=5 and kind-6 categories outside 1-4 spawn nothing (native sub_08044054 coverage); the state-1 gore burst remains an effect approximation; palette RAM is emulator-compared, but destruction and drop timing are not. sub_0800F1FC case 3 spawns every kind-3 record through sub_08046080/sub_08045EE0: sub_08046148's per-param0 tile DMA is exported as Object/special_62_v00-v15 animation 3 (0x081C3E00 chunks onto sheet tiles 32-37/48-53) and drawn per record; sub_08045F9C case 0 drops a sub_08043F70 money pickup ((RNG&1)+param1) on full MP Soma or a sub_08043C10 heart (big = param1 != 0) through the AosPickup paths. Cases 5/6 spawn their conditional sub_08044054 placed pickups once on camera-window entry: kind 5 on unk_A1_4 + Soma, kind 6 on Soma + unowned inventory slot + all souls collected. Patch 1230 corrects Object/special_15 rows 6/7/9 and every special_62 breakable variant to shared-effect palette banks 2/3/6; a private room-0/3 runtime capture restores the orange flame and metal instead of an opaque black silhouette.",
+   "next_action": "Compare the break animation, pickup spawn and per-frame candle placement against the same native room-0/3 checkpoint; port the +0x36 drop-selector source if found and model the unk_60.unk_A1_4 menu toggle.",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_breakable.c"
+     "tests/test_aos_breakable.c",
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
@@ -20346,6 +20348,17 @@
       "registered": true,
       "ctest": [
        "aos_breakable"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
       ],
       "outcome": "passed",
       "exists": true
@@ -25683,7 +25696,8 @@
     "tests/test_aos_save.c",
     "tests/test_aos_enemy.c",
     "tests/test_aria_simulate_xp.sh",
-    "tests/test_aria_simulate_route.sh"
+    "tests/test_aria_simulate_route.sh",
+    "tests/test_aria_simulate_levelup_room.sh"
    ],
    "dependencies": [
     "aos.saves.portable_slots",
@@ -25706,10 +25720,11 @@
      "tests/test_aos_save.c",
      "tests/test_aos_enemy.c",
      "tests/test_aria_simulate_xp.sh",
-     "tests/test_aria_simulate_route.sh"
+     "tests/test_aria_simulate_route.sh",
+     "tests/test_aria_simulate_levelup_room.sh"
     ],
     "in_game_check": [
-     "tests/test_aria_simulate_xp.sh: room 5/1 Cockatrice kill -> exact 120 XP -> level 2 (84 to next); deterministic enemy tests cover Death, Balore and Chaos killed-report propagation."
+     "tests/test_aria_simulate_xp.sh: room 5/1 Cockatrice kill -> exact 120 XP -> level 2 (84 to next); deterministic enemy tests cover Death, Balore and Chaos killed-report propagation.; tests/test_aria_simulate_levelup_room.sh sweeps room 0/3's recycled zombie children to the 84-XP level-2 threshold through the ordinary weapon kill path (Level up: level 2, max HP 332)"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -25766,6 +25781,16 @@
       "registered": true,
       "ctest": [
        "aria_simulate_route"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_aria_simulate_levelup_room.sh",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aria_simulate_levelup_room"
       ],
       "outcome": "passed",
       "exists": true
@@ -27938,7 +27963,8 @@
    "tests": [
     "tests/test_aos_room.c",
     "tests/test_aria_simulate_transition.sh",
-    "tests/compare_aos_movement.py"
+    "tests/compare_aos_movement.py",
+    "tests/test_aria_simulate_transition_banner.sh"
    ],
    "dependencies": [],
    "native_routines": [
@@ -27953,16 +27979,17 @@
     "sub_0803FBBC",
     "GameModeInGameUpdate"
    ],
-   "limitations": "sub_080104EC's staged transition (unk_64 = 3, unk_65 stages 0-3) is now reproduced as a frame machine in aria_runtime.c: the exit check latches the transition (stage 0: bldY = BLDY_MAX_VALUE equivalent, room effects cleared), the next frame commits take_exit while the display would be blanked (stage 1: sub_08010350/sub_0800F9EC room load, dispCnt = 0), the following aos_room_transition_settle_frames frames hold the blanked stage-2 settle (sub_0800ED24/sub_0803FBBC's 8 px-per-frame BG1 cap between the load scroll and the 0x78/0x6F camera settle, minimum 1), and the stage-3 frame restores and shows the target room — the same frame native first displays it. The game update is suspended on every blanked frame in both the SDL loop and --simulate; the SDL render clears black instead of drawing. Native has no gradual fade (bldY jumps 0 -> 16 -> 0), so the reproduced fade-out/in durations are the single blanked frames at each end. The two exit-cell (0xF0) transitions remain gated: room 9/1's gate is identified as the ported Object02 cutscene director (SPECIAL id 2 at the exit column, param0 = 0 one-shot deleting itself when gEwramData + 0x37E bit param1 = 0 sets — the bit the room's kind-4 pickup persistent_index 0 collects into aria_pickup_state.special), but room 5/5 has no entity within ~240 px of its 0xF0 cells in the complete exported record set and its gate is still unidentified. take_exit still fails fatally in the SDL loop and stops the simulate run when a leaving position matches no transition entry. sub_08011A44's bounds and exit-cell test, sub_08010244's exit velocity clamp, sub_08010350's transition-entry choice and arrival placement, sub_0800F9EC's room load with the sub_0800ED5C/sub_0800EE54 BG1 offsets and sub_0803FBBC's one-screen pinning are ported in aos_room.c. sub_080104EC's unk_65 stage machine is reproduced frame-accurately in ordering (blanked load, scroll settle, restore) with the settle length computed from the native 8 px/frame cap; the scroll itself is not drawn (the display is blanked natively too, and the draw-side fade registers are not modelled). --audit-transitions matches all 725 entries; 723 edge arrivals land inside their target. The simulate path crosses rooms through the staged machine: room 0/0 -> 0/3 -> 0/5 verified headless with begin/commit/restore frame diagnostics.",
+   "limitations": "sub_080104EC's staged transition (unk_64 = 3, unk_65 stages 0-3) is now reproduced as a frame machine in aria_runtime.c: the exit check latches the transition (stage 0: bldY = BLDY_MAX_VALUE equivalent, room effects cleared), the next frame commits take_exit while the display would be blanked (stage 1: sub_08010350/sub_0800F9EC room load, dispCnt = 0), the following aos_room_transition_settle_frames frames hold the blanked stage-2 settle (sub_0800ED24/sub_0803FBBC's 8 px-per-frame BG1 cap between the load scroll and the 0x78/0x6F camera settle, minimum 1), and the stage-3 frame restores and shows the target room — the same frame native first displays it. The game update is suspended on every blanked frame in both the SDL loop and --simulate; the SDL render clears black instead of drawing. Native has no gradual fade (bldY jumps 0 -> 16 -> 0), so the reproduced fade-out/in durations are the single blanked frames at each end. The two exit-cell (0xF0) transitions remain gated: room 9/1's gate is identified as the ported Object02 cutscene director (SPECIAL id 2 at the exit column, param0 = 0 one-shot deleting itself when gEwramData + 0x37E bit param1 = 0 sets — the bit the room's kind-4 pickup persistent_index 0 collects into aria_pickup_state.special), but room 5/5 has no entity within ~240 px of its 0xF0 cells in the complete exported record set and its gate is still unidentified. take_exit still fails fatally in the SDL loop and stops the simulate run when a leaving position matches no transition entry. The stage-1 blanked load span is the fixed 9-frame AOS_ROOM_TRANSITION_LOAD_FRAMES approximation measured on the real ROM's 0/0 -> 0/3 banner transition; room_transition_begin arms it only when the destination room's sub_0800FCB8 pick — resolved up front through the same room_area_banner map anchor, room_music.tsv flags and unk_37C shown mask the stage-2 arm uses — lands in [0, 0xC], so banner-less swaps commit on the first stage-1 frame like the native single-frame unk_65 == 1 branch. sub_08011A44's bounds and exit-cell test, sub_08010244's exit velocity clamp, sub_08010350's transition-entry choice and arrival placement, sub_0800F9EC's room load with the sub_0800ED5C/sub_0800EE54 BG1 offsets and sub_0803FBBC's one-screen pinning are ported in aos_room.c. sub_080104EC's unk_65 stage machine is reproduced frame-accurately in ordering (blanked load, scroll settle, restore) with the settle length computed from the native 8 px/frame cap; the scroll itself is not drawn (the display is blanked natively too, and the draw-side fade registers are not modelled). --audit-transitions matches all 725 entries; 723 edge arrivals land inside their target. The simulate path crosses rooms through the staged machine: room 0/0 -> 0/3 -> 0/5 verified headless with begin/commit/restore frame diagnostics.",
    "next_action": "Identify room 5/5's exit-cell gate (no entity record sits near the 0xF0 cells — likely an event-driven collision change or an entity outside the export); verify the 9/1 Object02 + pickup gate end-to-end in game; compare a scripted multi-room walk's blanked-frame count against the mGBA lab.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_room.c",
      "tests/test_aria_simulate_transition.sh",
-     "tests/compare_aos_movement.py"
+     "tests/compare_aos_movement.py",
+     "tests/test_aria_simulate_transition_banner.sh"
     ],
     "in_game_check": [
-     "fusion_aria_runtime --simulate 1200 --simulate-hold 16 --area 0 --room 0 --spawn 400 680 crosses the 0/0 -> 0/3 exit into 0/5 through the staged machine (tests/test_aria_simulate_transition.sh); aos_room_transition_settle_frames is unit-tested in tests/test_aos_room.c; the SDL loop blanks and commits through the same room_transition_tick path."
+     "fusion_aria_runtime --simulate 1200 --simulate-hold 16 --area 0 --room 0 --spawn 400 680 crosses the 0/0 -> 0/3 exit into 0/5 through the staged machine (tests/test_aria_simulate_transition.sh); aos_room_transition_settle_frames is unit-tested in tests/test_aos_room.c; the SDL loop blanks and commits through the same room_transition_tick path.; tests/test_aria_simulate_transition_banner.sh measures the begin->commit frame gap on the 0/0 -> 0/3 -> 0/5 route: 10 frames into banner room 0/3, 1 frame into banner-less 0/5 (needs --rom for the castle map cells)"
     ],
     "emulator_compared": false,
     "played_through": false
@@ -27999,6 +28026,16 @@
       "registered": false,
       "ctest": [],
       "outcome": null,
+      "exists": true
+     },
+     {
+      "test": "tests/test_aria_simulate_transition_banner.sh",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "aria_simulate_banner_transition"
+      ],
+      "outcome": "passed",
       "exists": true
      }
     ],
@@ -30301,7 +30338,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The native C11 rebuild task exports 800 traced door, enemy, skill and shared-effect sequences, 2,363 indexed frames, 1,499 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 1,500 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v3) also exports experience and drop fields used by the runtime, plus money and equipment metadata. Compressed tile sheets skip their expanded header. It exports breakable-wall art, opening actors and attacks, guardians and shared collision effects. Version 68 adds the four palette-specific direct type-4 soul-container sparkle sequences at 0x0852513C, with their native 3, 7, 7 and 3 frame durations; the nine most-placed SPECIAL room objects (ids 7,10,13,14,15,17,18,19,21) are exported as Object/special_NN sequences and drawn in rooms, with per-object animation/behaviour selection and the remaining ids still open. Version 69 adds Effect/level_up, the still frame 0x48 level-up display of sub_080455BC Sky Fish, Ectoplasm, Ghost Dancer, Medusa Head, Ghost, Zombie Officer, Curly/Durga Needles, Gorgon/Catoblepas, Dead Warrior, Mimic, Fleaman, Skeleton Knight, Killer Doll, Lightning Doll and Beam Skeleton are the first families compiled as their own translation units through the shared prefixed internal framework API; this refactor changes no runtime behavior or feature status.. Version 70 adds Object/special_29_v0/v1, the two Object1D (SPECIAL id 29) sprite sets decoded from descriptors 0x082052F0/0x082052E8, also drawn for the Object1C save point marker child. Version 74 adds Object/special_31_v2/v4/v5/v6/v7, the Object1F (SPECIAL id 31) opening-gate children sets: the packed 0x082052F0 descriptor and the twelve 0x08257BD8 frame records exported per palette bank (v2 for the nine ring children, v4-v7 for the two flanks cycling through the 0x081185F8 table). Version 76 adds Object/whiteout_burst_carrier (four variant animations over frames 0x08267EE4) and Object/whiteout_burst_particle (still frames 0xB/0xC), drawn for the whiteout burst state machines. Version 75 adds Object/special_28_v1-v4, the Object1C (SPECIAL id 28) child palette banks over the shared 0x08257964 frame records: every child kind resolves the same descriptor, differing only in OBJ palette row (marker bank 4, sparkle anim0 bank 2 / anim4 bank 1, beam and spark bank 3). Scripted Death, Balore and phase-2 Chaos deaths now propagate the shared collision helper's one-frame killed result while entering their native death states, preserving the runtime's once-only reward path. A headless real-room integration kills Cockatrice with an exported weapon hitbox and verifies its exact 120-XP record reaches level 2; no fidelity status changes without emulator comparison.",
+   "limitations": "The native C11 rebuild task exports 2,112 traced door, enemy, skill and shared-effect sequences, 7,100 indexed frames, 3,910 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 3,911 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v3) also exports experience and drop fields used by the runtime, plus money and equipment metadata. Compressed tile sheets skip their expanded header. It exports breakable-wall art, opening actors and attacks, guardians and shared collision effects. Version 68 adds the four palette-specific direct type-4 soul-container sparkle sequences at 0x0852513C, with their native 3, 7, 7 and 3 frame durations; the nine most-placed SPECIAL room objects (ids 7,10,13,14,15,17,18,19,21) are exported as Object/special_NN sequences and drawn in rooms, with per-object animation/behaviour selection and the remaining ids still open. Version 69 adds Effect/level_up, the still frame 0x48 level-up display of sub_080455BC Sky Fish, Ectoplasm, Ghost Dancer, Medusa Head, Ghost, Zombie Officer, Curly/Durga Needles, Gorgon/Catoblepas, Dead Warrior, Mimic, Fleaman, Skeleton Knight, Killer Doll, Lightning Doll and Beam Skeleton are the first families compiled as their own translation units through the shared prefixed internal framework API; this refactor changes no runtime behavior or feature status.. Version 70 adds Object/special_29_v0/v1, the two Object1D (SPECIAL id 29) sprite sets decoded from descriptors 0x082052F0/0x082052E8, also drawn for the Object1C save point marker child. Version 74 adds Object/special_31_v2/v4/v5/v6/v7, the Object1F (SPECIAL id 31) opening-gate children sets: the packed 0x082052F0 descriptor and the twelve 0x08257BD8 frame records exported per palette bank (v2 for the nine ring children, v4-v7 for the two flanks cycling through the 0x081185F8 table). Version 76 adds Object/whiteout_burst_carrier (four variant animations over frames 0x08267EE4) and Object/whiteout_burst_particle (still frames 0xB/0xC), drawn for the whiteout burst state machines. Version 75 adds Object/special_28_v1-v4, the Object1C (SPECIAL id 28) child palette banks over the shared 0x08257964 frame records: every child kind resolves the same descriptor, differing only in OBJ palette row (marker bank 4, sparkle anim0 bank 2 / anim4 bank 1, beam and spark bank 3). Scripted Death, Balore and phase-2 Chaos deaths now propagate the shared collision helper's one-frame killed result while entering their native death states, preserving the runtime's once-only reward path. A headless real-room integration kills Cockatrice with an exported weapon hitbox and verifies its exact 120-XP record reaches level 2; no fidelity status changes without emulator comparison. Version 77 fixes the shared 0x081C15F4 palette mapping: OBJ rows 6/7/9 use banks 2/3/6 of descriptor 0x082099FC; 0x0826F8A4 and 0x082718A8 are alternate graphics, not palettes.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -30319,7 +30356,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-11-17",
+   "last_validated": "2026-11-18",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -30640,24 +30677,26 @@
     "src/runtime/aos/game/aos_pickup.c"
    ],
    "tests": [
-    "tests/test_aos_breakable.c"
+    "tests/test_aos_breakable.c",
+    "tests/test_native_golden.c"
    ],
    "dependencies": [
     "assets.aria_objects",
     "assets.aria_rooms"
    ],
    "native_routines": [],
-   "limitations": "Variant DMA exported per param0 but the native +0x92 last-variant-wins VRAM behaviour is drawn per-entity; drop selector +0x36 unmodelled (case 0 only); unk_60.unk_A1_4 uses its new-game value; no emulator comparison.",
+   "limitations": "Variant DMA is exported per param0 while the native +0x92 last-variant-wins VRAM behaviour is drawn per entity. The chandelier and shared-flame exports now use the live native mapping from palette descriptor 0x082099FC (OBJ row 7 = bank 3) instead of treating alternate graphics 0x0826F8A4 as colours; a private mGBA room-0/3 dump matches all 32 palette bytes and a runtime capture restores the visible flame and metal. Drop selector +0x36 remains unmodelled (case 0 only), unk_60.unk_A1_4 uses its new-game value, and destruction timing is not emulator-compared.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
-     "tests/test_aos_breakable.c"
+     "tests/test_aos_breakable.c",
+     "tests/test_native_golden.c"
     ],
     "in_game_check": [],
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-11-17",
+   "last_validated": "2026-11-18",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -30669,6 +30708,17 @@
       "registered": true,
       "ctest": [
        "aos_breakable"
+      ],
+      "outcome": "passed",
+      "exists": true
+     },
+     {
+      "test": "tests/test_native_golden.c",
+      "kind": "ctest",
+      "registered": true,
+      "ctest": [
+       "native_golden_aos",
+       "native_golden_mzm"
       ],
       "outcome": "passed",
       "exists": true
@@ -33041,6 +33091,20 @@
     "outcome": "passed"
    },
    {
+    "name": "aria_simulate_banner_transition",
+    "files": [
+     "tests/test_aria_simulate_transition_banner.sh"
+    ],
+    "outcome": "passed"
+   },
+   {
+    "name": "aria_simulate_levelup_room",
+    "files": [
+     "tests/test_aria_simulate_levelup_room.sh"
+    ],
+    "outcome": "passed"
+   },
+   {
     "name": "aria_simulate_xp_levelup",
     "files": [
      "tests/test_aria_simulate_xp.sh"
@@ -33567,12 +33631,18 @@
    }
   ],
   "summary": {
-   "passed": 235,
+   "passed": 237,
    "failed": 0,
    "other": 0
   }
  },
  "timeline": [
+  {
+   "commit": "36d2f06f",
+   "date": "2026-11-18",
+   "subject": "aria: restore native save-room prompt",
+   "scope": "project"
+  },
   {
    "commit": "c44a7463",
    "date": "2026-11-18",
@@ -34045,12 +34115,6 @@
    "commit": "bbc5d9c9",
    "date": "2026-11-16",
    "subject": "aos: combat-feel parity audit; witch guard no longer flashes on blocked hits",
-   "scope": "project"
-  },
-  {
-   "commit": "c8f6726c",
-   "date": "2026-11-16",
-   "subject": "aos: port GameModeInGameUpdate unk_64/unk_65 channel and per-case player input lock",
    "scope": "project"
   }
  ],

@@ -1,3 +1,35 @@
+## Patch 1231 - Gate the room-load delay on the area banner; verify level-up in later rooms
+
+- **Unwanted transition delay fixed.** Commit `0c9c3b11` armed the fixed
+  `AOS_ROOM_TRANSITION_LOAD_FRAMES = 9` blanked stage-1 span on every
+  room swap, but the figure was measured on the real ROM's 0/0 -> 0/3
+  transition — a room whose `sub_0800FCB8` pick lands in `[0, 0xC]` and
+  therefore runs the `sub_0800FFCC` area-name banner. `room_transition_begin`
+  now resolves the destination's banner pick up front (the editor door's
+  target or the exit under Soma, through the same `room_area_banner` map
+  anchor, `room_music.tsv` flags and `unk_37C` shown mask the stage-2 arm
+  uses) and arms the countdown only for banner destinations; banner-less
+  swaps commit on the first stage-1 frame like the native single-frame
+  `unk_65 == 1` branch. Headless `--simulate` frame logs measure the
+  begin->commit gap at 10 frames into banner room 0/3 and 1 frame into
+  banner-less 0/5.
+- **Level-up regression investigated.** A reported failure to level up in
+  room 0/3 and later rooms does not reproduce at this revision: scripted
+  zombie kills in room 0/3 pay native XP through the ordinary weapon path,
+  cross the 84-XP threshold (`Level up: level 2, max HP 332`), arm the
+  `sub_080455BC`/`sub_08045454` display state for its 0x3C-frame run and
+  freeze the entity pass through `aos_levelup_frozen`; a framebuffer
+  capture shows the `Effect/level_up/anim_0` sprite drawn at Soma's
+  anchor. The entity-slot recycling of patch 1226 keeps the room's spawn
+  pool bounded (16 entities under `AOS_SIM_DUMP_ENTS`). No code change was
+  needed; `tests/test_aria_simulate_levelup_room.sh` now locks the
+  room-0/3 kill-to-level path in.
+- **Tests.** `tests/test_aria_simulate_transition_banner.sh` (new,
+  `aria_simulate_banner_transition`) asserts the banner-gated delay on
+  the 0/0 -> 0/3 -> 0/5 route and skips without the private ROM;
+  `tests/test_aria_simulate_levelup_room.sh` (new,
+  `aria_simulate_levelup_room`) sweeps room 0/3's zombies to level 2.
+
 ## Patch 1229 - Restore the native save-room prompt composition
 
 - **Permanent overlay fixed.** Object1C's marker child starts with entity

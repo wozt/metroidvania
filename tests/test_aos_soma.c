@@ -951,6 +951,56 @@ static void status_tests(void) {
     assert(stats.status == 0 && stats.status_timers[2] == 0);
 }
 
+static void body_attack_tests(void) {
+    /* sub_08041BDC / sub_080421AC bit 0x4: the slide and dive-kick
+     * body attack boxes reach the non-enemy victims whose mask is
+     * & 0x1E (sub_08045F9C's breakable props, Object18Update). The
+     * prop box is the callers' (x - 8, y - 16) to (x + 8, y). */
+    AosSoma soma = grounded();
+    soma.combat.type = AOS_TYPE_SLIDE;
+    soma.combat.attack_off = false;
+    soma.attack_box = aos_soma_slide_attack_box;    /* {4,-12,22,12} */
+    /* Slide box lands at x 104..126, y 188..200; the prop at
+     * (110, 190) overlaps it. */
+    AosRect prop = {102, 174, 118, 190};
+    assert(aos_soma_body_attack_hit(&soma, prop));
+    /* The + 0x7C callback write: + 0x10 |= 0x80000. */
+    assert(soma.flags & AOS_FLAG_KICK_HIT);
+
+    /* A prop outside the box does not connect. */
+    soma.flags &= ~AOS_FLAG_KICK_HIT;
+    assert(!aos_soma_body_attack_hit(&soma, (AosRect){192, 184, 208, 200}));
+    assert(!(soma.flags & AOS_FLAG_KICK_HIT));
+
+    /* + 0x72 bit 1 set (the update prologue): the attack is off. */
+    soma.combat.attack_off = true;
+    assert(!aos_soma_body_attack_hit(&soma, prop));
+
+    /* Type 1 (the resting + 0x70) never body-attacks. */
+    soma.combat.attack_off = false;
+    soma.combat.type = AOS_TYPE_PLAYER;
+    assert(!aos_soma_body_attack_hit(&soma, prop));
+
+    /* The spawn default 1x1 attack box is disabled. */
+    soma.combat.type = AOS_TYPE_DIVE_KICK;
+    soma.attack_box = (AosBox){0, 0, 1, 1};
+    assert(!aos_soma_body_attack_hit(&soma, prop));
+
+    /* The dive kick's fast box 0x080E1314 {6,-8,20,16} lands at
+     * x 106..126, y 192..208; a prop at the feet (105, 200) overlaps. */
+    soma.attack_box = aos_soma_dive_attack_box;
+    assert(aos_soma_body_attack_hit(&soma, (AosRect){97, 189, 113, 205}));
+
+    /* Mirrored (facing left): the dive box mirrors about x = 100 to
+     * x 74..94; a prop at (80, 195) still overlaps. */
+    soma.facing_left = true;
+    assert(aos_soma_body_attack_hit(&soma, (AosRect){72, 179, 88, 195}));
+    /* The dive box sits lower (y 192..208): the chest-height prop
+     * at (110, 190) is above it and does not connect. */
+    soma.facing_left = false;
+    assert(!aos_soma_body_attack_hit(&soma, prop));
+}
+
 int main(void) {
     init_anims();
     status_tests();
@@ -958,6 +1008,7 @@ int main(void) {
     soul_tests();
     hit_tests();
     attack_tests();
+    body_attack_tests();
     ability_tests();
     animation_tests();
     collision_tests();

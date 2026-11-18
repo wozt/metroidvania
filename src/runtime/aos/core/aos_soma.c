@@ -1350,3 +1350,20 @@ AosLanding aos_soma_update(AosSoma *soma, const AosCollision *layer, uint16_t he
     soma->ticks++;
     return landing;
 }
+
+bool aos_soma_body_attack_hit(AosSoma *soma, AosRect target) {
+    /* sub_08041BDC's gates, the same ones aos_enemy_collide's
+     * bit-0x4 block reads: + 0x72 bit 1 clear, + 0x70 above 1 and a
+     * real attack box left by sub_08042848 (slide / dive kick). */
+    if (soma->combat.attack_off || soma->combat.type <= 1 ||
+        soma->attack_box.w <= 1 || soma->attack_box.h <= 1)
+        return false;
+    AosRect blade = aos_player_rect(soma->attack_box, soma->x >> 16,
+                                    soma->y >> 16, soma->facing_left, false);
+    if (!(blade.x1 <= target.x2 && target.x1 <= blade.x2 &&
+          blade.y1 <= target.y2 && target.y1 <= blade.y2))
+        return false;
+    /* sub_080211F4, the player's + 0x7C callback: + 0x10 |= 0x80000. */
+    soma->flags |= AOS_FLAG_KICK_HIT;
+    return true;
+}

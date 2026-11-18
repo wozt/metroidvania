@@ -249,6 +249,19 @@ int aos_soma_take_hit(AosSoma *soma, int attack, int defence, int32_t source_x,
                       uint8_t knockback_type);
 /* sub_08014A04 on the BG1 layer only. */
 AosLanding aos_soma_collide(AosSoma *soma, const AosCollision *layer);
+/* sub_08041BDC behind sub_080421AC's result bit 0x4, read by the
+ * non-enemy victims whose mask is & 0x1E (the breakable props of
+ * sub_08045F9C, Object18Update): the player entity's attack
+ * rectangle at 0x03001A48 against the victim's `target` box. The
+ * slide's (type 4, box 0x080E130C) and dive kick's (type 2,
+ * 0x080E1314 / 0x080E1318) body attack are live while
+ * combat.attack_off is clear, combat.type reads above 1 and the
+ * attack box holds more than a point — the same gates as
+ * aos_enemy_collide's bit-0x4 block. On a hit the player's + 0x7C
+ * callback (sub_080211F4) writes + 0x10 |= 0x80000
+ * (AOS_FLAG_KICK_HIT). The victim's recent-hit slots stay the
+ * caller's business; the breakable props keep none. */
+bool aos_soma_body_attack_hit(AosSoma *soma, AosRect target);
 /* One player frame of sub_0801B0D8: animation-end flag, integration,
  * collision pass, state routine, wall probe selection, the pending
  * animation (+ 0x20) and the animation step. States 0 (normal, ground and

@@ -60,9 +60,9 @@ void aos_enemy_soul_attack_contact(int index, int *x, int *y) {
  * slot, the weapon entity) are approximated by aos_enemy_collide and
  * the breakable/Object0D callers' live weapon hitbox; bit 0x4
  * (sub_08041BDC, the victim's hurt box against the + 0x13110 entity's
- * attack rectangle at 0x03001A48) has no ported counterpart because
- * the player's per-state attack hitbox (sub_08042848 writes) is not
- * modelled. */
+ * attack rectangle at 0x03001A48) is ported as
+ * aos_soma_body_attack_hit for the non-enemy victims and inline in
+ * aos_enemy_collide for the enemies. */
 uint8_t aos_enemy_soul_attack_hit(AosRect target, uint8_t victim_type) {
     if (!soul_attacks) return 0;
     for (int i = 0; i < soul_attack_count; ++i) {

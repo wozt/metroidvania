@@ -1,3 +1,40 @@
+## Patch 1250 - Breakable/prop matchers consume sub_080421AC bit 0x4
+
+- **Scope.** `src/runtime/aos/core/aos_soma.c/.h`,
+  `src/runtime/aos/core/aos_enemy.c`, `src/runtime/aria_entities.c`,
+  `tests/test_aos_soma.c`, `data/native_parity/annotations.tsv`,
+  `docs/PROJECT_STATUS.md`.
+- **Native evidence.** `sub_08045F9C` (the breakable/prop victim
+  matcher behind the kind-3 room records, Object0E, Object0F and
+  Object18) and `Object18Update` read `sub_080421AC`'s result mask
+  `& 0x1E`, whose bit `0x4` is `sub_08041BDC`: the victim's hurt
+  rectangle against the `+ 0x13110` player entity's attack
+  rectangle at `0x03001A48` — patch 1249's slide (type 4,
+  `0x080E130C`) and dive-kick (type 2, `0x080E1314`/`0x080E1318`)
+  body attack. Object08 walls and Object0D read mask `& 0x1A`,
+  which excludes bit `0x4`, and are unchanged.
+- **Change.** New `aos_soma_body_attack_hit` ports the bit-0x4
+  test for non-enemy victims: the same `+ 0x72` bit-1 /
+  `+ 0x70 > 1` / live-attack-box gates and the same
+  `aos_player_rect` box math as `aos_enemy_collide`'s bit-0x4
+  block, plus the `+ 0x7C` callback write (`+ 0x10 |= 0x80000`,
+  `AOS_FLAG_KICK_HIT`). The four `& 0x1E` call sites in
+  `update_entities` (ARIA_KIND_BREAKABLE, SPECIAL ids 14/15/24)
+  OR it into their hit flags against the same `(x - 8, y - 16)` to
+  `(x + 8, y)` prop box the weapon and soul approximations already
+  use; the props keep no recent-hit slots, matching the mask read.
+- **Verification.** `cmake --build build -j8` clean;
+  `ctest --test-dir build -R "aos_soma|aos_breakable|aos_object0e|
+  aos_object0f|aos_object18|aos_object0d|aos_wall|aos_enemy"` 8/8
+  pass. `test_aos_soma`'s new `body_attack_tests` covers the slide
+  and dive boxes, the mirrored facing, the `attack_off` / type-1 /
+  disabled-box gates and the `AOS_FLAG_KICK_HIT` write.
+- **Remaining gaps.** The prop hit test is still the documented
+  approximation (prop box vs the shared attack rect, no per-record
+  `+ 0x70` type gate beyond the mask); the `sub_08045F9C` drop
+  dispatch's `+ 0x36` selector stays unmodelled, and there is no
+  emulator comparison.
+
 ## Patch 1249 - Player body attack hitbox: sub_08041BDC (sub_080421AC bit 0x4) ported
 
 - **Scope.** `src/runtime/aos/core/aos_soma.c/.h`,

@@ -3430,7 +3430,12 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * result bits 0x2 (+ 0x1311C attack entity), 0x4 (the
              * + 0x13110 entity's sub_08041BDC path), 0x8 and 0x10
              * (the + 0x13124/+ 0x13144 soul lists) all break the prop
-             * (its + 0x70 type is 0). */
+             * (its + 0x70 type is 0). Bit 0x4 is the player entity's
+             * attack rectangle — the slide/dive-kick body attack of
+             * aos_soma_body_attack_hit against the same prop box. */
+            hit |= soma && aos_soma_body_attack_hit(
+                soma, (AosRect){(int16_t)(e->x - 8), (int16_t)(e->y - 16),
+                                (int16_t)(e->x + 8), (int16_t)e->y});
             if (!hit)
                 hit = aos_enemy_soul_attack_hit(
                     (AosRect){(int16_t)(e->x - 8), (int16_t)(e->y - 16),
@@ -3816,7 +3821,12 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * result bits 0x2 (+ 0x1311C attack entity), 0x4 (the
              * + 0x13110 entity's sub_08041BDC path), 0x8 and 0x10
              * (the + 0x13124/+ 0x13144 soul lists) all break the prop
-             * (its + 0x70 type is 0). */
+             * (its + 0x70 type is 0). Bit 0x4 is the player entity's
+             * attack rectangle — the slide/dive-kick body attack of
+             * aos_soma_body_attack_hit against the same prop box. */
+            hit |= soma && aos_soma_body_attack_hit(
+                soma, (AosRect){(int16_t)(e->x - 8), (int16_t)(e->y - 16),
+                                (int16_t)(e->x + 8), (int16_t)e->y});
             if (!hit)
                 hit = aos_enemy_soul_attack_hit(
                     (AosRect){(int16_t)(e->x - 8), (int16_t)(e->y - 16),
@@ -3920,7 +3930,12 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * result bits 0x2 (+ 0x1311C attack entity), 0x4 (the
              * + 0x13110 entity's sub_08041BDC path), 0x8 and 0x10
              * (the + 0x13124/+ 0x13144 soul lists) all break the prop
-             * (its + 0x70 type is 0). */
+             * (its + 0x70 type is 0). Bit 0x4 is the player entity's
+             * attack rectangle — the slide/dive-kick body attack of
+             * aos_soma_body_attack_hit against the same prop box. */
+            hit |= soma && aos_soma_body_attack_hit(
+                soma, (AosRect){(int16_t)(e->x - 8), (int16_t)(e->y - 16),
+                                (int16_t)(e->x + 8), (int16_t)e->y});
             if (!hit)
                 hit = aos_enemy_soul_attack_hit(
                     (AosRect){(int16_t)(e->x - 8), (int16_t)(e->y - 16),
@@ -4324,7 +4339,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * (special_24). The sub_08068AD4 probe is the entity's
              * own screen position inside the (-0x20, -0x20, 0x130,
              * 0xE0) rect, the sub_080421AC low16 & 0x1E gate the
-             * weapon hitbox overlap, the gEwramData + 0x13266 byte
+             * weapon hitbox overlap plus the bit-0x4 player body
+             * attack, the gEwramData + 0x13266 byte
              * passes 0 (no runtime room flag), the eight
              * sub_08043F70 scatter and the sub_08043C10 heart
              * become real room pickups, and the sub_0805379C
@@ -4348,6 +4364,12 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                           ww > 1 && wh > 1 &&
                           !(wx + ww - 1 < e->x - 8 || e->x + 8 < wx ||
                             wy + wh - 1 < e->y - 16 || e->y < wy);
+            /* sub_080421AC's low16 & 0x1E bit 0x4 (sub_08041BDC): the
+             * player entity's attack rectangle — the slide/dive-kick
+             * body attack — against the same scatter box. */
+            attack |= soma && aos_soma_body_attack_hit(
+                soma, (AosRect){(int16_t)(e->x - 8), (int16_t)(e->y - 16),
+                                (int16_t)(e->x + 8), (int16_t)e->y});
             aos_object18_update(&e->object18, near, attack, false,
                                 e->x, e->y, aos_random);
             if (e->object18.song >= 0) {

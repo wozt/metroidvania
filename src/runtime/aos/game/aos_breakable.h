@@ -51,6 +51,13 @@ typedef struct {
     uint8_t state;          /* +0xA: 0 idle, 1 breaking */
     uint8_t timer;          /* +0xD: 0x28 on the hit, u8 wrap ends it */
     uint8_t flags58;        /* +0x58: bit 0x20 offscreen mark */
+    uint32_t anim_tick;     /* sub_08046100's per-frame step count:
+                             * the native drawFunc advances + 0x6F
+                             * once per drawn frame against the
+                             * animation record's duration bytes,
+                             * so the port keeps its own counter
+                             * instead of the wall-clock step/4
+                             * approximation. */
     bool finished;          /* +0x59 bit 3: the native done mark */
     bool swing_bounce;      /* sub_08046100's + 0x46 bounce, per frame */
     /* Outputs. */

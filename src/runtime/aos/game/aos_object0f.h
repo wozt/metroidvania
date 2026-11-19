@@ -25,6 +25,9 @@ typedef struct {
     uint8_t timer;          /* +0xD: 0x28 set on the hit, u8 wrap ends it */
     uint8_t flags58;        /* +0x58: bit 0x20 offscreen mark */
     uint8_t unk5a;          /* +0x5A draw byte: particle palette source */
+    uint32_t anim_tick;     /* sub_08050F08's per-frame step count —
+                             * same drawFunc stepping as the
+                             * breakable, kept per entity. */
     bool finished;          /* +0x59 bit 3: the native done mark */
     int32_t fx, fy;         /* +0x40/+0x44 fixed-point position */
     /* Outputs consumed by the runtime. */

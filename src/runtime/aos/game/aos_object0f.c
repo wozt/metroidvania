@@ -22,6 +22,7 @@ void aos_object0f_update(AosObject0f *o, bool near, bool hit,
                          uint32_t (*rng)(void)) {
     o->fx = fx;
     o->fy = fy;
+    ++o->anim_tick;         /* sub_08050F08 frame step, once per update */
     o->song = -1;
     o->particle = false;
     if (!near) {

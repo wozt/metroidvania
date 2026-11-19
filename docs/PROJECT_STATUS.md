@@ -1,3 +1,48 @@
+## Patch 1264 - Room 0/5 chandelier art, flame and prop animation stepping
+
+- **Scope.** area_00_room_005's destructible props: two Object0F
+  chandeliers (kind SPECIAL id 15, param0 0, at 208,344 and 304,344)
+  and two kind-3 breakable torches (param0 1, at 64,288 and 448,288).
+- **Chandelier sprite.** The generic SPECIAL draw picked animation 0 —
+  a 7x7 fragment — while Object0FCreate (func_08050DB4) presets
+  animation 0xE. special_15_v7's exported anim_14 (records 74-77,
+  four 8-tick frames, 10x16) is the full burning chandelier whose
+  frames carry the flame flicker; id 15 now draws defs[14]. This
+  supplies both the missing glow animation and the whole prop the
+  user reported as incomplete. Destruction already matched native:
+  state 1 keeps animating while sub_08045CEC drift particles emit
+  for the 0x28-tick window, then + 0x59 bit 3 ends the entity.
+- **Animation stepping.** func_0803EBA8's mode-0 stepper advances
+  + 0x6F once per func_0803F17C call (one per drawn frame) against
+  the animation record's duration bytes — one tick per frame. The
+  shared `(step / 4)` wall-clock pick ran these props four times too
+  slowly. AosBreakable and AosObject0f now keep their own anim_tick
+  counters, incremented once per update (the port's update/draw
+  cadence matches the native drawFunc rate), and the draw resolves
+  the frame index from that counter at native rate. Other special
+  objects keep the step/4 approximation pending the same audit.
+- **Flame variant.** Verified special_62_v01 (param0 1's
+  0x081C3E00 + 0x100 tile patch) loads and animates — no variant
+  miss — so the reported "incomplete or wrong" torch was the same
+  shared-sheet/anim-0 class of issue plus the four-times-slow
+  stepping, both now corrected.
+- **Evidence.** aos_breakable/aos_object0f unit tests pass; live
+  captures show the full chandelier with flickering flames and the
+  torch cycling at the native 17-frame period. Native routine refs:
+  func_08050DB4/08050E3C/08050F08 (Object0F), func_08046080/
+  func_08045EE0/08046100/08046148 (breakable), func_0803F17C/
+  func_0803EBA8 (stepping).
+- **Remaining gap — the fountain.** The room's Object07 (param0 1,
+  param1 3) is the sub_0804F690 BG-anim cycler: record 3 of
+  0x08525D9C selects four frames that each DMA one 32-byte tile
+  from 0x0811A320 + arg1*32 + 4 (arg1 5/0xD/0xE/0xF) into the
+  EWRAM tile cache slot arg3 = 5 at 0x0201261C + 0xA0 through
+  func_0803C918, marking dirty bits at 0x02012C1C for the deferred
+  VRAM upload. Reproducing it needs the cache-to-VRAM sync traced
+  (which BG char block and tilemap cell the slot maps to) plus a
+  per-frame tile-graphics write the layered-BG draw does not yet
+  own — documented as missing, not approximated.
+
 ## Patch 1263 - Opening slide completion resumes parsing same-tick
 
 - **Reported flicker.** At the end of a dialogue page-turn's twelve-frame

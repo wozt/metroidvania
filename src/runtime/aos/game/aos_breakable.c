@@ -17,6 +17,7 @@ void aos_breakable_create(AosBreakable *b, int param0, int param1) {
 void aos_breakable_update(AosBreakable *b, bool near, bool hit, bool swing,
                           bool mp_full_soma) {
     b->song = -1;
+    ++b->anim_tick;         /* sub_08046100 frame step, once per update */
     b->drop_kind = AOS_BREAKABLE_DROP_NONE;
     b->drop_big = false;
     b->drop_roll = false;

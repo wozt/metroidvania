@@ -759,7 +759,9 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
             for (unsigned f = 0; f < art->defs[3].count; ++f)
                 total += art->ticks[3][f];
             if (!total) continue;
-            unsigned t = (step / 4) % total, index = 0;
+            /* sub_08046100 steps + 0x6E/+ 0x6F once per drawn frame;
+             * e->breakable.anim_tick counts those update frames. */
+            unsigned t = e->breakable.anim_tick % total, index = 0;
             while (index + 1 < art->defs[3].count &&
                    t >= art->ticks[3][index])
                 t -= art->ticks[3][index++];
@@ -1059,14 +1061,27 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
             else
                 art = &objects->special_objects[e->id];
         }
-        if (!art->loaded || !art->defs[0].count) continue;
+        /* Object0FCreate (func_08050DB4, id 15) presets animation
+         * 0xE: the four-frame burning-chandelier cycle that carries
+         * the flame flicker. Every other special object still draws
+         * its first exported animation pending the per-object
+         * audit. */
+        int anim = e->id == 15 ? 14 : 0;
+        if (!art->loaded || anim >= OBJECT_MAX_ANIMS ||
+            !art->defs[anim].count) continue;
         unsigned total = 0;
-        for (unsigned f = 0; f < art->defs[0].count; ++f) total += art->ticks[0][f];
+        for (unsigned f = 0; f < art->defs[anim].count; ++f)
+            total += art->ticks[anim][f];
         if (!total) continue;
-        unsigned t = (step / 4) % total, index = 0;
-        while (index + 1 < art->defs[0].count && t >= art->ticks[0][index])
-            t -= art->ticks[0][index++];
-        const AriaFrame *frame = &art->frames[0][index];
+        /* Object0F's sub_08050F08 frame callback steps once per
+         * drawn frame like the breakable's sub_08046100 — its own
+         * counter replaces the wall-clock step/4 for id 15. */
+        unsigned t = (e->id == 15 ? e->object0f.anim_tick : step / 4) %
+                     total, index = 0;
+        while (index + 1 < art->defs[anim].count &&
+               t >= art->ticks[anim][index])
+            t -= art->ticks[anim][index++];
+        const AriaFrame *frame = &art->frames[anim][index];
         if (!frame->texture) continue;
         int ex = e->x, ey = e->y;
         SDL_FRect rect = {(float)(ex + frame->offset_x - cam_x),

@@ -3,6 +3,6 @@
   "private": true,
   "description": "Pinned romdev MCP server for native GBA inspection (see AGENTS.md)",
   "dependencies": {
-    "romdevtools": "^0.156.3"
+    "romdevtools": "0.156.3"
   }
 }

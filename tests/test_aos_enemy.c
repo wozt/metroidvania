@@ -1485,6 +1485,49 @@ static void creaking_skull_tests(void) {
     assert(ed.state == 3 && ed.hp == 2000);
     aos_enemy_set_flag_8e_40(false);
 
+    /* sub_08097D1C's mirrored create transform covers all thirteen
+     * x coordinates, and angles {0,1,2,8,11}; it is not limited to
+     * the first two records.  Keep the dormant state from advancing
+     * the reduced choreography after the create bake. */
+    ed.mirrored = true;
+    ed.x = AOS_FIXED(150);
+    ed.y = AOS_FIXED(120);
+    ed.boss_parts_spawned = true;
+    ed.spawned_count = 13;
+    (void)aos_enemy_update(&ed, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    static const int8_t cs_mirrored_x_3_11[] = {
+        -22, -6, -10, -6, 11, 26, 26, -12, 6,
+    };
+    for (int i = 3; i <= 11; ++i)
+        assert(ed.cs_rec[i].x ==
+               (int32_t)cs_mirrored_x_3_11[i - 3] * AOS_FIXED(1));
+    assert(ed.cs_rec[2].ang == 0x15000 &&
+           ed.cs_rec[8].ang == 0x10000 &&
+           ed.cs_rec[11].ang == 0x10000);
+    int32_t cs_before_x[13], cs_before_ang[13];
+    for (int i = 0; i < 13; ++i) {
+        cs_before_x[i] = ed.cs_rec[i].x;
+        cs_before_ang[i] = ed.cs_rec[i].ang;
+    }
+    /* A later facing change runs the exact sub_08097D1C record loop:
+     * every x changes sign, while only angles 0/1/2/8/11 mirror. */
+    ed.state = 1;
+    ed.substep = 0xFF; /* reduced-machine default: no record arm */
+    ed.cs_cool = 0;
+    soma.x = ed.x - AOS_FIXED(40);
+    (void)aos_enemy_update(&ed, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(!ed.mirrored);
+    for (int i = 0; i < 13; ++i) {
+        bool angle_mirrors = i <= 2 || i == 8 || i == 11;
+        assert(ed.cs_rec[i].x == -cs_before_x[i]);
+        assert(ed.cs_rec[i].ang ==
+               (angle_mirrors ? 0x20000 - cs_before_ang[i]
+                              : cs_before_ang[i]));
+    }
+    soma.x = AOS_FIXED(150);
+
     /* The thirteen bone children emit over two updates (8-child
      * cap): 8 then 5. */
     e.x = AOS_FIXED(150);

@@ -1,3 +1,24 @@
+## Patch 1272 - Creaking Skull full record-facing transform
+
+- **Root correction.** `sub_08097D1C` does not mirror only records 0 and
+  1 as the previous port claimed. Its loop negates the x coordinate of all
+  thirteen records, and its address tests transform `+8` as
+  `0x20000-angle` for records 0, 1, 2, 8 and 11. The port now reproduces
+  those exact sets.
+- **Correct ownership and timing.** Record baking already reads the current
+  facing in `sub_08097B94/sub_08097D84`; applying another unconditional
+  mirror after the bake double-transformed the pose. The transform now runs
+  only when the reduced choreography changes facing, at state-0 engagement
+  and in the existing state-1 facing path. The unit test verifies the nine
+  native home-table x positions under a mirrored bake, then forces a facing
+  change and checks all thirteen x values plus the five angle records.
+- **Measured limit.** A private portable room-0/10 capture at frame 300 is
+  essentially unchanged because that left-side Soma setup does not make the
+  boss change facing. The skeleton remains visibly separated relative to the
+  earlier native romdev capture. This patch fixes turning poses and removes
+  a false routine description, but does not validate or complete the missing
+  state-0/state-1 record-arm choreography.
+
 ## Patch 1271 - Creaking Skull rotating attack entity
 
 - **Native lifecycle.** The port's former `CS_SHOT` was a fast horizontal

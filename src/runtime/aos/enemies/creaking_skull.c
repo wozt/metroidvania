@@ -337,14 +337,23 @@ static void cs_restore_records(AosEnemy *e) {
 }
 
 /* sub_08097D1C: when the facing bit disagrees with sub_0806CF2C the
- * create negates records 0/1 x and mirrors their + 8 angle
- * (0x20000 - ang).  The port applies it once at init when the spawn
- * mirrored bit is set (documented approximation of the bit-0 probe). */
+ * native loop negates every record x.  Its two address comparisons
+ * mirror +8 (0x20000 - ang) for records 0, 1, 2, 8 and 11.  The port
+ * applies that exact record transform whenever the reduced
+ * choreography changes the body facing. */
 static void cs_mirror_records(AosEnemy *e) {
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < CS_BONES; ++i) {
         e->cs_rec[i].x = -e->cs_rec[i].x;
-        e->cs_rec[i].ang = 0x20000 - e->cs_rec[i].ang;
+        if (i <= 2 || i == 8 || i == 11)
+            e->cs_rec[i].ang = 0x20000 - e->cs_rec[i].ang;
     }
+}
+
+static void cs_face_records(AosEnemy *e, const AosSoma *soma) {
+    bool was_mirrored = e->mirrored;
+    face_player(e, soma);
+    if (e->mirrored != was_mirrored)
+        cs_mirror_records(e);
 }
 
 /* EnemyCreakingSkullCreate's record bake: home pairs for the + 0x20
@@ -372,9 +381,9 @@ static void cs_init_records(AosEnemy *e) {
     cs_config_ex(e, 1, 0, 0, 0x780000, true, false);
     cs_config_ex(e, 2, 1, 0, 0x700000, true, false);
     cs_step_perm(e, cs_perm_tab);
-    /* sub_08097D1C runs at the create tail, after the bakes. */
-    if (e->mirrored)
-        cs_mirror_records(e);
+    /* The bake already reads the current facing in sub_08097B94 and
+     * sub_08097D84.  sub_08097D1C is a change-of-facing transform,
+     * not an unconditional second mirror of the baked pose. */
     if (e->state == 3)
         e->cs_cool = 0; /* the dormant branch clears + 0xD */
 }
@@ -634,6 +643,7 @@ static void cs_state0(AosEnemy *e, AosSoma *soma,
          * sub_08095898 case 0 fires on engagement with the decoded
          * + 0xD entry divider. */
         if (player_near(soma, e->x >> 16, e->y >> 16, 0xC0, 0x80)) {
+            cs_face_records(e, soma);
             play(e, anims, 1);
             e->step = 1;
             e->timer = 0;
@@ -742,7 +752,7 @@ static void cs_state1(AosEnemy *e, AosSoma *soma,
         break;
     }
     if (soma)
-        face_player(e, soma);
+        cs_face_records(e, soma);
 }
 
 AosHitReport aos_enemy_creaking_skull_update(

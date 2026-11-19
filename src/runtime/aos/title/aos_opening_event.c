@@ -10,6 +10,11 @@ static void clear_page(AosOpeningEvent *event) {
     memset(event->glyphs, 0, sizeof event->glyphs);
     memset(event->glyph_counts, 0, sizeof event->glyph_counts);
     event->line = 0;
+    /* Commands 3/4/9 clear the native BG0 text tilemap, including the
+     * speaker row. The portable renderer rebuilds that tilemap from this
+     * struct, so retaining the previous speaker would redraw a stale name on
+     * the first fully-open frame before the next command 7 is parsed. */
+    event->speaker = 0;
     event->dirty = true;
 }
 

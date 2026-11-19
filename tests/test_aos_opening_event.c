@@ -664,16 +664,17 @@ static void test_script_and_commit(void) {
     /* Command 4 selects close state 3 only: twelve -3 polls reach zero,
      * then the parser resumes. It does not silently reopen the old page. */
     assert(!event.waiting && event.slide_dir == -1 &&
-           event.glyph_counts[0] == 0);
+           event.glyph_counts[0] == 0 && event.speaker == 0);
     for (unsigned frame = 0; frame < 12; ++frame)
         aos_opening_event_update(&event, 0);
     assert(event.slide_dir == 0 && event.slide_pos == 0);
     aos_opening_event_update(&event, 0);
     assert(event.portrait == 5 && event.slide_dir == 1 &&
-           event.slide_pos == 0);
+           event.slide_pos == 0 && event.speaker == 0);
     for (unsigned frame = 0; frame < 12; ++frame)
         aos_opening_event_update(&event, 0);
-    assert(event.slide_dir == 0 && event.slide_pos == 0x24);
+    assert(event.slide_dir == 0 && event.slide_pos == 0x24 &&
+           event.speaker == 0);
     for (unsigned frame = 0; frame < 16 && !event.waiting; ++frame)
         aos_opening_event_update(&event, 0);
     assert(event.waiting && event.beat == 9 && event.speaker == 8);
@@ -744,7 +745,8 @@ static void test_insert_and_malformed(void) {
 /* The host-side beat -> player +0x6D map (aos_opening_soma_anim):
  * the native sequence 0x51 -> 0x0D -> 0x00 -> 0x04 -> 0x05 -> 0x52 ->
  * post window, read back out of the serialized +0xB/+0xC/+0xD beat
- * state. States 6-8 do not call sub_0801D028 and therefore retain 0x52. */
+ * state. States 6-8 hand the already-started post-absorb choreography to
+ * the normal player animation path. */
 static void test_soma_anim_map(void) {
     AosOpeningActors actors;
     aos_opening_actors_init(&actors);
@@ -777,11 +779,11 @@ static void test_soma_anim_map(void) {
     actors.soul_notice = 1;
     assert(aos_opening_soma_anim(&actors) == 0x52);
     actors.soul_notice = 0;
-    /* +0xB 6,7,8 leave the already-bound crouched absorb pose alone. */
+    /* +0xB 6,7,8 hand the post-absorb choreography to the host. */
     actors.scene_state = 6;
-    assert(aos_opening_soma_anim(&actors) == 0x52);
+    assert(aos_opening_soma_anim(&actors) == AOS_OPENING_SOMA_ANIM_POST);
     actors.scene_state = 8;
-    assert(aos_opening_soma_anim(&actors) == 0x52);
+    assert(aos_opening_soma_anim(&actors) == AOS_OPENING_SOMA_ANIM_POST);
     assert(aos_opening_soma_anim(NULL) == 0x00);
 }
 

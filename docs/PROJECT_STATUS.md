@@ -1,3 +1,29 @@
+## Patch 1261 - Post-soul crouch and dialogue-page ordering regression
+
+- **Regression and native interpretation.** Patch 1260 correctly separated
+  permanent story completion from the reusable epilogue parser, but it also
+  removed the player animation continuation after pose 0x52. The Object20
+  routine makes no new position write in states 6-8; that does not mean the
+  already-running normal player choreography stops. The reviewed native
+  sequence remains `0x52 -> CROUCH_DOWN (0x09) -> CROUCH (0x02) -> IDLE`.
+- **Player correction.** The three-stage continuation is restored while
+  `opening_story_complete` is false. Epilogue text still bypasses every story
+  pose and position write, so the Genya manual-dialogue repin fixed by Patch
+  1260 does not return. Runtime captures at frames 2714 and 2720 show Soma in
+  animation 9 at successive frames before the later crouch/idle stages.
+- **Dialogue correction.** Native commands 3, 4 and 9 clear the BG0 text map,
+  including its speaker row. `clear_page` now clears the portable `speaker`
+  field as well as glyphs. Before the fix, the first fully-open post-soul
+  frame reconstructed the previous name (`Genya Arikado`) before command 7
+  installed the new speaker. Reviewed captures now show the fully-open gray
+  panel and portrait with no text at frame 2759, followed by `Soma Cruz` and
+  the first glyph at frame 2760.
+- **Tests/status.** `test_aos_opening_event` again asserts the post-absorb
+  sentinel and now asserts that speaker state stays clear through close,
+  portrait selection and the complete 12-frame reopen. The opening remains
+  partial; these host captures prove the corrected ordering but do not replace
+  a fresh native pixel comparison of the remaining choreography.
+
 ## Patch 1260 - Opening dialogue ownership and room-return actors
 
 - **Native evidence.** `sub_0805CED0` keeps the permanent story state in

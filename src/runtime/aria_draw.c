@@ -286,6 +286,10 @@ void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObject
         if (e->enemy.role == AOS_ROLE_CS_BONE &&
             (e->enemy.cs_pose <= 2 || e->enemy.cs_pose == 11))
             degrees = (double)(e->enemy.vx & 0xFFFF) * 360.0 / 65536.0;
+        /* sub_080989DC submits the stationary Creaking Skull attack
+         * entity through sub_0803E058 with its rotating +0x18 angle. */
+        if (e->enemy.role == AOS_ROLE_CS_SHOT)
+            degrees = (double)(e->enemy.angle & 0xFFFF) * 360.0 / 65536.0;
         /* Triton's whirlpool head (sub_080871C0/sub_08087318): the
          * sub_0803E238 affine draw turns the sprite by the head's + 0x20
          * whirlpool angle — tr_angle here — at the unit scale set at

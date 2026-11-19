@@ -1636,6 +1636,39 @@ static void creaking_skull_tests(void) {
     for (int i = 0; i < hit.child_count; ++i)
         if (hit.children[i].role == AOS_ROLE_CS_SHOT) shots++;
     assert(shots == 1);
+    AosEnemy shot = hit.children[0];
+    assert(shot.role == AOS_ROLE_CS_SHOT);
+    int32_t shot_dx = shot.mirrored ? AOS_FIXED(36) : -AOS_FIXED(36);
+    uint32_t shot_start = shot.mirrored ? 0x30000u : (uint32_t)-0x30000;
+    assert(shot.x == a.x + shot_dx &&
+           shot.y == a.y - AOS_FIXED(25));
+    assert(shot.vx == 0 && shot.vy == 0 && shot.angle == shot_start);
+    soma.x = soma.y = 0;
+    uint32_t shot_angle = shot.angle;
+    (void)aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(!shot.removed && shot.x == a.x + shot_dx &&
+           shot.angle == shot_angle);
+    (void)aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(shot.angle == shot_angle + 0x2400);
+    /* sub_08098DF0: a weapon strike starts the stationary entity's
+     * burst without awarding damage, XP or a damage popup. */
+    soma.x = shot.x;
+    soma.y = shot.y;
+    cs_weapon.active = true;
+    int shot_burst_songs =
+        aos_audio_requested(AOS_AUDIO_START_SONG, 0x76);
+    hit = aos_enemy_update(&shot, &soma, &layer, &kind, &cs_weapon,
+                           &cs_blade, 20, 4, 0, 0, always_zero);
+    assert(hit.enemy_hit && hit.enemy_damage == 0 &&
+           !hit.has_damage_popup && !hit.killed && shot.state == 1 &&
+           !shot.removed &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x76) ==
+               shot_burst_songs + 1);
+    hit = aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(shot.removed);
     a.state = 1;
     a.substep = 2;
     aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,

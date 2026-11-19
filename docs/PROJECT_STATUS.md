@@ -1,3 +1,26 @@
+## Patch 1271 - Creaking Skull rotating attack entity
+
+- **Native lifecycle.** The port's former `CS_SHOT` was a fast horizontal
+  projectile with an arbitrary lifetime. `sub_0809884C` actually creates the
+  stationary `sub_080989DC` entity at facing-dependent x offset `+/-36` and
+  y offset `-25`, with frame 0, collision type `0x0A` and angle `+/-0x30000`.
+  The port now uses those values, keeps the entity stationary and advances
+  its affine angle by `0x2400` every second update.
+- **Interaction.** Native contact callback `sub_08098DB4` and weapon callback
+  `sub_08098DF0` both switch the helper to state 1 and request song `0x76`.
+  The shared collision path now reproduces that transition without applying
+  damage, a damage popup, XP or rewards to this auxiliary entity; the next
+  update removes it like the native state-1 tail. The targeted test covers
+  spawn offsets, stationary rotation, weapon-triggered transition, sound and
+  deletion. The real-room boss integration remains green.
+- **Honest remaining scope.** The native spawn also emits eight launch
+  particles, while state 1 emits three `sub_0806D894` and three
+  `sub_0806D644` particles. Their distinct resource/velocity semantics are
+  not represented by a verified shared effect path and remain unported. The
+  parent choreography still reaches this helper through a collapsed two-shot
+  schedule rather than the complete native cases, and the overall skeleton
+  remains visibly incoherent against the private emulator capture.
+
 ## Patch 1270 - Creaking Skull affine bones and attack-pose restore
 
 - **Native affine subset.** `sub_0809808C` sends only records 0, 1, 2 and

@@ -15,8 +15,8 @@
  *   0x0811903C indexed through 0x08119056; the + 0x36 variant byte
  *   and the sub_0804277C hurt/death callbacks (sub_08098C54 /
  *   sub_08098C84) fold into the shared collide and the bone role;
- * - the attack shots of the state-1 machine become
- *   AOS_ROLE_CS_SHOT children and the sub_08098CF0 debris spawns
+ * - the sub_0809884C/sub_080989DC rotating attack entity becomes an
+ *   AOS_ROLE_CS_SHOT child and the sub_08098CF0 debris spawns
  *   AOS_ROLE_CS_GORE;
  * - the + 0xB sixteen-case state-0 machine, the state-1 attack
  *   machine and the + 0xD death countdown fold into step/substep/
@@ -404,9 +404,10 @@ static void cs_emit_bones(AosEnemy *e, AosHitReport *hit) {
     }
 }
 
-/* The state-1 attack shot: a fast horizontal projectile spawned at
- * the head, mirrored by facing (the native volley helpers collapse
- * to this single role). */
+/* sub_0809884C: after its eight particle calls, create the linked
+ * sub_080989DC entity at the literal facing-dependent x offset and
+ * common -25 px y offset.  +0x48 carries an angle whose low half is
+ * initially zero; the signed high half is retained for traceability. */
 static void cs_fire_shot(AosEnemy *e, AosSoma *soma, AosHitReport *hit) {
     (void)soma;
     if (hit->child_count >= AOS_ENEMY_MAX_CHILDREN)
@@ -416,11 +417,14 @@ static void cs_fire_shot(AosEnemy *e, AosSoma *soma, AosHitReport *hit) {
     c.id = e->id;
     c.role = AOS_ROLE_CS_SHOT;
     c.parent = e;
-    c.x = e->x + (e->mirrored ? -0x100000 : 0x100000);
-    c.y = e->y - 0x600000;
-    c.vx = e->mirrored ? 0x500000 : -0x500000;
-    c.vy = 0;
-    c.hp = 1;
+    c.mirrored = e->mirrored;
+    c.x = e->x + (e->mirrored ? 0x240000 : -0x240000);
+    c.y = e->y - 0x190000;
+    c.angle = e->mirrored ? 0x30000u : (uint32_t)-0x30000;
+    c.static_frame = 0;
+    c.hp = INT16_MAX;
+    c.stats = e->stats;
+    c.combat.type = 0x0A;
     hit->children[hit->child_count++] = c;
 }
 
@@ -561,16 +565,46 @@ static void cs_bone_update(AosEnemy *e, const AosAnimSet *anims,
     e->removed = true;
 }
 
-/* A shot flies straight until it leaves the room margins or its
- * lifetime ends. */
-static void cs_shot_update(AosEnemy *e) {
-    AosEnemy *p = e->parent;
-    if (!p || !cs_is_boss(p->id) || p->state == 2 || p->removed ||
-        ++e->timer > 0x60) {
+/* sub_080989DC: state 0 is a stationary affine hazard.  Its +0xD
+ * counter advances every update and every even value adds 0x2400 to
+ * the +0x18 angle.  Either native callback (sub_08098DB4 contact or
+ * sub_08098DF0 weapon hit) changes to state 1 and plays song 0x76;
+ * state 1 emits three sub_0806D894 plus three sub_0806D644 particles
+ * and deletes immediately.  Those six distinct particle helpers are
+ * still not represented by the shared effect model. */
+static AosHitReport cs_shot_update(
+    AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def, int cam_x, int cam_y) {
+    AosHitReport hit;
+    memset(&hit, 0, sizeof hit);
+    if (e->state == 1) {
         e->removed = true;
-        return;
+        return hit;
     }
-    integrate(e);
+    if (outside_margins(kind, 1, (e->x >> 16) - cam_x,
+                        (e->y >> 16) - cam_y)) {
+        e->removed = true;
+        return hit;
+    }
+    hit = collide(e, soma, kind, weapon, weapon_frames, soma_atk, soma_def);
+    if (hit.enemy_hit) {
+        /* sub_08098DF0 does not damage the helper or emit a damage
+         * number; it only starts the burst. */
+        e->hp = INT16_MAX;
+        e->defeated = false;
+        hit.enemy_damage = 0;
+        hit.has_damage_popup = false;
+        hit.killed = false;
+    }
+    if (hit.soma_hit || hit.enemy_hit) {
+        e->state = 1;
+        aos_audio_play_song(0x76);
+        return hit;
+    }
+    if ((++e->timer & 1) == 0)
+        e->angle += 0x2400;
+    return hit;
 }
 
 /* Gore debris flies on its launch velocity and lands. */
@@ -749,8 +783,8 @@ AosHitReport aos_enemy_creaking_skull_update(
         return hit;
     }
     if (e->role == AOS_ROLE_CS_SHOT) {
-        cs_shot_update(e);
-        return hit;
+        return cs_shot_update(e, soma, kind, weapon, weapon_frames,
+                              soma_atk, soma_def, cam_x, cam_y);
     }
     if (e->role == AOS_ROLE_CS_GORE) {
         cs_gore_update(e);

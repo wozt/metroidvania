@@ -77,16 +77,35 @@ void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *object
              * (0x03004564) is not traced, this matches the room art at both
              * room edges. */
             bool flip = e->door.facing_left;
-            /* sub_0804D794's affine swing: while 0 < swing < 0x4000 the
-             * leaf is squashed horizontally by cos(swing) and its x
-             * shifted by 32*sin(swing) - 1 px; at 0x4000 the cosine is
-             * zero and the edge-on leaf disappears into the doorway.
-             * The hinge edge stays fixed (the left edge unmirrored,
-             * the right edge mirrored). The live-OAM two-group affine
-             * composition (sub_0804342C, indices 8/9) was tried as
-             * split halves but reads as a doubled door; kept as the
-             * documented gap in annotations.tsv. */
+            /* sub_0804D794's affine swing, live-OAM measured (room
+             * 0/0->0/3 door, frames 401-459): two sprite groups through
+             * sub_0804342C — the 32x48 leaf (tiles 17/145, affine 8)
+             * foreshortens by cos(swing) while the 8x48 edge strip
+             * (tiles 16/144 = frame record 1's sheet column x0-7,
+             * affine 9) travels toward the room interior, x +21 px over
+             * the swing. The strip is drawn first so the narrowing leaf
+             * covers it until the free edge pulls away — the door's
+             * visible thickness. Entity x also shifts by
+             * sin(swing)*32-1 px (sub_0804D794's +0x40 adjust). */
             float scale = aos_door_swing_scale(&e->door);
+            float swing_s = 0.0f;
+            bool swinging = e->door.swing > 0 && e->door.swing < 0x4000;
+            if (swinging)
+                swing_s = (float)aos_sine((uint32_t)e->door.swing) / 65536.0f;
+            if (swinging && objects->edge_frames[style][k].texture) {
+                const AriaFrame *edge = &objects->edge_frames[style][k];
+                float dir = flip ? -1.0f : 1.0f;
+                float ex = (float)e->x - (float)cam_x +
+                           dir * (6.0f + 21.0f * swing_s);
+                if (dir < 0) ex -= edge->w * scale;
+                SDL_FRect erec = {ex, (float)(e->y + frame->offset_y - cam_y),
+                                  edge->w * scale, edge->h};
+                if (erec.w >= 1.0f)
+                    SDL_RenderTextureRotated(renderer, edge->texture, NULL,
+                                             &erec, 0, NULL,
+                                             flip ? SDL_FLIP_HORIZONTAL
+                                                  : SDL_FLIP_NONE);
+            }
             float x = flip ? (float)(e->x - frame->offset_x) - frame->w
                            : (float)(e->x + frame->offset_x);
             float w = frame->w * scale;

@@ -373,6 +373,10 @@ typedef struct {
  * (the door frame under each step of its palette cycle). */
 typedef struct {
     AriaFrame frames[DOOR_STYLES][MAX_FRAMES];
+    /* WoodenDoorEdge/style_N: the 8x48 edge-on strip of frame record 1,
+     * drawn under the leaf during the swing (live OAM group B, affine
+     * index 9). Shares the leaf's palette cycle (ticks/counts). */
+    AriaFrame edge_frames[DOOR_STYLES][MAX_FRAMES];
     uint8_t ticks[DOOR_STYLES][MAX_FRAMES];
     int counts[DOOR_STYLES];
     struct {

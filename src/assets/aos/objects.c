@@ -1976,6 +1976,24 @@ static bool export_doors(const FusionRom *rom, FusionSpriteLibrary *library,
             success = begin_and_add(library, key, index, entry[1], &rendered,
                                     index == 0, error, error_size);
             free(rendered.bmp);
+            /* Frame record 1 is the door's edge-on strip: two 8x32/8x16
+             * components sourcing sheet column x0-7 — the same art the
+             * live OAM shows as the second affine sprite group (tiles
+             * 16/144, affine index 9) travelling into the room while
+             * the 32x48 leaf (tiles 17/145, index 8) foreshortens.
+             * Records 2/6/7 render the identical strip with different
+             * record metadata; record 1 is the canonical edge frame. */
+            RenderedFrame edge;
+            success = palette && render_frame(
+                rom, 0x0820F160, &sheet, palette, 1, &edge,
+                error, error_size);
+            if (!success) break;
+            char edge_key[48];
+            snprintf(edge_key, sizeof edge_key, "WoodenDoorEdge/style_%zu",
+                     style);
+            success = begin_and_add(library, edge_key, index, entry[1],
+                                    &edge, index == 0, error, error_size);
+            free(edge.bmp);
         }
     }
     free(sheet.data);

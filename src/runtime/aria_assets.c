@@ -852,6 +852,23 @@ bool aria_load_objects(const char *path, AriaObjects *objects, SDL_Renderer *ren
                 ok = false;
             continue;
         }
+        if (sscanf(line, "WoodenDoorEdge/style_%d\t%d\t%d\t%d\t%d\t%511s", &style, &frame,
+                   &ticks, &ox, &oy, frame_path) == 6) {
+            if (style < 0 || style >= DOOR_STYLES || frame >= MAX_FRAMES ||
+                ticks < 1 || ticks > 255) { ok = false; break; }
+            SDL_Surface *surface = SDL_LoadBMP(frame_path);
+            if (!surface) { ok = false; break; }
+            AriaFrame *out = &objects->edge_frames[style][frame];
+            out->w = (float)surface->w;
+            out->h = (float)surface->h;
+            out->offset_x = ox;
+            out->offset_y = oy;
+            out->texture = renderer ? SDL_CreateTextureFromSurface(renderer, surface) : NULL;
+            SDL_DestroySurface(surface);
+            if (renderer && !out->texture) { ok = false; break; }
+            if (out->texture) SDL_SetTextureScaleMode(out->texture, SDL_SCALEMODE_NEAREST);
+            continue;
+        }
         if (sscanf(line, "WoodenDoor/style_%d\t%d\t%d\t%d\t%d\t%511s", &style, &frame, &ticks,
                    &ox, &oy, frame_path) != 6)
             continue;
@@ -886,8 +903,10 @@ bool aria_load_objects(const char *path, AriaObjects *objects, SDL_Renderer *ren
 
 void aria_free_objects(AriaObjects *objects) {
     for (int i = 0; i < DOOR_STYLES; ++i)
-        for (int j = 0; j < MAX_FRAMES; ++j)
+        for (int j = 0; j < MAX_FRAMES; ++j) {
             if (objects->frames[i][j].texture) SDL_DestroyTexture(objects->frames[i][j].texture);
+            if (objects->edge_frames[i][j].texture) SDL_DestroyTexture(objects->edge_frames[i][j].texture);
+        }
     for (int id = 0; id < ENEMY_KINDS; ++id)
         for (int i = 0; i < AOS_ENEMY_MAX_ANIMS; ++i)
             for (int j = 0; j < MAX_FRAMES; ++j)

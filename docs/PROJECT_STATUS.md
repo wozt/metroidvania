@@ -1,3 +1,35 @@
+## Patch 1263 - Opening slide completion resumes parsing same-tick
+
+- **Reported flicker.** At the end of a dialogue page-turn's twelve-frame
+  extension, the previous dialogue's window chrome, retained speaker row and
+  old portrait flashed for exactly one rendered frame before the following
+  portrait slide closed everything again.
+- **Root cause.** `aos_opening_event_update` returned unconditionally while
+  `slide_dir != 0`, so the frame that carried `slide_pos` to `0x24` left
+  `slide_dir == 0` for one rendered frame before the next update consumed the
+  script's following command. The intro's `command 4 -> command 3` handoff
+  therefore rendered one fully-open window — frame, speaker name and stale
+  portrait — between the two animations. Confirmed by per-frame slide tracing
+  and BMP captures: the flashed frame showed the old portrait plus an empty
+  glyph canvas (speaker row still rendered by `rebuild_opening_text`).
+- **Correction.** When the WIN0V slide reaches `0x24`, the update now falls
+  through and resumes `run_until_glyph_or_wait` on the same tick, matching
+  sub_08067A04's state machine which continues byte processing when its
+  window animation completes. A following slide command is consumed before
+  the next rendered frame, so the fully-open state is never displayed between
+  chained animations; the first glyph of a normally completed page also
+  lands one frame earlier, on the completion tick itself. Retract reversal
+  at `slide_pos == 0` still returns early — parsing stays held through both
+  twelve-frame halves.
+- **Evidence.** `tests/test_aos_opening_event.c` now asserts the chained
+  timing: the page-turn extension's completion frame consumes command 3
+  immediately (`slide_dir == 1`, `slide_pos == 0`, new portrait, cleared
+  speaker) with no intermediate open state. Slide tracing shows the
+  `dir 1->1 pos 33->0` handoff replacing the former `dir 1->0` gap frame;
+  framebuffer captures confirm the stale-chrome frame is gone. The opening
+  remains `partial`: BLDY brightness, portrait decode and the remaining
+  documented approximations are unchanged.
+
 ## Patch 1262 - Frame-synchronized opening dialogue choreography
 
 - **Native lab evidence.** The clean room-0 checkpoint was replayed with the

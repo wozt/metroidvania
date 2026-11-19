@@ -204,14 +204,22 @@ void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input) {
         if (pos <= 0) {
             event->slide_pos = 0;
             event->slide_dir = 1;
-        } else if (pos >= 0x24) {
-            event->slide_pos = 0x24;
-            event->slide_dir = 0;
-        } else {
-            event->slide_pos = (uint8_t)pos;
+            event->dirty = true;
+            return;
         }
+        if (pos < 0x24) {
+            event->slide_pos = (uint8_t)pos;
+            event->dirty = true;
+            return;
+        }
+        /* sub_08067A04 resumes byte parsing on the same tick its WIN0V
+         * animation reaches 0x24: falling through here consumes a
+         * following slide command (the intro's page-turn -> portrait
+         * handoff) before the next rendered frame, so the fully-open
+         * window state is never displayed between two animations. */
+        event->slide_pos = 0x24;
+        event->slide_dir = 0;
         event->dirty = true;
-        return;
     }
     if (event->waiting) {
         if (!advance) return;

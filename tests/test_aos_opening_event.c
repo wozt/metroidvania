@@ -652,8 +652,10 @@ static void test_script_and_commit(void) {
     assert(event.slide_dir == 1 && event.slide_pos == 0);
     for (unsigned frame = 0; frame < 12; ++frame)
         aos_opening_event_update(&event, 0);
+    /* sub_08067A04 resumes byte parsing on the tick the WIN0V animation
+     * reaches 0x24: the speaker and first glyph land on the completion
+     * frame itself, with no intermediate fully-open frame. */
     assert(event.slide_dir == 0 && event.slide_pos == 0x24);
-    aos_opening_event_update(&event, 0);
     assert(event.speaker == 2);
     assert(event.glyph_counts[0] == 1 && event.glyphs[0][0] == 'A');
     for (unsigned frame = 0; frame < 16 && !event.waiting; ++frame)
@@ -670,15 +672,17 @@ static void test_script_and_commit(void) {
     assert(event.slide_dir == 1 && event.slide_pos == 0);
     for (unsigned frame = 0; frame < 12; ++frame)
         aos_opening_event_update(&event, 0);
-    assert(event.slide_dir == 0 && event.slide_pos == 0x24 &&
-           event.speaker == 2);
-    aos_opening_event_update(&event, 0);
-    assert(event.portrait == 5 && event.slide_dir == 1 &&
-           event.slide_pos == 0 && event.speaker == 0);
+    /* The extension's completion frame consumes the following command 3
+     * in the same update: the portrait slide restarts from zero
+     * immediately, so no rendered frame ever shows the reopened empty
+     * window between the page turn and the portrait change. */
+    assert(event.slide_dir == 1 && event.slide_pos == 0 &&
+           event.portrait == 5 && event.speaker == 0);
     for (unsigned frame = 0; frame < 12; ++frame)
         aos_opening_event_update(&event, 0);
     assert(event.slide_dir == 0 && event.slide_pos == 0x24 &&
-           event.speaker == 0);
+           event.speaker == 8 &&
+           event.glyph_counts[0] == 1 && event.glyphs[0][0] == 'D');
     for (unsigned frame = 0; frame < 16 && !event.waiting; ++frame)
         aos_opening_event_update(&event, 0);
     assert(event.waiting && event.beat == 9 && event.speaker == 8);

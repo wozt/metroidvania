@@ -1,3 +1,21 @@
+## Patch 1268 - Wooden door swing: native two-part mechanism decoded
+
+- **Native correction (drawFunc sub_0804D794).** The door frame's two
+  sprite components (the 32x32 upper band and the 32x16 lower band of
+  records 0/5 in descriptor 0x0820F160) are submitted with separate OBJ
+  affine matrices: sub_0804D8F0 allocates two slots (+0x18/+0x19) and
+  each sub_0803E058 call gets scaleX sin(swing) for the first component
+  and sin(swing + 0x4000) = cos(swing) for the second, scaleY 1.0, no
+  rotation — plus the shared +0x40 drift of 32*sin(swing) - 1 px.
+  Verified against the cvaos disassembly; `aos_door_swing_bands` exposes
+  both curves and `test_aos_door` asserts them at 0x1000/0x2000/0x3000.
+- **Status: approximation kept.** A first port attempt drew the frame as
+  two vertical band sub-rects with those scales and was visually worse
+  than the previous single-quad squash, so `draw_doors` keeps the
+  cos(swing) whole-leaf approximation. The remaining gap is the per-part
+  pivot anchoring and submit order, which need a native frame capture of
+  the swinging door to pin down before retrying.
+
 ## Patch 1267 - romdev MCP server integrated for native GBA debugging
 
 - **Tooling only; no gameplay changes.** `romdevtools` 0.156.3 (pinned via

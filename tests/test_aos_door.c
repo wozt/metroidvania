@@ -117,6 +117,26 @@ int main(void) {
     swing.facing_left = true;
     assert(aos_door_swing_shift(&swing) < -20.0f &&
            aos_door_swing_shift(&swing) > -23.0f);
+    /* sub_0804D794's two affine submits: the upper band takes
+     * cos(swing), the lower sin(swing); both ~0.707 at half swing,
+     * swapped toward the endpoints, and the helper refuses the plain
+     * draw endpoints. */
+    {
+        float top = 0.0f, bottom = 0.0f;
+        swing.swing = 0;
+        assert(!aos_door_swing_bands(&swing, &top, &bottom));
+        swing.swing = 0x2000;
+        assert(aos_door_swing_bands(&swing, &top, &bottom));
+        assert(top > 0.6f && top < 0.8f && bottom > 0.6f && bottom < 0.8f);
+        swing.swing = 0x1000;   /* 22.5 deg: cos ~0.92, sin ~0.38 */
+        assert(aos_door_swing_bands(&swing, &top, &bottom));
+        assert(top > 0.85f && bottom > 0.3f && bottom < 0.45f);
+        swing.swing = 0x3000;   /* 67.5 deg: cos ~0.38, sin ~0.92 */
+        assert(aos_door_swing_bands(&swing, &top, &bottom));
+        assert(bottom > 0.85f && top > 0.3f && top < 0.45f);
+        swing.swing = 0x4000;
+        assert(!aos_door_swing_bands(&swing, &top, &bottom));
+    }
 
     /* sub_0803C150's palette script is a per-door instance registered at
      * spawn: palette_age counts the door's own update frames (hidden

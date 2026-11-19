@@ -124,3 +124,10 @@ float aos_door_swing_shift(const AosDoor *door) {
     float shift = (float)aos_sine((uint32_t)door->swing) * 32.0f / 65536.0f - 1.0f;
     return door->facing_left ? -shift : shift;
 }
+
+bool aos_door_swing_bands(const AosDoor *door, float *top, float *bottom) {
+    if (door->swing <= 0 || door->swing >= 0x4000) return false;
+    *top = (float)aos_sine((uint32_t)door->swing + 0x4000) / 65536.0f;
+    *bottom = (float)aos_sine((uint32_t)door->swing) / 65536.0f;
+    return true;
+}

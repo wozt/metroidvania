@@ -64,4 +64,15 @@ int aos_door_update(AosDoor *door, AosCollision *layer, const AosSoma *soma,
 float aos_door_swing_scale(const AosDoor *door);
 float aos_door_swing_shift(const AosDoor *door);
 
+/* sub_0804D794's two-part affine swing: the door frame's two sprite
+ * components (the 32x32 upper band and the 32x16 lower band of frame
+ * records 0/5 in descriptor 0x0820F160) each get their own OBJ affine
+ * slot — sub_0803E058 is called once per submit with scaleX sin(swing)
+ * for the first component and sin(swing + 0x4000) = cos(swing) for the
+ * second, scaleY 1.0 and no rotation, on top of the shared x drift of
+ * aos_door_swing_shift. `top` receives the upper band's scale (cos) and
+ * `bottom` the lower band's (sin). Returns false at the endpoints
+ * (swing <= 0 or >= 0x4000), where the native draws the frame plainly. */
+bool aos_door_swing_bands(const AosDoor *door, float *top, float *bottom);
+
 #endif /* AOS_DOOR_H */

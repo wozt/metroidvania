@@ -77,46 +77,28 @@ void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *object
              * (0x03004564) is not traced, this matches the room art at both
              * room edges. */
             bool flip = e->door.facing_left;
-            /* Live-OAM-measured swing (aos_door_swing_split): the
-             * panel's hinge-side half stays near its closed spot while
-             * the free-side half travels right with sin(swing) and the
-             * two separate — the native submits them as distinct OBJ
-             * sprites, so the leaf is split down its middle. Outside
-             * 0 < swing < 0x4000 the plain single-quad path runs. */
-            float hinge_dx, free_dx;
+            /* Live-capture-measured swing (room 0/0 -> 0/3, frames
+             * 399-459): the leaf foreshortens in place around its
+             * hinge — no affine flag in OAM, no sliding. The brown
+             * panel compresses horizontally and ends as a ~10px
+             * edge-on strip anchored at the hinge side while the
+             * doorway behind is revealed. aos_door_swing_scale is the
+             * cosine curve (1 -> 0 over swing 0 -> 0x4000); the leaf
+             * is anchored on the hinge side (left, or right when the
+             * door faces left) with NO horizontal drift — the native
+             * strip stays at the closed position. */
+            float scale = aos_door_swing_scale(&e->door);
+            float w = frame->w * scale;
             float x = flip ? (float)(e->x - frame->offset_x) - frame->w
                            : (float)(e->x + frame->offset_x);
-            float base_x = x - (float)cam_x;
+            float base_x = x - (float)cam_x +
+                           (flip ? frame->w - w : 0.0f);
             float y = (float)(e->y + frame->offset_y - cam_y);
             SDL_FlipMode mode = flip ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
-            if (aos_door_swing_split(&e->door, &hinge_dx, &free_dx)) {
-                float half = frame->w * 0.5f;
-                /* Hinge side = left half of the texture, free side =
-                 * right half; mirrored doors swap the destination
-                 * sides and each half is flipped in place. */
-                SDL_FRect src_h = {0, 0, half, (float)frame->h};
-                SDL_FRect src_f = {half, 0, frame->w - half,
-                                   (float)frame->h};
-                SDL_FRect dst_h = {base_x + (flip ? half + hinge_dx
-                                                  : hinge_dx),
-                                   y, half, (float)frame->h};
-                SDL_FRect dst_f = {base_x + (flip ? free_dx
-                                                  : half + free_dx),
-                                   y, frame->w - half, (float)frame->h};
-                SDL_RenderTextureRotated(renderer, frame->texture, &src_h,
-                                         &dst_h, 0, NULL, mode);
-                SDL_RenderTextureRotated(renderer, frame->texture, &src_f,
-                                         &dst_f, 0, NULL, mode);
-            } else {
-                float scale = aos_door_swing_scale(&e->door);
-                float w = frame->w * scale;
-                SDL_FRect rect = {base_x + aos_door_swing_shift(&e->door) +
-                                      (flip ? frame->w - w : 0.0f),
-                                  y, w, (float)frame->h};
-                if (w >= 1.0f)
-                    SDL_RenderTextureRotated(renderer, frame->texture, NULL,
-                                             &rect, 0, NULL, mode);
-            }
+            SDL_FRect rect = {base_x, y, w, (float)frame->h};
+            if (w >= 1.0f)
+                SDL_RenderTextureRotated(renderer, frame->texture, NULL,
+                                         &rect, 0, NULL, mode);
             continue;
         }
         SDL_FRect rect = {(float)((e->x & ~15) - cam_x), (float)(e->y - 48 - cam_y), 16, 48};

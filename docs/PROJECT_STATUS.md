@@ -1,6 +1,6 @@
 ## Patch 1267 - romdev MCP server integrated for native GBA debugging
 
-- **Tooling only; no gameplay changes.** `romdevtools` 0.155.0 (pinned via
+- **Tooling only; no gameplay changes.** `romdevtools` 0.156.3 (pinned via
   `tools/romdev/package.json` + `package-lock.json`, `node_modules`
   gitignored) runs as an MCP/HTTP server bundling the mGBA core, memory/CPU/
   video inspectors, disassembly and save states. It complements

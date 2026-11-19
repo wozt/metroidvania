@@ -20,7 +20,7 @@ romdev inputs instead of mixing the two.
 cd tools/romdev && npm ci
 ```
 
-Requires Node.js 24+. `package.json` pins `romdevtools` (currently 0.155.0);
+Requires Node.js 24+. `package.json` pins `romdevtools` (currently 0.156.3);
 `package-lock.json` is committed. `node_modules/` is gitignored.
 
 ## Start / stop / health
@@ -61,7 +61,7 @@ scripts/romdev_call.sh state    '{"op":"save","path":"/tmp/aos_room05.state"}'
 `system_ram` offset `0x1261C`), not a GBA absolute address. Region sizes are
 listed by `memory({op:"regions"})`.
 
-## Verified on GBA (romdevtools 0.155.0, mGBA core)
+## Verified on GBA (romdevtools 0.156.3, mGBA core)
 
 - `loadMedia` Aria ROM: loads, `core:"mgba"`, 240x160 framebuffer.
 - `frame` step/screenshot/stepAndShot; title screen reached after ~720 frames.

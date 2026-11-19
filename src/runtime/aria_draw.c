@@ -77,12 +77,24 @@ void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *object
              * (0x03004564) is not traced, this matches the room art at both
              * room edges. */
             bool flip = e->door.facing_left;
+            /* sub_0804D794's affine swing: while 0 < swing < 0x4000 the
+             * leaf is squashed horizontally by cos(swing) and its x
+             * shifted by 32*sin(swing) - 1 px; at 0x4000 the cosine is
+             * zero and the edge-on leaf disappears into the doorway.
+             * The hinge edge stays fixed (the left edge unmirrored,
+             * the right edge mirrored). */
+            float scale = aos_door_swing_scale(&e->door);
             float x = flip ? (float)(e->x - frame->offset_x) - frame->w
                            : (float)(e->x + frame->offset_x);
-            SDL_FRect rect = {x - (float)cam_x, (float)(e->y + frame->offset_y - cam_y),
-                              frame->w, (float)frame->h};
-            SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0, NULL,
-                                     flip ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
+            float w = frame->w * scale;
+            if (flip) x += frame->w - w;
+            x += aos_door_swing_shift(&e->door) - (float)cam_x;
+            SDL_FRect rect = {x, (float)(e->y + frame->offset_y - cam_y), w,
+                              (float)frame->h};
+            if (w >= 1.0f)
+                SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0,
+                                         NULL, flip ? SDL_FLIP_HORIZONTAL
+                                                    : SDL_FLIP_NONE);
             continue;
         }
         SDL_FRect rect = {(float)((e->x & ~15) - cam_x), (float)(e->y - 48 - cam_y), 16, 48};

@@ -1,3 +1,35 @@
+## Patch 1260 - Opening dialogue ownership and room-return actors
+
+- **Native evidence.** `sub_0805CED0` keeps the permanent story state in
+  Object20 while `sub_08067934`/`sub_08067A04` reuse the text state for the
+  short post-story entries 0xD and 0xE. Its state-10 trigger zeroes velocity
+  but never writes the player's position or animation; state 11 only polls
+  the text machine. `sub_0805D410` calls `sub_0801D028(0x52)` during the
+  absorption sequence and makes no new player-animation request in states
+  6-8. Room teardown destroys the param0-3 controller and its private
+  children; on an event-0x20 revisit the ordinary param0-26/27/28 gates leave
+  the standing Mina record visible.
+- **Corrections.** The runtime now latches `opening_story_complete`
+  independently of the reusable `AosOpeningEvent`, so starting a manual
+  conversation no longer resets the story, pins Soma to x=168, or reapplies
+  a cutscene pose. The parser's existing 0-to-0x24 slide is the sole WIN0
+  opening; the extra 12-frame host hold was removed. States 6-8 retain and
+  step pose 0x52 instead of injecting an untraced
+  `CROUCH_DOWN -> CROUCH -> IDLE` sequence. Leaving room 0/0 after completion
+  retires the private host actors, allowing the normal event-gated Mina to be
+  the only opening NPC drawn after a return.
+- **Evidence and tests.** `fusion_aos_opening_event_tests` covers the native
+  pose hold, Genya's confrontation flip and actor retirement predicate. The
+  ROM-backed parser test consumes all seven script beats. The Object20 lab
+  workflow reports the runtime epilogue window visibly open 13 frames after
+  its pulse, inside the previously measured native 10-30-frame range. A
+  private event-0x20 return capture at the lower room floor shows only
+  standing Mina; no ROM, state, save or capture is tracked.
+- **Honest status.** The opening remains partial: the state-3/state-4 battle
+  choreography and complete post-scene loop still lack a fresh frame-by-frame
+  emulator comparison, and the documented BLDY, language-strip and soul-touch
+  approximations remain.
+
 ## Patch 1259 - Water band transit, level hold and splash draw order
 
 - **Scope.** `src/runtime/aos/core/aos_soma.c` (head-out/body-in water

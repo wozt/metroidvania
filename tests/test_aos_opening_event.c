@@ -744,7 +744,7 @@ static void test_insert_and_malformed(void) {
 /* The host-side beat -> player +0x6D map (aos_opening_soma_anim):
  * the native sequence 0x51 -> 0x0D -> 0x00 -> 0x04 -> 0x05 -> 0x52 ->
  * post window, read back out of the serialized +0xB/+0xC/+0xD beat
- * state. */
+ * state. States 6-8 do not call sub_0801D028 and therefore retain 0x52. */
 static void test_soma_anim_map(void) {
     AosOpeningActors actors;
     aos_opening_actors_init(&actors);
@@ -777,12 +777,19 @@ static void test_soma_anim_map(void) {
     actors.soul_notice = 1;
     assert(aos_opening_soma_anim(&actors) == 0x52);
     actors.soul_notice = 0;
-    /* +0xB 6,7,8 hand the post-absorb crouch flourish to the host. */
+    /* +0xB 6,7,8 leave the already-bound crouched absorb pose alone. */
     actors.scene_state = 6;
-    assert(aos_opening_soma_anim(&actors) == AOS_OPENING_SOMA_ANIM_POST);
+    assert(aos_opening_soma_anim(&actors) == 0x52);
     actors.scene_state = 8;
-    assert(aos_opening_soma_anim(&actors) == AOS_OPENING_SOMA_ANIM_POST);
+    assert(aos_opening_soma_anim(&actors) == 0x52);
     assert(aos_opening_soma_anim(NULL) == 0x00);
+}
+
+static void test_opening_actor_room_lifetime(void) {
+    assert(!aos_opening_actors_should_retire(false, 0, 3));
+    assert(!aos_opening_actors_should_retire(true, 0, 0));
+    assert(aos_opening_actors_should_retire(true, 0, 3));
+    assert(aos_opening_actors_should_retire(true, 1, 0));
 }
 
 static void test_actor_anim_ticks(void) {
@@ -1072,6 +1079,7 @@ int main(int argc, char **argv) {
     test_emitted_anim_ticks();
     test_opening_sparks();
     test_soma_anim_map();
+    test_opening_actor_room_lifetime();
     test_trigger();
     test_intro_transition();
     test_mosaic_register_values();

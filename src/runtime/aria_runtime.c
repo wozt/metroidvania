@@ -2177,10 +2177,6 @@ int aria_runtime_main(int argc, char **argv) {
     AosIntroFont opening_font = {0};
     AosOpeningEvent opening = {0};
     AosOpeningActors opening_actors = {0};
-    /* Opening-cutscene Soma pose tracking: opening_post_stage walks the post-absorb
-     * CROUCH_DOWN -> CROUCH -> IDLE flourish the native player state
-     * machine runs after the obtained-soul window. */
-    uint8_t opening_post_stage = 0;
     AosWindowFrame opening_window = {0};
     AosSoulNotice opening_soul_notice = {0};
     AosSoulNotice gameplay_soul_notice = {0};
@@ -2202,21 +2198,16 @@ int aria_runtime_main(int argc, char **argv) {
     };
     bool opening_text_ready = false;
     bool opening_window_ready = false;
+    /* Separate the permanent param0-3 story completion from the reusable
+     * AosOpeningEvent parser. Epilogue text 0xD/0xE reinitializes that parser
+     * and therefore clears opening.complete; it must never make the runtime
+     * pin Soma or run story poses again. */
+    bool opening_story_complete = false;
     bool opening_epilogue = false;
     bool dialogue_trace_was_open = false;   /* --dialogue-trace edge state */
-    /* Epilogue room-dialogue open delay: sub_08067934 writes the
-     * empty WIN0V bounds (0xC0C1) on the trigger frame, but the
-     * window only becomes visible after sub_08067A04's open states
-     * run sub_08067804(+3) per poll — gEwramData +0x41B climbing
-     * 0->0x24, AOS_ROOM_DIALOGUE_OPEN_FRAMES polls (the same delay
-     * aos_room_dialogue models for the Object20 path). The epilogue
-     * reuses the opening draw path whose window_shown latched during
-     * the story, so the hold is counted locally: opening stays
-     * active (the native +0x42C input lock and frozen player apply
-     * from the trigger frame) while the chrome, glyphs and the
-     * script machine wait out the animation. */
-    unsigned epilogue_window_hold = 0;
-    bool epilogue_window_trace = false;   /* pending "open" trace line */
+    /* A pending epilogue trace is discharged when the shared text machine's
+     * own 0 -> 0x24 WIN0V opening reaches its visible endpoint. */
+    bool epilogue_window_trace = false;
     uint16_t epilogue_window_text = 0;
     bool opening_soul_text_ready = false;
     SDL_Texture *opening_portrait_texture = NULL;
@@ -2869,6 +2860,19 @@ int aria_runtime_main(int argc, char **argv) {
                     clear_skills(&souls);
                     layer = room_layer(&room);
                     save_room = (AosSaveRoom){0};
+                    /* Object20 param0-3 and its three private children are
+                     * room entities. Once the completed opening room is
+                     * left they are destroyed with entityData. On a later
+                     * visit, the ordinary param0-26/27/28 records evaluate
+                     * event 0x20 and leave only the standing Mina record;
+                     * retaining this host scene used to resurrect lying
+                     * Mina and Arikado over those native records. */
+                    if (aos_opening_actors_should_retire(
+                            opening_story_complete, (uint8_t)room.area,
+                            (uint16_t)room.number)) {
+                        opening_needed = false;
+                        opening_actors.active = false;
+                    }
                 } else if (tr < 0) goto cleanup;
                 if (room_transition.active) {
                     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -3022,19 +3026,6 @@ int aria_runtime_main(int argc, char **argv) {
              * the script's end command; the branch stays open until the
              * camera finishes recentring on Soma. */
             if (opening.active || opening_actors.camera_active) {
-                /* The epilogue WIN0V open hold ticks once per frame
-                 * the dialogue branch owns; when it expires the
-                 * window chrome may draw and the trace reports the
-                 * visible-open frame (native: ~10-30 frames after
-                 * the pulse edge, not the trigger frame). */
-                if (epilogue_window_hold &&
-                    --epilogue_window_hold == 0 &&
-                    epilogue_window_trace) {
-                    epilogue_window_trace = false;
-                    if (dialogue_trace)
-                        printf("DialogueTrace open frame=%ld text=0x%04X\n",
-                               step, epilogue_window_text);
-                }
                 /* The scene owns Soma's pose until Object20 commits.
                  * sub_0801D028 binds the pose once (+0x6D guard) and
                  * the normal entity animation step advances it — the
@@ -3049,11 +3040,17 @@ int aria_runtime_main(int argc, char **argv) {
                  * and +0xA==2 only starts sub_08067A04 — once window_open
                  * latches. */
                 if (opening_actors.window_open &&
-                    !epilogue_window_hold &&
                     !aos_opening_actors_blocks_script(&opening_actors)) {
                     aos_opening_event_update(&opening, aria_input.new_input);
                     if (opening.advanced) aos_audio_play_song(0x132);
                     script_cue = opening.cue;
+                }
+                if (epilogue_window_trace && opening.slide_dir == 0 &&
+                    opening.slide_pos == 0x24) {
+                    epilogue_window_trace = false;
+                    if (dialogue_trace)
+                        printf("DialogueTrace open frame=%ld text=0x%04X\n",
+                               step, epilogue_window_text);
                 }
                 aos_opening_actors_trigger(&opening_actors, script_cue);
                 uint16_t actor_durations[AOS_OPENING_ACTOR_COUNT];
@@ -3070,14 +3067,14 @@ int aria_runtime_main(int argc, char **argv) {
                  * sequence, not just the spawn/absorb pair. */
                 uint8_t soma_pose = aos_opening_soma_anim(&opening_actors);
                 /* The spawn pin belongs to the
-                 * story scene only. Once the script's end command lands
-                 * (opening.complete) Object20's +0xA==0x80 tail, the
-                 * return pan and the epilogue proximity talks own the
+                 * story scene only. Once the main script's end command
+                 * latches opening_story_complete, Object20's +0xA==0x80 tail,
+                 * return pan and epilogue proximity talks own the
                  * player: native keeps the entity wherever it stands,
                  * so re-pinning soma.x to the spawn word here snapped
                  * Soma back to x 0xA8 in the middle of an epilogue
                  * conversation after the player had walked away. */
-                if (!opening.complete) {
+                if (!opening_story_complete) {
                     int32_t soma_world_x = (int32_t)AOS_OPENING_SOMA_X << 16;
                     /* sub_0805D410 changes Soma's animation and camera
                      * modes here but contains no direct +0x40 position
@@ -3085,31 +3082,12 @@ int aria_runtime_main(int argc, char **argv) {
                      * an invented host envelope and caused the visible
                      * backward/right glide reported in this scene. */
                     soma.x = soma_world_x;
+                    if (soma.anims && soma.anim.id != soma_pose)
+                        (void)aos_anim_start(&soma.anim, soma.anims, soma_pose,
+                                             false);
+                    if (soma.anims)
+                        (void)aos_anim_step(&soma.anim, soma.anims);
                 }
-                /* +0xB 6,7,8: the post-absorb crouch flourish. Native
-                 * runs CROUCH_DOWN -> CROUCH -> IDLE through the player
-                 * state machine; the port has no per-sub-state timer
-                 * there, so it advances on each animation's natural
-                 * end — the same +0x59 finished flag sub_0803F17C
-                 * raises. */
-                bool post_absorb = soma_pose == AOS_OPENING_SOMA_ANIM_POST;
-                if (post_absorb) {
-                    if (opening_post_stage == 0) opening_post_stage = 1;
-                    soma_pose = opening_post_stage == 1
-                        ? AOS_SOMA_ANIM_CROUCH_DOWN
-                        : opening_post_stage == 2 ? AOS_SOMA_ANIM_CROUCH
-                                                  : AOS_SOMA_ANIM_IDLE;
-                } else {
-                    opening_post_stage = 0;
-                }
-                if (soma.anims && soma.anim.id != soma_pose)
-                    (void)aos_anim_start(&soma.anim, soma.anims, soma_pose,
-                                         false);
-                int soma_anim_step = soma.anims
-                    ? aos_anim_step(&soma.anim, soma.anims) : 0;
-                if (post_absorb && soma_anim_step == 3 &&
-                    opening_post_stage < 3)
-                    ++opening_post_stage;
                 for (unsigned actor = 0;
                      actor < opening_actors.emitted_count; ++actor)
                     if (opening_actors.emitted[actor].events &
@@ -3139,12 +3117,15 @@ int aria_runtime_main(int argc, char **argv) {
                         goto cleanup;
                     }
                 }
-                if (opening.complete &&
-                    aos_opening_event_commit(&opening, aria_events, &progress)) {
-                    printf("Aria opening story completed; event 0x20 set and "
-                           "Winged Skeleton soul granted and equipped\n");
+                if (opening.complete && !opening_story_complete) {
+                    opening_story_complete = true;
+                    if (aos_opening_event_commit(&opening, aria_events,
+                                                 &progress)) {
+                        printf("Aria opening story completed; event 0x20 set and "
+                               "Winged Skeleton soul granted and equipped\n");
+                    }
                 }
-                if (opening.complete && start_song < 0 &&
+                if (opening_story_complete && start_song < 0 &&
                     (room.area != music_area || room.number != music_room)) {
                     /* sub_0805CED0's +0xA==0x80 tail runs
                      * sub_08013EEC(0x26): the breath/wind ambient takes
@@ -3368,7 +3349,7 @@ int aria_runtime_main(int argc, char **argv) {
              * 0xE, Mina (+0x14) text 0xD, inside a 0x40px box test
              * (sub_08068AD4) offset by -0x20 from each actor's screen
              * position, gated on the player being controllable. */
-            opening_epilogue = opening_needed && opening.complete &&
+            opening_epilogue = opening_needed && opening_story_complete &&
                                !opening_actors.camera_active &&
                                room.area == 0 && room.number == 0;
             if (opening_epilogue && !opening.active &&
@@ -3412,7 +3393,6 @@ int aria_runtime_main(int argc, char **argv) {
                                                script_size)) {
                         aos_opening_event_set_resolver(
                             &opening, resolve_opening_text, &opening_resources);
-                        opening_actors.soma_animation = AOS_SOMA_ANIM_IDLE;
                         /* _0805D076's tail on the trigger frame: the
                          * player entity's +0x48 and +0x50 (vx and the
                          * friction word) are zeroed and +0x4C (vy) is
@@ -3428,15 +3408,11 @@ int aria_runtime_main(int argc, char **argv) {
                             (opening_actors.actor_flags58[1] &
                              (uint8_t)~0x41) |
                             (soma.x > opening_actors.x[1] ? 0x40 : 0));
-                        /* sub_08067934's synchronous half ran on
-                         * this frame (window registers + the
-                         * +0x42C input lock the frozen-player skip
-                         * above already models); the WIN0V open
-                         * animation still has
-                         * AOS_ROOM_DIALOGUE_OPEN_FRAMES polls to
-                         * run inside sub_08067A04 before the
-                         * window covers the dialogue band. */
-                        epilogue_window_hold = AOS_ROOM_DIALOGUE_OPEN_FRAMES;
+                        /* aos_opening_event_init starts at the same closed
+                         * WIN0V value as sub_08067934. Its portrait command
+                         * and slide_dir now own the sole 12-poll opening;
+                         * an extra host hold here doubled the delay and let
+                         * short entries flash or disappear before drawing. */
                         epilogue_window_trace = dialogue_trace;
                         epilogue_window_text = (uint16_t)talk;
                     }
@@ -5226,7 +5202,7 @@ aria_render_frame:
          * stay frozen on top of the native pause pages. */
         if (!soul_menu.open && opening.active &&
             opening_actors.soul_notice == 0 &&
-            opening_actors.window_shown && !epilogue_window_hold)
+            opening_actors.window_shown)
             draw_opening_backdrop(renderer, &opening, &opening_rom,
                                   &opening_portrait_texture,
                                   &opening_portrait_id);
@@ -5238,7 +5214,7 @@ aria_render_frame:
          * end command lands; the backdrop gate above already hides it, so
          * the glyph pass must not linger through the return pan. */
         else if (!soul_menu.open && opening.active && opening_text_ready &&
-                 opening_actors.window_shown && !epilogue_window_hold)
+                 opening_actors.window_shown)
             draw_opening_text(renderer, &opening, &opening_tiles,
                               opening_window_ready ? &opening_window : NULL,
                               (uint32_t)step);

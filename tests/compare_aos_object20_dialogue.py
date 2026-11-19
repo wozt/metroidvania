@@ -309,10 +309,13 @@ def measure_runtime(runtime, rom, save, workdir, frames,
     # the pre-increment step, so the effective capture frame is
     # printed + 1 and pulse_latency() reports the offset inside the
     # cycle (edge frame itself maps to 1).
-    lat = [pulse_latency(t + 1, repeat) for t in talks]
-    result["talk_latencies"] = lat
+    talk_lat = [pulse_latency(t + 1, repeat) for t in talks]
+    open_lat = [pulse_latency(o + 1, repeat) for o in opens]
+    result["talk_latencies"] = talk_lat
+    result["open_latencies"] = open_lat
     result["first_talk"] = talks[0] + 1
-    result["pulse_latency"] = lat[0] if lat else None
+    result["first_open"] = opens[0] + 1 if opens else None
+    result["pulse_latency"] = open_lat[0] if open_lat else None
     # Band sanity probe well inside the first talk window (the talk
     # stays open ~repeat frames; +60 is past any open lag).
     probe_frame = talks[0] + 61
@@ -406,7 +409,9 @@ def main():
                   f"first at frame {rt['first_talk']}")
             print(f"talk->pulse-cycle latencies: {rt['talk_latencies'][:10]}"
                   f"{'...' if len(rt['talk_latencies']) > 10 else ''}")
-            print(f"first pulse_latency={rt.get('pulse_latency')} "
+            print(f"window-open latencies: {rt.get('open_latencies', [])[:10]}"
+                  f"{'...' if len(rt.get('open_latencies', [])) > 10 else ''}")
+            print(f"first window pulse_latency={rt.get('pulse_latency')} "
                   f"(native ~=10-30)")
             print(f"band sanity at first talk+60: "
                   f"{rt.get('band_at_first_talk+60')} "

@@ -448,6 +448,15 @@ bool aos_opening_event_should_start(uint8_t area, uint16_t room,
                                     uint8_t character,
                                     const uint32_t events[8],
                                     bool room_has_controller);
+
+/* The param0-3 controller and its private actor children are destroyed on a
+ * room load. Return true when a completed host scene has left area 0 room 0
+ * and must be retired instead of being drawn again on a later visit. */
+static inline bool aos_opening_actors_should_retire(bool story_complete,
+                                                    uint8_t area,
+                                                    uint16_t room) {
+    return story_complete && (area != 0 || room != 0);
+}
 bool aos_opening_event_init(AosOpeningEvent *event, const uint8_t *script,
                             size_t script_size);
 /* sub_08067804's WIN0V bytes for the 0..0x24 animation counter. */
@@ -504,8 +513,7 @@ bool aos_opening_event_commit(AosOpeningEvent *event, uint32_t events[8],
  * machine drives Soma through the normal player pose path — sub_0801D028
  * binds +0x6D and sub_0803F17C steps it — so the host feeds this id into the
  * same guarded bind+step the gameplay update uses. The mapping follows the
- * native sequence 0x51 -> 0x0D -> 0x00 -> 0x04 -> 0x05 -> 0x52 -> 0x09 ->
- * 0x02 -> 0x00 observed on a real ROM:
+ * native sequence 0x51 -> 0x0D -> 0x00 -> 0x04 -> 0x05 -> 0x52:
  *   +0xB==0 (reveal/MOSAIC):              the unconscious floor pose 0x51.
  *   +0xB==1 pan (beat1_step 0):           0x0D LAND — the entry step.
  *   +0xB==1 dialogue / +0xB 2,3,4:        0x00 idle.
@@ -514,10 +522,10 @@ bool aos_opening_event_commit(AosOpeningEvent *event, uint32_t events[8],
  *       sub_0801D028(0x52,0,0,0) every frame while +0xC==2's +0xD<=0x8F
  *       tail and sub-states 3-5 run, which the port serializes as
  *       scene_step==2 plus the soul_notice modal window.
- *   +0xB 6,7,8 (post-absorb):             the host sequences the
- *       CROUCH_DOWN -> CROUCH -> IDLE flourish itself; AOS_OPENING_SOMA_
- *       ANIM_POST marks that window. */
-#define AOS_OPENING_SOMA_ANIM_POST 0xFFu
+ *   +0xB 6,7,8 (post-absorb):             no sub_0801D028 call; the
+ *       previously bound 0x52 pose remains active while sub_0803F17C keeps
+ *       stepping the player. The host therefore returns 0x52 instead of
+ *       inventing a second crouch sequence. */
 static inline uint8_t aos_opening_soma_anim(const AosOpeningActors *actors) {
     if (!actors) return 0x00;
     if (actors->scene_state == 5 &&
@@ -536,7 +544,7 @@ static inline uint8_t aos_opening_soma_anim(const AosOpeningActors *actors) {
     case 4: return 0x00;
     case 6:
     case 7:
-    case 8: return (uint8_t)AOS_OPENING_SOMA_ANIM_POST;
+    case 8: return 0x52;
     default: return 0x00;
     }
 }

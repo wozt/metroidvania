@@ -131,3 +131,20 @@ bool aos_door_swing_bands(const AosDoor *door, float *top, float *bottom) {
     *bottom = (float)aos_sine((uint32_t)door->swing) / 65536.0f;
     return true;
 }
+
+/* Live OAM capture (aos_mgba_lab, room 0/0->0/3 door, frames 401-459):
+ * the swinging panel is two sprite groups easing apart with
+ * s = sin(swing) — the hinge-side group drifts -6 + 13*s px and the
+ * free-side group travels +27*s px. Offsets are screen px relative
+ * to the closed pose and already carry the facing sign. Returns false
+ * outside 0 < swing < 0x4000, where the native takes the plain
+ * closed/open draw branches the port already handles. */
+bool aos_door_swing_split(const AosDoor *door, float *hinge_dx,
+                          float *free_dx) {
+    if (door->swing <= 0 || door->swing >= 0x4000) return false;
+    float sign = door->facing_left ? -1.0f : 1.0f;
+    float s = (float)aos_sine((uint32_t)door->swing) / 65536.0f;
+    *hinge_dx = (-6.0f + 13.0f * s) * sign;
+    *free_dx = 27.0f * s * sign;
+    return true;
+}

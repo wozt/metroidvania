@@ -164,6 +164,26 @@ int main(void) {
         assert(aos_door_palette_phase(21, ticks, 3) == 0);
         assert(aos_door_palette_phase(0, ticks, 0) == 0);
     }
+
+    /* Live-OAM-measured split (aos_mgba_lab room 0/0->0/3): the hinge
+     * group drifts -6 + 13*sin(swing) and the free group travels
+     * +27*sin(swing) px, both negated on a left-facing door; outside
+     * 0 < swing < 0x4000 the plain path runs. */
+    {
+        AosDoor split = {.swing = 0, .facing_left = false};
+        float hinge, free_;
+        assert(!aos_door_swing_split(&split, &hinge, &free_));
+        split.swing = 0x2000;   /* sin = ~0.707 */
+        assert(aos_door_swing_split(&split, &hinge, &free_));
+        assert(hinge > 2.5f && hinge < 3.5f);
+        assert(free_ > 18.5f && free_ < 19.5f);
+        split.swing = 0x4000;
+        assert(!aos_door_swing_split(&split, &hinge, &free_));
+        split.swing = 0x2000;
+        split.facing_left = true;
+        assert(aos_door_swing_split(&split, &hinge, &free_));
+        assert(hinge < -2.5f && free_ < -18.5f);
+    }
     puts("aos_door: ok");
     return 0;
 }

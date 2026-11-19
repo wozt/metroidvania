@@ -54,25 +54,33 @@ void aos_door_create(AosDoor *door, AosCollision *layer, int32_t x, int32_t y,
 int aos_door_update(AosDoor *door, AosCollision *layer, const AosSoma *soma,
                     AosForcedInput *input, int32_t camera_x, int32_t camera_y);
 
-/* sub_0804D794's drawFunc affine swing, for 0 < swing < 0x4000:
- * swing is +0x14 in 16.16-turn units where 0x4000 is the open position
- * (a quarter turn). The leaf is drawn with horizontal scale cos(swing)
- * and its screen x shifted by 32*sin(swing) - 1 pixels (the +0x40
- * adjust; the sign follows the door's facing bit). At the endpoints the
+/* sub_0804D794's swing draw, measured live in OAM (aos_mgba_lab,
+ * room 0/0->0/3 door, swing +=0x100/frame): no OBJ sprite carries the
+ * affine flag — the door is a static frame pair plus a 4-sprite panel
+ * whose two groups ease apart with s = sin(pi*swing/0x8000). The port
+ * approximates the panel collapse with the leaf's horizontal scale
+ * cos(swing) and x shift 32*sin(swing) - 1 px (the +0x40 adjust;
+ * the sign follows the door's facing bit). At the endpoints the
  * native takes the plain non-affine draw path, so the helpers return
  * the identity values there. */
 float aos_door_swing_scale(const AosDoor *door);
 float aos_door_swing_shift(const AosDoor *door);
 
-/* sub_0804D794's two-part affine swing: the door frame's two sprite
- * components (the 32x32 upper band and the 32x16 lower band of frame
- * records 0/5 in descriptor 0x0820F160) each get their own OBJ affine
- * slot — sub_0803E058 is called once per submit with scaleX sin(swing)
- * for the first component and sin(swing + 0x4000) = cos(swing) for the
- * second, scaleY 1.0 and no rotation, on top of the shared x drift of
- * aos_door_swing_shift. `top` receives the upper band's scale (cos) and
- * `bottom` the lower band's (sin). Returns false at the endpoints
- * (swing <= 0 or >= 0x4000), where the native draws the frame plainly. */
+/* Static-analysis reading of sub_0804D794's two OBJ affine submits
+ * (scaleX sin(swing) on one frame component, cos(swing) on the
+ * other). Live OAM capture shows no affine flag on any door sprite,
+ * so this models a path the hardware does not take for this door;
+ * kept for reference only — the draw path does not use it. `top`
+ * receives the upper band's scale (cos) and `bottom` the lower
+ * band's (sin). Returns false at the endpoints (swing <= 0 or
+ * >= 0x4000). */
 bool aos_door_swing_bands(const AosDoor *door, float *top, float *bottom);
+
+/* Live-OAM-measured swing split (see aos_door.c): for 0 < swing <
+ * 0x4000 the leaf is drawn as two halves — the hinge-side half at
+ * `hinge_dx` and the free-side half at `free_dx` screen px relative
+ * to the closed pose. Returns false outside that range. */
+bool aos_door_swing_split(const AosDoor *door, float *hinge_dx,
+                          float *free_dx);
 
 #endif /* AOS_DOOR_H */

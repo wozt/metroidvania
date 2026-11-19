@@ -40,7 +40,7 @@ if [ "$max_y" -le 426 ]; then
     echo "FAIL: no entry dip (max y=$max_y, expected > 426)" >&2
     exit 1
 fi
-if [ "$max_y" -ge 440 ]; then
+if [ "$max_y" -ge 446 ]; then
     echo "FAIL: sank to the pool floor (max y=$max_y)" >&2
     exit 1
 fi

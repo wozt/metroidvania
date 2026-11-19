@@ -310,7 +310,7 @@ void aos_soma_air(AosSoma *soma, const AosCollision *layer, uint16_t held) {
         !(soma->abilities & AOS_ABILITY_SPECIAL_WALK)) {
         if (soma->flags & AOS_FLAG_HEAD_SPECIAL) {
             if (soma->vy > 0) {
-                soma->vy -= 0x8000;                     /* bleed the entry fall */
+                soma->vy -= 0x5000;                     /* bleed the entry fall */
                 if (soma->vy < 0) soma->vy = 0;
             } else if (soma->vy > (int32_t)0xFFFF4000) {
                 soma->vy = (int32_t)0xFFFF4000;         /* -0.75 float rise */
@@ -323,7 +323,7 @@ void aos_soma_air(AosSoma *soma, const AosCollision *layer, uint16_t held) {
              * held level so the head does not bob across the water-cell
              * boundary every frame. */
             if (soma->vy > 0x8000) {
-                soma->vy -= 0x6000;                 /* water drag */
+                soma->vy -= 0x5000;                 /* water drag */
                 if (soma->vy < 0) soma->vy = 0;
             } else if (soma->vy >= -(int32_t)0x8000) {
                 soma->vy = 0;

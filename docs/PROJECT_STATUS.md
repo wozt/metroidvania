@@ -1,3 +1,41 @@
+## Patch 1259 - Water band transit, level hold and splash draw order
+
+- **Scope.** `src/runtime/aos/core/aos_soma.c` (head-out/body-in water
+  response and the swim-animation gate), `src/runtime/aria_runtime.c`
+  (splash interleaved inside the layered priority pass),
+  `tests/test_aria_simulate_water_entry_jump.sh` (jump-cancel
+  regression), `docs/AOS_SOMA.md` and the `aos.player.soma_controller`
+  annotation.
+- **Native evidence (live mGBA telemetry, room 0/5 pool).** Released in
+  the head-out/body-in band, Soma keeps full gravity with no water drag
+  -- vy climbed past +2.3 px/frame through world y 408-424. The entry
+  fall is bled off only once the head probes are wet, ~0.6 px/frame
+  toward the -0.75 rise (measured +2.29 -> -0.75 over ~6 frames), and
+  the stable float sits at world y 425 with the swim descriptor
+  0x0822AB2C. The swim animation stays out of the band transit (air
+  animations there) and appears at the float/submerged column.
+- **Port change.** The head-out/body-in branch no longer applies water
+  drag: gravity runs at full strength through the band so a cancelled
+  or repeated jump cannot park Soma at waist/feet depth. The level hold
+  (`vy = 0`) now engages only when the head probes sit within ~1px of
+  the top water cell (`head_near_water`, tight window because the pool
+  surface steps by several pixels across x). The head-in bleed rises
+  from -0.3125 to -0.625 px/frame to match the measured ~0.6 px/frame
+  decel (entry dip 438, float 424). The swim gate requires
+  HEAD_SPECIAL or a level velocity at the surface line, so band transit
+  keeps fall/jump animations like native. `AOS_EFFECT_SPLASH` now draws
+  inside the layered priority loop at `aria_bg_band_priority(0x0F)` --
+  the band `sub_08032FC8` stamps on the splash entity, one above Soma's
+  0xE -- so the splash paints behind the player instead of over him.
+- **Verification.** `test_aria_simulate_water_entry_jump.sh` gains a
+  jump-cancel-during-penetration case (final y=424 on the float line);
+  `aos_soma`, `aria_simulate_water_float` and the entry/jump script all
+  pass. Splash ordering verified by code inspection of the priority
+  interleave; a visual check on the SDL path is still owed.
+- **Not yet done.** The exact native pixel where the level hold engages
+  is approximated by the ~1px probe window rather than traced flag
+  bits; soul-dependent water stances remain unported.
+
 ## Patch 1258 - Water entry/exit splash effect and sound
 
 - **Scope.** `src/runtime/aos/core/aos_soma.{c,h}` (`splash_request` +

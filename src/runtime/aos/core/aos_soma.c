@@ -230,6 +230,23 @@ static bool bump_ceiling(AosSoma *soma, const AosCollision *layer, int dy) {
     return false;
 }
 
+/* True when bit-3 cells sit within ~1px below the head probes: the only
+ * place the surface float may hold level. Measured on the native room 0/5
+ * pool: released anywhere higher in the head-out/body-in band, gravity
+ * still sinks Soma to the float line; the level hold exists only to keep
+ * the head probe from bobbing across the top water cell. The window must
+ * stay tight -- the pool surface steps by several pixels across x, and a
+ * wide probe parks Soma mid-band reading as a waist-deep swim. */
+static bool head_near_water(const AosSoma *soma, const AosCollision *layer) {
+    if (!layer) return false;
+    int32_t x = soma->x >> 16, y = (soma->y >> 16) - 25;
+    for (int d = 0; d <= 1; ++d)
+        if (aos_collision_special(layer, x - 5, y + d) ||
+            aos_collision_special(layer, x + 5, y + d))
+            return true;
+    return false;
+}
+
 /* sub_08018B98 (a label inside sub_08018020). */
 void aos_soma_gravity(AosSoma *soma, const AosCollision *layer) {
     if (!(soma->flags & 0x1Eu)) return;
@@ -256,12 +273,19 @@ void aos_soma_gravity(AosSoma *soma, const AosCollision *layer) {
     }
     /* _08018E4A: airborne animations. */
     if ((soma->flags & 0x1E0u) || soma->air_anim_locked) return;
-    /* Water locomotion: with the body probes in bit-3 cells and the
-     * walk-on-special ability absent, native plays the swim animation
-     * (descriptor 0x0822AB2C, index 0x28) from the surface float through
-     * the submerged column, measured live in the room 0/5 pool. */
-    if ((soma->flags & AOS_FLAG_BODY_SPECIAL) &&
-        !(soma->abilities & AOS_ABILITY_SPECIAL_WALK)) {
+    /* Water locomotion: native plays the swim animation
+     * (descriptor 0x0822AB2C, index 0x28) once the head probes are in the
+     * bit-3 cells or the head-out float line is reached, and it persists
+     * through the submerged column because the head-in-water flag skips
+     * this whole gravity/animation block natively. While only the body
+     * probes are wet higher in the band, native keeps the air animations
+     * (fall on the way in, jump on the breach): measured live in the room
+     * 0/5 pool at world y 408-424 vs the 425 float. */
+    bool afloat = (soma->flags & AOS_FLAG_HEAD_SPECIAL) ||
+                  ((soma->flags & AOS_FLAG_BODY_SPECIAL) &&
+                   head_near_water(soma, layer) &&
+                   soma->vy > -(int32_t)0x8000 && soma->vy < (int32_t)0x8000);
+    if (afloat && !(soma->abilities & AOS_ABILITY_SPECIAL_WALK)) {
         play(soma, AOS_SOMA_ANIM_SWIM, true, LOW);
         return;
     }
@@ -318,23 +342,33 @@ void aos_soma_air(AosSoma *soma, const AosCollision *layer, uint16_t held) {
     if ((soma->flags & AOS_FLAG_BODY_SPECIAL) &&
         !(soma->abilities & AOS_ABILITY_SPECIAL_WALK)) {
         if (soma->flags & AOS_FLAG_HEAD_SPECIAL) {
+            /* mGBA room 0/5 pool: once the head probes are wet, gravity is
+             * skipped natively and vy is bled toward the -0.75 float rise
+             * at ~0.6 px/frame (measured +2.29 -> -0.75 over ~6 frames on
+             * entry), which produces the entry dip below the float line. */
             if (soma->vy > 0) {
-                soma->vy -= 0x5000;                     /* bleed the entry fall */
+                soma->vy -= 0xA000;
                 if (soma->vy < 0) soma->vy = 0;
             } else if (soma->vy > (int32_t)0xFFFF4000) {
                 soma->vy = (int32_t)0xFFFF4000;         /* -0.75 float rise */
             }
         } else {
-            /* Head out, body still submerged (the float depth). A strong
-             * downward entry keeps sinking under water drag so the head dips
-             * under briefly; a strong rise (the swim stroke) is left alone so
-             * Soma can breach the surface; only a weak residual velocity is
-             * held level so the head does not bob across the water-cell
-             * boundary every frame. */
-            if (soma->vy > 0x8000) {
-                soma->vy -= 0x5000;                 /* water drag */
-                if (soma->vy < 0) soma->vy = 0;
-            } else if (soma->vy >= -(int32_t)0x8000) {
+            /* Head out, body still submerged. A strong downward entry keeps
+             * sinking under water drag so the head dips under briefly; a
+             * strong rise (the swim stroke) is left alone so Soma can
+             * breach the surface. With a weak residual velocity he is held
+             * level only once the head probes reach the top water cell --
+             * higher in the band gravity still sinks him to the float
+             * line, measured live on the native pool. */
+            /* Head out, body still submerged: measured live on the native
+             * pool, gravity runs at full strength through the whole band
+             * (vy reached +2.3 px/frame with no drag) until the head probes
+             * enter the top water cell; only there, at the float line, a
+             * weak residual velocity is held level so the head does not
+             * bob across the cell boundary every frame. A strong rise
+             * (the swim stroke) is left alone so Soma can breach. */
+            if (soma->vy >= -(int32_t)0x8000 && soma->vy <= (int32_t)0x8000 &&
+                head_near_water(soma, layer)) {
                 soma->vy = 0;
                 soma->gravity_mod = 0;
             }

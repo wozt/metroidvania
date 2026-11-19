@@ -545,14 +545,18 @@ acceleration) that ends with vy = 0 once the head leaves the water.
 `aos_soma_air` reproduces it, applied after gravity so it wins:
 with the body probes in bit-3 cells and the walk-on-special ability
 (`0x13260 & 0x8000`) absent, a submerged head (`0x800000`) rises at a
-constant -0.75 unless already rising faster, while a downward entry is
-bled off gradually so Soma dips on landing instead of snapping up. With
-the head just out but the body still in (`0x1000000` alone, the float
-depth) a strong fall keeps sinking under water drag (the entry dip), a
-strong rise is preserved so the swim stroke can breach the surface, and
-only a weak residual velocity is held at vy = 0 so the head does not bob
-across the water-cell boundary (the earlier head-above/head-below limit
-cycle read as sprite tremble). `aos_soma_jump` gates the stroke on
+constant -0.75 unless already rising faster. Per-frame native telemetry
+released in the head-out/body-in band shows **full gravity with no water
+drag** there (vy climbed past +2.3 px/frame); the entry fall is instead
+bled off once the head probes are wet, at ~0.6 px/frame toward the
+-0.75 rise (measured +2.29 -> -0.75 over ~6 frames), which produces the
+dip below the float line. Only at the float line itself -- the head
+probes within ~1px of the top water cell -- is a weak residual velocity
+held at vy = 0 so the head does not bob across the cell boundary (the
+earlier head-above/head-below limit cycle read as sprite tremble); the
+probe window must stay tight because the pool surface steps by several
+pixels across x, and a wide one parks Soma mid-band reading as a
+waist-deep swim after a cancelled jump. `aos_soma_jump` gates the stroke on
 HEAD_SPECIAL or BODY_SPECIAL (not SPECIAL_WALK) so it fires while
 treading, and `collide_special` clears the `0x02000000` stroke cooldown
 once the head is out so repeated strokes are not locked.
@@ -562,8 +566,12 @@ telemetry in the room 0/5 pool reads the animation descriptor
 constant from the surface float (vy = 0) through the submerged column
 (vy = -0.75), switching to the fall/jump air animations only once the
 stroke breaches the surface. `AOS_SOMA_ANIM_SWIM` reproduces it:
-`aos_soma_gravity`'s airborne block plays it whenever the body probes
-are in bit-3 cells without the walk-on-special ability.
+`aos_soma_gravity`'s airborne block plays it once the head probes are
+in bit-3 cells, or at the level float line; it then persists through the
+submerged column because the head-in-water flag skips that whole block
+natively. While only the body probes are wet higher in the band the air
+animations stay (fall on the way in, jump on the breach): measured live
+in the room 0/5 pool at world y 408-424 vs the 425 float.
 The water entry/exit splash is `sub_0803319C`, called from the collision
 pass `sub_08014A04` on a bit-3 transition: entry when the body probes
 enter bit-3 cells faster than 1.5 px/frame (`vy > 0x18000`, native param
@@ -577,10 +585,13 @@ the surface and self-deletes when the animation ends. `collide_special`
 requests `AOS_SPLASH_ENTRY` / `AOS_SPLASH_EXIT` on `AosSoma` and
 `update_entities` spawns the one-shot `AOS_EFFECT_SPLASH` at the probed
 surface with the matching song. The probe's two-position retry is folded
-into a single down-walk here.
+into a single down-walk here. The splash entity stamps `+0x5C` with 0xF,
+one band above Soma's 0xE, so `aria_runtime` interleaves
+`AOS_EFFECT_SPLASH` inside the layered priority pass at
+`aria_bg_band_priority(0x0F)` -- behind the player, over the surface.
 `tests/test_aria_simulate_water_float.sh` holds Soma off the pool floor
 and `tests/test_aria_simulate_water_entry_jump.sh` locks the entry dip,
-the stable float and the surface breach. Soul-dependent variants (bottom walking with water
+the stable float, the surface breach and the jump-cancel band transit. Soul-dependent variants (bottom walking with water
 inertia, higher/multi jump, walk-on-water) are not yet ported; the
 walk-on-water ability still clears `0x800000` in `collide_special`.
 

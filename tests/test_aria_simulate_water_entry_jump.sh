@@ -90,4 +90,34 @@ if [ "$min_y" -ge 414 ]; then
     exit 1
 fi
 
-echo "aria simulate water entry/jump: OK (dip to y=$max_y, float y=$final_y, breach to y=$min_y)"
+# Jump-cancel during penetration: re-jumping while the body probes are
+# already in the water must not park Soma in the head-out/body-in band.
+# Measured on the native pool, gravity runs at full strength through the
+# whole band (vy reached +2.3 px/frame), so he has to keep sinking until
+# the head probes reach the top water cell and the float line holds.
+cat > "$script" <<'EOF'
+wait 26
+tap 1 1
+wait 12
+tap 1 1
+wait 150
+EOF
+ctrace=$(AOS_SIM_TRACE_SOMA=1 "$bin" --simulate 200 --area 0 --room 5 \
+    --spawn 360 340 --simulate-script "$script" --mute 2>/dev/null \
+    | sed -n 's/.*pos=[0-9]*,\([0-9]*\).*/\1/p')
+rm -f "$script"
+[ -n "$ctrace" ] || { echo "FAIL: no cancel SOMATRACE positions"; exit 1; }
+cancel_y=$(printf '%s\n' "$ctrace" | tail -1)
+if [ "$cancel_y" -lt 420 ] || [ "$cancel_y" -gt 428 ]; then
+    echo "FAIL: jump-cancel left Soma off the float line (final y=$cancel_y)" >&2
+    exit 1
+fi
+# He must not linger mid-band: after the inputs end, the last ~30 frames
+# have to sit at the float, not strung along the head-out/body-in band.
+late=$(printf '%s\n' "$ctrace" | tail -30 | sort -un | tail -1)
+if [ "$late" -lt 420 ]; then
+    echo "FAIL: jump-cancel still sinking late (max late y=$late)" >&2
+    exit 1
+fi
+
+echo "aria simulate water entry/jump: OK (dip to y=$max_y, float y=$final_y, breach to y=$min_y, cancel y=$cancel_y)"

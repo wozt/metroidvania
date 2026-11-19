@@ -4247,6 +4247,11 @@ aria_render_frame:
          * that band ordering (enemy bands span 0x03-0x1E). */
         const int soma_band_prio =
             bg_layered ? aria_bg_band_priority(0x0E) : -1;
+        /* The water-splash entity stamps +0x5C with 0xF (sub_08032FC8),
+         * one band above Soma's 0xE, so it paints before him within a
+         * shared priority -- behind the player, over the surface. */
+        const int splash_band_prio =
+            bg_layered ? aria_bg_band_priority(0x0F) : -1;
         /* sub_0805EAFC stamps the soul orb's +0x5C with 0x13, so it
          * interleaves on its own band like the actors below. */
         const int soul_band_prio =
@@ -4269,6 +4274,12 @@ aria_render_frame:
                 if (opening_draw)
                     draw_opening_actors(renderer, &objects,
                                         &opening_actors, cam_x, cam_y, p);
+                /* The splash family interleaves on its own +0x5C
+                 * band like the actors above, so it lands behind
+                 * Soma when they share a priority. */
+                if (objects_ok && p == splash_band_prio)
+                    draw_effects(renderer, &room, &objects,
+                                 AOS_EFFECT_SPLASH, cam_x, cam_y);
                 /* Soma reads the player library, not `objects` —
                  * he draws even when the object tables failed. */
                 if (p == soma_band_prio)
@@ -4315,8 +4326,10 @@ aria_render_frame:
             draw_pickup_art(renderer, &objects, 9, &soul, cam_x, cam_y);
         }
         if (objects_ok) draw_levelup(renderer, &objects, &combat.levelup, &soma, cam_x, cam_y);
-        for (int k = AOS_EFFECT_SMOKE; objects_ok && k < AOS_EFFECT_KINDS; ++k)
+        for (int k = AOS_EFFECT_SMOKE; objects_ok && k < AOS_EFFECT_KINDS; ++k) {
+            if (k == AOS_EFFECT_SPLASH && splash_band_prio >= 0) continue;
             draw_effects(renderer, &room, &objects, k, cam_x, cam_y);
+        }
         if (objects_ok) draw_effects(renderer, &room, &objects, AOS_EFFECT_FLAME, cam_x, cam_y);
         for (size_t k = 0; objects_ok && k < room.damage_popup_count; ++k)
             draw_damage_popup(renderer, &objects, &room.damage_popups[k], cam_x, cam_y);

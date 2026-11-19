@@ -1,3 +1,57 @@
+## Patch 1265 - Room 0/5 fountain palette animation (Object07 BG-anim)
+
+- **Scope.** area_00_room_005's water: the Object07 SPECIAL record
+  (param0 1, param1 3) whose sub_0804F690 update was reduced to a
+  frame counter with no visual consumer.
+- **Native mechanism (corrected trace).** func_0804F690 indexes the
+  8-byte records at 0x08525D9C by the entity's +0x32 param1 — not
+  param0 — giving record 3 = {count 4, arg 5, frame table
+  0x0852560C}. Each 8-byte frame entry is {u32 patch record 0x0811A320,
+  u16 palette chunk, u16 duration 5}; on every tick wrap the record
+  frame advances and func_0803C918 DMAs the chunk's 32 bytes (16
+  BGR555 colours) into palette RAM row arg*0x20 = bank 5 at
+  0x050000A0. The earlier "tile cache -> VRAM" reading was wrong:
+  0x05000000 is GBA palette RAM, and the dirty-map/staging chain
+  (0x0201261C -> 0x02012A1C -> 0x05000000) ends at palette memory,
+  not a char block. Room 0/5's BG2 tilemap carries 434 cells on
+  palette bank 5 — the pool surface — so the four chunks (5, 0xD,
+  0xE, 0xF, all blue water tones verified against live palette RAM
+  in an mGBA checkpoint) cycle the water every 5 ticks, 20-frame
+  period.
+- **Implementation.** aos_object07 now selects the record by param1
+  (the previous param0 index picked record 1), exposes pal_bank
+  (record arg) and pal_serial (bumped on each advance, matching the
+  native patch-on-wrap order so the room's loaded palette shows for
+  the first five ticks exactly like native). aria_bg_room_ensure
+  scans spawned SPECIAL id-7 entities for param0 == 1 records,
+  computes the animated bank mask, and retains the decoded tilemap +
+  background record of every text layer whose cells use an animated
+  bank (room 0/5: BG2 only) plus the shared FusionAosVideoMemory.
+  aria_bg_room_anim_apply runs each rendered frame inside
+  aria_bg_room_begin: when an entity's pal_serial moves it resolves
+  the chunk through the ROM chain (record -> frame table -> patch
+  record +4+chunk*0x20, the same row layout
+  fusion_aos_load_video_memory decodes), memcpy's the 32 bytes into
+  memory->palette + bank*0x20 like the native DMA, and re-renders
+  only the retained layers using that bank. Per-entity serials are
+  tracked so two cyclers may share a bank. No ROM data is
+  hardcoded — colours are read from the bound ROM at apply time.
+- **Evidence.** fusion_aos_object07_tests extended (record-3 timing:
+  pal_bank 5, serial bumps on each 5-tick wrap, frame cycle 0-3).
+  Headless captures of `--area 0 --room 5 --spawn 360 440` at frames
+  200-220: frames one chunk apart differ on ~199k pixels across the
+  pool region while same-chunk frames differ only in the sprite
+  (~368 px), and frames 20 apart (full cycle) return to ~1.6k px of
+  idle-animation noise — the four-chunk/20-frame cadence matches
+  the native durations. No mGBA pixel comparison yet.
+- **Remaining gaps.** The EWRAM cache/staging intermediates
+  (0x0201261C/0x02012A1C/0x02012C1C) are not modelled — the port
+  writes the palette row directly, which is the observable end
+  state. Affine BG layers are excluded from retention (their cell
+  format carries no palette bank); no room currently combines an
+  affine layer with a palette cycler. Other Object07 records
+  (banks 4, 6, 7) share the same path and are covered generically.
+
 ## Patch 1264 - Room 0/5 chandelier art, flame and prop animation stepping
 
 - **Scope.** area_00_room_005's destructible props: two Object0F
@@ -32,16 +86,9 @@
   func_08050DB4/08050E3C/08050F08 (Object0F), func_08046080/
   func_08045EE0/08046100/08046148 (breakable), func_0803F17C/
   func_0803EBA8 (stepping).
-- **Remaining gap — the fountain.** The room's Object07 (param0 1,
-  param1 3) is the sub_0804F690 BG-anim cycler: record 3 of
-  0x08525D9C selects four frames that each DMA one 32-byte tile
-  from 0x0811A320 + arg1*32 + 4 (arg1 5/0xD/0xE/0xF) into the
-  EWRAM tile cache slot arg3 = 5 at 0x0201261C + 0xA0 through
-  func_0803C918, marking dirty bits at 0x02012C1C for the deferred
-  VRAM upload. Reproducing it needs the cache-to-VRAM sync traced
-  (which BG char block and tilemap cell the slot maps to) plus a
-  per-frame tile-graphics write the layered-BG draw does not yet
-  own — documented as missing, not approximated.
+- **Remaining gap — the fountain.** Traced further in Patch 1265:
+  the Object07 (param0 1, param1 3) cycler patches palette RAM, not
+  tile graphics — see below.
 
 ## Patch 1263 - Opening slide completion resumes parsing same-tick
 

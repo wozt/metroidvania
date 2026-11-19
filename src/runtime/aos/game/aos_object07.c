@@ -53,6 +53,16 @@ static const uint8_t anchor_rec[4][3] = {
 static const uint16_t anchor_pos[6][2] = {
     {0xFFB4, 0xFFC8}, {0, 0}, {0, 0}, {0xFFB4, 0}, {0xFFB4, 0}, {0, 0}};
 
+/* sub_0804F690: the param0 == 1 BG-anim cycler. The 8-byte records
+ * at 0x08525D9C are {u16 count, u16 arg, u32 frame-table ptr}; each
+ * frame-table entry is {u32 patch record, u16 palette chunk, u16
+ * duration}; arg is the palette RAM row the patch rewrites. */
+static const struct { uint16_t count, arg; } anim_records[6] = {
+    {2, 6}, {2, 6}, {2, 6}, {4, 5}, {2, 4}, {2, 7}};
+static const uint16_t anim_mod[6][4] = {
+    {2, 2, 0, 0}, {2, 2, 0, 0}, {2, 2, 0, 0}, {5, 5, 5, 5}, {2, 2, 0, 0}, {3, 3, 0, 0}};
+
+
 static uint32_t rnd(uint32_t (*rng)(void)) { return (*rng)(); }
 
 /* sub_0804F374: spawn table[param1] ambient motes. */
@@ -136,6 +146,7 @@ void aos_object07_create(AosObject07 *o, int param0, int param1,
         break;
     case 1:
         o->frame_index = 0;
+        o->pal_bank = anim_records[param1 < 6 ? param1 : 0].arg;
         break;
     case 2:
         spawn_ambient(o, rng, cam_x, cam_y);
@@ -165,17 +176,12 @@ static void update_mote_anim(AosObject07Mote *m) {
     }
 }
 
-/* sub_0804F690: the param0 == 1 BG-anim cycler. The 8-byte records
- * at 0x08525D9C are {u16 count, u16 arg, u32 frame-table ptr}; each
- * frame-table entry is {u32 sprite, u16 duration, u16 mod}. The tile
- * DMA (sub_0803C918) is not modelled — only + 0x10/+ 0x12 advance. */
-static const struct { uint16_t count, arg; } anim_records[6] = {
-    {2, 6}, {2, 6}, {2, 6}, {4, 5}, {2, 4}, {2, 7}};
-static const uint16_t anim_mod[6][4] = {
-    {2, 2, 0, 0}, {2, 2, 0, 0}, {2, 2, 0, 0}, {5, 5, 5, 5}, {2, 2, 0, 0}, {3, 3, 0, 0}};
-
 static void update_anim(AosObject07 *o) {
-    uint16_t rec = o->param0 < 6 ? o->param0 : 0;
+    /* sub_0804F690 indexes 0x08525D9C by the entity's +0x32 param1 —
+     * param0 only selects this update. Each frame-table entry's patch
+     * (sub_0803C918) rewrites one palette RAM row; pal_serial marks
+     * the advances so the draw side re-uploads only on a change. */
+    uint16_t rec = o->param1 < 6 ? o->param1 : 0;
     uint16_t mod = anim_mod[rec][o->frame_index < 4 ? o->frame_index : 0];
     if (mod == 0) mod = 1;
     o->sub_index = (uint16_t)((o->sub_index + 1) % mod);
@@ -183,7 +189,12 @@ static void update_anim(AosObject07 *o) {
         uint16_t count = anim_records[rec].count;
         if (!count) count = 1;
         o->frame_index = (uint8_t)((o->frame_index + 1) % count);
+        o->pal_serial++;
     }
+}
+
+uint8_t aos_object07_anim_bank(int param1) {
+    return anim_records[param1 < 6 ? param1 : 0].arg;
 }
 
 void aos_object07_update(AosObject07 *o, int32_t cam_x, int32_t cam_y,

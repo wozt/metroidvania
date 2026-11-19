@@ -82,8 +82,14 @@ typedef struct {
 typedef struct {
     uint8_t param0;         /* +0x30 s16: create dispatch 0-4 */
     uint8_t param1;         /* +0x32 s16: ambient count table index / case-4 gate */
-    uint8_t frame_index;    /* +0x10: BG-anim record index (param0 == 1) */
-    uint16_t sub_index;     /* +0x12: frame index inside the record */
+    uint8_t frame_index;    /* +0x10: frame position inside the
+                               param1-selected BG-anim record */
+    uint16_t sub_index;     /* +0x12: tick count inside that frame */
+    uint8_t pal_bank;       /* param0 == 1: palette RAM row the record's
+                               arg field patches (sub_0803C918 dest) */
+    uint32_t pal_serial;    /* param0 == 1: bumped on every record-frame
+                               advance; the draw side re-applies the
+                               palette chunk only when it changes */
     uint8_t win48;          /* gDisplayRegisters + 0x48 = 0xE40 request */
     bool clear_4c4;         /* param0 == 3: gEwramData + 0x4C4 = 0 */
     bool set_42c_800;       /* param0 == 3: + 0x42C |= 0x800 */
@@ -109,4 +115,8 @@ void aos_object07_create(AosObject07 *o, int param0, int param1,
  * those velocities at gEwramData + 0xA0A0/+0xA0A4. */
 void aos_object07_update(AosObject07 *o, int32_t cam_x, int32_t cam_y,
                          uint32_t (*rng)(void));
+
+/* The palette RAM row a param0 == 1 record patches, for room-bind
+ * scans that run before Object07Create (0x08525D9C[param1].arg). */
+uint8_t aos_object07_anim_bank(int param1);
 #endif

@@ -34,12 +34,26 @@ int main(void) {
     aos_object07_create(&o, 2, 5, 0, 0, rng);
     assert(o.ambient_count == 2);
 
-    /* param0 == 1: no children, the anim cycler runs. */
+    /* param0 == 1: no children, the anim cycler runs. param1
+     * selects the 0x08525D9C record — record 3 (the room 0/5
+     * fountain) has 4 frames of 5 ticks patching palette bank 5. */
     aos_object07_create(&o, 1, 0, 0, 0, rng);
     assert(o.ambient_count == 0 && o.anchor_count == 0);
     uint8_t fi = o.frame_index; uint16_t si = o.sub_index;
     aos_object07_update(&o, 0, 0, rng);
     assert(o.frame_index != fi || o.sub_index != si);
+
+    aos_object07_create(&o, 1, 3, 0, 0, rng);
+    assert(o.pal_bank == 5 && o.pal_serial == 0 && o.frame_index == 0);
+    /* 5 ticks per frame: the serial bumps exactly on each wrap. */
+    for (int f = 0; f < 4; ++f) {
+        for (int t = 0; t < 5; ++t)
+            aos_object07_update(&o, 0, 0, rng);
+        assert(o.frame_index == (uint8_t)((f + 1) % 4));
+        assert(o.pal_serial == (uint32_t)(f + 1));
+    }
+    assert(aos_object07_anim_bank(3) == 5);
+    assert(aos_object07_anim_bank(4) == 4);
 
     /* param0 == 3: the global writes. */
     aos_object07_create(&o, 3, 0, 0, 0, rng);

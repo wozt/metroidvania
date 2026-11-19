@@ -1693,6 +1693,14 @@ typedef struct {
      * BgAffineSet transform needs texel access. Affine layers
      * only (256x256x4 = 256 KiB); NULL for text layers. */
     uint8_t *affine_pixels;
+    /* Palette-anim retention (Object07 param0 == 1 records patch
+     * one palette RAM row per frame through sub_0803C918): a layer
+     * whose tilemap uses an animated bank keeps its decoded
+     * tilemap + record so a chunk change can re-render it. */
+    FusionAosBackgroundTilemap tilemap;
+    FusionAosBackground record;
+    uint16_t anim_banks;    /* animated palette banks this layer uses */
+    bool owns_tilemap;
 } AriaBgLayerDraw;
 
 typedef struct {
@@ -1744,6 +1752,14 @@ typedef struct {
     AosDepthPriorities depth;
     bool depth_ok;
     int32_t ofs_bx, ofs_by; /* this frame's drawn BG1 offset */
+    /* Palette-anim state: the room's video memory stays alive
+     * while any decoded layer uses a bank an Object07 param0 == 1
+     * record patches, so the chunk upload can rewrite
+     * memory->palette and re-render that layer. pal_serial_seen
+     * tracks each entity slot's last applied advance — serials are
+     * per entity, so two cyclers may share a bank. */
+    FusionAosVideoMemory *anim_memory;
+    uint32_t pal_serial_seen[MAX_ENTITIES];
 } AriaBgRoomLayers;
 
 static const FusionRom *aria_bg_rom;
@@ -1772,7 +1788,16 @@ static void aria_bg_room_clear(void) {
         aria_bg_room.layer[i].wrap = false;
         free(aria_bg_room.layer[i].affine_pixels);
         aria_bg_room.layer[i].affine_pixels = NULL;
+        if (aria_bg_room.layer[i].owns_tilemap)
+            fusion_aos_free_background_tilemap(
+                &aria_bg_room.layer[i].tilemap);
+        aria_bg_room.layer[i].owns_tilemap = false;
+        aria_bg_room.layer[i].anim_banks = 0;
     }
+    free(aria_bg_room.anim_memory);
+    aria_bg_room.anim_memory = NULL;
+    memset(aria_bg_room.pal_serial_seen, 0,
+           sizeof aria_bg_room.pal_serial_seen);
     if (aria_bg_room.warp_tex)
         SDL_DestroyTexture(aria_bg_room.warp_tex);
     aria_bg_room.warp_tex = NULL;
@@ -1808,6 +1833,106 @@ void aria_bg_layers_bind(const FusionRom *rom) {
  * bind the display-side scroll state. Returns false (caller falls
  * back to background.bmp) when no ROM is bound, the records fail
  * to read, or no layer decoded. */
+/* Bounded ROM read for the Object07 palette-patch chain. */
+static bool aria_bg_rom_read(const FusionRom *rom, uint32_t address,
+                             uint8_t *out, size_t size) {
+    if (!rom || !rom->data || address < 0x08000000u) return false;
+    size_t offset = (size_t)(address - 0x08000000u);
+    if (offset > rom->size || size > rom->size - offset) return false;
+    memcpy(out, rom->data + offset, size);
+    return true;
+}
+
+/* sub_0804F690's frame table -> sub_0803C918's palette patch:
+ * 0x08525D9C[param1] is the 8-byte record {u16 count, u16 arg,
+ * u32 frame-table}; each frame entry is {u32 patch record,
+ * u16 palette chunk, u16 duration} and the patch's 16-color row
+ * for `chunk` sits at patch+4+chunk*0x20 — the same +4 row layout
+ * fusion_aos_load_video_memory decodes for palette loads. Writes
+ * the raw 32 BGR555 bytes; the caller copies them into
+ * memory->palette + bank*0x20 verbatim like the native DMA. */
+static bool aria_bg_palette_chunk(const FusionRom *rom, int param1,
+                                  int frame_index, uint8_t out[0x20]) {
+    if (param1 < 0 || param1 >= 6 || frame_index < 0 || frame_index >= 8)
+        return false;
+    uint8_t rec[8];
+    if (!aria_bg_rom_read(rom, 0x08525D9C + (uint32_t)param1 * 8,
+                          rec, sizeof rec))
+        return false;
+    uint16_t count = (uint16_t)(rec[0] | (rec[1] << 8));
+    uint32_t frame_table = (uint32_t)rec[4] | ((uint32_t)rec[5] << 8) |
+                           ((uint32_t)rec[6] << 16) |
+                           ((uint32_t)rec[7] << 24);
+    if (!count || (uint32_t)frame_index >= count) return false;
+    uint8_t frame[8];
+    if (!aria_bg_rom_read(rom, frame_table + (uint32_t)frame_index * 8,
+                          frame, sizeof frame))
+        return false;
+    uint32_t patch = (uint32_t)frame[0] | ((uint32_t)frame[1] << 8) |
+                     ((uint32_t)frame[2] << 16) |
+                     ((uint32_t)frame[3] << 24);
+    uint16_t chunk = (uint16_t)(frame[4] | (frame[5] << 8));
+    return aria_bg_rom_read(rom,
+                            patch + 4 + (uint32_t)chunk * 0x20,
+                            out, 0x20);
+}
+
+/* Re-render one retained layer after its palette bank changed. */
+static void aria_bg_layer_refresh(SDL_Renderer *renderer,
+                                  AriaBgLayerDraw *layer) {
+    (void)renderer;
+    if (!layer->owns_tilemap || !aria_bg_room.anim_memory) return;
+    FusionAosRenderedBackground rendered;
+    memset(&rendered, 0, sizeof rendered);
+    char error[160];
+    if (!fusion_aos_render_background(&layer->record, &layer->tilemap,
+                                      aria_bg_room.anim_memory, &rendered,
+                                      error, sizeof error))
+        return;
+    if (layer->texture && rendered.rgba)
+        SDL_UpdateTexture(layer->texture, NULL, rendered.rgba,
+                          (int)(rendered.width_pixels * 4));
+    if (layer->affine_pixels && rendered.rgba &&
+        rendered.pixel_count * 4 <=
+            (size_t)layer->width * (size_t)layer->height * 4)
+        memcpy(layer->affine_pixels, rendered.rgba,
+               rendered.pixel_count * 4);
+    fusion_aos_free_rendered_background(&rendered);
+}
+
+/* Per-frame palette-anim apply: each spawned Object07 param0 == 1
+ * entity (sub_0804F690) advances its record frame inside
+ * update_entities; when its pal_serial moves, upload the new
+ * 16-color chunk into the shared palette row and re-render the
+ * retained layers that use that bank. */
+static void aria_bg_room_anim_apply(SDL_Renderer *renderer,
+                                    const AriaRoom *room) {
+    if (!aria_bg_room.anim_memory) return;
+    for (size_t i = 0; i < room->entity_count &&
+                        i < MAX_ENTITIES; ++i) {
+        const AriaEntity *e = &room->entities[i];
+        if (!e->spawned || e->kind != ARIA_KIND_SPECIAL || e->id != 7 ||
+            e->param0 != 1)
+            continue;
+        const AosObject07 *o = &e->object07;
+        if (o->param0 != 1 || o->pal_bank >= 16) continue;
+        uint8_t bank = o->pal_bank;
+        if (o->pal_serial == aria_bg_room.pal_serial_seen[i]) continue;
+        uint8_t colors[0x20];
+        if (!aria_bg_palette_chunk(aria_bg_rom, e->param1,
+                                   o->frame_index, colors))
+            continue;
+        memcpy(aria_bg_room.anim_memory->palette + bank * 0x20,
+               colors, 0x20);
+        aria_bg_room.pal_serial_seen[i] = o->pal_serial;
+        for (int l = 0; l < FUSION_AOS_BACKGROUND_COUNT; ++l)
+            if (aria_bg_room.layer[l].owns_tilemap &&
+                (aria_bg_room.layer[l].anim_banks & (1u << bank)))
+                aria_bg_layer_refresh(renderer,
+                                      &aria_bg_room.layer[l]);
+    }
+}
+
 static bool aria_bg_room_ensure(SDL_Renderer *renderer,
                                 const AriaRoom *room,
                                 int cam_x, int cam_y) {
@@ -1859,6 +1984,18 @@ static bool aria_bg_room_ensure(SDL_Renderer *renderer,
      * (0 for the 261 no-blend rooms and any non-alpha effect). */
     aria_bg_room.blend_mask =
         aos_scroll_blend_first_targets(descriptor.blend_control);
+    /* Palette banks this room's Object07 param0 == 1 cyclers
+     * (sub_0804F690) patch through sub_0803C918 — e.g. room 0/5's
+     * fountain rewrites BG2's water bank. */
+    uint16_t anim_mask = 0;
+    for (size_t i = 0; i < room->entity_count && i < MAX_ENTITIES; ++i) {
+        const AriaEntity *e = &room->entities[i];
+        if (e->spawned && e->kind == ARIA_KIND_SPECIAL && e->id == 7 &&
+            e->param0 == 1) {
+            uint8_t bank = aos_object07_anim_bank(e->param1);
+            if (bank < 16) anim_mask |= (uint16_t)(1u << bank);
+        }
+    }
     FusionAosVideoMemory *memory = malloc(sizeof *memory);
     if (!memory) return false;
     bool mem_ok = fusion_aos_load_video_memory(
@@ -1867,12 +2004,15 @@ static bool aria_bg_room_ensure(SDL_Renderer *renderer,
         free(memory);
         return false;
     }
+    bool any_anim = false;
     for (int i = 0; i < FUSION_AOS_BACKGROUND_COUNT; ++i) {
         AriaBgLayerDraw *layer = &aria_bg_room.layer[i];
         const FusionAosBackground *rec = &backgrounds.entries[i];
         layer->rank = rec->field_0;
         layer->affine = false;
         layer->wrap = false;
+        layer->owns_tilemap = false;
+        layer->anim_banks = 0;
         /* BGxCNT bit 13 (the record's control halfword): affine
          * area-overflow — out-of-map texel coords wrap instead of
          * sampling transparent. */
@@ -1911,6 +2051,23 @@ static bool aria_bg_room_ensure(SDL_Renderer *renderer,
                     layer->width = (int)rendered.width_pixels;
                     layer->height = (int)rendered.height_pixels;
                     aria_bg_room.ready = true;
+                    /* Retain the decode inputs when this layer's
+                     * text tilemap uses a bank an Object07 record
+                     * animates, so aria_bg_room_anim_apply can
+                     * re-render it on each palette chunk change. */
+                    if (anim_mask && !(tilemap.flags & 1)) {
+                        uint16_t used = 0;
+                        for (size_t c = 0; c < tilemap.cell_count; ++c)
+                            used |= (uint16_t)1u <<
+                                    ((tilemap.cells[c] >> 12) & 0xF);
+                        layer->anim_banks = used & anim_mask;
+                        if (layer->anim_banks) {
+                            layer->owns_tilemap = true;
+                            layer->tilemap = tilemap;
+                            layer->record = *rec;
+                            any_anim = true;
+                        }
+                    }
                     if (layer->affine && rendered.rgba) {
                         /* The affine warp samples texels per
                          * frame; SDL textures are write-only, so
@@ -1925,9 +2082,15 @@ static bool aria_bg_room_ensure(SDL_Renderer *renderer,
                 fusion_aos_free_rendered_background(&rendered);
             }
         }
-        fusion_aos_free_background_tilemap(&tilemap);
+        if (!layer->owns_tilemap)
+            fusion_aos_free_background_tilemap(&tilemap);
+        else
+            memset(&tilemap, 0, sizeof tilemap);
     }
-    free(memory);
+    if (any_anim)
+        aria_bg_room.anim_memory = memory;
+    else
+        free(memory);
     if (!aria_bg_room.ready) return false;
 
     /* Display-side scroll bind, mirroring object20_scroll_ensure
@@ -2007,6 +2170,7 @@ bool aria_bg_room_begin(SDL_Renderer *renderer, const AriaRoom *room,
                         uint32_t frame_counter, uint32_t wave_phase) {
     if (!aria_bg_room_ensure(renderer, room, cam_x, cam_y))
         return false;
+    aria_bg_room_anim_apply(renderer, room);
     /* gEwramData->frameCounter and unk_60.unk_4C8 arrive from the
      * simulation side: main.c increments frameCounter once per
      * main-loop iteration unconditionally and sub_0800CA40 ticks

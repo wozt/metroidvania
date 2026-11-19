@@ -84,4 +84,11 @@ if [ "$second_exit" -lt 2 ]; then
     echo "FAIL: save room did not re-exit after the dead-edge clamp" >&2
     exit 1
 fi
+# The final room is a freshly loaded 0/5 after the second save-room
+# exit. Its eight native kind-1 records must all have been recreated;
+# this catches stale per-room entity state after Object1C's save path.
+printf '%s\n' "$out" | grep -q "SPECIAL 3/4 spawned, 8 enemies alive" || {
+    echo "FAIL: enemies did not respawn after leaving the save room" >&2
+    exit 1
+}
 echo "aria simulate save-room route: OK (save, exit, return, dead edge, re-exit)"

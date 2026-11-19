@@ -1003,6 +1003,10 @@ typedef struct {
     bool has_damage_popup; /* sub_08042B8C, including the zero-damage guard art */
     AosDamagePopup damage_popup;
     bool killed;
+    /* A multipart child's native callback applied this strike to its
+     * owning main body. The room host attributes XP, drops and boss-clear
+     * state to the spawner record, not to the child slot. */
+    bool owner_forwarded;
     bool special_soul;     /* this boss death reached sub_080D7308 */
     bool spawn;             /* a zombie spawner created a zombie here */
     int32_t spawn_x, spawn_y;   /* room pixels */

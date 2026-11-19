@@ -3178,14 +3178,18 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * entity (still frame 0x48, OBJ row 6) with PlaySong(0xBC);
              * the equipment refresh is sub_08033CAC's tail. */
             /* Bone Pillar's skulls are enemies in their own right. */
+            AriaEntity *hit_owner = e;
+            if (hit.owner_forwarded && e->spawner >= 0 &&
+                (size_t)e->spawner < room->entity_count)
+                hit_owner = &room->entities[e->spawner];
             if (hit.killed &&
-                (e->enemy.role == AOS_ROLE_ENEMY ||
-                 e->enemy.role == AOS_ROLE_BONE_PILLAR_SEGMENT) &&
+                (hit_owner->enemy.role == AOS_ROLE_ENEMY ||
+                 hit_owner->enemy.role == AOS_ROLE_BONE_PILLAR_SEGMENT) &&
                 combat->progress) {
                 int32_t gained = aos_stats_reward_enemy(
-                    combat->progress, &e->reward_flags,
-                    aria_ewram_cine_4cc, (uint8_t)e->id,
-                    combat->stats[e->id]->experience);
+                    combat->progress, &hit_owner->reward_flags,
+                    aria_ewram_cine_4cc, (uint8_t)hit_owner->id,
+                    combat->stats[hit_owner->id]->experience);
                 if (gained > 0) {
                     soma->max_hp = (int16_t)combat->progress->max_hp;
                     /* sub_080455BC(0): the display entity; its creation
@@ -3204,7 +3208,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 if (gained >= 0) {
                     if (combat->hud && combat->hud_font)
                         aos_hud_show_enemy(combat->hud, combat->hud_font,
-                                           aos_bestiary_name((uint8_t)e->id));
+                                           aos_bestiary_name((uint8_t)hit_owner->id));
                     printf("Experience %u (next level in %d)\n", combat->progress->experience,
                            aos_stats_experience_to_next(combat->progress));
                     /* The drop draws, in the native order; the pickups they
@@ -3214,24 +3218,28 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     AosDropContext context = {
                         .luck = (int16_t)combat->progress->current[AOS_STAT_LCK],
                         .accessory = combat->progress->accessory,
-                        .soul_owned = combat->drops[e->id]->soul_index &&
+                        .soul_owned = combat->drops[hit_owner->id]->soul_index &&
                                       aos_souls_total(combat->progress,
-                                                      combat->drops[e->id]->soul_type,
-                                                      combat->drops[e->id]->soul_index - 1),
-                        .ground = aos_collision_cell(layer, e->enemy.x >> 16,
-                                                     (e->enemy.y >> 16) - 8)};
-                    const AosEnemyDrops *enemy_drops = combat->drops[e->id];
-                    if (e->id != AOS_BOSS_HEADHUNTER)
-                        (void)spawn_special_boss_soul(room, e, soma, combat);
-                    AosDrop drop = aos_stats_roll_drop(combat->progress, (uint8_t)e->id,
+                                                      combat->drops[hit_owner->id]->soul_type,
+                                                      combat->drops[hit_owner->id]->soul_index - 1),
+                        .ground = aos_collision_cell(layer,
+                                                     hit_owner->enemy.x >> 16,
+                                                     (hit_owner->enemy.y >> 16) - 8)};
+                    const AosEnemyDrops *enemy_drops = combat->drops[hit_owner->id];
+                    if (hit_owner->id != AOS_BOSS_HEADHUNTER)
+                        (void)spawn_special_boss_soul(room, hit_owner, soma, combat);
+                    AosDrop drop = aos_stats_roll_drop(combat->progress,
+                                                       (uint8_t)hit_owner->id,
                                                        enemy_drops, &context,
                                                        aos_random);
                     if (drop.kind == AOS_DROP_SOUL) {
                         /* sub_0804459C(x, y - 8, type, index, 0). */
                         if (room->pickup_count < MAX_PICKUPS)
                             room->pickups[room->pickup_count++] = aos_pickup_create_soul(
-                                drop.soul_type, drop.soul_index, e->enemy.x >> 16,
-                                (e->enemy.y >> 16) - 8, soma->x, soma->y, aos_random);
+                                drop.soul_type, drop.soul_index,
+                                hit_owner->enemy.x >> 16,
+                                (hit_owner->enemy.y >> 16) - 8, soma->x, soma->y,
+                                aos_random);
                         printf("Drop: soul type %u index %u\n", drop.soul_type,
                                drop.soul_index);
                     }
@@ -3241,7 +3249,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                         if (aos_item_decode(drop.item, &category, &index) &&
                             room->pickup_count < MAX_PICKUPS)
                             room->pickups[room->pickup_count++] = aos_pickup_create_item(
-                                category, index, e->enemy.x >> 16, (e->enemy.y >> 16) - 8);
+                                category, index, hit_owner->enemy.x >> 16,
+                                (hit_owner->enemy.y >> 16) - 8);
                         printf("Drop: %s item 0x%02X\n", drop.rare ? "rare" : "common",
                                drop.item);
                     }
@@ -3249,13 +3258,16 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                              room->pickup_count < MAX_PICKUPS)
                         /* sub_08043F70 at the enemy's (x, y - 8). */
                         room->pickups[room->pickup_count++] = aos_pickup_create_money(
-                            combat->money, drop.variant, e->enemy.x >> 16,
-                            (e->enemy.y >> 16) - 8);
+                            combat->money, drop.variant,
+                            hit_owner->enemy.x >> 16,
+                            (hit_owner->enemy.y >> 16) - 8);
                     else if (drop.kind == AOS_DROP_PICKUP_43C10 &&
                              room->pickup_count < MAX_PICKUPS)
                         /* sub_08043C10(x, y - 8, big, 1): an MP heart. */
                         room->pickups[room->pickup_count++] = aos_pickup_create_heart(
-                            drop.variant != 0, true, e->enemy.x >> 16, (e->enemy.y >> 16) - 8);
+                            drop.variant != 0, true,
+                            hit_owner->enemy.x >> 16,
+                            (hit_owner->enemy.y >> 16) - 8);
                     else if (drop.kind != AOS_DROP_NONE)
                         printf("Drop: pickup sub_%s variant %u\n",
                                drop.kind == AOS_DROP_PICKUP_43F70 ? "08043F70" : "08043C10",
@@ -3263,7 +3275,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 }
             }
             if (hit.special_soul)
-                (void)spawn_special_boss_soul(room, e, soma, combat);
+                (void)spawn_special_boss_soul(room, hit_owner, soma, combat);
             /* The boss-clear + 0x37E bit: the native lethal-hit
              * callbacks write it in the same pass that reports the
              * kill (sub_080D6EF8 for most bosses, a direct orr for
@@ -3271,10 +3283,11 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
              * killing blow — not on the dropped soul's pickup.
              * Ordered after the soul spawns above so the guaranteed
              * boss soul is not suppressed by its own bit. Only the
-             * room record's main body (role ENEMY) counts: the
-             * bosses' destructible parts share the enemy id. */
-            if (hit.killed && e->enemy.role == AOS_ROLE_ENEMY) {
-                int clear_bit = boss_clear_bit(e);
+             * room record's main body (role ENEMY) counts; multipart
+             * callbacks such as Creaking Skull bones resolve to that
+             * owner before this test. */
+            if (hit.killed && hit_owner->enemy.role == AOS_ROLE_ENEMY) {
+                int clear_bit = boss_clear_bit(hit_owner);
                 if (clear_bit >= 0)
                     aria_pickup_state.special |=
                         (uint16_t)(1u << clear_bit);
@@ -4854,9 +4867,15 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                  * on the collision layer (same probe shape as
                  * find_spawn). */
                 int gy = 0x50;
-                for (int yy = 0x50; yy < 0x1000; ++yy)
+                for (int yy = 0x50; yy < 0x1000; yy += 8)
                     if (aos_collision_cell(layer, 0x78, yy) & 1) {
-                        gy = yy;
+                        /* sub_0806AF98 advances +0x46 eight pixels at
+                         * a time until sub_08001D94 finds a solid cell,
+                         * then adds that routine's signed penetration.
+                         * At the aligned probe used here the response is
+                         * -1, placing the sprite one pixel above the
+                         * first solid row rather than inside it. */
+                        gy = yy - 1;
                         break;
                     }
                 cin.ground_y = (int16_t)gy;

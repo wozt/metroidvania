@@ -1,3 +1,47 @@
+## Patch 1269 - Save-room anchors and Creaking Skull hit ownership
+
+- **Save-room closed side.** `Object1DCreate` already derived the native
+  closed-side position from the transition-screen checksum, but the SDL draw
+  path discarded its rewritten `+0x42/+0x46` coordinates and rendered the
+  room record's fixed `(0,0)` instead. `aria_draw.c` now consumes
+  `object1d.off_x/off_y` and the native `+0x58` horizontal flip. In room 0/36
+  this places the param-1 pillar at `(0xE0,0x70)`; the corresponding native
+  romdev capture submits its two visible OAM parts at x=208, y=64/96, which
+  agrees with the decoded frame's -16/-48 offsets. No proprietary capture or
+  state is tracked.
+- **Save-point vertical anchor.** The host ground search used one-pixel steps
+  and placed Object1C on the first solid pixel. `sub_0806AF98` probes in
+  eight-pixel increments and applies `sub_08001D94`'s signed penetration;
+  the aligned room-0/36 probe returns -1. The runtime now mirrors that scan
+  and positions the statue one pixel above the solid row. A private portable
+  capture and the native romdev room-0/36 capture align the central sprite at
+  the same y=64 OAM origin; prompt palette and child timing remain open.
+- **Enemy respawn after leaving.** The current room-loading path already
+  reconstructs fresh entity records. The reported stale-enemy failure does
+  not reproduce on current `main`: the scripted 0/5 -> 0/36 -> 0/5 -> 0/36
+  -> 0/5 route ends with all eight native kind-1 records alive. The route
+  test now asserts that final count so later save/transition changes cannot
+  silently reintroduce the regression; no replacement respawn owner was
+  added.
+- **Creaking Skull interactions.** The visibility gate passed camera origin
+  coordinates to `sub_0806D128`'s screen-margin model, hiding an on-screen
+  boss in a scrolled room. It now passes boss world position minus camera.
+  The thirteen separate bone entities also reproduce
+  `sub_08098C54/sub_08098C84`: a live bone temporarily substitutes its
+  position into the main body, runs the ordinary contact/weapon collision,
+  then restores the body coordinates. A lethal forwarded hit attributes XP,
+  drops, guaranteed soul and the boss-clear bit to the owning room record,
+  without widening the audited XP role gate to child entities.
+- **Evidence and honest status.** romdev 0.156.3 was booted from a clean ROM,
+  driven through the introduction and normal room transitions, then used
+  with test-only EWRAM position writes to reach room 0/36. The room capture,
+  OAM inspection and BG register inspection are private under `/tmp`; the
+  deterministic lab remains the regression tool, but its older local states
+  did not restore cleanly with the current mGBA build and were not used as
+  evidence. Creaking Skull's remaining strike/projectile/bone-throw arms,
+  palette/affine effects, snapshots and full frame-by-frame boss fight still
+  remain partial. Object02's existing gate path was not promoted.
+
 ## Patch 1268 - Wooden door swing: native two-part mechanism decoded
 
 - **Native correction (drawFunc sub_0804D794).** The door frame's two

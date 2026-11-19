@@ -699,6 +699,27 @@ AosHitReport aos_enemy_creaking_skull_update(
     /* Children dispatch on their roles. */
     if (e->role == AOS_ROLE_CS_BONE) {
         cs_bone_update(e, anims, random);
+        /* sub_08098C54/sub_08098C84 make every live bone part of the
+         * container's interaction surface.  The weapon callback saves
+         * the parent +0x40/+0x44, temporarily substitutes the bone
+         * position, runs the ordinary enemy damage routine on the
+         * parent, then restores the body position.  Do the same here:
+         * the parent's combat cooldowns and HP remain authoritative,
+         * while hit sparks and contact damage originate at this bone. */
+        if (!e->removed && e->state == 0 && e->parent &&
+            cs_is_boss(e->parent->id) && !e->parent->removed &&
+            e->parent->state != 2) {
+            AosEnemy *parent = e->parent;
+            int32_t px = parent->x, py = parent->y;
+            parent->x = e->x;
+            parent->y = e->y;
+            hit = collide(parent, soma, kind, weapon, weapon_frames,
+                          soma_atk, soma_def);
+            parent->x = px;
+            parent->y = py;
+            if (hit.enemy_hit)
+                hit.owner_forwarded = true;
+        }
         return hit;
     }
     if (e->role == AOS_ROLE_CS_SHOT) {
@@ -716,7 +737,8 @@ AosHitReport aos_enemy_creaking_skull_update(
      * gates; the probe, collision and the container hit box fold
      * into the shared collide. */
     if (e->state != 2) {
-        if (outside_margins(kind, 6, cam_x, cam_y)) {
+        if (outside_margins(kind, 6, (e->x >> 16) - cam_x,
+                            (e->y >> 16) - cam_y)) {
             e->hidden = true;
             return hit;
         }

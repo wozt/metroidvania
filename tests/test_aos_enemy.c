@@ -1505,6 +1505,21 @@ static void creaking_skull_tests(void) {
     assert(bones == 5 && e.spawned_count == 13 &&
            e.boss_parts_spawned);
 
+    /* The visibility probe receives the boss's screen position, not
+     * the camera origin.  A scrolled room must not hide an on-screen
+     * boss merely because cam_x itself exceeds margin entry 6. */
+    AosEnemy visible = e;
+    visible.hidden = false;
+    visible.x = AOS_FIXED(1150);
+    visible.y = AOS_FIXED(120);
+    soma.x = visible.x;
+    soma.y = visible.y;
+    aos_enemy_update(&visible, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 1000, 0, always_zero);
+    assert(!visible.hidden);
+    soma.x = e.x;
+    soma.y = e.y;
+
     /* The create record bake: unlaunched records sit on their
      * variant-0 home pairs, record 2 keeps its 0x085280B0 angle and
      * the bake armed records 12/1/2 toward anchors 11/0/1. */
@@ -1537,11 +1552,29 @@ static void creaking_skull_tests(void) {
     b.cs_bone = 3;
     b.cs_pose = 3;
     b.cs_tgt = 3;
+    b.hp = 1;
     b.x = AOS_FIXED(150);
     b.y = AOS_FIXED(120);
     aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 0, 0, always_zero);
     assert(!b.removed && b.y < e.y);
+
+    /* sub_08098C84 forwards a strike on a bone to the parent while
+     * temporarily using the bone position for contact/effects. */
+    static const uint8_t cs_blade_ticks[] = {8};
+    static const AosAnimDef cs_blade_def = {1, cs_blade_ticks};
+    static const AosAnimSet cs_blade_set = {&cs_blade_def, 1};
+    static const AosHitbox cs_blade_box[] = {{-64, -64, 128, 128, true}};
+    static const AosWeaponFrames cs_blade = {&cs_blade_set, cs_blade_box};
+    AosWeaponEntity cs_weapon = {.active = true};
+    soma.weapon = (AosWeapon){0, 0x0020, {0, 0, 0, 0, 0}, 15, 0, 0};
+    soma.x = b.x;
+    soma.y = b.y + AOS_FIXED(20);
+    int parent_hp = e.hp;
+    hit = aos_enemy_update(&b, &soma, &layer, &kind, &cs_weapon,
+                           &cs_blade, 20, 4, 0, 0, always_zero);
+    assert(hit.enemy_hit && hit.owner_forwarded &&
+           e.hp < parent_hp && b.hp == 1);
     e.state = 2;
     aos_enemy_update(&b, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 0, 0, always_zero);

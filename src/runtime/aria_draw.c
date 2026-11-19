@@ -911,10 +911,22 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                         break;
                     }
             if (!frame29 || !frame29->texture) continue;
-            SDL_FRect rect29 = {(float)(e->x + frame29->offset_x - cam_x),
-                                (float)(e->y + frame29->offset_y - cam_y),
+            /* Object1DCreate rewrites the entity's +0x42/+0x46
+             * position after inspecting the room-transition checksum.
+             * The room record itself is always 0,0 in save rooms, so
+             * drawing e->x/e->y discards the native absolute 0x10/0xE0,
+             * 0x70 placement and makes the closed-side pillar vanish. */
+            SDL_FRect rect29 = {
+                                (float)(e->object1d.off_x +
+                                        frame29->offset_x - cam_x),
+                                (float)(e->object1d.off_y +
+                                        frame29->offset_y - cam_y),
                                 frame29->w, frame29->h};
-            SDL_RenderTexture(renderer, frame29->texture, NULL, &rect29);
+            SDL_RenderTextureRotated(renderer, frame29->texture, NULL,
+                                     &rect29, 0.0, NULL,
+                                     (e->object1d.flags58 & 0x40)
+                                         ? SDL_FLIP_HORIZONTAL
+                                         : SDL_FLIP_NONE);
             continue;
         }
         if (e->id == 31) {

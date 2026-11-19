@@ -1492,6 +1492,7 @@ static void creaking_skull_tests(void) {
     AosHitReport hit = aos_enemy_update(&e, &soma, &layer, &kind,
                                         NULL, NULL, 10, 4, 0, 0,
                                         always_zero);
+    assert(!e.hidden);
     int bones = 0;
     for (int i = 0; i < hit.child_count; ++i)
         if (hit.children[i].role == AOS_ROLE_CS_BONE) bones++;

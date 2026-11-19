@@ -773,10 +773,17 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
             SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
             continue;
         }
-        /* Every special object but Object07 and Object1F lacks a retained
-         * +0x5C band, so a priority slot skips them outright;
-         * they all draw in the front pass. */
-        if (prio_slot >= 0 && e->id != 7 && e->id != 31) continue;
+        /* Object02Create stamps +0x5C = 0x16. Object07 and Object1F
+         * retain their own per-child bands; the remaining objects still
+         * use the unbanded front pass. */
+        if (e->id == 2) {
+            int object02_prio = aria_bg_band_priority(0x16);
+            if (prio_slot >= 0 ? object02_prio != prio_slot
+                               : object02_prio >= 0)
+                continue;
+        } else if (prio_slot >= 0 && e->id != 7 && e->id != 31) {
+            continue;
+        }
         if (e->id == 2 && e->object02.deleted) continue;
         if (e->id == 4 && e->object04.deleted) continue;
         if (e->id == 15 && e->object0f.finished) continue;
@@ -1038,7 +1045,20 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
              * the + 0x32 param selects the record. */
             variant_key = e->param1 & 3;
         }
-        for (int v = 0; v < SPECIAL_VARIANTS; ++v)
+        if (e->id == 2) {
+            /* sub_0804DF3C loads the shared 0x081C15F4 tiles and
+             * 0x0820ED60 frame descriptor into OBJ palette row 6.
+             * The extractor already exposes that exact combination as
+             * special_15_v6 for the generic flame family. */
+            for (int v = 0; v < SPECIAL_VARIANTS; ++v)
+                if (objects->special_variants[v].id == 15 &&
+                    objects->special_variants[v].param0 == 6 &&
+                    objects->special_variants[v].loaded) {
+                    art = &objects->special_variants[v];
+                    break;
+                }
+        }
+        for (int v = 0; !art && v < SPECIAL_VARIANTS; ++v)
             if ((objects->special_variants[v].id == e->id ||
                  (e->id == 41 &&
                   objects->special_variants[v].id == 42)) &&
@@ -1066,7 +1086,7 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
          * the flame flicker. Every other special object still draws
          * its first exported animation pending the per-object
          * audit. */
-        int anim = e->id == 15 ? 14 : 0;
+        int anim = e->id == 2 ? e->object02.anim : e->id == 15 ? 14 : 0;
         if (!art->loaded || anim >= OBJECT_MAX_ANIMS ||
             !art->defs[anim].count) continue;
         unsigned total = 0;
@@ -1076,8 +1096,10 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         /* Object0F's sub_08050F08 frame callback steps once per
          * drawn frame like the breakable's sub_08046100 — its own
          * counter replaces the wall-clock step/4 for id 15. */
-        unsigned t = (e->id == 15 ? e->object0f.anim_tick : step / 4) %
-                     total, index = 0;
+        unsigned t = (e->id == 2 ? step
+                                 : e->id == 15 ? e->object0f.anim_tick
+                                               : step / 4) % total,
+                 index = 0;
         while (index + 1 < art->defs[anim].count &&
                t >= art->ticks[anim][index])
             t -= art->ticks[anim][index++];

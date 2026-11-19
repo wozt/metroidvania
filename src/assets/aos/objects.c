@@ -277,8 +277,14 @@ static const EntitySpec entities[] = {
     ENTITY("death", 0x08119498, 0x0820BC1C, 0, 0x08249C48),
     ENTITY("manticore", 0x081CBF54, 0x0820A4D0, 0, 0x082145BC),
     ENTITY("balore", 0x081193FC, 0x0820B92C, 7, 0x08244220),
-    ENTITY("creaking_skull", 0x081CC044, 0x0820AB38, 0, 0x082232B8),
-    ENTITY("giant_skeleton", 0x081CC044, 0x0820AB38, 0, 0x082232B8),
+    /* EnemyCreakingSkullCreate's thirteen sub_0809808C children use
+     * +0x65 still-frame ids {0..11,20} from 0x0811903C rather than an
+     * animation sequence.  Export those records alongside the animated
+     * head for both enemies sharing this descriptor. */
+    STATIC("creaking_skull", 0x081CC044, 0x0820AB38, 0, 0x082232B8,
+           13, 0, 1, 2, 3, 4, 20, 5, 6, 7, 8, 9, 10, 11),
+    STATIC("giant_skeleton", 0x081CC044, 0x0820AB38, 0, 0x082232B8,
+           13, 0, 1, 2, 3, 4, 20, 5, 6, 7, 8, 9, 10, 11),
     ENTITY("legion", 0x081190C0, 0x0820AC4C, 0, 0x082258FC),
     /* Julius Belmont EnemyBelmontCreate 0x080CFAB0: tiles
      * 0x08119520, palette 0x0820C028, frames 0x08252748 — shared by

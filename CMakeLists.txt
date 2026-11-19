@@ -1558,6 +1558,15 @@ if(BUILD_TESTING)
                      sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_transition.sh")
     set_tests_properties(aria_simulate_room_transition PROPERTIES SKIP_RETURN_CODE 77)
 
+    # First boss integration: room 0/9's Object02 seal admits Soma to
+    # room 0/10, where Creaking Skull creates its body and thirteen
+    # ROM-extracted still-frame bone children.
+    add_test(NAME aria_simulate_first_boss_room
+             COMMAND ${CMAKE_COMMAND} -E env
+                     FUSION_ARIA_RUNTIME=$<TARGET_FILE:fusion_aria_runtime>
+                     sh "${CMAKE_SOURCE_DIR}/tests/test_aria_simulate_first_boss_room.sh")
+    set_tests_properties(aria_simulate_first_boss_room PROPERTIES SKIP_RETURN_CODE 77)
+
     # Headless banner-gated load-delay contract: the fixed
     # AOS_ROOM_TRANSITION_LOAD_FRAMES blanked span arms only when the
     # destination's sub_0800FCB8 pick lands in [0, 0xC].  Room

@@ -723,7 +723,11 @@ AosHitReport aos_enemy_creaking_skull_update(
         hit = collide(e, soma, kind, weapon, weapon_frames,
                       soma_atk, soma_def);
     }
-    e->hidden = e->y + 0x20 >= 0x44000;
+    /* EnemyCreakingSkullUpdate does not hide the body here.  The native
+     * tail at 0x080953DC builds the container hit boxes and submits them;
+     * 0x44000 was an erroneous fixed-point transcription that hid every
+     * normally positioned boss (176 << 16 already exceeds it). */
+    e->hidden = false;
 
     /* The create's record bake runs once, then the thirteen bone
      * children emit on the first updates. */

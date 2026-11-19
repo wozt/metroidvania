@@ -1,3 +1,41 @@
+## Patch 1266 - First boss door and Creaking Skull room restored
+
+- **Observed failure.** The room 0/9 boss gate stopped Soma at its
+  collision column, and entering room 0/10 created Creaking Skull's
+  logical body and thirteen bone entities without drawing them. A centred
+  runtime capture and debugger trace showed the body permanently hidden and
+  the bone children selecting still frames from an empty exported list.
+- **Boss visibility fix.** `EnemyCreakingSkullUpdate` no longer evaluates
+  the erroneous `e->y + 0x20 >= 0x44000` transcription. Native
+  `EnemyCreakingSkullUpdate` 0x080953DC builds and submits the container hit
+  boxes there; it does not hide the body. The old expression compared a
+  16.16 world coordinate against 4.25 pixels and therefore hid every normal
+  placement. `creaking_skull_tests` now asserts that an active body remains
+  visible.
+- **Multipart ROM graphics.** `src/assets/aos/objects.c` now exports the
+  thirteen `sub_0809808C` child still-frame ids `{0..11,20}` selected by
+  table 0x0811903C, for both Creaking Skull and Giant Skeleton. These are
+  descriptor records in 0x082232B8 and remain private ROM-derived output;
+  no extracted image is tracked. A room 0/10 capture now shows the animated
+  head and the complete articulated skeleton instead of only a small head.
+- **Boss-door rendering.** Object02 now draws at its native +0x5C band
+  0x16 with the exact shared 0x081C15F4 tiles, 0x0820ED60 frames and palette
+  row 6 already exported as `special_15_v6`. It consumes the create-selected
+  animation 6 (or 9 for parameter 1 equal to 7) at native per-frame timing,
+  replacing the generic animation-0 fallback. Collision, forced walking and
+  the +0x37E boss-clear release remain owned by `aos_object02`.
+- **Integration evidence.** `aria_simulate_first_boss_room` starts far
+  enough inside room 0/9 to exercise Object02's ordinary approach path,
+  crosses the native 0/9 -> 0/10 transition and checks that at least the
+  boss body plus thirteen bones remain alive. It also requires every native
+  still-frame id in the rebuilt private sprite index. Local SDL captures
+  confirm the blue gate animation and complete boss are visible.
+- **Remaining fidelity gaps.** The Creaking Skull choreography still lacks
+  the previously documented strike/projectile/bone-throw record arms,
+  palette writes, affine transforms and hurt forwarding. Object02 still
+  omits the window-out blend, accent and per-room bookkeeping. Neither was
+  promoted or called emulator-validated.
+
 ## Patch 1265 - Room 0/5 fountain palette animation (Object07 BG-anim)
 
 - **Scope.** area_00_room_005's water: the Object07 SPECIAL record

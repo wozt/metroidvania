@@ -164,8 +164,9 @@
   `src/runtime/aria_entities.c`, the `--simulate` entity diagnostic in
   `src/runtime/aria_runtime.c`, the pause and headless integration tests,
   and the existing progression/Skeleton registries. The unrelated
-  interrupted `aria_entity_dead.h` and palette-script drafts remain
-  untracked and were not adopted.
+  interrupted `aria_entity_dead.h` draft was reviewed and removed as
+  obsolete; the unrelated palette-script draft remains untracked and was
+  not adopted.
 - **EXP/NEXT correction.** The progression core was already native: the
   total threshold is `x(x+1)(3x+8)`, `sub_08033E10` returns the remaining
   amount to the next threshold, and each loaded enemy record supplies its

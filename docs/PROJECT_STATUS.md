@@ -1,3 +1,44 @@
+## Patch 1258 - Water entry/exit splash effect and sound
+
+- **Scope.** `src/runtime/aos/core/aos_soma.{c,h}` (`splash_request` +
+  `AOS_SPLASH_*` set by `collide_special`), `src/runtime/aos/core/aos_effect.h`
+  (new `AOS_EFFECT_SPLASH` kind), `src/runtime/aria_tables.c`
+  (`effect_names` entry), `src/runtime/aria_entities.c` (splash spawn in
+  `update_entities` + `SPLASHTRACE`), `src/runtime/aria_runtime.c`
+  (`SOMATRACE` `splash=`/`fx=`), `src/assets/aos/objects.c` (splash
+  `EffectSpec`), `tests/test_aos_soma.c` (`splash_tests`),
+  `docs/AOS_SOMA.md` and the `aos.player.soma_controller` annotation.
+- **Native evidence (decompiled cvaos).** `sub_0803319C` is called from
+  the player collision pass `sub_08014A04` on a bit-3 transition: entry
+  (`sub_0803319C(0)`) when the body probes enter bit-3 cells faster than
+  1.5 px/frame (`vy > 0x18000`), exit (`sub_0803319C(2)`) when they
+  leave upward faster than 1.5 px/frame with the head out
+  (`vy < 0xFFFE8000`). Table `sUnk_080E1D88`: param 0 -> animation 0x0A,
+  sound 0xC0; param 2 -> animation 0x0A, sound 0xC1. The effect entity
+  `sub_08032FC8` copies the player position, probes down from y - 8 with
+  `sub_08001E58` (mode 2) for the surface, plays common animation 0x0A of
+  0x0820ED60 once on OBJ row 6 (palette bank 2 via `sUnk_084F0DD8[6]`)
+  and self-deletes when `sub_0803F17C` returns 3.
+- **Port change.** `collide_special` sets `AosSoma.splash_request` to
+  `AOS_SPLASH_ENTRY` / `AOS_SPLASH_EXIT` on those exact transitions;
+  `update_entities` consumes it once per frame, probes the surface with
+  `aos_floor_depth` (the `sub_08001E58` port, mode 2) and appends a
+  one-shot `AosEffect` of kind `AOS_EFFECT_SPLASH` (exported as
+  `Effect/splash/anim_10`, eight frames rising above the anchor), then
+  plays song 0xC0 / 0xC1. The generic `aos_effect_update` one-shot path
+  handles the lifetime. The probe's two-position retry loop is folded
+  into a single down-walk.
+- **Verification.** `AOS_SIM_TRACE_SPLASH=1` on room 0/5 shows the entry
+  request=1 at pos 360,411 surface 400 song 0xc0 and exit request=2
+  song 0xc1 on each surface breach. `aos_soma` (`splash_tests` covers
+  entry/exit gates, thresholds and one-shot consumption),
+  `aria_simulate_water_float` and `aria_simulate_water_entry_jump`
+  CTest selections pass.
+- **Not yet done.** The surface probe is a single down-walk standing in
+  for the native two-position retry; the exact pixel of the splash
+  anchor against native has not been compared on an emulator. Soul-
+  dependent water stances remain unported.
+
 ## Patch 1257 - Surface swim animation from live native telemetry
 
 - **Scope.** `src/runtime/aos/core/aos_soma.{c,h}` (new

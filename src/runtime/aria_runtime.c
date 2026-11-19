@@ -2071,12 +2071,13 @@ int aria_runtime_main(int argc, char **argv) {
             }
             if (getenv("AOS_SIM_TRACE_SOMA"))
                 printf("SOMATRACE f=%ld pos=%d,%d vx=%d vy=%d flags=0x%x "
-                       "state=%d grounded=%d anim=%d\n", frame,
-                       (int)(soma.x >> 16), (int)(soma.y >> 16),
+                       "state=%d grounded=%d anim=%d splash=%d fx=%d\n",
+                       frame, (int)(soma.x >> 16), (int)(soma.y >> 16),
                        (int)(soma.vx >> 16), (int)(soma.vy >> 16),
                        (unsigned)soma.flags, soma.state,
                        (soma.flags & AOS_FLAG_GROUNDED) != 0,
-                       (int)soma.anim.id);
+                       (int)soma.anim.id, (int)soma.splash_request,
+                       (int)room.effect_count);
             homing_age();
             aos_enemy_set_soul_attacks(NULL, 0);
         }

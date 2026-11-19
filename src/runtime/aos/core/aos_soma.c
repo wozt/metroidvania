@@ -400,21 +400,30 @@ static int collide_walls(AosSoma *soma, const AosCollision *layer, int32_t y) {
     return direction;
 }
 
-/* Bit-3 cells: sets 0x1000000, 0xC00000 and 0x800 (sub_0803319C splash
- * calls are not modelled). */
+/* Bit-3 cells: sets 0x1000000, 0xC00000 and 0x800. The sub_0803319C splash
+ * calls of code_08014548 are modelled as a request the runtime consumes:
+ * entry when the body probes enter bit-3 cells faster than 1.5 px/frame
+ * (vy > 0x18000, native param 0) and exit when they leave upward faster
+ * than 1.5 px/frame with the head out (vy < 0xFFFE8000, native param 2). */
 static void collide_special(AosSoma *soma, const AosCollision *layer, int32_t x,
                             int32_t y) {
     bool head = aos_collision_special(layer, x - 5, y - 25) ||
                 aos_collision_special(layer, x + 5, y - 25);
-    if (aos_collision_special(layer, x - 5, y - 8) ||
-        aos_collision_special(layer, x + 5, y - 8)) {
-        if (!(soma->flags & AOS_FLAG_BODY_SPECIAL) && soma->vy > 0 &&
+    bool body = aos_collision_special(layer, x - 5, y - 8) ||
+                aos_collision_special(layer, x + 5, y - 8);
+    bool was_body = (soma->flags & AOS_FLAG_BODY_SPECIAL) != 0;
+    if (body) {
+        if (!was_body && soma->vy > 0x18000)
+            soma->splash_request = AOS_SPLASH_ENTRY;
+        if (!was_body && soma->vy > 0 &&
             (soma->abilities & AOS_ABILITY_SPECIAL_WALK)) {
             soma->vy >>= 2;
             soma->gravity_mod = 0;
         }
         soma->flags |= AOS_FLAG_BODY_SPECIAL;
     } else {
+        if (was_body && !head && soma->vy < (int32_t)0xFFFE8000)
+            soma->splash_request = AOS_SPLASH_EXIT;
         soma->flags &= ~(uint32_t)AOS_FLAG_BODY_SPECIAL;
     }
     if (head) {

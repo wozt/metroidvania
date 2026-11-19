@@ -137,6 +137,7 @@ typedef struct {
     int8_t air_probes[5];   /* gEwramData + 0x13218: count, offsets */
     uint16_t held, pressed; /* this frame's gEwramData + 0x1C / + 0x1E */
     uint16_t anim_request;  /* + 0x20: one-shot animation, 0xFF for none */
+    uint8_t splash_request; /* sub_0803319C: pending water splash, AOS_SPLASH_* */
     uint8_t up_frames;      /* + 0x2A: frames with Up held while idle */
     bool air_anim_locked;   /* gEwramData + 0x131B8 & 4, cleared every frame */
     bool hold_still;        /* + 0x131B8 & 0x20: the update's end zeroes vx and
@@ -191,6 +192,11 @@ typedef struct {
 } AosSoma;
 
 #define AOS_ANIM_NONE 0xFF
+
+/* sub_0803319C water splash request, set by collide_special on a bit-3
+ * transition and consumed by the runtime's effect spawn: 0 none, 1 entry
+ * (native param 0, sound 0xC0), 2 exit (native param 2, sound 0xC1). */
+enum { AOS_SPLASH_NONE = 0, AOS_SPLASH_ENTRY = 1, AOS_SPLASH_EXIT = 2 };
 
 /* Soma's hurtboxes (sub_080428B4 arguments). */
 extern const AosBox aos_soma_stand_box;   /* 0x080E12F8: -6, -32, 12 x 28 */

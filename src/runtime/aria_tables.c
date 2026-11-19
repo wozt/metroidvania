@@ -157,4 +157,5 @@ const char *const effect_names[AOS_EFFECT_KINDS] = {"flame", "blood", "smoke",
                                                           "soul_storm2",
                                                           "soul_storm3",
                                                           "death_sparkle",
-                                                          "level_up"};
+                                                          "level_up",
+                                                          "splash"};

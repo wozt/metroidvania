@@ -1070,6 +1070,14 @@ static const EffectSpec effects[] = {
      * (0x085251F0) = still frame 0x48; sub_0803B924's nibble 6 selects
      * OBJ row 6, palette bank 2 through sUnk_084F0DD8. */
     {"level_up", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 0, {0}, 0x48},
+    /* sub_0803319C's water entry/exit splash: the entity sub_08032FC8
+     * spawned by collide_special plays common animation 0x0A of
+     * 0x0820ED60 once (sub_0803F2C8 non-looping) and self-deletes when it
+     * ends. sub_0803B924's fourth argument is the OBJ palette row; row 6
+     * draws from palette bank sUnk_084F0DD8[6] = 2 of 0x082099FC. Entry
+     * (param 0) and exit (param 2) share the same art and differ only in
+     * the sound 0xC0 / 0xC1. */
+    {"splash", 0x081C15F4, 0x082099FC, 2, 0x0820ED60, 1, {0x0A}, -1},
 };
 
 /* 0x0852513C, selected by sub_08045B44 type 4: its four type-1 records are

@@ -564,6 +564,20 @@ constant from the surface float (vy = 0) through the submerged column
 stroke breaches the surface. `AOS_SOMA_ANIM_SWIM` reproduces it:
 `aos_soma_gravity`'s airborne block plays it whenever the body probes
 are in bit-3 cells without the walk-on-special ability.
+The water entry/exit splash is `sub_0803319C`, called from the collision
+pass `sub_08014A04` on a bit-3 transition: entry when the body probes
+enter bit-3 cells faster than 1.5 px/frame (`vy > 0x18000`, native param
+0) and exit when they leave upward faster than 1.5 px/frame with the head
+out (`vy < 0xFFFE8000`, native param 2). Both share common animation 0x0A
+of 0x0820ED60 on OBJ row 6 (palette bank 2, exported as
+`Effect/splash/anim_10`, eight frames rising above the anchor) and differ
+only in the sound 0xC0 / 0xC1; the entity `sub_08032FC8` copies the
+player position, probes down from y - 8 with `sub_08001E58` (mode 2) for
+the surface and self-deletes when the animation ends. `collide_special`
+requests `AOS_SPLASH_ENTRY` / `AOS_SPLASH_EXIT` on `AosSoma` and
+`update_entities` spawns the one-shot `AOS_EFFECT_SPLASH` at the probed
+surface with the matching song. The probe's two-position retry is folded
+into a single down-walk here.
 `tests/test_aria_simulate_water_float.sh` holds Soma off the pool floor
 and `tests/test_aria_simulate_water_entry_jump.sh` locks the entry dip,
 the stable float and the surface breach. Soul-dependent variants (bottom walking with water

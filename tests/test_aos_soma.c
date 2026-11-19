@@ -1001,8 +1001,63 @@ static void body_attack_tests(void) {
     assert(!aos_soma_body_attack_hit(&soma, prop));
 }
 
+/* Water splash requests of sub_0803319C, driven through the collision pass
+ * with bit-3 cells (0x0B: solid + special + slope bits read as water by
+ * aos_collision_special). */
+static void splash_tests(void) {
+    memset(cells, 0, sizeof(cells));
+    /* Water cells (bit 3 set, bit 0 clear) in rows 20+; the body probes at
+     * y - 8 and the head probes at y - 25 read them. */
+    fill(0, 20, W - 1, H - 1, 0x0B);
+
+    /* Entry: falling faster than 1.5 px/frame into the water requests the
+     * entry splash (native param 0) once, on the clear-to-set transition.
+     * The body probes read y - 8; y = 176 puts them in cell row 21 (water)
+     * on the first collide while the head probes at y - 25 stay clear. */
+    AosSoma soma = at(100, 176, AOS_FLAG_AIRBORNE);
+    soma.vy = AOS_FIXED(3);
+    frame(&soma, 0, 0);
+    assert(soma.splash_request == AOS_SPLASH_ENTRY);
+    soma.splash_request = AOS_SPLASH_NONE;   /* the runtime consumes it */
+    frame(&soma, 0, 0);
+    assert(soma.splash_request == AOS_SPLASH_NONE);
+
+    /* A slow entry (vy <= 1.5) does not splash. */
+    memset(cells, 0, sizeof(cells));
+    fill(0, 20, W - 1, H - 1, 0x0B);
+    soma = at(100, 150, AOS_FLAG_AIRBORNE);
+    soma.vy = AOS_FIXED(1);
+    frame(&soma, 0, 0);
+    assert(soma.splash_request == AOS_SPLASH_NONE);
+
+    /* Exit: swimming up out of the water faster than 1.5 px/frame with the
+     * head out requests the exit splash (native param 2) once. */
+    memset(cells, 0, sizeof(cells));
+    fill(0, 20, W - 1, H - 1, 0x0B);
+    /* Head probes (y - 25) above the water, body probes (y - 8) inside it:
+     * y = 180 puts y - 25 = 155 (cell row 19, clear) and y - 8 = 172
+     * (cell row 21, water). */
+    soma = at(100, 167, AOS_FLAG_AIRBORNE | AOS_FLAG_BODY_SPECIAL);
+    soma.vy = (int32_t)0xFFFE0000;            /* -2.0: above the -1.5 gate */
+    frame(&soma, 0, 0);
+    assert(soma.splash_request == AOS_SPLASH_EXIT);
+    soma.splash_request = AOS_SPLASH_NONE;
+    frame(&soma, 0, 0);
+    assert(soma.splash_request == AOS_SPLASH_NONE);
+
+    /* A slow rise (vy >= -1.5) does not splash on exit. */
+    memset(cells, 0, sizeof(cells));
+    fill(0, 20, W - 1, H - 1, 0x0B);
+    soma = at(100, 167, AOS_FLAG_AIRBORNE | AOS_FLAG_BODY_SPECIAL);
+    soma.vy = (int32_t)0xFFFF0000;            /* -1.0: below the -1.5 gate */
+    frame(&soma, 0, 0);
+    assert(soma.splash_request == AOS_SPLASH_NONE);
+    memset(cells, 0, sizeof(cells));
+}
+
 int main(void) {
     init_anims();
+    splash_tests();
     status_tests();
     transform_tests();
     soul_tests();

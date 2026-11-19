@@ -5708,6 +5708,37 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
     int16_t top = (int16_t)((soma->y >> 16) - ((soma->flags & AOS_FLAG_CROUCH) ? 0x16 : 0x22));
     const AosEffectWorld world = {layer, cam_x, cam_y, aos_random, soma->x, top,
                                   soma->y};
+    /* sub_0803319C: Soma's water entry/exit splash, requested by
+     * collide_special on a bit-3 transition. The entity sub_08032FC8
+     * copies the player's position, probes down from y - 8 with
+     * sub_08001E58 (mode 2) for the surface and plays common animation
+     * 0x0A of 0x0820ED60 once on OBJ row 6, then self-deletes; entry
+     * (param 0) and exit (param 2) share the art and differ only in the
+     * sound 0xC0 / 0xC1. The probe's two-position retry is folded into
+     * the single down-walk here; the surface y is the walked depth. */
+    if (soma->splash_request) {
+        uint8_t splash = soma->splash_request;
+        soma->splash_request = AOS_SPLASH_NONE;
+        int32_t sx = soma->x >> 16, sy = soma->y >> 16;
+        int surface = 0;
+        for (int i = 0; i < 2 && !surface; ++i) {
+            int depth = aos_floor_depth(layer, sx, sy - 8 + i * 0x10, 2, true);
+            if (depth) surface = sy - 7 + depth + i * 0x10;
+        }
+        if (surface && room->effect_count < MAX_EFFECTS &&
+            combat->effects[AOS_EFFECT_SPLASH]) {
+            room->effects[room->effect_count++] = (AosEffect){
+                .kind = AOS_EFFECT_SPLASH,
+                .x = soma->x, .y = (int32_t)surface << 16,
+                .started = false};
+            aos_audio_play_song(splash == AOS_SPLASH_ENTRY ? 0xC0 : 0xC1);
+            if (getenv("AOS_SIM_TRACE_SPLASH"))
+                fprintf(stderr, "SPLASHTRACE f request=%d pos=%d,%d surface=%d song=0x%x fx=%d\n",
+                        (int)splash, (int)(soma->x >> 16), (int)(soma->y >> 16),
+                        surface, splash == AOS_SPLASH_ENTRY ? 0xC0 : 0xC1,
+                        (int)room->effect_count);
+        }
+    }
     /* sub_08045350: while the new-soul entity's +0xD stays <= 0x2F, one
      * type-0x49 sparkle spawns per frame at the player plus a random
      * byte-angle's sine/cosine * 48, drifting with velocity offset >> 4

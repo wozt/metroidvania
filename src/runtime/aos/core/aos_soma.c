@@ -256,6 +256,15 @@ void aos_soma_gravity(AosSoma *soma, const AosCollision *layer) {
     }
     /* _08018E4A: airborne animations. */
     if ((soma->flags & 0x1E0u) || soma->air_anim_locked) return;
+    /* Water locomotion: with the body probes in bit-3 cells and the
+     * walk-on-special ability absent, native plays the swim animation
+     * (descriptor 0x0822AB2C, index 0x28) from the surface float through
+     * the submerged column, measured live in the room 0/5 pool. */
+    if ((soma->flags & AOS_FLAG_BODY_SPECIAL) &&
+        !(soma->abilities & AOS_ABILITY_SPECIAL_WALK)) {
+        play(soma, AOS_SOMA_ANIM_SWIM, true, LOW);
+        return;
+    }
     if ((soma->abilities & AOS_ABILITY_FAST_WALK) && soma->vx) {
         play(soma, AOS_SOMA_ANIM_FAST, true, STAND);
     } else if (soma->vy > 0x3FFF) {

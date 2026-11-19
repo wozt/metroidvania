@@ -1,3 +1,40 @@
+## Patch 1257 - Surface swim animation from live native telemetry
+
+- **Scope.** `src/runtime/aos/core/aos_soma.{c,h}` (new
+  `AOS_SOMA_ANIM_SWIM` + selection in `aos_soma_gravity`),
+  `src/runtime/aria_runtime.c` (`SOMATRACE` now prints `anim=%d`),
+  `docs/AOS_SOMA.md` and the `aos.player.soma_controller` annotation.
+- **Native evidence (mGBA, room 0/5 pool).** Using the existing
+  `/tmp/water_*.state` save states and the decoded entity layout
+  (animation descriptor pointer at entity +0x68 = 0x0200054C, world pos =
+  pos + BG1 scroll), Soma was held in the pool while the live animation
+  descriptor was sampled per depth. World y <= 415 reads the fall
+  animation; world y = 425 (surface, vy = 0) and the whole submerged
+  column (vy = -0.75 = 0xFFFF4000) read descriptor 0x0822AB2C, which maps
+  to `Soma/animation_040` - a four-frame loop, native index 0x28. On a
+  surface-breach stroke the descriptor switches to the air/jump
+  animations and returns to 0x28 on re-entry.
+- **Port change.** `AOS_SOMA_ANIM_SWIM = 0x28` is played (looping, LOW
+  hurtbox) in `aos_soma_gravity`'s airborne block whenever the body
+  probes are in bit-3 water cells without the walk-on-special ability -
+  i.e. for ordinary no-soul swimming and treading. The existing
+  `play()` current-animation guard prevents restarting the loop each
+  frame. The deeper entry dip from e0839182 (bleed/drag halved, ~16 px
+  below the float line, still clear of the ~448 floor) is folded into
+  this presentation pass.
+- **Verification.** `AOS_SIM_TRACE_SOMA=1` on room 0/5 shows the entry
+  transition fall anim 12 -> swim anim 40 at the surface, anim 40 held
+  steady through the float (y=424, vy=0, flags=0x1001002), and a stroke
+  sequence swim 40 -> air 50 -> fall 12 -> swim 40 on re-entry - matching
+  the native descriptor transitions. `aos_soma`,
+  `aria_simulate_water_float` and `aria_simulate_water_entry_jump`
+  CTest selections pass; the full dashboard run is 243/243.
+- **Not yet done.** The entry/exit water splash is a separate native
+  effect entity (`sub_0803319C` -> `sub_08032FC8`, shared frames
+  0x0820ED60 animation index 0x0A, palette bank 6, one-shot, sounds
+  0xC0/0xC1); it is not yet exported or spawned. Soul-dependent water
+  stances remain unported.
+
 ## Patch 1256 - Water float stability, entry dip and the surface swim stroke
 
 - **Scope.** `src/runtime/aos/core/aos_soma.c` (`aos_soma_air` buoyancy,

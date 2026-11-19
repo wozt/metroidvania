@@ -556,6 +556,14 @@ cycle read as sprite tremble). `aos_soma_jump` gates the stroke on
 HEAD_SPECIAL or BODY_SPECIAL (not SPECIAL_WALK) so it fires while
 treading, and `collide_special` clears the `0x02000000` stroke cooldown
 once the head is out so repeated strokes are not locked.
+The locomotion animation while afloat is the swim loop: live mGBA
+telemetry in the room 0/5 pool reads the animation descriptor
+0x0822AB2C (index 0x28, `Soma/animation_040`, a four-frame loop) held
+constant from the surface float (vy = 0) through the submerged column
+(vy = -0.75), switching to the fall/jump air animations only once the
+stroke breaches the surface. `AOS_SOMA_ANIM_SWIM` reproduces it:
+`aos_soma_gravity`'s airborne block plays it whenever the body probes
+are in bit-3 cells without the walk-on-special ability.
 `tests/test_aria_simulate_water_float.sh` holds Soma off the pool floor
 and `tests/test_aria_simulate_water_entry_jump.sh` locks the entry dip,
 the stable float and the surface breach. Soul-dependent variants (bottom walking with water

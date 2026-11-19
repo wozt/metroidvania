@@ -27,3 +27,7 @@
 __pycache__/
 *.pyc
 database/
+
+# romdev MCP server install (pinned via tools/romdev/package.json)
+/tools/romdev/node_modules/
+/tools/romdev/romdev.log

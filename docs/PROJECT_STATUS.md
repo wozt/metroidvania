@@ -1,3 +1,25 @@
+## Patch 1267 - romdev MCP server integrated for native GBA debugging
+
+- **Tooling only; no gameplay changes.** `romdevtools` 0.155.0 (pinned via
+  `tools/romdev/package.json` + `package-lock.json`, `node_modules`
+  gitignored) runs as an MCP/HTTP server bundling the mGBA core, memory/CPU/
+  video inspectors, disassembly and save states. It complements
+  `build/aos_mgba_lab`, which remains the deterministic checkpoint/regression
+  path; save-state compatibility between the two mGBA builds is unverified.
+- **Lifecycle scripts.** `scripts/romdev_start.sh` (idempotent, localhost
+  only), `scripts/romdev_health.sh`, `scripts/romdev_stop.sh`, and
+  `scripts/romdev_call.sh` for one-shot MCP tool calls without registration.
+- **Devin integration.** `.devin/mcp_config.json` registers `romdev` as a
+  project-scope Streamable HTTP server at `http://127.0.0.1:7331/mcp`;
+  `docs/ROMDEV.md` documents install, usage, verified capabilities
+  (loadMedia, frame step/screenshot, memory regions, sprites/palette/
+  background inspectors, cpu regs, PC breakpoints, instruction stepping,
+  save states) and unverified features (tracing, watchpoints, disasm).
+- **Smoke test.** Aria ROM loaded through the mGBA core; frames advanced to
+  the title screen; EWRAM/IWRAM/IO/palette/OAM regions read; live OAM sprite
+  entries and BG render state inspected; PC breakpoint and instruction
+  stepping exercised; save-state save/load round-trip confirmed.
+
 ## Patch 1266 - First boss door and Creaking Skull room restored
 
 - **Observed failure.** The room 0/9 boss gate stopped Soma at its

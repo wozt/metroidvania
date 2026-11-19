@@ -216,3 +216,25 @@ These rules are permanent and apply to every development cycle.
 11. Feature completion claims must match the evidence.
 12. Development cycles must remain focused, measurable and
     reviewable.
+
+## romdev MCP — Native GBA Inspection and Debugging
+
+romdev (`romdevtools`, pinned in `tools/romdev/package.json`) is an MCP/HTTP
+server bundling the mGBA core plus memory, CPU, video, sprite, palette,
+disassembly and save-state tools for native-parity investigation of Aria of
+Sorrow and Metroid: Zero Mission.
+
+- Install once: `cd tools/romdev && npm ci` (Node.js 24+).
+- Start: `scripts/romdev_start.sh` (idempotent, localhost:7331 only).
+  Health: `scripts/romdev_health.sh`. Stop: `scripts/romdev_stop.sh`.
+- Devin connects via `.devin/mcp_config.json` (project scope, Streamable HTTP
+  at `http://127.0.0.1:7331/mcp`); restart the Devin session after starting
+  the server for the `mcp__romdev__*` tools to appear.
+- Without MCP registration, `scripts/romdev_call.sh <tool> '<json>'` makes
+  one-shot calls; emulator state persists across calls.
+- Full usage, verified capabilities and limitations: `docs/ROMDEV.md`.
+- Prefer `build/aos_mgba_lab` for deterministic checkpoints, validated frame
+  captures and regression tests; use romdev for interactive CPU debugging,
+  breakpoints/watchpoints, memory search and inspector-driven investigation.
+  Save states are not assumed compatible between the two mGBA builds.
+- ROMs and save states stay local; never commit them or expose port 7331.

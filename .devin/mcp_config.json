@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "romdev": {
+      "url": "http://127.0.0.1:7331/mcp",
+      "transport": "http"
+    }
+  }
+}

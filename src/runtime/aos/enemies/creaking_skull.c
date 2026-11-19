@@ -43,15 +43,17 @@
  * cs_step_perm counts + 0xD down like the native cases.  The
  * remaining case arms — the state-0 cases 3-12/20-24 strike tables,
  * the state-1 cases 4-12/15-19/21-37 including the sub_08097EC4
- * pairs, the RNG-driven projectile cases and the cases 9/27/37 bone
- * throws that write + 0xA — stay unported because the ported case
- * structure does not reproduce them; the sub_08098C1C/38 pose
- * snapshots they bracket are folded into the arm calls.  The
+ * pairs and the RNG-driven projectile cases — stay unported because
+ * the ported case structure does not reproduce them.  The terminal
+ * cases 9/27/37 restore the sub_08098C1C pose snapshot through
+ * sub_08098C38; that position-only snapshot/restore is ported.  The
  * sub_0809808C state-1/state-2 death machines keep their timers and
  * deletes while the sub_08042848/428B4/429D0 palette writes, the
  * sub_0806D3D8/sub_0806D5C0/sub_0806D518 spark helpers, the
- * sub_0803E058 affine sprite setup and the sub_0806DFF8 child
- * creation flags are not modeled; the sub_08098E00 room gate, the
+ * sub_0803E058 affine submission for records {0,1,2,11} is connected
+ * to the SDL draw path; its native pivot and OAM rounding are not yet
+ * pixel-compared.  The sub_0806DFF8 child creation flags are not
+ * modeled; the sub_08098E00 room gate, the
  * gEwramData flag checks and the + 0x5A palette merge are covered by
  * the shared spawn/collide paths. */
 
@@ -314,6 +316,24 @@ static void cs_step_perm(AosEnemy *e, const uint8_t *perm) {
         e->cs_cool--;
     for (int i = 0; i < CS_BONES; ++i)
         cs_step_rec(e, perm[i]);
+}
+
+/* sub_08098C1C/sub_08098C38: the attack machine brackets its
+ * destructive record arms with a complete thirteen-record position
+ * snapshot.  Only +0/+4 are copied; held angles and orbit parameters
+ * deliberately survive the restore. */
+static void cs_snapshot_records(AosEnemy *e) {
+    for (int i = 0; i < CS_BONES; ++i) {
+        e->cs_rec[i].sx = e->cs_rec[i].x;
+        e->cs_rec[i].sy = e->cs_rec[i].y;
+    }
+}
+
+static void cs_restore_records(AosEnemy *e) {
+    for (int i = 0; i < CS_BONES; ++i) {
+        e->cs_rec[i].x = e->cs_rec[i].sx;
+        e->cs_rec[i].y = e->cs_rec[i].sy;
+    }
 }
 
 /* sub_08097D1C: when the facing bit disagrees with sub_0806CF2C the
@@ -598,6 +618,9 @@ static void cs_state0(AosEnemy *e, AosSoma *soma,
         if (++e->timer > 0x40 ||
             aos_enemy_blocked_ahead(layer, e->x >> 16, e->y >> 16)) {
             uint32_t r = random ? random() : 0x80;
+            /* sub_08096A94 case 0 calls sub_08098C1C before its
+             * first three record arms. */
+            cs_snapshot_records(e);
             e->state = 1;
             e->step = 0;
             e->substep = 0;
@@ -667,7 +690,10 @@ static void cs_state1(AosEnemy *e, AosSoma *soma,
         break;
     case 2:
         /* Return to the approach — the case-20 reset re-arm with
-         * the table + 0xD divider. */
+         * the table + 0xD divider.  Native terminal cases 9/27/37
+         * first call sub_08098C38, undoing positional drift from the
+         * attack while retaining the new orbit parameters. */
+        cs_restore_records(e);
         e->state = 0;
         e->step = 1;
         e->substep = 0;

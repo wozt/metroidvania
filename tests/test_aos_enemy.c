@@ -1596,9 +1596,18 @@ static void creaking_skull_tests(void) {
                             &soma, &layer, &kind, &cs33));
     a.x = AOS_FIXED(150);
     a.y = AOS_FIXED(120);
-    a.state = 1;
     a.boss_parts_spawned = true;
     a.spawned_count = 13;
+    /* Let create's record bake run before bypassing the ordinary
+     * state-0 attack entry for this focused state-1 test. */
+    a.state = 3;
+    (void)aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    a.state = 1;
+    for (int i = 0; i < 13; ++i) {
+        a.cs_rec[i].sx = a.cs_rec[i].x;
+        a.cs_rec[i].sy = a.cs_rec[i].y;
+    }
     hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
                            10, 4, 0, 0, always_zero);
     /* substep 0 -> 1: the windup arms leave records 1/2 aimed at
@@ -1636,6 +1645,11 @@ static void creaking_skull_tests(void) {
     assert(a.cs_rec[12].dist == 0x1F0000 &&
            a.cs_rec[1].dist == 0x1E0000 &&
            a.cs_rec[2].dist == 0x1C0000);
+
+    /* sub_08098C38 restored the record positions captured at attack
+     * entry even though the orbit speed/radius arms above survive. */
+    assert(a.cs_rec[3].x == a.cs_rec[3].sx);
+    assert(a.cs_rec[3].y == a.cs_rec[3].sy);
 
     /* Lethal: hp 0 -> defeated, state 2 death machine with gore,
      * then the delete. */

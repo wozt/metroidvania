@@ -279,6 +279,13 @@ void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObject
          * taken with the convention of sub_0803E058). */
         if (e->enemy.role == AOS_ROLE_PEEPING_SEGMENT && e->enemy.variant == 5)
             degrees = (double)e->enemy.pe_rotation * 360.0 / 65536.0;
+        /* sub_0809808C submits Creaking Skull/Giant Skeleton records
+         * 0, 1, 2 and 11 through sub_0803E058.  Their child +0x48
+         * angle is carried in vx by the enemy port; the other nine
+         * records use the ordinary non-affine draw path. */
+        if (e->enemy.role == AOS_ROLE_CS_BONE &&
+            (e->enemy.cs_pose <= 2 || e->enemy.cs_pose == 11))
+            degrees = (double)(e->enemy.vx & 0xFFFF) * 360.0 / 65536.0;
         /* Triton's whirlpool head (sub_080871C0/sub_08087318): the
          * sub_0803E238 affine draw turns the sprite by the head's + 0x20
          * whirlpool angle — tr_angle here — at the unit scale set at

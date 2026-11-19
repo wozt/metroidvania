@@ -1,3 +1,28 @@
+## Patch 1270 - Creaking Skull affine bones and attack-pose restore
+
+- **Native affine subset.** `sub_0809808C` sends only records 0, 1, 2 and
+  11 through `sub_0803E058`; their child `+0x48` angle is now consumed by
+  the SDL renderer. The other nine bone records keep the ordinary
+  non-affine path. A private portable capture confirms that the four long
+  bones rotate instead of remaining horizontal.
+- **Attack-pose ownership.** `sub_08096A94` case 0 calls
+  `sub_08098C1C` before changing the container records, while terminal
+  cases 9, 27 and 37 call `sub_08098C38`. The port now snapshots and
+  restores only each record's `+0/+4` position, leaving angles, orbit
+  speeds and radii intact like the native routines. `creaking_skull_tests`
+  protects both the restored coordinates and the surviving exit arms.
+- **Emulator comparison and remaining gap.** A private romdev route through
+  rooms 0/5, 0/6 and 0/9 reached native room 0/10 and captured the live boss
+  after 300 frames. It shows a coherent articulated skeleton; the portable
+  capture still has widely separated segments because most of the native
+  state-0/state-1 record re-arms and movement cases remain collapsed. The
+  comparison was reached from different player/camera positions, so it is
+  diagnostic evidence only, not a fidelity validation. `sub_0806AE54` was
+  also confirmed to be the hit-flash/palette timer rather than positional
+  integration; no speculative body movement was added. Native affine pivot
+  rounding, the stationary attack entity of `sub_080989DC`, palette effects,
+  full choreography and a matched frame schedule remain partial.
+
 ## Patch 1269 - Save-room anchors and Creaking Skull hit ownership
 
 - **Save-room closed side.** `Object1DCreate` already derived the native

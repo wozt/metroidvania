@@ -77,24 +77,53 @@ void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *object
              * (0x03004564) is not traced, this matches the room art at both
              * room edges. */
             bool flip = e->door.facing_left;
-            /* sub_0804D794's affine swing: while 0 < swing < 0x4000 the
-             * leaf is squashed horizontally by cos(swing) and its x
-             * shifted by 32*sin(swing) - 1 px; at 0x4000 the cosine is
-             * zero and the edge-on leaf disappears into the doorway.
-             * The hinge edge stays fixed (the left edge unmirrored,
-             * the right edge mirrored). */
-            float scale = aos_door_swing_scale(&e->door);
+            /* Live-OAM-measured swing (room 0/0 -> 0/3 door, frames
+             * 401-459): during 0 < swing < 0x4000 the door is drawn by
+             * sub_0804342C through two affine matrix slots (indices 8
+             * and 9) as two sprite groups — the hinge group stays near
+             * x -5..7 and crushes edge-on, the free group travels
+             * x10 -> x35 toward the room interior. sub_0804D794 also
+             * shifts the entity draw x by sin(swing)*32-1 px (sign by
+             * facing, restored afterwards). Rendered as two halves of
+             * the leaf: the hinge half anchored on the hinge edge and
+             * the free half carried inward, both foreshortened by the
+             * measured cos(swing) curve — the crushed hinge remnant is
+             * the door's visible thickness. */
+            float hinge_dx = 0.0f, free_dx = 0.0f;
+            bool swinging = (e->door.swing > 0 && e->door.swing < 0x4000);
+            if (swinging)
+                aos_door_swing_split(&e->door, &hinge_dx, &free_dx);
+            float scale = swinging ? aos_door_swing_scale(&e->door) : 1.0f;
             float x = flip ? (float)(e->x - frame->offset_x) - frame->w
                            : (float)(e->x + frame->offset_x);
-            float w = frame->w * scale;
-            if (flip) x += frame->w - w;
-            x += aos_door_swing_shift(&e->door) - (float)cam_x;
-            SDL_FRect rect = {x, (float)(e->y + frame->offset_y - cam_y), w,
-                              (float)frame->h};
-            if (w >= 1.0f)
-                SDL_RenderTextureRotated(renderer, frame->texture, NULL, &rect, 0,
-                                         NULL, flip ? SDL_FLIP_HORIZONTAL
-                                                    : SDL_FLIP_NONE);
+            float base_x = x - (float)cam_x +
+                           aos_door_swing_shift(&e->door);
+            float y = (float)(e->y + frame->offset_y - cam_y);
+            SDL_FlipMode mode = flip ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
+            if (swinging) {
+                /* Hinge half keeps the hinge edge fixed and crushes to
+                 * a thin strip; the free half is carried toward the
+                 * room by the measured group offset and crushes too —
+                 * a gap opens between them like the native doorway. */
+                float half = frame->w * 0.5f;
+                float hw = half * scale;
+                SDL_FRect src_h = {0, 0, half, (float)frame->h};
+                SDL_FRect dst_h = {flip ? base_x + frame->w - hw + hinge_dx
+                                        : base_x + hinge_dx,
+                                   y, hw, (float)frame->h};
+                SDL_FRect src_f = {half, 0, frame->w - half, (float)frame->h};
+                SDL_FRect dst_f = {flip ? base_x - free_dx
+                                        : base_x + hw + free_dx,
+                                   y, hw, (float)frame->h};
+                SDL_RenderTextureRotated(renderer, frame->texture, &src_h,
+                                         &dst_h, 0, NULL, mode);
+                SDL_RenderTextureRotated(renderer, frame->texture, &src_f,
+                                         &dst_f, 0, NULL, mode);
+            } else {
+                SDL_FRect rect = {base_x, y, frame->w, (float)frame->h};
+                SDL_RenderTextureRotated(renderer, frame->texture, NULL,
+                                         &rect, 0, NULL, mode);
+            }
             continue;
         }
         SDL_FRect rect = {(float)((e->x & ~15) - cam_x), (float)(e->y - 48 - cam_y), 16, 48};

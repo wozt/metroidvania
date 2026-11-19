@@ -1,3 +1,34 @@
+## Patch 1262 - Frame-synchronized opening dialogue choreography
+
+- **Native lab evidence.** The clean room-0 checkpoint was replayed with the
+  same A-every-60-frames schedule on both engines. Per-frame WRAM peeks and
+  screenshots at native frames 1623-1627 show Object20 entering `+0xB==2`,
+  Genya's child `+0x58` bit 6 changing and the first glyph of `Huh?` appearing
+  while `gEwramData+0x41B` remains `0x24`: the dialogue window and retained
+  `Genya Arikado` row are visible on the turn frame. Frames 2335-2465 show
+  Soma's `+0x6D` chain `0x09 -> 0x02 -> 0x0A -> 0x00`; animation `0x02` is
+  held across the Soma and Genya dialogue pages and released only at the next
+  Object20 beat. Captures remain private under `/tmp`.
+- **Page-transition correction.** Patch 1253's close-only interpretation of
+  commands 4/9 left the parser printing later pages with `slide_pos == 0`, so
+  Genya turned while no gray dialogue field was visible. Those page commands
+  now hold parsing through the measured `0x24 -> 0 -> 0x24` retract/extend.
+  Command 3 still owns a new portrait's independent `0 -> 0x24` opening.
+  Page turns retain the current speaker; portrait changes clear it until the
+  following command 7, preventing both the missing Genya row and the earlier
+  stale-name flash.
+- **Soma correction.** The host now runs `CROUCH_DOWN`, holds `CROUCH` for
+  the complete post-soul dialogue beat, then runs `STAND_UP` before `IDLE` at
+  the next beat. It no longer uses animation completion to decide how many
+  dialogue pages remain.
+- **Runtime evidence and status.** New captures at runtime frames 2259-2261
+  show Genya turned with the full gray field, portrait, speaker and `Huh?`
+  already visible. The ROM-backed parser test asserts that same cue/window/
+  speaker/text invariant and the beat-to-pose test pins the crouch/release
+  split. This closes the two reported synchronization regressions, but the
+  opening remains `partial`: battle choreography, post-scene behavior, BLDY
+  and other previously documented approximations are not declared faithful.
+
 ## Patch 1261 - Post-soul crouch and dialogue-page ordering regression
 
 - **Regression and native interpretation.** Patch 1260 correctly separated

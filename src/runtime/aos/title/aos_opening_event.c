@@ -6,15 +6,16 @@
 #include "../core/aos_effect.h"
 #include "../core/aos_input.h"
 
-static void clear_page(AosOpeningEvent *event) {
+static void clear_page(AosOpeningEvent *event, bool clear_speaker) {
     memset(event->glyphs, 0, sizeof event->glyphs);
     memset(event->glyph_counts, 0, sizeof event->glyph_counts);
     event->line = 0;
-    /* Commands 3/4/9 clear the native BG0 text tilemap, including the
-     * speaker row. The portable renderer rebuilds that tilemap from this
-     * struct, so retaining the previous speaker would redraw a stale name on
-     * the first fully-open frame before the next command 7 is parsed. */
-    event->speaker = 0;
+    /* Command 3 installs a new portrait before command 7 selects its speaker,
+     * so the old name must not be reconstructed during that opening. Page
+     * turns (commands 4/9) keep the current speaker: synchronized lab frames
+     * around Object20 +0xB==2 show "Genya Arikado" surviving the page change
+     * on the exact frame he turns and "Huh?" starts printing. */
+    if (clear_speaker) event->speaker = 0;
     event->dirty = true;
 }
 
@@ -129,7 +130,7 @@ static void run_until_glyph_or_wait(AosOpeningEvent *event) {
             break;
         case 3:
             if (!argument(event, &event->portrait)) return;
-            clear_page(event);
+            clear_page(event, true);
             /* _08067C34 selects state 2. Its following updates call
              * sub_08067804(+3); parsing resumes only at 0x24, after
              * sub_080676BC installs this portrait and its BG0 map. */
@@ -138,16 +139,17 @@ static void run_until_glyph_or_wait(AosOpeningEvent *event) {
             event->dirty = true;
             return;
         case 4:
-            clear_page(event);
-            /* _08067CD4 selects state 3 and seeds +0x41B with 0x24.
-             * State 3 only closes; state 0 then resumes the script, where
-             * a later portrait command owns the separate opening. */
+            clear_page(event, false);
+            /* Native frame captures show page turns returning +0x41B to
+             * 0x24 before byte parsing resumes: retract the old page, then
+             * extend the cleared page. This is also what keeps the window
+             * visible when +0xB==2 turns Genya and prints "Huh?". */
             event->slide_pos = 0x24;
             event->slide_dir = -1;
             event->dirty = true;
             return;
         case 9:
-            clear_page(event);
+            clear_page(event, false);
             event->slide_pos = 0x24;
             event->slide_dir = -1;
             event->dirty = true;
@@ -194,14 +196,14 @@ void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input) {
     event->advanced = false;
     event->cue = AOS_OPENING_CUE_NONE;
     bool advance = (new_input & (AOS_KEY_A | AOS_KEY_START)) != 0;
-    /* sub_08067804 clamps both directions inclusively: case 2 completes
-     * at 0x24 and case 3 completes at zero. Parsing resumes on the next
-     * update, never in the middle of either twelve-frame transition. */
+    /* Portrait opens stop at 0x24. Page turns start at -1, reverse at zero,
+     * and stop only after returning to 0x24; the parser remains held for both
+     * twelve-frame halves. */
     if (event->slide_dir != 0) {
         int pos = (int)event->slide_pos + event->slide_dir * 3;
         if (pos <= 0) {
             event->slide_pos = 0;
-            event->slide_dir = 0;
+            event->slide_dir = 1;
         } else if (pos >= 0x24) {
             event->slide_pos = 0x24;
             event->slide_dir = 0;
@@ -215,7 +217,7 @@ void aos_opening_event_update(AosOpeningEvent *event, uint16_t new_input) {
         if (!advance) return;
         event->waiting = false;
         event->advanced = true;
-        if (event->beat == 0) clear_page(event);
+        if (event->beat == 0) clear_page(event, false);
         event->beat = 0;
     }
     /* sub_08067A04 exits its print state after one visible glyph. A pressed

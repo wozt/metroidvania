@@ -2177,10 +2177,9 @@ int aria_runtime_main(int argc, char **argv) {
     AosIntroFont opening_font = {0};
     AosOpeningEvent opening = {0};
     AosOpeningActors opening_actors = {0};
-    /* The normal player animation path finishes the post-absorb
-     * CROUCH_DOWN -> CROUCH -> IDLE choreography. This stage is consulted
-     * only while the permanent story controller still owns Soma; epilogue
-     * text reuse never enters it. */
+    /* The normal player animation path runs CROUCH_DOWN and then holds
+     * CROUCH throughout the post-absorb dialogue. The next story beat runs
+     * STAND_UP before IDLE, matching the synchronized native +0x6D trace. */
     uint8_t opening_post_stage = 0;
     AosWindowFrame opening_window = {0};
     AosSoulNotice opening_soul_notice = {0};
@@ -3089,13 +3088,18 @@ int aria_runtime_main(int argc, char **argv) {
                     soma.x = soma_world_x;
                     bool post_absorb =
                         soma_pose == AOS_OPENING_SOMA_ANIM_POST;
+                    bool post_release =
+                        soma_pose == AOS_OPENING_SOMA_ANIM_RELEASE;
                     if (post_absorb) {
                         if (opening_post_stage == 0) opening_post_stage = 1;
                         soma_pose = opening_post_stage == 1
                             ? AOS_SOMA_ANIM_CROUCH_DOWN
-                            : opening_post_stage == 2
-                                ? AOS_SOMA_ANIM_CROUCH
-                                : AOS_SOMA_ANIM_IDLE;
+                            : AOS_SOMA_ANIM_CROUCH;
+                    } else if (post_release) {
+                        if (opening_post_stage < 3) opening_post_stage = 3;
+                        soma_pose = opening_post_stage == 3
+                            ? AOS_SOMA_ANIM_STAND_UP
+                            : AOS_SOMA_ANIM_IDLE;
                     } else {
                         opening_post_stage = 0;
                     }
@@ -3105,8 +3109,11 @@ int aria_runtime_main(int argc, char **argv) {
                     int soma_anim_step = soma.anims
                         ? aos_anim_step(&soma.anim, soma.anims) : 0;
                     if (post_absorb && soma_anim_step == 3 &&
-                        opening_post_stage < 3)
-                        ++opening_post_stage;
+                        opening_post_stage == 1)
+                        opening_post_stage = 2;
+                    else if (post_release && soma_anim_step == 3 &&
+                             opening_post_stage == 3)
+                        opening_post_stage = 4;
                 }
                 for (unsigned actor = 0;
                      actor < opening_actors.emitted_count; ++actor)

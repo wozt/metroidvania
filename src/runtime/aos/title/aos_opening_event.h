@@ -523,12 +523,12 @@ bool aos_opening_event_commit(AosOpeningEvent *event, uint32_t events[8],
  *       sub_0801D028(0x52,0,0,0) every frame while +0xC==2's +0xD<=0x8F
  *       tail and sub-states 3-5 run, which the port serializes as
  *       scene_step==2 plus the soul_notice modal window.
- *   +0xB 6,7,8 (post-absorb):             the player animation path
- *       continues through CROUCH_DOWN -> CROUCH -> IDLE. The Object20
- *       routine makes no direct position write here; the host sequences the
- *       three ordinary player animations only while the main story owns
- *       Soma. */
+ *   +0xB==6 (post-absorb dialogue):        the player animation path runs
+ *       CROUCH_DOWN and then holds CROUCH. Synchronized native frames keep
+ *       animation 0x02 through the Soma and Genya pages; +0xB==7 then runs
+ *       STAND_UP (0x0A) and returns to the ordinary idle pose. */
 #define AOS_OPENING_SOMA_ANIM_POST 0xFFu
+#define AOS_OPENING_SOMA_ANIM_RELEASE 0xFEu
 static inline uint8_t aos_opening_soma_anim(const AosOpeningActors *actors) {
     if (!actors) return 0x00;
     if (actors->scene_state == 5 &&
@@ -545,9 +545,9 @@ static inline uint8_t aos_opening_soma_anim(const AosOpeningActors *actors) {
     case 2:
     case 3:
     case 4: return 0x00;
-    case 6:
-    case 7:
-    case 8: return (uint8_t)AOS_OPENING_SOMA_ANIM_POST;
+    case 6: return (uint8_t)AOS_OPENING_SOMA_ANIM_POST;
+    case 7: return (uint8_t)AOS_OPENING_SOMA_ANIM_RELEASE;
+    case 8: return 0x00;
     default: return 0x00;
     }
 }

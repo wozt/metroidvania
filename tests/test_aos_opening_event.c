@@ -661,13 +661,17 @@ static void test_script_and_commit(void) {
     assert(event.waiting && event.line == 1);
     assert(event.glyph_counts[0] == 2 && event.glyph_counts[1] == 1);
     aos_opening_event_update(&event, AOS_KEY_A);
-    /* Command 4 selects close state 3 only: twelve -3 polls reach zero,
-     * then the parser resumes. It does not silently reopen the old page. */
+    /* Command 4 holds parsing through a twelve-frame retract and a
+     * twelve-frame extension. Its page turn retains the current speaker. */
     assert(!event.waiting && event.slide_dir == -1 &&
-           event.glyph_counts[0] == 0 && event.speaker == 0);
+           event.glyph_counts[0] == 0 && event.speaker == 2);
     for (unsigned frame = 0; frame < 12; ++frame)
         aos_opening_event_update(&event, 0);
-    assert(event.slide_dir == 0 && event.slide_pos == 0);
+    assert(event.slide_dir == 1 && event.slide_pos == 0);
+    for (unsigned frame = 0; frame < 12; ++frame)
+        aos_opening_event_update(&event, 0);
+    assert(event.slide_dir == 0 && event.slide_pos == 0x24 &&
+           event.speaker == 2);
     aos_opening_event_update(&event, 0);
     assert(event.portrait == 5 && event.slide_dir == 1 &&
            event.slide_pos == 0 && event.speaker == 0);
@@ -779,11 +783,16 @@ static void test_soma_anim_map(void) {
     actors.soul_notice = 1;
     assert(aos_opening_soma_anim(&actors) == 0x52);
     actors.soul_notice = 0;
-    /* +0xB 6,7,8 hand the post-absorb choreography to the host. */
+    /* +0xB==6 holds the post-absorb crouch choreography. The following
+     * dialogue beat requests the stand-up sequence, exactly where the native
+     * +0x6D trace changes from 0x02 through 0x0A to 0x00. */
     actors.scene_state = 6;
     assert(aos_opening_soma_anim(&actors) == AOS_OPENING_SOMA_ANIM_POST);
+    actors.scene_state = 7;
+    assert(aos_opening_soma_anim(&actors) ==
+           AOS_OPENING_SOMA_ANIM_RELEASE);
     actors.scene_state = 8;
-    assert(aos_opening_soma_anim(&actors) == AOS_OPENING_SOMA_ANIM_POST);
+    assert(aos_opening_soma_anim(&actors) == 0x00);
     assert(aos_opening_soma_anim(NULL) == 0x00);
 }
 
@@ -1103,13 +1112,21 @@ int main(int argc, char **argv) {
         assert(aos_opening_event_init(&event, script, script_size));
         aos_opening_event_set_resolver(&event, resolve_rom_text, &resources);
         bool cues[AOS_OPENING_CUE_COMPLETE + 1] = {false};
+        bool confrontation_visible = false;
         for (unsigned frame = 0; frame < 10000 && event.active; ++frame) {
             aos_opening_event_update(&event, AOS_KEY_A);
+            if (event.cue == AOS_OPENING_CUE_CONFRONTATION)
+                confrontation_visible = event.slide_pos == 0x24 &&
+                    event.slide_dir == 0 &&
+                    (event.speaker == 3 || event.speaker == 7) &&
+                    (event.glyph_counts[0] != 0 ||
+                     event.glyph_counts[1] != 0);
             cues[event.cue] = true;
         }
         assert(event.complete && !event.malformed);
         assert(event.beat_count == 7);
         assert(cues[AOS_OPENING_CUE_CONFRONTATION]);
+        assert(confrontation_visible);
         assert(cues[AOS_OPENING_CUE_ENEMY_APPEARS]);
         assert(cues[AOS_OPENING_CUE_ENEMY_ATTACKS]);
         assert(cues[AOS_OPENING_CUE_SOUL_ABSORBED]);

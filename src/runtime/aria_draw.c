@@ -85,15 +85,20 @@ void draw_doors(SDL_Renderer *renderer, const AriaRoom *room, const void *object
              * doorway behind is revealed. aos_door_swing_scale is the
              * cosine curve (1 -> 0 over swing 0 -> 0x4000); the leaf
              * is anchored on the side away from its opening direction
-             * (right, or left when the door faces left) with NO
-             * horizontal drift — the native strip stays at the closed
-             * position. */
+             * (right, or left when the door faces left) so the
+             * edge-on strip stays on the room-interior side, and it
+             * drifts with the measured hinge-group offset
+             * (aos_door_swing_split) so the panel travels toward the
+             * room as it opens — no horizontal slide of the whole
+             * closed leaf. */
             float scale = aos_door_swing_scale(&e->door);
             float w = frame->w * scale;
+            float hinge_dx = 0.0f, free_dx = 0.0f;
+            aos_door_swing_split(&e->door, &hinge_dx, &free_dx);
             float x = flip ? (float)(e->x - frame->offset_x) - frame->w
                            : (float)(e->x + frame->offset_x);
             float base_x = x - (float)cam_x +
-                           (flip ? 0.0f : frame->w - w);
+                           (flip ? 0.0f : frame->w - w) + hinge_dx;
             float y = (float)(e->y + frame->offset_y - cam_y);
             SDL_FlipMode mode = flip ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
             SDL_FRect rect = {base_x, y, w, (float)frame->h};

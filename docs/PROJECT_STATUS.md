@@ -1,3 +1,21 @@
+## Patch 1282 - Lamp glow retuned to measured pale-warm haze profile
+
+Framebuffer re-measurement of the native room 0/3 lamp (frame
+`/tmp/lampA_00200.ppm`, flame centre ~(120,72)) refined the glow spec:
+
+- The halo is a **pale warm haze** (~`(231,214,206)`), luminance
+  217→174→108→90 over r=0..12 px then flat baseline — NOT the
+  saturated orange `(255,180,90)` disc previously drawn.
+- Warmth `R-B` and luminance both reach baseline by ~r=12; the disc
+  was ~3-4x too strong (alpha 110) and the wrong hue.
+- The glow pixels are sprite art (mode=1 OBJ, blend engine OFF —
+  `BLDCNT=0x0E40`, `BLDY=0`), consistent with the `sub_080BD358`
+  light-effect entity system; the procedural disc remains a stand-in.
+
+`draw_flame_glow` retuned: colour `(255,208,158)`, alpha `72*blink*fade`
+(was 110), lamp radius 12 (was 16), breakable radius 11 (was 15).
+Still a measured approximation — matched-view pixel diff pending.
+
 ## Patch 1281 - Lamp glow: native light engine located (sub_080BD358 jump table)
 
 Deeper asm trace located the real light-render routine, replacing the

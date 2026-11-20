@@ -789,8 +789,11 @@ static void draw_flame_glow(SDL_Renderer *renderer, int ex, int ey,
     if (!glow || fade <= 0.0f) return;
     float blink = 0.65f + 0.35f *
         sinf((float)(anim_tick % 32) * (3.14159265f / 16.0f));
-    SDL_SetTextureColorMod(glow, 255, 180, 90);
-    SDL_SetTextureAlphaMod(glow, (uint8_t)(110.0f * blink * fade));
+    /* Framebuffer-measured halo (room 0/3 lamp, native frame): the
+     * light is a pale warm haze ~(231,214,206), not saturated orange,
+     * fading to the dim-room baseline by ~12 px. */
+    SDL_SetTextureColorMod(glow, 255, 208, 158);
+    SDL_SetTextureAlphaMod(glow, (uint8_t)(72.0f * blink * fade));
     SDL_FRect g = {(float)(ex - radius - cam_x),
                    (float)(ey + dy - radius - cam_y),
                    radius * 2.0f, radius * 2.0f};
@@ -836,7 +839,7 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                             e->breakable.state == 1
                                 ? (float)e->breakable.timer / 0x28f
                                 : 1.0f,
-                            15.0f, -8);
+                            11.0f, -8);
             /* On the hit sub_08045EE0 sets + 0x58 bit 0x20, which
              * sub_0803AC40 reads as "do not draw": the prop vanishes
              * instantly and only the sub_0806D5C0 particles, the
@@ -1259,7 +1262,7 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                             e->object0f.state == 1
                                 ? (float)e->object0f.timer / 0x28f
                                 : 1.0f,
-                            16.0f, -16);
+                            12.0f, -14);
             /* Same + 0x58 bit 0x20 rule as the breakable: on the hit
              * sub_0803AC40 stops drawing the prop — only the glow,
              * particles and drop remain until + 0x59 bit 3. */

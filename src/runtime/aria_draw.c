@@ -14,6 +14,7 @@
 #include "aos/math/aos_math.h"
 #include "fusion/assets/aos.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -740,6 +741,37 @@ static void draw_object20_entity(SDL_Renderer *renderer,
  * and Object1F's per-child band5c. prio_slot < 0 is the front pass:
  * every unit without a resolved band draws there, preserving
  * the pre-priority all-on-top order. */
+/* Object0F's lamp glow: the native engine lights the flame through its
+ * dynamic-light pass (the + 0x72 bit-1 emitter the room darkness system
+ * reads), which the port does not model. This procedural radial disc is
+ * the documented stand-in for that glow — a filled warm circle centred
+ * on the flame that breathes with the anim-14 flicker and dies with the
+ * break timer. */
+static SDL_Texture *object0f_glow_texture(SDL_Renderer *renderer) {
+    static SDL_Texture *tex;
+    if (tex) return tex;
+    enum { S = 64 };
+    uint32_t *px = calloc((size_t)S * S, sizeof *px);
+    if (!px) return NULL;
+    const float c = (S - 1) * 0.5f, r = S * 0.5f;
+    for (int y = 0; y < S; ++y)
+        for (int x = 0; x < S; ++x) {
+            float d = sqrtf((x - c) * (x - c) + (y - c) * (y - c)) / r;
+            if (d >= 1.0f) continue;
+            float a = 1.0f - d;
+            a = a * a * (3.0f - 2.0f * a);      /* smoothstep falloff */
+            px[y * S + x] = ((uint32_t)(a * 255.0f) << 24) | 0x00FFFFFF;
+        }
+    tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                            SDL_TEXTUREACCESS_STATIC, S, S);
+    if (tex) {
+        SDL_UpdateTexture(tex, NULL, px, S * (int)sizeof *px);
+        SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+    }
+    free(px);
+    return tex;
+}
+
 void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                                  const AriaObjects *objects, int cam_x, int cam_y,
                                  unsigned step, int prio_slot) {
@@ -1151,6 +1183,32 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         const AriaFrame *frame = &art->frames[anim][index];
         if (!frame->texture) continue;
         int ex = e->x, ey = e->y;
+        if (e->id == 15) {
+            /* The lamp glow behind the flame: a filled warm disc that
+             * blinks with the anim-14 cycle (the native light emitter
+             * has no port yet — see object0f_glow_texture). During the
+             * state-1 break it fades out with the + 0xD timer. */
+            SDL_Texture *glow = object0f_glow_texture(renderer);
+            if (glow) {
+                float fade = e->object0f.state == 1
+                                 ? (float)e->object0f.timer / 0x28f
+                                 : 1.0f;
+                if (fade > 0.0f) {
+                    /* Blink: the disc breathes twice per 32-tick flame
+                     * cycle, brighter on the flame's fuller frames. */
+                    float blink = 0.65f + 0.35f *
+                        sinf((float)(e->object0f.anim_tick % 32) *
+                             (3.14159265f / 16.0f));
+                    SDL_SetTextureColorMod(glow, 255, 196, 110);
+                    SDL_SetTextureAlphaMod(glow,
+                        (uint8_t)(110.0f * blink * fade));
+                    SDL_FRect g = {(float)(ex - 20 - cam_x),
+                                   (float)(ey - 34 - cam_y), 40.0f, 40.0f};
+                    SDL_RenderTexture(renderer, glow, NULL, &g);
+                    SDL_SetTextureAlphaMod(glow, 255);
+                }
+            }
+        }
         SDL_FRect rect = {(float)(ex + frame->offset_x - cam_x),
                           (float)(ey + frame->offset_y - cam_y), frame->w, frame->h};
         /* Object19Update (id 25) ends every near update with

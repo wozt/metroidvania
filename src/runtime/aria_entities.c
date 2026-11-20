@@ -3828,7 +3828,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             if (!e->spawned) {
                 if (!entity_spawn_due(e, room, cam_x, cam_y)) continue;
                 e->spawned = true;
-                aos_object0f_create(&e->object0f, e->param0);
+                aos_object0f_create(&e->object0f, e->param0, e->param1);
                 continue;
             }
             if (e->object0f.finished) continue;
@@ -3838,11 +3838,11 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             bool near = (uint16_t)(ssx - osx + 0x10) <= 0x130 &&
                         (uint16_t)(ssy - osy + 0x20) <= 0xC0;
             int wx, wy, ww, wh;
-            bool hit = combat->weapon && combat->weapon_frames &&
+            bool whb = combat->weapon && combat->weapon_frames &&
                        aos_weapon_hitbox(combat->weapon, soma,
                                          combat->weapon_frames,
-                                         &wx, &wy, &ww, &wh) &&
-                       ww > 1 && wh > 1 &&
+                                         &wx, &wy, &ww, &wh);
+            bool hit = whb && ww > 1 && wh > 1 &&
                        !(wx + ww - 1 < e->x - 8 || e->x + 8 < wx ||
                          wy + wh - 1 < e->y - 16 || e->y < wy);
             /* sub_08045F9C reads sub_080421AC's result mask & 0x1E:
@@ -3859,13 +3859,49 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 hit = aos_enemy_soul_attack_hit(
                     (AosRect){(int16_t)(e->x - 8), (int16_t)(e->y - 16),
                               (int16_t)(e->x + 8), (int16_t)e->y}, 0) != 0;
+            /* sub_08045F9C case 0's money gate: currentMP == maxMP &&
+             * currentCharacter == 0, the same approximation the
+             * breakable records use. */
+            bool mp_full_soma = combat->progress &&
+                combat->progress->mp == (int16_t)combat->progress->max_mp &&
+                combat->progress->character == 0;
             aos_object0f_update(&e->object0f, near, hit,
                                 ((int32_t)e->x) << 16, ((int32_t)e->y) << 16,
-                                aos_random);
-            if (e->object0f.song >= 0) {
+                                aos_random, mp_full_soma);
+            if (e->object0f.song >= 0)
                 sound = e->object0f.song;
-                printf("Object0F %zu: song 0x%X\n", i, e->object0f.song);
+            /* sub_08045F9C's latched drop, created through the same
+             * AosPickup paths the breakable and enemy drops use: the
+             * pickup spawns on the accepted hit frame. Case 0 drops a
+             * sub_08043F70 money pickup (variant (RNG&1) + param1) on a
+             * full-MP Soma or a sub_08043C10 heart (big = param1 != 0,
+             * pop = 0); selector 1 is sub_08043F70 of variant param1
+             * and selector 2 a sub_08044054(x, y, 2, param1) item —
+             * decoded like the enemy drop table. */
+            if (e->object0f.drop_kind == AOS_OBJECT0F_DROP_MONEY &&
+                combat->money && combat->progress &&
+                room->pickup_count < MAX_PICKUPS) {
+                room->pickups[room->pickup_count++] = aos_pickup_create_money(
+                    combat->money, e->object0f.drop_variant, e->x, e->y);
+            } else if (e->object0f.drop_kind == AOS_OBJECT0F_DROP_HEART &&
+                       room->pickup_count < MAX_PICKUPS) {
+                room->pickups[room->pickup_count++] = aos_pickup_create_heart(
+                    e->object0f.drop_big, false, e->x, e->y);
+            } else if (e->object0f.drop_kind == AOS_OBJECT0F_DROP_ITEM &&
+                       room->pickup_count < MAX_PICKUPS) {
+                uint8_t category, index;
+                if (aos_item_decode(e->object0f.drop_item, &category,
+                                    &index))
+                    room->pickups[room->pickup_count++] =
+                        aos_pickup_create_item(category, index, e->x, e->y);
             }
+            if (e->object0f.burst && room->effect_count < MAX_EFFECTS)
+                /* The break flourish: the shared burst_15 art (common
+                 * animation 15 — the filled-circle flash into debris)
+                 * at the lamp position, one shot on the hit frame. */
+                room->effects[room->effect_count++] = (AosEffect){
+                    .kind = AOS_EFFECT_BURST_15, .drift = true,
+                    .x = ((int32_t)e->x) << 16, .y = ((int32_t)e->y) << 16};
             if (e->object0f.particle && room->effect_count < MAX_EFFECTS)
                 room->effects[room->effect_count++] = (AosEffect){
                     .kind = AOS_EFFECT_SPARKLE, .direct = true,

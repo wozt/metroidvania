@@ -1,3 +1,39 @@
+## Patch 1274 - Object0F breakable chandelier: loot, glow and break flourish
+
+- **Scope.** SPECIAL id 15 (Object0F, the burning chandelier/lamp) in
+  exported rooms such as area_00_room_016's pair at (80,120) and
+  (176,120). The user reported the prop missing its destruction sound,
+  its state/timing machine, the blinking filled-circle glow, the
+  object-break animation and an immediate loot drop.
+- **Drop dispatch ported.** `sub_08045F9C` now runs as per-frame
+  outputs latched on the accepted hit frame: `AosObject0fDrop`
+  carries the heart (`sub_08043C10`, big = param1 != 0), money
+  (`sub_08043F70`, variant `(RNG&1)+param1` on a full-MP Soma, plain
+  `param1` for selector 1) and item (`sub_08044054(x, y, 2, param1)`)
+  cases, and `aria_entities` spawns them through the same `AosPickup`
+  creators the breakable and enemy drops use — so the pickup appears
+  the frame Soma's whip connects, not after the 0x28-tick break. Every
+  extracted record keeps selector 0, so the heart/money path is live.
+- **Break flourish and glow.** The hit frame requests the shared
+  `burst_15` export (common animation 15 — the filled-circle flash
+  into debris, `drift`/`sub_08045C9C` like the skill bursts) plus the
+  native song 0xA2, which now reaches the room sound output. The draw
+  adds a procedural filled warm disc behind the flame — smoothstep
+  radial, breathing with the anim-14 flicker, fading with the + 0xD
+  timer — as the documented stand-in for the + 0x72 bit-1 emitter's
+  dynamic-light pass, which the port does not model.
+- **Evidence.** `aos_object0f` unit tests cover the hit transition,
+  the exact 0x28 timer and 0xFF-wrap finish, the particle cadence
+  (timer > 0x1E on multiples of four, `sub_0802D5EC(0x80000)` jitter),
+  the drop latch firing once, the burst one-shot and all three drop
+  selectors. Live `--simulate` on room 0/16 with a jump+whip script:
+  song 0xA2, state 1 timer 40 -> 0xFF wrap, one money pickup on the
+  hit frame at full MP, burst_15 rendered.
+- **Remaining gap.** The glow is procedural, not the native light
+  pass; the burst reuses shared animation 15 rather than a dedicated
+  Object0F break entity; the + 0x5A draw byte stays 0; no emulator
+  comparison of the break sequence yet.
+
 ## Patch 1272 - Creaking Skull full record-facing transform
 
 - **Root correction.** `sub_08097D1C` does not mirror only records 0 and

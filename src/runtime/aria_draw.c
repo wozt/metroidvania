@@ -741,12 +741,13 @@ static void draw_object20_entity(SDL_Renderer *renderer,
  * and Object1F's per-child band5c. prio_slot < 0 is the front pass:
  * every unit without a resolved band draws there, preserving
  * the pre-priority all-on-top order. */
-/* Object0F's lamp glow: the native engine lights the flame through its
- * dynamic-light pass (the + 0x72 bit-1 emitter the room darkness system
- * reads), which the port does not model. This procedural radial disc is
- * the documented stand-in for that glow — a filled warm circle centred
- * on the flame that breathes with the anim-14 flicker and dies with the
- * break timer. */
+/* Object0F's lamp glow: the native lamp draws its flame plus glow
+ * sprite tiles (the 0x081C3E00 chunks sub_08046148 DMAs into OBJ VRAM)
+ * through the normal sprite path — there is no dynamic-light engine
+ * (the + 0x72 bit-1 flag is the hitbox attack-box-off bit, not a light
+ * emitter; see docs/PROJECT_STATUS.md Patch 1288). This procedural
+ * radial disc is the measured stand-in for that sprite glow — a filled
+ * warm circle centred on the flame tuned to the native halo profile. */
 static SDL_Texture *object0f_glow_texture(SDL_Renderer *renderer) {
     static SDL_Texture *tex;
     if (tex) return tex;
@@ -777,11 +778,13 @@ static SDL_Texture *object0f_glow_texture(SDL_Renderer *renderer) {
     return tex;
 }
 
-/* The + 0x72 bit-1 emitter's stand-in glow for the flame props
- * (Object0F id 15 and the kind-3 breakable records — sub_08046080
- * sets the same bit): a filled warm disc centred on the flame that
- * breathes with the animation tick; `fade` (0..1) carries the
- * state-1 break timer so the light dies with the prop. */
+/* The flame-prop glow stand-in (Object0F id 15 and the kind-3
+ * breakable records — sub_08046080 sets the same + 0x72 bit 1, which
+ * disables the attack box, not a light): a filled warm disc centred on
+ * the flame tuned to the framebuffer-measured native halo; `fade`
+ * (0..1) carries the state-1 break timer so the glow dies with the
+ * prop. The faithful replacement is the 0x081C3E00 glow sprite tiles
+ * drawn through the normal sprite path. */
 static void draw_flame_glow(SDL_Renderer *renderer, int ex, int ey,
                             int cam_x, int cam_y, uint32_t anim_tick,
                             float fade, float radius, int dy) {
@@ -831,9 +834,9 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                                 : breakable_prio >= 0) ||
                 e->breakable.finished)
                 continue;
-            /* sub_08046080 sets the same + 0x72 bit 1 light emitter
-             * Object0F carries: the flame glow stays up through the
-             * state-1 break and fades with the + 0xD timer. */
+            /* sub_08046080 sets the same + 0x72 bit 1 (attack box
+             * off) Object0F carries: the flame glow stays up through
+             * the state-1 break and fades with the + 0xD timer. */
             draw_flame_glow(renderer, e->x, e->y, cam_x, cam_y,
                             e->breakable.anim_tick,
                             e->breakable.state == 1
@@ -1253,10 +1256,11 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (!frame->texture) continue;
         int ex = e->x, ey = e->y;
         if (e->id == 15) {
-            /* The lamp glow behind the flame: a filled warm disc that
-             * blinks with the anim-14 cycle (the native light emitter
-             * has no port yet — see draw_flame_glow). During the
-             * state-1 break it fades out with the + 0xD timer. */
+            /* The lamp glow behind the flame: a filled warm disc
+             * tuned to the measured native halo (the real glow is the
+             * 0x081C3E00 sprite tiles on the normal draw path — see
+             * draw_flame_glow). During the state-1 break it fades out
+             * with the + 0xD timer. */
             draw_flame_glow(renderer, ex, ey, cam_x, cam_y,
                             e->object0f.anim_tick,
                             e->object0f.state == 1

@@ -1,66 +1,63 @@
-## Patch 1286 - Lamp light engine: core decode (implementation-ready spec)
+## Patch 1288 - CORRECTION: code_08040A38.s is the hitbox/collision system, not lighting
 
-Decoded the dynamic-lighting module `asm/code/code_08040A38.s` far
-enough to spec the port. Still asm-only in cvaos (no decompiled C).
+A focused decode pass (asm + a subagent cross-check against the ported
+sources) overturned the whole "lamp light engine" thread — Patches
+1281, 1284, 1285, 1286 and 1287: the routines read as a
+"dynamic-light engine" are the entity **attack/hurt hitbox +
+recent-hit cooldown** system — and it is ALREADY ported in
+`src/runtime/aos/core/aos_combat.c`. There is **no dynamic light
+engine** in Aria of Sorrow; the lamp glow is ordinary sprite art.
 
-Data layout (verified against live WRAM + asm):
+Corrected data layout (`entity+0x70..` = hitbox config block):
 
-- Two light-record tables at `0x03001A58` and `0x03001A5C`; each is a
-  bank of 8-byte records indexed by `entity+0x73` (light slot). The
-  `+0x73` byte *8 gives the record offset; `0x03001A50`/`0x03001A48`
-  nearby hold related pointers used as `sub_080417A0` args.
-- A record is TWO 4-byte rect descriptors: bytes 0-3 = `{x_off:s8,
-  y_off:s8, w:u8, h:u8}`; bytes 4-7 = a second rect of the same shape.
-- `entity+0x42`/`+0x46` = u16 x/y position; `entity+0x58` bit6 = flipX,
-  bit7 = flipY; `entity+0x70..` = per-object light state.
-- `gEwramData+0x13110` holds a POINTER to the master/reference entity;
-  its `+0x70` block is the comparison target.
-- `gEwramData+0x13074/76/78/7A` = the computed light rect
-  (left/top/right/bottom); `+0x1307C..7F` = four global per-type
-  counters; `0x080E33F0` = ROM table indexed by light type.
+- `+0x70` u8 attacker type (player=1, weapon=3, soul=5, guardian=6,
+  enemy=8, type 9); `+0x71` attack-box-only flag.
+- `+0x72` flags: bit0 = hitbox system enabled, bit1 = attack box OFF,
+  bit2 = hurtbox OFF.
+- `+0x73` u8 hitbox slot (`EntityGetSlot`).
+- `+0x74/75/76` u8 x3 recent attacker types; `+0x78/79/7A` u8 x3
+  cooldown counters; `+0x7C`/`+0x80` u32 callbacks.
+- `0x03001A58 + slot*8` = one 8-byte record = TWO 4-byte boxes:
+  bytes +0..3 = attack box `{s8 x,y; u8 w,h}`, +4..7 = hurtbox.
+  `0x03001A5C` = base+4 (the hurtbox half of the same array).
+- `0x03001A48`/`0x03001A50` = the player/master entity's attack and
+  hurt world rects; `gEwramData+0x13074..7A` = last computed entity
+  rect (inclusive); `+0x1307C..7F` = four per-type cooldown overrides
+  written by `sub_08042A54`.
+- `0x080E33F0` = per-attacker-type recent-hit cooldown table
+  (`{0,0,8,28,30,0,0,0,80,60,120,0}`) — already `type_cooldowns` in
+  `aos_combat.c`.
 
-Decoded routines:
+Routine mapping (all already in `aos_combat.c`):
 
-- `sub_080415A8(entity, rectDesc[4])` — writes the entity's light rect
-  to `+0x13074..7A`. Normal (flip clear): left=`x+rect[0]`,
-  right=`x+rect[0]+rect[2]-1`, top=`y+rect[1]`,
-  bottom=`y+rect[1]+rect[3]-1`. With flipX (bit6) the X edges mirror
-  (`x-rect[0]-rect[2]+1` .. `x-rect[0]`); flipY (bit7) mirrors Y.
-- `sub_08041688` / `sub_080417A0` — two near-identical overlap tests:
-  given a computed rect and an object+rectDesc, return whether the
-  object's rect intersects it (early-out on degenerate 1px axes and on
-  `rect[2]==1`/`rect[3]==1`).
-- `sub_08041864(objA, objB)` — object-vs-object accumulation. Computes
-  objB's rect via `sub_080415A8(objB, recordB+4)`, overlap-tests with
-  `sub_08041688(objA, recordA)`, then for each of up to three stored
-  light "slots" (`objB+0x74/75/76` type bytes) increments a per-type
-  counter: type 3/5/6/9 map to `gEwramData+0x1307C/7D/7E/7F`, other
-  types index `0x080E33F0`. Results stored to `objB+0x78/79/7A`.
-- `sub_08041BDC(obj)` / `sub_08041D54(obj)` — same accumulation but
-  object-vs-MASTER-entity (`gEwramData+0x13110`), using the
-  `0x03001A5C`/`0x03001A58` record halves respectively and
-  `sub_080417A0`. Called from different pipeline stages.
-- `sub_080421AC(out, obj)` — higher-level resolver: builds a result
-  struct `{u16 flags@0, u16@2, u16@4, u8 type@6}`, calls `sub_08041D54`,
-  merges per-type influence into the output.
-- `sub_080429D0` — copies `+0x74/+0x78` bound bytes between objects,
-  calls `sub_080421AC`, conditionally copies back.
+- `sub_080415A8` = `aos_entity_rect` (entity rect, inclusive `w-1`/`h-1`,
+  mirrored by `+0x58` bits 0x40/0x80). `sub_08042584`'s player rect is
+  the EXCLUSIVE variant (`aos_player_rect`).
+- `sub_08041688`/`sub_080417A0` = `aos_rect_hits_box`.
+- `sub_08041864`/`sub_08041BDC`/`sub_08041D54`/`sub_080421AC` =
+  `aos_combat_can_take`/`aos_combat_take`/`aos_combat_tick`/
+  `aos_combat_cooldown` (recent-attacker slots + cooldowns).
+- `sub_080430B0` = a per-player helper entity (palette cycler), not a
+  light consumer. `sub_0804311C` (ARM) = the generic OAM
+  sprite-component emitter copied to IWRAM — the only shading-adjacent
+  behavior is a per-sprite flash LUT, not room lighting.
 
-Interpretation: this is a per-object light-INFLUENCE accumulator, not a
-direct pixel shader. Each light source registers an 8-byte record (two
-rects); every frame the engine resolves which objects each light's rect
-touches and accumulates per-light-type counts onto the objects
-(`+0x78..`) and global counters (`+0x1307C..`). A later shade/render
-stage (`sub_080430B0`/`sub_0804311C`, ARM) presumably turns those counts
-into the visible dimming/glow. The visible lamp halo is the composite of
-these accumulated light contributions plus the flame/ember sprites.
+Lamp truth: `sub_08046080` sets `entity+0x72 |= 2` (attack box OFF) and
+`sub_080428F0(e, 0x140CF4FA)` writes hurtbox `{x=-6, y=-12, w=12, h=20}`
+so Soma can strike the lamp — it is a breakable prop, not a light.
+`sub_08046148` DMAs the flame/glow tiles `0x081C3E00` into OBJ VRAM as
+part of its sprite resources; the visible halo is those tiles + the
+flame sprite drawn by the normal entity path (`sub_0804311C`), some as
+mode-1 blend sprites. **The correct port for the lamp glow is sprite
+extraction + the normal draw path — not an engine.**
 
-Remaining decode for a faithful port: the exact 8-byte record field
-split (which half is "source rect" vs "affected rect"), the full
-`0x080E33F0` type table, the driver loop that calls
-`41864/41BDC/41D54/421AC` each frame, and the ARM shade/render emission
-that consumes the accumulated counts. `draw_flame_glow` remains the
-measured stand-in until that port lands and is pixel-verified.
+Patches 1281/1284/1285/1286/1287 (the "light engine" decode, the
+`sub_080BD358` glow-entity theory and the `aos_light` module) are
+retracted: `sub_080BD358`/`entityData[0]` belonged to Soma, not the
+lamp; the `aos_light` module duplicated `aos_combat.c` and has been
+removed; the decode specs are superseded by this correction. The real
+remaining lamp work is extracting the `0x081C3E00` glow tiles and
+drawing them through the existing sprite pipeline.
 
 ## Patch 1285 - Lamp glow: frame/component model + live OAM decode of the glow sprites
 

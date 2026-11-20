@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-20T17:07:01+00:00",
+ "generated_at": "2026-11-20T18:11:34+00:00",
  "git": {
-  "commit": "6ea3ca29",
+  "commit": "9a5ee016",
   "branch": "main",
   "dirty": true
  },
@@ -20348,7 +20348,7 @@
     "sub_08068AD4",
     "PlaySong"
    ],
-   "limitations": "The sub_08068AD4 probe and the sub_08045F9C attack-box match stay caller approximations; entity +0x36 (the drop selector) is unmodelled and reads 0, so only case 0 (heart or full-MP money) drops — cases 1/2 are unreachable; the +0x92 param0 cache's last-variant-wins VRAM fight is drawn per-entity instead; sub_08045EE0's hit sets +0x58 bit 0x20 which sub_0803AC40 reads as do-not-draw, so the prop now vanishes on the hit frame while the 0x28-tick break plays; sub_08046080's +0x72 bit-1 light emitter is drawn as the same procedural flame glow stand-in Object0F uses (the real room light pass is unported); the kind-3 gore burst now spawns the sub_0806D5C0 entity-0x49/0xCF particle — animation 0 flame art, translucent, rising -0x8000/frame at the rand-jittered position — instead of the soul-sparkle still; shared sheet 0x081C15F4 now uses palette descriptor 0x082099FC bank 3 for destination OBJ row 7 (live mGBA row-7 bytes match exactly), replacing the erroneous use of alternate graphics 0x0826F8A4 as colours; unk_60.unk_A1_4 uses its new-game value (the sub_080074C0 menu toggle is unported); sub_08032DF0 is reduced to the ==0x3E8 all-souls check; kind-5 id>=5 and kind-6 categories outside 1-4 spawn nothing (native sub_08044054 coverage); the state-1 gore burst remains an effect approximation; the retained +0x5C band 0x14 now enters the BG/OBJ priority interleave instead of the final front pass, but the overlap is runtime-only and not synchronized with mGBA; palette RAM is emulator-compared, but destruction and drop timing are not. Patch 1264: the drawFunc animation step is now ported per entity — AosBreakable.anim_tick counts update frames and the frame index resolves from it at the native one-tick-per-frame rate (func_0803EBA8 mode 0), replacing the four-times-slow shared step/4 wall-clock pick for this prop. Audit (patches 1246/1250): the sub_08045F9C mask & 0x1E's bit 0x4 (sub_08041BDC, victim hurt box vs the + 0x13110 player entity's attack rect at 0x03001A48) was unmodelled at patch 1246 — patch 1249 ported the player's slide/dive-kick attack box in aos_soma/aos_enemy_collide and patch 1250 wires it into this matcher through aos_soma_body_attack_hit against the same prop box; bit 0x2 is approximated by the live weapon hitbox and bits 0x8/0x10 by the soul lists. sub_0800F1FC case 3 spawns every kind-3 record through sub_08046080/sub_08045EE0: sub_08046148's per-param0 tile DMA is exported as Object/special_62_v00-v15 animation 3 (0x081C3E00 chunks onto sheet tiles 32-37/48-53) and drawn per record; the animation cycles at the native drawFunc rate through the entity's own anim_tick (patch 1264); sub_08045F9C case 0 drops a sub_08043F70 money pickup ((RNG&1)+param1) on full MP Soma or a sub_08043C10 heart (big = param1 != 0) through the AosPickup paths. Patch 1275 hides the prop on the hit frame, adds the flame glow and replaces the sparkle gore with the native flame particle. Cases 5/6 spawn their conditional sub_08044054 placed pickups once on camera-window entry: kind 5 on unk_A1_4 + Soma, kind 6 on Soma + unowned inventory slot + all souls collected. Patch 1234 corrects Object/special_15 rows 6/7/9 and every special_62 breakable variant to shared-effect palette banks 2/3/6; a private room-0/3 runtime capture restores the orange flame and metal instead of an opaque black silhouette. Patch 1238 routes sub_08046080's +0x5C band 0x14 through the shared priority interleave; a forced runtime overlap at (768,128), frame 1, shows Soma composed above the prop.",
+   "limitations": "The sub_08068AD4 probe and the sub_08045F9C attack-box match stay caller approximations; entity +0x36 (the drop selector) is unmodelled and reads 0, so only case 0 (heart or full-MP money) drops — cases 1/2 are unreachable; the +0x92 param0 cache's last-variant-wins VRAM fight is drawn per-entity instead; sub_08045EE0's hit sets +0x58 bit 0x20 which sub_0803AC40 reads as do-not-draw, so the prop now vanishes on the hit frame while the 0x28-tick break plays; sub_08046080's +0x72 bit-1 flag disables the attack box (there is no light emitter or dynamic-light pass — Patch 1288); the lamp glow is the 0x081C3E00 flame/glow sprite tiles on the normal draw path, drawn as the same procedural glow stand-in Object0F uses; the kind-3 gore burst now spawns the sub_0806D5C0 entity-0x49/0xCF particle — animation 0 flame art, translucent, rising -0x8000/frame at the rand-jittered position — instead of the soul-sparkle still; shared sheet 0x081C15F4 now uses palette descriptor 0x082099FC bank 3 for destination OBJ row 7 (live mGBA row-7 bytes match exactly), replacing the erroneous use of alternate graphics 0x0826F8A4 as colours; unk_60.unk_A1_4 uses its new-game value (the sub_080074C0 menu toggle is unported); sub_08032DF0 is reduced to the ==0x3E8 all-souls check; kind-5 id>=5 and kind-6 categories outside 1-4 spawn nothing (native sub_08044054 coverage); the state-1 gore burst remains an effect approximation; the retained +0x5C band 0x14 now enters the BG/OBJ priority interleave instead of the final front pass, but the overlap is runtime-only and not synchronized with mGBA; palette RAM is emulator-compared, but destruction and drop timing are not. Patch 1264: the drawFunc animation step is now ported per entity — AosBreakable.anim_tick counts update frames and the frame index resolves from it at the native one-tick-per-frame rate (func_0803EBA8 mode 0), replacing the four-times-slow shared step/4 wall-clock pick for this prop. Audit (patches 1246/1250): the sub_08045F9C mask & 0x1E's bit 0x4 (sub_08041BDC, victim hurt box vs the + 0x13110 player entity's attack rect at 0x03001A48) was unmodelled at patch 1246 — patch 1249 ported the player's slide/dive-kick attack box in aos_soma/aos_enemy_collide and patch 1250 wires it into this matcher through aos_soma_body_attack_hit against the same prop box; bit 0x2 is approximated by the live weapon hitbox and bits 0x8/0x10 by the soul lists. sub_0800F1FC case 3 spawns every kind-3 record through sub_08046080/sub_08045EE0: sub_08046148's per-param0 tile DMA is exported as Object/special_62_v00-v15 animation 3 (0x081C3E00 chunks onto sheet tiles 32-37/48-53) and drawn per record; the animation cycles at the native drawFunc rate through the entity's own anim_tick (patch 1264); sub_08045F9C case 0 drops a sub_08043F70 money pickup ((RNG&1)+param1) on full MP Soma or a sub_08043C10 heart (big = param1 != 0) through the AosPickup paths. Patch 1275 hides the prop on the hit frame, adds the flame glow and replaces the sparkle gore with the native flame particle. Cases 5/6 spawn their conditional sub_08044054 placed pickups once on camera-window entry: kind 5 on unk_A1_4 + Soma, kind 6 on Soma + unowned inventory slot + all souls collected. Patch 1234 corrects Object/special_15 rows 6/7/9 and every special_62 breakable variant to shared-effect palette banks 2/3/6; a private room-0/3 runtime capture restores the orange flame and metal instead of an opaque black silhouette. Patch 1238 routes sub_08046080's +0x5C band 0x14 through the shared priority interleave; a forced runtime overlap at (768,128), frame 1, shows Soma composed above the prop.",
    "next_action": "Compare the break animation, glow and hide-on-hit frame against pickup spawn and per-frame candle placement against the same native room-0/3 checkpoint; port the +0x36 drop-selector source if found and model the unk_60.unk_A1_4 menu toggle.",
    "evidence": {
     "unit_tests": [
@@ -22751,8 +22751,8 @@
     "sub_08045CEC",
     "PlaySong"
    ],
-   "limitations": "The sub_08068AD4 probe is approximated by a player-near window, the sub_08045F9C attack-box match (sub_080421AC over the player + 0x70 slots) collapses to the weapon hitbox overlap plus the bit-0x4 player body attack (aos_soma_body_attack_hit) and the soul-hit probe with a 16x16 entity box, the sub_0803AFB8/0x081C15F4 resource attach and the 0x080CF8FA attack-box preset are covered by the exported special_15_v* art, the + 0x5A draw byte stays 0 so particle palettes read 0, the lamp glow is a procedural radial disc stand-in — the native + 0x72 bit-1 emitter's dynamic-light pass is not ported — the break flourish plays the shared burst_15 export (common animation 15, the filled-circle flash into debris) rather than a dedicated Object0F break entity, and there is no emulator comparison. Patch 1264: the SPECIAL draw selects animation 0xE (defs[14]) for id 15 — the full burning-chandelier cycle — and the frame step uses the entity's own anim_tick at the native one-tick-per-frame rate.; sub_08050F08 routes through sub_0803AC40, so the +0x58 bit-0x20 set on the hit now also hides the prop sprite for the whole break (only the glow, particles and drop remain); the state-1 drift particle now uses the animation-0 flame art translucent via sub_08045C9C instead of the soul-sparkle still Object0FCreate (0x08050DB4) splits param0 into the OBJ palette row (high byte, default 7) and the kept low byte, attaches tiles through sub_0803AFB8(0x081C15F4) and sub_0803B924 with palette 0x0820ED60, sets + 0x5C = 0x14, + 0x58 &= 0xBF, animation 0xE and + 0x72 bit 1, presets the attack box and installs the sub_08050F08 frame callback. Object0FUpdate (0x08050E3C) sets + 0x58 bit 0x20 and ends on a failed sub_08068AD4 probe; state 0 clears + 0x58 bits 0 and 5 and on a sub_08045F9C hit plays song 0xA2, sets bit 0x20, + 0xD = 0x28 and enters state 1; state 1 emits a sub_08045CEC drift every fourth frame while + 0xD exceeds 0x1E, jittered by sub_0802D5EC(0x80000) with the + 0x5A palette bits, counts the u8 timer down and sets + 0x59 bit 3 on the 0xFF wrap. The sub_08045F9C drop dispatch is ported as per-frame outputs latched on the accepted hit frame: case 0 drops a sub_08043F70 money pickup of variant (RNG&1)+param1 on a full-MP Soma or a sub_08043C10 heart (big = param1 != 0), selector 1 money of variant param1 and selector 2 a sub_08044054(x, y, 2, param1) item — every extracted record keeps selector 0, so the heart/money path is the live one; the pickups spawn through the same AosPickup creators the breakable and enemy drops use. The hit frame also requests the burst_15 break flourish and song 0xA2 reaches the room sound output; the draw adds the blinking filled-disc glow (smoothstep radial, breathing with the anim-14 flicker, fading with the + 0xD timer through state 1) as the documented stand-in for the + 0x72 bit-1 light emitter. Unit-tested in test_aos_object0f including the drop latch and the burst one-shot.",
-   "next_action": "Compare the break sequence (song 0xA2, burst_15 flourish, drift particles, pickup pop) against an emulator capture of room 0/16; port the + 0x72 bit-1 emitter's native dynamic-light pass if the glow needs to match.",
+   "limitations": "The sub_08068AD4 probe is approximated by a player-near window, the sub_08045F9C attack-box match (sub_080421AC over the player + 0x70 slots) collapses to the weapon hitbox overlap plus the bit-0x4 player body attack (aos_soma_body_attack_hit) and the soul-hit probe with a 16x16 entity box, the sub_0803AFB8/0x081C15F4 resource attach and the 0x080CF8FA attack-box preset are covered by the exported special_15_v* art, the + 0x5A draw byte stays 0 so particle palettes read 0, the lamp glow is a procedural radial disc stand-in — the native glow is the 0x081C3E00 sprite tiles drawn through the normal sprite path (+0x72 bit-1 is the hitbox attack-box-off flag, not a light emitter; Patch 1288) — the break flourish plays the shared burst_15 export (common animation 15, the filled-circle flash into debris) rather than a dedicated Object0F break entity, and there is no emulator comparison. Patch 1264: the SPECIAL draw selects animation 0xE (defs[14]) for id 15 — the full burning-chandelier cycle — and the frame step uses the entity's own anim_tick at the native one-tick-per-frame rate.; sub_08050F08 routes through sub_0803AC40, so the +0x58 bit-0x20 set on the hit now also hides the prop sprite for the whole break (only the glow, particles and drop remain); the state-1 drift particle now uses the animation-0 flame art translucent via sub_08045C9C instead of the soul-sparkle still Object0FCreate (0x08050DB4) splits param0 into the OBJ palette row (high byte, default 7) and the kept low byte, attaches tiles through sub_0803AFB8(0x081C15F4) and sub_0803B924 with palette 0x0820ED60, sets + 0x5C = 0x14, + 0x58 &= 0xBF, animation 0xE and + 0x72 bit 1, presets the attack box and installs the sub_08050F08 frame callback. Object0FUpdate (0x08050E3C) sets + 0x58 bit 0x20 and ends on a failed sub_08068AD4 probe; state 0 clears + 0x58 bits 0 and 5 and on a sub_08045F9C hit plays song 0xA2, sets bit 0x20, + 0xD = 0x28 and enters state 1; state 1 emits a sub_08045CEC drift every fourth frame while + 0xD exceeds 0x1E, jittered by sub_0802D5EC(0x80000) with the + 0x5A palette bits, counts the u8 timer down and sets + 0x59 bit 3 on the 0xFF wrap. The sub_08045F9C drop dispatch is ported as per-frame outputs latched on the accepted hit frame: case 0 drops a sub_08043F70 money pickup of variant (RNG&1)+param1 on a full-MP Soma or a sub_08043C10 heart (big = param1 != 0), selector 1 money of variant param1 and selector 2 a sub_08044054(x, y, 2, param1) item — every extracted record keeps selector 0, so the heart/money path is the live one; the pickups spawn through the same AosPickup creators the breakable and enemy drops use. The hit frame also requests the burst_15 break flourish and song 0xA2 reaches the room sound output; the draw adds the blinking filled-disc glow (smoothstep radial, breathing with the anim-14 flicker, fading with the + 0xD timer through state 1) as the documented stand-in for the native 0x081C3E00 glow sprites (+ 0x72 bit-1 is the hitbox attack-box-off flag, not a light emitter; Patch 1288). Unit-tested in test_aos_object0f including the drop latch and the burst one-shot.",
+   "next_action": "Compare the break sequence (song 0xA2, burst_15 flourish, drift particles, pickup pop) against an emulator capture of room 0/16; extract the 0x081C3E00 glow tiles and draw them through the normal sprite path if the glow needs to match.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_object0f.c"
@@ -33946,6 +33946,36 @@
  },
  "timeline": [
   {
+   "commit": "9a5ee016",
+   "date": "2026-11-20",
+   "subject": "Docs: retract Aria \"light engine\" — code_08040A38.s is hitbox collision",
+   "scope": "project"
+  },
+  {
+   "commit": "430b249a",
+   "date": "2026-11-20",
+   "subject": "Docs: spec Aria dynamic-light engine core decode for future port",
+   "scope": "project"
+  },
+  {
+   "commit": "7a2d41db",
+   "date": "2026-11-20",
+   "subject": "Docs: decode Aria lamp frame/component model and live glow-sprite OAM",
+   "scope": "project"
+  },
+  {
+   "commit": "4a2188e7",
+   "date": "2026-11-20",
+   "subject": "Docs: decode Aria lamp-glow sprite resource chain to ROM pointers",
+   "scope": "project"
+  },
+  {
+   "commit": "e10da8f9",
+   "date": "2026-11-20",
+   "subject": "Aria: retune lamp glow to measured pale-warm halo profile",
+   "scope": "project"
+  },
+  {
    "commit": "6ea3ca29",
    "date": "2026-11-20",
    "subject": "Docs: locate native Aria light engine (sub_080BD358 dispatch)",
@@ -34393,36 +34423,6 @@
    "commit": "0c9c3b11",
    "date": "2026-11-17",
    "subject": "aos: native area-banner band geometry, load-latency arm timing and full freeze",
-   "scope": "project"
-  },
-  {
-   "commit": "c7c34c39",
-   "date": "2026-11-17",
-   "subject": "aos: run the wooden-door palette cycle on the door's own script instance",
-   "scope": "project"
-  },
-  {
-   "commit": "35d7d40e",
-   "date": "2026-11-17",
-   "subject": "Document native emulator comparison workflow",
-   "scope": "project"
-  },
-  {
-   "commit": "14ec9273",
-   "date": "2026-11-17",
-   "subject": "Fix Aria pause menu text cursor carry",
-   "scope": "project"
-  },
-  {
-   "commit": "df79feaa",
-   "date": "2026-11-17",
-   "subject": "Rebuild Aria pause pages and fix cursor frame",
-   "scope": "project"
-  },
-  {
-   "commit": "2cb0e58f",
-   "date": "2026-11-17",
-   "subject": "aos: finish menu icon commands and integrate kill XP",
    "scope": "project"
   }
  ],

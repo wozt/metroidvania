@@ -18,13 +18,15 @@ hardcoded: the fleet advances by reward, rooms and checkpoints.
 
 `aos_lab_worker.c` embeds the rules the AI needs:
 
-- **Controls** (GBA masks): A=1 attack / advance text, B=2 jump /
-  cancel, SELECT=4, START=8 pause menu, arrows 16/32/64/128
-  (right/left/up/down), R=256, L=512 ability buttons.
+- **Controls** (GBA masks): A=1 jump / advance text & confirm, B=2
+  attack / cancel, SELECT=4, START=8 pause menu, arrows 16/32/64/128
+  (right/left/up/down), R=256, L=512 ability buttons. (Aria of Sorrow
+  maps A to jump and B to the whip attack; the mask bits are the GBA
+  buttons, only the gameplay meaning differs from earlier drafts.)
 - **Menu discipline**: START only before gameplay mode 4; never during
   play; B closes accidental menus; dialogue advances with A.
 - **Movement policy**: pulses biased RIGHT (early route pushes
-  right), LEFT ~30% for backtracking; B jump every 5th chunk; A attack
+  right), LEFT ~30% for backtracking; A jump every 5th chunk; B attack
   every 4th chunk while moving; UP tap every 6th chunk because doors
   open with UP.
 - **WRAM map** (verified against the decomp):

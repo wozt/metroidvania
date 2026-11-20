@@ -75,9 +75,23 @@ typedef struct {
     AosPeekResult *peeks; /* peek_count entries */
     int peek_count;
     bool state_out_ok;
+    bool ok;               /* false when the run failed (bad state, capture) */
+    char error[256];       /* failure reason when ok == false */
     uint16_t video_regs[8]; /* DISPCNT + BGCNT0..3 at run end */
     uint32_t *fb_first;   /* framebuffer after frame 0 (malloc'd) */
 } AosRunResult;
+
+/* Normalize a key or poke schedule for aos_mgba_run: stable-sort by
+ * frame (same-frame events keep their input order, last mask wins) and
+ * reject negative frames. Returns a malloc'd sorted copy; *out_count is
+ * set to the element count, or -1 when the schedule is invalid (any
+ * negative frame). The caller frees the result with the matching
+ * aos_mgba_free_* function. This is the single place input schedules
+ * are ordered, so callers never have to pre-sort. */
+AosKeyEvent *aos_mgba_normalize_keys(const AosKeyEvent *in, int count,
+                                     int *out_count);
+AosPokeEvent *aos_mgba_normalize_pokes(const AosPokeEvent *in, int count,
+                                       int *out_count);
 
 /* Open a session and load the ROM. On failure returns NULL and fills err. */
 AosMgbaSession *aos_mgba_open(const char *rom_path, char *err, size_t err_size);

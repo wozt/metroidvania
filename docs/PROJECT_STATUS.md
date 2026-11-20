@@ -1,3 +1,76 @@
+## Patch 1278 - LAB tooling reliability: input semantics, scheduling, failure propagation
+
+A development-process correction cycle, not a gameplay feature. The
+headless mGBA laboratory (`aos_mgba_lab` / `aos_mgba_session` /
+`aos_lab_worker`) had several defects that made native comparison
+unreliable; each was traced to its owning subsystem and fixed in place.
+No new emulator, LAB or debugging framework was added.
+
+- **Aria button semantics corrected.** Aria of Sorrow maps A (mask 1)
+  to jump and B (mask 2) to the whip attack. `aos_lab_worker.c` had the
+  gameplay actions inverted in `run_traverse` (the stuck-reaction
+  ladder and the proactive cruise attack) and in the scout phase-2
+  pulse schedule, and the built-in `attack` curriculum action used
+  `key=a`. All now use A=jump / B=attack while preserving legitimate
+  A-for-dialogue-confirm and B-for-menu-cancel uses. The Python
+  `scout_keys()` mirror in `tests/compare_aos_opening_dialogue.py` was
+  corrected to match. The movement comparison reaching room 0/3
+  (below) exercises the corrected jump/attack path end to end.
+- **Chronological input scheduling.** `aos_mgba_session.c` matched
+  frame-indexed events with `event.frame == frame`, so an out-of-order
+  schedule (the scout emits UP/jump/attack taps that can precede an
+  earlier release frame) silently dropped every event whose frame had
+  passed. `aos_mgba_normalize_keys()` / `aos_mgba_normalize_pokes()`
+  now stable-sort each schedule by frame before the run — same-frame
+  events keep input order so the run loop's last-mask-wins rule stays
+  deterministic — and reject any negative frame instead of losing
+  events. This is the single ordering point; callers never pre-sort.
+- **Save-state failures are now explicit.** A `--state-in` that cannot
+  be opened, has the wrong size (the loader requires exactly
+  `core->stateSize` bytes, so truncated or foreign-format blobs are
+  rejected before `loadState` can corrupt the core) or fails
+  `loadState` now fails the run; `--state-out` write/save failures and
+  in-memory `aos_mgba_load_state_blob` size mismatches propagate the
+  same way. Continuing from a fresh boot after a requested checkpoint
+  is no longer possible. This also enforces the documented rule that
+  LAB and romdev save states are not interchangeable: a romdev-format
+  state (430144 bytes) is correctly refused by the LAB core
+  (397312 bytes).
+- **Screenshot failures are now explicit.** `write_ppm()` checks
+  `fopen`, every `fputc`, and `fclose`; a capture that cannot be
+  written fails the run instead of leaving a missing/partial image.
+- **CLI/automation reliability.** `--peek-at F:ADDR:SIZE` (documented
+  but previously parsed as an unknown argument) is now honored by
+  merging it into the peek spec; `aos_mgba_run()`'s boolean result is
+  checked and any failure prints `result.error` and exits nonzero.
+  `tests/compare_aos_opening_dialogue.py::run_lab()` and the
+  `compare_aos_movement.py` runtime probe now check subprocess return
+  codes instead of parsing possibly-empty output. The CLI contract
+  (exit 0/1/2) is documented at the top of `aos_mgba_lab.c`.
+- **Regression coverage.** New ROM-free C test
+  `tests/test_aos_mgba_session.c` (`ctest -R aos_mgba_session`) pins
+  the schedule contract: chronological sorting, stable same-frame
+  order, negative-frame rejection, and the `--keys`/`--peek`/`--poke`
+  parsers. Verified live: bad `--state-in`, bad `--state-out` and bad
+  `--shot` paths each exit 1; a valid capture still exits 0.
+- **romdev verified.** `scripts/romdev_health.sh` passes
+  (documentation + MCP initialize, server 0.156.3);
+  `mcp__romdev__*` tools are registered and `catalog({op:'status'})`
+  executes over MCP; `scripts/romdev_call.sh` one-shot calls work as a
+  fallback. Emulator state persists per session slug; pass a stable
+  `session` argument (the shell wrapper injects `main`).
+- **Native room 0/3 reference established.** `tests/compare_aos_movement.py`
+  reproduces the boot→gameplay→room-0/3 progression deterministically
+  and writes LAB-format checkpoints (`room0/free/clean/entered/moved.state`,
+  397312 bytes each). A run into `/tmp/aos_room03` produced
+  `moved.state` verified at area 0 room 3 (room bytes `0x0200009E/9F`
+  = 0/3) with a valid RIGHT+A movement series — the first reusable
+  native checkpoint for the lamp room. Native and runtime captures of
+  the lamp area both show a localized bright cluster, but the camera
+  views were not matched, so no lighting-fidelity claim is made; the
+  room-light pass remains an unported approximation (`draw_flame_glow`
+  is a procedural stand-in, not 1:1).
+
 ## Patch 1277 - First-boss gate frame, assembled pose and battle music
 
 - **Object02 gate frame corrected.** `sub_0804DF3C` loads graphics

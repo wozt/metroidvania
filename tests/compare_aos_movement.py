@@ -384,6 +384,9 @@ def runtime_measure(runtime, rom, save, workdir, frames, direction,
              "--save", save, "--area", str(area), "--room", str(room),
              "--spawn", str(spawn[0]), str(spawn[1]), "--mute"],
             capture_output=True, text=True)
+        if proc.returncode != 0:
+            sys.exit(f"runtime simulate exited rc={proc.returncode} at "
+                     f"N={n}:\n{proc.stdout}\n{proc.stderr}")
         m = re.search(r"Soma (\d+),(\d+)", proc.stdout)
         if not m:
             sys.exit(f"runtime simulate failed at N={n}:\n"

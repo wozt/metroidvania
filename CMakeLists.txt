@@ -1494,6 +1494,16 @@ if(BUILD_TESTING)
     fusion_enable_warnings(fusion_aos_input_tests)
     add_test(NAME aos_input COMMAND fusion_aos_input_tests)
 
+    # ROM-free regression tests for the aos_mgba_lab frame-schedule
+    # contract (chronological ordering, stable same-frame order, and
+    # rejection of negative frames) plus the CLI spec parsers.
+    add_executable(fusion_aos_mgba_session_tests tests/test_aos_mgba_session.c
+                   $<TARGET_OBJECTS:aos_mgba_session>)
+    target_include_directories(fusion_aos_mgba_session_tests PRIVATE src/tools)
+    target_link_libraries(fusion_aos_mgba_session_tests PRIVATE ${MGBA_LIBRARY} pthread)
+    fusion_enable_warnings(fusion_aos_mgba_session_tests)
+    add_test(NAME aos_mgba_session COMMAND fusion_aos_mgba_session_tests)
+
     add_executable(fusion_aos_in_game_mode_tests tests/test_aos_in_game_mode.c
                    src/runtime/aos/game/aos_in_game_mode.c)
     target_include_directories(fusion_aos_in_game_mode_tests PRIVATE src/runtime)

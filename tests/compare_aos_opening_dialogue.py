@@ -133,11 +133,13 @@ def scout_keys() -> str:
         if chunk % 6 == 5:
             events.append((b2 + 20, 64))
             events.append((b2 + 34, pulse))
+        # A = jump (mask 1), B = attack (mask 2) — mirrors the corrected
+        # aos_lab_worker.c scout phase 2; action taps OR the held pulse.
         if chunk % 5 == 4:
-            events.append((b2 + 30, 2 | pulse))
+            events.append((b2 + 30, 1 | pulse))
             events.append((b2 + 40, pulse))
         if chunk % 4 == 3:
-            events.append((b2 + 45, 1 | pulse))
+            events.append((b2 + 45, 2 | pulse))
             events.append((b2 + 57, pulse))
         events.append((b2 + 79, 0))
     events.sort(key=lambda e: e[0])
@@ -151,6 +153,9 @@ def run_lab(rom: str, frames: int, keys: str, workdir: str,
         cmd += ["--keys", keys]
     cmd += extra
     proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        sys.exit(f"aos_mgba_lab failed (rc={proc.returncode}):\n"
+                 f"{proc.stderr.strip() or proc.stdout.strip()}")
     return proc.stdout + proc.stderr
 
 

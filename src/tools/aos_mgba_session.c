@@ -125,11 +125,23 @@ struct RunCtx {
     AosMgbaSession *session;
     const AosRunSpec *spec;
     AosRunResult *result;
+    /* Normalized (stable-sorted, validated) frame schedules. run_on_thread
+     * consumes these instead of spec->keys/spec->pokes so events are
+     * always applied chronologically. Owned by aos_mgba_run. */
+    AosKeyEvent *keys;
+    int key_count;
+    AosPokeEvent *pokes;
+    int poke_count;
+    /* Run failure latch: set on the emulation thread, read by
+     * aos_mgba_run after the job completes. */
+    bool failed;
+    char error[256];
 };
 static struct RunCtx g_ctx;
 
 struct BlobJob {
     const void *blob;
+    size_t size;   /* bytes supplied; must equal core->stateSize */
     bool *ok;
 };
 static struct BlobJob g_blob_job;
@@ -140,19 +152,32 @@ struct SaveJob {
 };
 static struct SaveJob g_save_job;
 
-static void write_ppm(const char *path, const uint32_t *pixels) {
+/* Write a P6 PPM of the 240x160 framebuffer. Returns false on any
+ * I/O failure (open, write or close) so a missing/partial capture can
+ * never be reported as success. */
+static bool write_ppm(const char *path, const uint32_t *pixels) {
     FILE *f = fopen(path, "wb");
-    if (!f) return;
-    fprintf(f, "P6\n%d %d\n255\n", AOS_MGBA_WIDTH, AOS_MGBA_HEIGHT);
-    for (int y = 0; y < AOS_MGBA_HEIGHT; ++y) {
+    if (!f) {
+        fprintf(stderr, "capture: cannot open %s\n", path);
+        return false;
+    }
+    bool ok = fprintf(f, "P6\n%d %d\n255\n", AOS_MGBA_WIDTH,
+                      AOS_MGBA_HEIGHT) > 0;
+    for (int y = 0; ok && y < AOS_MGBA_HEIGHT; ++y) {
         for (int x = 0; x < AOS_MGBA_WIDTH; ++x) {
             uint32_t c = pixels[y * AOS_MGBA_WIDTH + x];
-            fputc(c & 0xFF, f);        /* R: low byte (0xAABBGGRR) */
-            fputc((c >> 8) & 0xFF, f);
-            fputc((c >> 16) & 0xFF, f); /* B: third byte */
+            if (fputc(c & 0xFF, f) == EOF ||          /* R: low byte */
+                fputc((c >> 8) & 0xFF, f) == EOF ||
+                fputc((c >> 16) & 0xFF, f) == EOF) { /* B: third byte */
+                ok = false;
+                break;
+            }
         }
     }
-    fclose(f);
+    if (fclose(f) != 0) ok = false;
+    if (!ok)
+        fprintf(stderr, "capture: write failed for %s\n", path);
+    return ok;
 }
 
 static bool is_capture_frame(const AosRunSpec *spec, int frame) {
@@ -162,20 +187,33 @@ static bool is_capture_frame(const AosRunSpec *spec, int frame) {
     return false;
 }
 
-/* Called on the emulation thread: load/save must go through the core
- * directly here — aos_mgba_load/save_state_blob would deadlock by
- * dispatching another function onto the same thread. */
+/* Load a serialized state file on the emulation thread. The blob must
+ * be exactly core->stateSize bytes: mGBA's loadState consumes a fixed
+ * stateSize buffer, so a truncated or oversized file is rejected before
+ * it can corrupt the core. */
 static bool load_state_file_on_thread(struct mCore *core, const char *path) {
     FILE *f = fopen(path, "rb");
-    if (!f) return false;
+    if (!f) {
+        fprintf(stderr, "state: cannot open %s\n", path);
+        return false;
+    }
     fseek(f, 0, SEEK_END);
     long size = ftell(f);
     fseek(f, 0, SEEK_SET);
-    uint8_t *blob = malloc(size > 0 ? (size_t)size : 1);
+    size_t expect = core->stateSize(core);
+    if (size <= 0 || (size_t)size != expect) {
+        fprintf(stderr, "state: %s bad size %ld (expected %zu)\n",
+                path, size, expect);
+        fclose(f);
+        return false;
+    }
+    uint8_t *blob = malloc((size_t)size);
     bool ok = blob && fread(blob, 1, (size_t)size, f) == (size_t)size &&
               core->loadState(core, blob);
     fclose(f);
     free(blob);
+    if (!ok)
+        fprintf(stderr, "state: load failed for %s\n", path);
     return ok;
 }
 
@@ -191,6 +229,18 @@ static bool save_state_file_on_thread(struct mCore *core, const char *path) {
     return ok;
 }
 
+/* Record the first run failure; later failures are ignored so the
+ * reported reason stays the root cause. */
+static void run_fail(const char *fmt, ...) {
+    if (g_ctx.failed) return;
+    g_ctx.failed = true;
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(g_ctx.error, sizeof g_ctx.error, fmt, ap);
+    va_end(ap);
+    fprintf(stderr, "lab: %s\n", g_ctx.error);
+}
+
 static void run_on_thread(struct mCoreThread *thread) {
     AosMgbaSession *s = g_ctx.session;
     const AosRunSpec *spec = g_ctx.spec;
@@ -198,10 +248,14 @@ static void run_on_thread(struct mCoreThread *thread) {
     uint32_t keys = 0;
     int key_index = 0, poke_index = 0;
 
+    /* An explicitly requested checkpoint that cannot be loaded must
+     * fail the run: continuing from a fresh boot would silently
+     * invalidate every capture and state written afterwards. */
     if (spec->state_in &&
-        !load_state_file_on_thread(core, spec->state_in))
-        fprintf(stderr, "warning: state load failed for %s\n",
-                spec->state_in);
+        !load_state_file_on_thread(core, spec->state_in)) {
+        run_fail("state load failed for %s", spec->state_in);
+        return;
+    }
 
     if (g_ctx.result && spec->peek_count > 0) {
         g_ctx.result->peeks = calloc(spec->peek_count, sizeof(AosPeekResult));
@@ -215,16 +269,20 @@ static void run_on_thread(struct mCoreThread *thread) {
     clock_gettime(CLOCK_MONOTONIC, &next_frame);
 
     for (int frame = 0; frame < spec->frames; ++frame) {
-        while (key_index < spec->key_count &&
-               spec->keys[key_index].frame == frame) {
-            keys = spec->keys[key_index].mask;
+        if (g_ctx.failed) break;   /* stop wasting frames after a failure */
+        /* g_ctx.keys/g_ctx.pokes are stable-sorted by frame, so every
+         * event fires exactly at its scheduled frame in order; several
+         * events on one frame apply in input order (last mask wins). */
+        while (key_index < g_ctx.key_count &&
+               g_ctx.keys[key_index].frame == frame) {
+            keys = g_ctx.keys[key_index].mask;
             ++key_index;
         }
         core->setKeys(core, keys);
         core->runFrame(core);
-        while (poke_index < spec->poke_count &&
-               spec->pokes[poke_index].frame == frame) {
-            const AosPokeEvent *pk = &spec->pokes[poke_index];
+        while (poke_index < g_ctx.poke_count &&
+               g_ctx.pokes[poke_index].frame == frame) {
+            const AosPokeEvent *pk = &g_ctx.pokes[poke_index];
             size_t avail = 0;
             void *block = mCoreGetMemoryBlock(core, pk->address, &avail);
             if (block && pk->size <= avail)
@@ -275,7 +333,8 @@ static void run_on_thread(struct mCoreThread *thread) {
             char path[1024];
             snprintf(path, sizeof path, "%s_%05d.ppm", spec->shot_prefix,
                      frame);
-            write_ppm(path, s->framebuffer);
+            if (!write_ppm(path, s->framebuffer))
+                run_fail("screenshot capture failed for %s", path);
         }
         /* Sample mid-run peeks whose frame matches. */
         if (g_ctx.result)
@@ -316,9 +375,12 @@ static void run_on_thread(struct mCoreThread *thread) {
             }
         }
 
-    if (spec->state_out && g_ctx.result)
-        g_ctx.result->state_out_ok =
-            save_state_file_on_thread(core, spec->state_out);
+    if (spec->state_out) {
+        bool out_ok = save_state_file_on_thread(core, spec->state_out);
+        if (g_ctx.result) g_ctx.result->state_out_ok = out_ok;
+        if (!out_ok)
+            run_fail("state save failed for %s", spec->state_out);
+    }
     /* snapshot video registers for tilemap/OCR analysis */
     if (g_ctx.result) {
         struct GBA *gba = (struct GBA *)core->board;
@@ -333,6 +395,12 @@ static void run_on_thread(struct mCoreThread *thread) {
 }
 
 static void blob_load_on_thread(struct mCoreThread *thread) {
+    /* mGBA loadState consumes exactly stateSize bytes; reject any other
+     * length instead of letting it read past the caller's buffer. */
+    if (g_blob_job.size != thread->core->stateSize(thread->core)) {
+        *g_blob_job.ok = false;
+        return;
+    }
     *g_blob_job.ok = thread->core->loadState(thread->core, g_blob_job.blob);
     (void)thread;
 }
@@ -342,6 +410,77 @@ static void blob_save_on_thread(struct mCoreThread *thread) {
     (void)thread;
 }
 
+/* ---- schedule normalization -----------------------------------------
+ * Frame-indexed schedules must be applied chronologically. The run loop
+ * matches events with `event.frame == frame`, so an out-of-order list
+ * would skip every event whose frame had already passed. These helpers
+ * stable-sort by frame (same-frame events keep input order, so the last
+ * mask wins deterministically) and reject negative frames. */
+
+typedef struct { AosKeyEvent ev; int ord; } KeySortEnt;
+static int key_sort_cmp(const void *a, const void *b) {
+    const KeySortEnt *x = a, *y = b;
+    if (x->ev.frame != y->ev.frame) return x->ev.frame - y->ev.frame;
+    return x->ord - y->ord;
+}
+
+AosKeyEvent *aos_mgba_normalize_keys(const AosKeyEvent *in, int count,
+                                     int *out_count) {
+    *out_count = 0;
+    if (count <= 0) return NULL;
+    if (!in) { *out_count = -1; return NULL; }
+    KeySortEnt *tmp = malloc((size_t)count * sizeof *tmp);
+    if (!tmp) { *out_count = -1; return NULL; }
+    for (int i = 0; i < count; ++i) {
+        if (in[i].frame < 0) {           /* invalid schedule */
+            free(tmp);
+            *out_count = -1;
+            return NULL;
+        }
+        tmp[i].ev = in[i];
+        tmp[i].ord = i;
+    }
+    qsort(tmp, (size_t)count, sizeof *tmp, key_sort_cmp);
+    AosKeyEvent *out = malloc((size_t)count * sizeof *out);
+    if (!out) { free(tmp); *out_count = -1; return NULL; }
+    for (int i = 0; i < count; ++i) out[i] = tmp[i].ev;
+    free(tmp);
+    *out_count = count;
+    return out;
+}
+
+typedef struct { AosPokeEvent ev; int ord; } PokeSortEnt;
+static int poke_sort_cmp(const void *a, const void *b) {
+    const PokeSortEnt *x = a, *y = b;
+    if (x->ev.frame != y->ev.frame) return x->ev.frame - y->ev.frame;
+    return x->ord - y->ord;
+}
+
+AosPokeEvent *aos_mgba_normalize_pokes(const AosPokeEvent *in, int count,
+                                       int *out_count) {
+    *out_count = 0;
+    if (count <= 0) return NULL;
+    if (!in) { *out_count = -1; return NULL; }
+    PokeSortEnt *tmp = malloc((size_t)count * sizeof *tmp);
+    if (!tmp) { *out_count = -1; return NULL; }
+    for (int i = 0; i < count; ++i) {
+        if (in[i].frame < 0) {
+            free(tmp);
+            *out_count = -1;
+            return NULL;
+        }
+        tmp[i].ev = in[i];   /* shallow copy: data pointer shared, not owned */
+        tmp[i].ord = i;
+    }
+    qsort(tmp, (size_t)count, sizeof *tmp, poke_sort_cmp);
+    AosPokeEvent *out = malloc((size_t)count * sizeof *out);
+    if (!out) { free(tmp); *out_count = -1; return NULL; }
+    for (int i = 0; i < count; ++i) out[i] = tmp[i].ev;
+    free(tmp);
+    *out_count = count;
+    return out;
+}
+
 bool aos_mgba_run(AosMgbaSession *s, const AosRunSpec *spec,
                   AosRunResult *result) {
     if (!s || !spec) return false;
@@ -349,8 +488,60 @@ bool aos_mgba_run(AosMgbaSession *s, const AosRunSpec *spec,
     g_ctx.session = s;
     g_ctx.spec = spec;
     g_ctx.result = result;
+    g_ctx.failed = false;
+    g_ctx.error[0] = '\0';
+    g_ctx.keys = NULL;
+    g_ctx.key_count = 0;
+    g_ctx.pokes = NULL;
+    g_ctx.poke_count = 0;
+
+    /* Normalize schedules up front: an invalid (negative-frame) spec
+     * fails the run before a single frame executes. */
+    if (spec->key_count > 0) {
+        g_ctx.keys = aos_mgba_normalize_keys(spec->keys, spec->key_count,
+                                             &g_ctx.key_count);
+        if (!g_ctx.keys) {
+            if (result) {
+                result->ok = false;
+                snprintf(result->error, sizeof result->error,
+                         "invalid key schedule");
+            }
+            return false;
+        }
+    }
+    if (spec->poke_count > 0) {
+        g_ctx.pokes = aos_mgba_normalize_pokes(spec->pokes, spec->poke_count,
+                                               &g_ctx.poke_count);
+        if (!g_ctx.pokes) {
+            free(g_ctx.keys);
+            g_ctx.keys = NULL;
+            if (result) {
+                result->ok = false;
+                snprintf(result->error, sizeof result->error,
+                         "invalid poke schedule");
+            }
+            return false;
+        }
+    }
+
     mCoreThreadRunFunction(&s->thread, run_on_thread);
-    return true;
+
+    /* run_on_thread owns g_ctx.keys/pokes copies now; free them. The
+     * poke data buffers are caller-owned (aos_mgba_free_pokes), so only
+     * the array shells are released here. */
+    free(g_ctx.keys);
+    free(g_ctx.pokes);
+    g_ctx.keys = NULL;
+    g_ctx.pokes = NULL;
+
+    bool ok = !g_ctx.failed;
+    if (result) {
+        result->ok = ok;
+        if (g_ctx.failed)
+            snprintf(result->error, sizeof result->error, "%s",
+                     g_ctx.error);
+    }
+    return ok;
 }
 
 void aos_mgba_free_result(AosRunResult *result) {
@@ -390,9 +581,12 @@ bool aos_mgba_load_state(AosMgbaSession *s, const char *path) {
 
 bool aos_mgba_load_state_blob(AosMgbaSession *s, const void *blob,
                               size_t size) {
-    (void)size; /* mGBA loadState consumes exactly stateSize bytes */
+    /* Reject blobs whose size cannot be a valid serialized state before
+     * handing them to the core (loadState reads exactly stateSize). */
+    if (!s || !blob || size != s->core->stateSize(s->core)) return false;
     bool ok = false;
     g_blob_job.blob = blob;
+    g_blob_job.size = size;
     g_blob_job.ok = &ok;
     mCoreThreadRunFunction(&s->thread, blob_load_on_thread);
     return ok;

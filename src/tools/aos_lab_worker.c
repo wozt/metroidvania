@@ -601,16 +601,18 @@ static void run_traverse(AosMgbaSession *session, int frames,
     int nseg = 0, stuck = 0, hp_prev = -1;
     for (int off = 0; off < frames; off += SEG) {
         int f = frames - off < SEG ? frames - off : SEG;
-        /* reaction ladder: 0 cruise, 1 jump, 2 attack, 3 door-up */
+        /* reaction ladder: 0 cruise, 1 jump, 2 attack, 3 door-up.
+         * Aria of Sorrow controls: A (mask 1) = jump, B (mask 2) =
+         * attack. `a`/`b` below are the button masks, not the actions. */
         AosKeyEvent keys[6];
         int kn = 0;
-        uint32_t b = 2, a = 1, up = 64;
-        if (stuck == 1) {           /* hop the obstacle */
-            keys[kn++] = (AosKeyEvent){0, dir_mask | b};
+        const uint32_t jump = 1, attack = 2, up = 64;
+        if (stuck == 1) {           /* hop the obstacle: A = jump */
+            keys[kn++] = (AosKeyEvent){0, dir_mask | jump};
             keys[kn++] = (AosKeyEvent){18 < f ? 18 : f, dir_mask};
             keys[kn++] = (AosKeyEvent){f, 0};
-        } else if (stuck == 2) {    /* swing through whatever blocks */
-            keys[kn++] = (AosKeyEvent){0, dir_mask | a};
+        } else if (stuck == 2) {    /* swing through whatever blocks: B = attack */
+            keys[kn++] = (AosKeyEvent){0, dir_mask | attack};
             keys[kn++] = (AosKeyEvent){16 < f ? 16 : f, dir_mask};
             keys[kn++] = (AosKeyEvent){f, 0};
         } else if (stuck == 3) {    /* maybe a door: push UP then resume */
@@ -620,12 +622,12 @@ static void run_traverse(AosMgbaSession *session, int frames,
             keys[kn++] = (AosKeyEvent){f, 0};
         } else {
             /* proactive path clearing: every 3rd cruise segment also
-             * attacks (kills enemies on the way), every 4th holds UP
+             * attacks (B, kills enemies on the way), every 4th holds UP
              * (Aria doors open on UP and smooth walks never stall,
              * so the reaction ladder alone would miss doorways) */
             uint32_t cm = dir_mask;
-            if (nseg % 3 == 2) cm |= 1;
-            else if (nseg % 4 == 3) cm |= 64;
+            if (nseg % 3 == 2) cm |= attack;
+            else if (nseg % 4 == 3) cm |= up;
             keys[kn++] = (AosKeyEvent){0, cm};
             keys[kn++] = (AosKeyEvent){f, 0};
         }
@@ -1291,25 +1293,28 @@ static int scout_loop(AosMgbaSession *session, AosLabDb *db,
         /* game knowledge: the early game pushes RIGHT (start ->
          * chapel -> study); LEFT only 30% to backtrack */
         uint32_t pulse = (chunk % 10 < 7) ? 16 : 32; /* RIGHT / LEFT */
+        /* A = jump (1), B = attack (2). Action taps OR the held
+         * direction so the player keeps moving while jumping /
+         * attacking — a bare action mask would release `pulse`. */
         AosKeyEvent pev[12];
         int pne = 0;
         pev[pne++] = (AosKeyEvent){0, pulse};
         /* every 6th chunk: tap UP mid-pulse — doors in Aria open with
          * UP, so this is how the scout actually changes rooms */
         if (chunk % 6 == 5) {
-            pev[pne++] = (AosKeyEvent){20, 64};
-            pev[pne++] = (AosKeyEvent){34, 0};
+            pev[pne++] = (AosKeyEvent){20, 64};  /* UP opens doors */
+            pev[pne++] = (AosKeyEvent){34, pulse};
         }
-        /* every 5th chunk: jump (B) mid-pulse to clear gaps */
+        /* every 5th chunk: jump (A) mid-pulse to clear gaps */
         if (chunk % 5 == 4) {
-            pev[pne++] = (AosKeyEvent){30, 2};
-            pev[pne++] = (AosKeyEvent){40, 0};
+            pev[pne++] = (AosKeyEvent){30, pulse | 1};
+            pev[pne++] = (AosKeyEvent){40, pulse};
         }
-        /* every 4th chunk: attack (A) while moving — early rooms have
+        /* every 4th chunk: attack (B) while moving — early rooms have
          * mandatory fights (Manticore room, Great Armor approach) */
         if (chunk % 4 == 3) {
-            pev[pne++] = (AosKeyEvent){45, 1};
-            pev[pne++] = (AosKeyEvent){57, 0};
+            pev[pne++] = (AosKeyEvent){45, pulse | 2};
+            pev[pne++] = (AosKeyEvent){57, pulse};
         }
         pev[pne++] = (AosKeyEvent){79, 0};
         AosPeekRequest pk[2] = {{-1, 0x02000010, 4},
@@ -1673,7 +1678,7 @@ int main(int argc, char **argv) {
              "probe=0x02000524:4,expect=increase,threshold=4096"},
             {"walk-left", "hold", "key=left,hold=80-140,at=5-20,jitter=8",
              "probe=0x02000524:4,expect=decrease,threshold=4096"},
-            {"attack", "hold", "key=a,hold=8-24,at=5-30,jitter=6",
+            {"attack", "hold", "key=b,hold=8-24,at=5-30,jitter=6",
              "probe=0x0201327A:4,expect=decrease"},
             {"explore-input", "hold", "",
              "probe=0x02000000:4,expect=changed"},

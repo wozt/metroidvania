@@ -16,7 +16,15 @@
  *     --state-in FILE       load emulated state before the run
  *     --peek ADDR:SIZE      hex dump memory region after the run
  *     --peek-at F:ADDR:SIZE dump at frame F instead of end
+ *     --poke F:ADDR:HEX     write HEX bytes at frame F (raw memory poke)
  *     --log PATH            append one line of status per run
+ *
+ * Exit status: 0 on success, 1 when the run fails (bad --state-in,
+ * --state-out write error, screenshot write error, invalid key/poke
+ * schedule), 2 on argument errors. Frame-indexed --keys/--poke
+ * schedules are sorted chronologically before execution; same-frame
+ * events keep their listed order (last mask wins). A negative frame
+ * index rejects the whole schedule rather than dropping events.
  */
 #include "aos_mgba_session.h"
 
@@ -41,7 +49,8 @@ static void dump_peek(const AosPeekResult *peek) {
 int main(int argc, char **argv) {
     const char *rom = NULL, *shot = NULL, *state_out = NULL,
                *state_in = NULL, *keys_spec = NULL, *capture_spec = NULL,
-               *peek_spec = NULL, *poke_spec = NULL, *log_path = NULL;
+               *peek_spec = NULL, *peek_at_spec = NULL, *poke_spec = NULL,
+               *log_path = NULL;
     int frames = 60;
     for (int i = 1; i < argc; ++i) {
         const char *arg = argv[i];
@@ -54,6 +63,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(arg, "--state-out") && value) { state_out = value; ++i; }
         else if (!strcmp(arg, "--state-in") && value) { state_in = value; ++i; }
         else if (!strcmp(arg, "--peek") && value) { peek_spec = value; ++i; }
+        else if (!strcmp(arg, "--peek-at") && value) { peek_at_spec = value; ++i; }
         else if (!strcmp(arg, "--poke") && value) { poke_spec = value; ++i; }
         else if (!strcmp(arg, "--log") && value) { log_path = value; ++i; }
         else {
@@ -82,7 +92,18 @@ int main(int argc, char **argv) {
     int key_count = 0, capture_count = 0, peek_count = 0;
     AosKeyEvent *keys = aos_mgba_parse_keys(keys_spec, &key_count);
     int *capture = aos_mgba_parse_frames(capture_spec, &capture_count);
-    AosPeekRequest *peeks = aos_mgba_parse_peeks(peek_spec, &peek_count);
+    /* --peek and --peek-at share the "[F:]ADDR:SIZE" grammar; merge both
+     * specs into one comma list so a mid-run --peek-at frame is honored. */
+    char peek_merged[8192];
+    peek_merged[0] = '\0';
+    if (peek_spec) snprintf(peek_merged, sizeof peek_merged, "%s", peek_spec);
+    if (peek_at_spec) {
+        size_t used = strlen(peek_merged);
+        snprintf(peek_merged + used, sizeof peek_merged - used, "%s%s",
+                 used ? "," : "", peek_at_spec);
+    }
+    AosPeekRequest *peeks =
+        aos_mgba_parse_peeks(peek_merged[0] ? peek_merged : NULL, &peek_count);
     int poke_count = 0;
     AosPokeEvent *pokes = aos_mgba_parse_pokes(poke_spec, &poke_count);
     spec.keys = keys;
@@ -94,20 +115,25 @@ int main(int argc, char **argv) {
     spec.pokes = pokes;
     spec.poke_count = poke_count;
 
-    /* --peek-at F:ADDR:SIZE entries must fire mid-run; the session API
-     * samples peeks after the run, so map them onto end-of-run reads
-     * here is not possible. Keep CLI behaviour: peeks run post-run. */
     AosRunResult result;
-    aos_mgba_run(session, &spec, &result);
+    bool ok = aos_mgba_run(session, &spec, &result);
 
     for (int i = 0; i < result.peek_count; ++i) dump_peek(&result.peeks[i]);
 
     if (log_path) {
         FILE *log = fopen(log_path, "a");
         if (log) {
-            fprintf(log, "frames=%d keys=%d\n", frames, key_count);
+            fprintf(log, "frames=%d keys=%d ok=%d\n", frames, key_count,
+                    (int)ok);
             fclose(log);
         }
+    }
+
+    int rc = 0;
+    if (!ok) {
+        fprintf(stderr, "run failed: %s\n",
+                result.error[0] ? result.error : "unknown error");
+        rc = 1;
     }
 
     aos_mgba_free_result(&result);
@@ -116,5 +142,5 @@ int main(int argc, char **argv) {
     aos_mgba_free_peeks(peeks);
     aos_mgba_free_pokes(pokes, poke_count);
     aos_mgba_close(session);
-    return 0;
+    return rc;
 }

@@ -1540,6 +1540,10 @@ static void creaking_skull_tests(void) {
     for (int i = 0; i < hit.child_count; ++i)
         if (hit.children[i].role == AOS_ROLE_CS_BONE) bones++;
     assert(bones == 8 && e.spawned_count == 8);
+    assert(e.step == 2 && e.timer == 0x20 && e.cs_cool == 0x1F);
+    assert(e.vx == (e.mirrored ? 0x190000 : -0x190000) / 0x3C &&
+           e.vy == 0x10000 && e.ay == 0x2800);
+    int32_t stride_x = e.x, stride_y = e.y;
     hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
                            10, 4, 0, 0, always_zero);
     bones = 0;
@@ -1547,6 +1551,7 @@ static void creaking_skull_tests(void) {
         if (hit.children[i].role == AOS_ROLE_CS_BONE) bones++;
     assert(bones == 5 && e.spawned_count == 13 &&
            e.boss_parts_spawned);
+    assert(e.x != stride_x && e.y != stride_y && e.timer == 0x1F);
 
     /* The visibility probe receives the boss's screen position, not
      * the camera origin.  A scrolled room must not hide an on-screen

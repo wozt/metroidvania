@@ -74,6 +74,7 @@
 #define play_loop aos_enemy_play_loop
 #define play aos_enemy_play
 #define integrate aos_enemy_integrate
+#define projectile_collide aos_enemy_projectile_collide
 #define player_near aos_enemy_player_near
 
 #define CS_BONES 13
@@ -211,6 +212,14 @@ static const CsArm cs_arms_s0_alert[] = {
     {0xC, 0xB, (int32_t)0xFFFFF000, 0x1F0000},
     {1, 0, (int32_t)0xFFFFF800, 0x1E0000},
     {2, 1, (int32_t)0xFFFFF000, 0x1C0000},
+};
+
+/* sub_08095898 case 2 -> 3 (shared tail _08096544): keep record 12
+ * at -0x1000 and drive records 1/2 at -0x1800 for the next stride. */
+static const CsArm cs_arms_s0_stride[] = {
+    {0xC, 0xB, (int32_t)0xFFFFF000, 0x1F0000},
+    {1, 0, (int32_t)0xFFFFE800, 0x1E0000},
+    {2, 1, (int32_t)0xFFFFE800, 0x1C0000},
 };
 
 /* sub_08096A94 case 0: the state-1 entry re-arm — record 12 holds
@@ -636,55 +645,60 @@ static void cs_gore_update(AosEnemy *e) {
 static void cs_state0(AosEnemy *e, AosSoma *soma,
                       const AosCollision *layer, const AosAnimSet *anims,
                       uint32_t (*random)(void)) {
-    (void)layer;
     switch (e->step) {
     case 0:
-        /* Aggro probe then enter the approach; the alert re-arm of
-         * sub_08095898 case 0 fires on engagement with the decoded
-         * + 0xD entry divider. */
+        /* Native case 0: aggro, face, enter case 2 and seed the
+         * sub_0806D288 stride.  The x speed is +/-0x190000 divided
+         * by (2 * entry_timer - 4); +0x4C/+0x54 become
+         * 0x10000/0x2800 at the shared _08096A72 tail. */
         if (player_near(soma, e->x >> 16, e->y >> 16, 0xC0, 0x80)) {
             cs_face_records(e, soma);
             play(e, anims, 1);
-            e->step = 1;
-            e->timer = 0;
+            e->step = 2;
+            e->timer = cs_cool_tab(0, e->id);
             cs_run_arms(e, cs_arms_s0_alert,
                         (int)(sizeof cs_arms_s0_alert /
                              sizeof cs_arms_s0_alert[0]));
-            e->cs_cool = cs_cool_tab(0, e->id);
+            e->cs_cool = e->timer;
+            int divisor = (int)e->timer * 2 - 4;
+            e->vx = (e->mirrored ? 0x190000 : -0x190000) / divisor;
+            e->vy = 0x10000;
+            e->ax = 0;
+            e->ay = 0x2800;
         }
         break;
     case 1:
-        /* Approach; wall contact or proximity picks an attack — the
-         * transition runs the sub_08096A94 case-0 entry re-arm. */
-        if (soma)
-            aos_enemy_move_toward(e, target_x(soma), target_y(soma),
-                                  0x10);
-        if (++e->timer > 0x40 ||
-            aos_enemy_blocked_ahead(layer, e->x >> 16, e->y >> 16)) {
-            uint32_t r = random ? random() : 0x80;
-            /* sub_08096A94 case 0 calls sub_08098C1C before its
-             * first three record arms. */
-            cs_snapshot_records(e);
-            e->state = 1;
-            e->step = 0;
-            e->substep = 0;
-            e->cs_hits = 0;
-            cs_run_arms(e, cs_arms_s1_entry,
-                        (int)(sizeof cs_arms_s1_entry /
-                             sizeof cs_arms_s1_entry[0]));
-            e->cs_cool = cs_cool_tab(1, e->id);
-            (void)r;
+    case 2:
+        /* Native cases 1/2 both step records then run
+         * sub_0806D288(0x10000, -0x300000).  Particle emission and
+         * the secondary +0x19 animation countdown remain open. */
+        (void)projectile_collide(e, layer, 0x10000,
+                                 (int32_t)0xFFD00000);
+        if (e->timer && --e->timer == 0) {
+            e->step = 3;
+            e->timer = cs_cool_tab(0, e->id);
+            cs_run_arms(e, cs_arms_s0_stride,
+                        (int)(sizeof cs_arms_s0_stride /
+                             sizeof cs_arms_s0_stride[0]));
+            e->cs_cool = e->timer;
         }
         break;
-    case 2:
     case 3:
-        /* Creak pause: the 0x8C stinger every other case entry. */
-        if ((e->step & 1) == 0)
-            aos_audio_play_song(0x8C);
-        if (++e->timer > 0x20) {
-            e->step = 1;
-            e->timer = 0;
-        }
+        /* Native case 3 contains the distance/wall/RNG branch into
+         * cases 4, 7, 10 or state 1.  The port still collapses that
+         * decision, but only after preserving its timed record pose. */
+        if (e->timer && --e->timer)
+            break;
+        cs_snapshot_records(e);
+        e->state = 1;
+        e->step = 0;
+        e->substep = 0;
+        e->cs_hits = 0;
+        cs_run_arms(e, cs_arms_s1_entry,
+                    (int)(sizeof cs_arms_s1_entry /
+                         sizeof cs_arms_s1_entry[0]));
+        e->cs_cool = cs_cool_tab(1, e->id);
+        (void)random;
         break;
     default:
         e->step = 1;

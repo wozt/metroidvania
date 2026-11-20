@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-19T21:02:00+00:00",
+ "generated_at": "2026-11-20T01:47:03+00:00",
  "git": {
-  "commit": "8147b609",
+  "commit": "ecc32857",
   "branch": "main",
   "dirty": true
  },
@@ -1068,7 +1068,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -1151,7 +1151,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -1280,7 +1280,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -1351,7 +1351,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -1479,7 +1479,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -1568,7 +1568,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -1647,7 +1647,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -1719,7 +1719,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -1792,7 +1792,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -1870,7 +1870,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -1962,7 +1962,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2036,7 +2036,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2110,7 +2110,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2192,7 +2192,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2257,7 +2257,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2339,7 +2339,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2401,7 +2401,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2489,7 +2489,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2589,7 +2589,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2648,7 +2648,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2721,7 +2721,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2790,7 +2790,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2861,7 +2861,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2919,7 +2919,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -2997,7 +2997,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -3055,7 +3055,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -3143,7 +3143,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -3226,7 +3226,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -3313,7 +3313,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -3419,7 +3419,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -3537,7 +3537,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -3595,7 +3595,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -3670,7 +3670,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -3763,7 +3763,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -3821,7 +3821,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -3916,7 +3916,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -3980,7 +3980,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -4050,7 +4050,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -4110,7 +4110,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -4222,7 +4222,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -4289,7 +4289,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -4349,7 +4349,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -4408,7 +4408,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -4534,7 +4534,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -4606,7 +4606,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -4691,7 +4691,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -4749,7 +4749,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -4808,7 +4808,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -4931,7 +4931,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -4993,7 +4993,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -5061,7 +5061,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -5120,7 +5120,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -5178,7 +5178,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -5236,7 +5236,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -5326,7 +5326,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -5398,7 +5398,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -5498,7 +5498,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -5577,7 +5577,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -5690,7 +5690,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -5759,7 +5759,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -5885,7 +5885,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -5984,7 +5984,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -6104,7 +6104,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -6169,7 +6169,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -6244,7 +6244,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -6342,7 +6342,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -6430,7 +6430,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -6579,7 +6579,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -6651,7 +6651,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -6728,7 +6728,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -6803,7 +6803,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -6864,7 +6864,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -6953,7 +6953,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -7016,7 +7016,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -7109,7 +7109,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -7204,7 +7204,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -7394,7 +7394,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -7483,7 +7483,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -7607,7 +7607,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -7666,7 +7666,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -7774,7 +7774,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -7856,7 +7856,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -7933,7 +7933,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -8012,7 +8012,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -8138,7 +8138,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -8225,7 +8225,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -8302,7 +8302,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -8400,7 +8400,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -8503,7 +8503,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -8592,7 +8592,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -8684,7 +8684,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -8789,7 +8789,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -8942,7 +8942,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -9034,7 +9034,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -9102,7 +9102,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -9217,7 +9217,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -9339,7 +9339,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -9441,7 +9441,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -9536,7 +9536,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -9651,7 +9651,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -9723,7 +9723,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -9849,7 +9849,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -9937,7 +9937,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -10073,7 +10073,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -10174,7 +10174,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -10249,7 +10249,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -10334,7 +10334,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -10448,7 +10448,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -10585,7 +10585,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -10693,7 +10693,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -10777,7 +10777,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -10867,7 +10867,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -10950,7 +10950,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -11039,7 +11039,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -11112,7 +11112,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -11184,7 +11184,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -11326,7 +11326,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -11423,7 +11423,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -11525,7 +11525,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -11624,7 +11624,7 @@
     "RandomNumberGenerator2",
     "sub_08034498"
    ],
-   "limitations": "The + 0x1C container entity and its thirteen 0x30-byte records fold into cs_rec[13] and the persistent CS_BONE children emitted under the 8-child cap; the create's variant home tables (0x08527FD8 pairs, the 0x085280B0 bone-2 angle dwords and the 0x0811903C/49/56/63/81 byte tables) are reproduced, the sub_08097D84/sub_08097EC4 record arming, the sub_08097B94 orbit/unlaunched-lerp step in the 0x08119063 order, sub_08097D1C's facing transform (all thirteen x values and angles {0,1,2,8,11}) and the sub_0809808C state-0 record ride with the ArcTan2 aim of records {0,1,11} and the held angle of {2,8} are ported, while the two ~2000-line choreography machines keep their case order and songs and now fire the decoded per-case record re-arms at the points the ported cases traverse — the sub_08095898 case-0 alert arms on aggro, the sub_08096A94 case-0 entry, case-13 windup (0x86), case-14 volley (0x80) and case-20 reset arms — each with its decoded + 0xD divider (the 0x08119070/0x08119078 timing bytes selected by entity + 0x24, or the per-case constants 2/0xE) that cs_step_perm counts down like the native cases; the remaining case arms (state-0 cases 3-12/20-24 and state-1 cases 4-12/15-19/21-37 including the sub_08097EC4 pairs and RNG projectile schedule) stay unported because the ported case structure does not reproduce them; sub_0809884C/sub_080989DC now use the native +/-36,-25 spawn, stationary 0x2400/every-other-frame affine turn, collision callbacks and 0x76 burst transition, while their eight launch and six burst particles remain open; the sub_0809808C state-1/state-2 death machines keep their 0x08119081 timers and deletes while the palette writes (sub_08042848/428B4/429D0), the spark helpers (sub_0806D3D8/5C0/518), the native affine pivot/OAM rounding and the sub_0803E6BC slot free stay open; sub_0803E058 angles records {0,1,2,11} in the SDL draw path, sub_08098C1C/38 snapshot and restore all thirteen record positions around attacks, and the sub_08098C54/84 callbacks forward bone contact and weapon strikes through the owning body with owner-attributed rewards; the sub_08098CF0 debris becomes CS_GORE children; the sub_08098E00 room gate, the gEwramData flag checks and the + 0x5A palette merge are covered by the shared spawn/collide paths or not ported; the former erroneous 0x44000 fixed-point hide was removed; the runtime object export now includes the thirteen native still-frame ids {0..11,20}; and a private native/portable room-0/10 comparison diagnoses visibly separated portable segments but does not validate fidelity because player/camera states were unmatched. EnemyCreakingSkullCreate (0x0809549C) loads tiles 0x081CC044, palette 0x0820AB38 and frames 0x082232B8 shared by the body and the thirteen bone children, runs the + 0x30 param and gEwramData room gates, builds the 0x9C container with thirteen sub_0806DFF8 children of callback sub_0809808C indexed by the 0x0811903C/49/56/63 tables, bakes the two sub_08098BE0 bone poses through sub_08097D84 and parks state 3 under the global 0x8E & 0x40 else state 0. EnemyCreakingSkullUpdate (0x08095320) clears + 0x21, runs the sub_0806D128(6) gate, the sub_08068AD4 probe and sub_0806AE54, the sub_0806D4C0 collision and the container hit box, then dispatches state 0 sub_08095898 (the sixteen-case machine), state 1 sub_08096A94 (the attack), state 2 (the + 0xD death countdown with the container delete) and state 3 sub_08097A14 (dormant). EnemyGiantSkeletonCreate/Update are thunks to the same routines. The port keeps the container's thirteen records in cs_rec[13], runs the create bake (home pairs, the three sub_08097D84 arms {12->11, 1->0, 2->1} and the two sub_08098BE0 passes) once per boss, fires the decoded choreography re-arms (sub_08095898 case 0 alert; sub_08096A94 cases 0 entry, 13 windup, 14 volley and 20 reset) with their + 0xD dividers, steps the records through the ported sub_08097B94/sub_08098BE0 math each update in the 0x08119063 order and drives the bone children from their + 0x20/+ 0x21/+ 0x65 table bytes. Unit-tested in creaking_skull_tests; the room 0/9 -> 0/10 integration proves the Object02 entry, visible body and thirteen live bone children. The reachable sub_08034498 escort writes of its create/update tail now report through aos_enemy_create_events / AosHitReport.escort_op into gEwramData + 0x13220 (the stored identity is the persistent AosEnemy record); the remaining native sites stay in unported sub-machines.",
+   "limitations": "The + 0x1C container entity and its thirteen 0x30-byte records fold into cs_rec[13] and the persistent CS_BONE children emitted under the 8-child cap; the create's variant home tables (0x08527FD8 pairs, the 0x085280B0 bone-2 angle dwords and the 0x0811903C/49/56/63/81 byte tables) are reproduced, the sub_08097D84/sub_08097EC4 record arming, the sub_08097B94 orbit/unlaunched-lerp step in the 0x08119063 order, sub_08097D1C's facing transform (all thirteen x values and angles {0,1,2,8,11}) and the sub_0809808C state-0 record ride with the ArcTan2 aim of records {0,1,11} and the held angle of {2,8} are ported, while the two ~2000-line choreography machines keep their case order and songs and now fire the decoded per-case record re-arms at the points the ported cases traverse — the sub_08095898 case-0 alert arms and signed stride velocity on aggro, the cases-1/2 sub_0806D288 collision movement and the case-2-to-3 _08096544 stride arms, the sub_08096A94 case-0 entry, case-13 windup (0x86), case-14 volley (0x80) and case-20 reset arms — each with its decoded + 0xD divider (the 0x08119070/0x08119078 timing bytes selected by entity + 0x24, or the per-case constants 2/0xE) that cs_step_perm counts down like the native cases; the remaining case arms (state-0 case-3 branching and cases 4-12/20-24 and state-1 cases 4-12/15-19/21-37 including the sub_08097EC4 pairs and RNG projectile schedule) stay unported because the ported case structure does not reproduce them; sub_0809884C/sub_080989DC now use the native +/-36,-25 spawn, stationary 0x2400/every-other-frame affine turn, collision callbacks and 0x76 burst transition, while their eight launch and six burst particles remain open; the sub_0809808C state-1/state-2 death machines keep their 0x08119081 timers and deletes while the palette writes (sub_08042848/428B4/429D0), the spark helpers (sub_0806D3D8/5C0/518), the native affine pivot/OAM rounding and the sub_0803E6BC slot free stay open; sub_0803E058 angles records {0,1,2,11} in the SDL draw path, sub_08098C1C/38 snapshot and restore all thirteen record positions around attacks, and the sub_08098C54/84 callbacks forward bone contact and weapon strikes through the owning body with owner-attributed rewards; the sub_08098CF0 debris becomes CS_GORE children; the sub_08098E00 room gate, the gEwramData flag checks and the + 0x5A palette merge are covered by the shared spawn/collide paths or not ported; the former erroneous 0x44000 fixed-point hide was removed; the runtime object export now includes the thirteen native still-frame ids {0..11,20}; and a private native/portable room-0/10 comparison diagnoses visibly separated portable segments but does not validate fidelity because player/camera states were unmatched. EnemyCreakingSkullCreate (0x0809549C) loads tiles 0x081CC044, palette 0x0820AB38 and frames 0x082232B8 shared by the body and the thirteen bone children, runs the + 0x30 param and gEwramData room gates, builds the 0x9C container with thirteen sub_0806DFF8 children of callback sub_0809808C indexed by the 0x0811903C/49/56/63 tables, bakes the two sub_08098BE0 bone poses through sub_08097D84 and parks state 3 under the global 0x8E & 0x40 else state 0. EnemyCreakingSkullUpdate (0x08095320) clears + 0x21, runs the sub_0806D128(6) gate, the sub_08068AD4 probe and sub_0806AE54, the sub_0806D4C0 collision and the container hit box, then dispatches state 0 sub_08095898 (the sixteen-case machine), state 1 sub_08096A94 (the attack), state 2 (the + 0xD death countdown with the container delete) and state 3 sub_08097A14 (dormant). EnemyGiantSkeletonCreate/Update are thunks to the same routines. The port keeps the container's thirteen records in cs_rec[13], runs the create bake (home pairs, the three sub_08097D84 arms {12->11, 1->0, 2->1} and the two sub_08098BE0 passes) once per boss, fires the decoded choreography re-arms (sub_08095898 case 0 alert; sub_08096A94 cases 0 entry, 13 windup, 14 volley and 20 reset) with their + 0xD dividers, steps the records through the ported sub_08097B94/sub_08098BE0 math each update in the 0x08119063 order and drives the bone children from their + 0x20/+ 0x21/+ 0x65 table bytes. Unit-tested in creaking_skull_tests; the room 0/9 -> 0/10 integration proves the Object02 entry, visible body and thirteen live bone children. The reachable sub_08034498 escort writes of its create/update tail now report through aos_enemy_create_events / AosHitReport.escort_op into gEwramData + 0x13220 (the stored identity is the persistent AosEnemy record); the remaining native sites stay in unported sub-machines.",
    "next_action": "Compare the bone choreography, the attack volleys and the death timing against an emulator; port the remaining per-case sub_08097D84/sub_08097EC4 record re-arms and + 0xD divider writes of sub_08095898/sub_08096A94 (the state-0 strike cases and the state-1 projectile scheduling cases the ported machines do not yet reproduce), the sub_0809884C/sub_080989DC launch/burst particle helpers, the native affine pivot/OAM rounding and the sub_0809808C state-1/2 effect helpers.",
    "evidence": {
     "unit_tests": [
@@ -11678,7 +11678,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -11758,7 +11758,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -11834,7 +11834,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -11911,7 +11911,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -12009,7 +12009,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -12081,7 +12081,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -12209,7 +12209,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -12302,7 +12302,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -12399,7 +12399,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -12470,7 +12470,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -12567,7 +12567,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -12638,7 +12638,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -12731,7 +12731,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -12849,7 +12849,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -12937,7 +12937,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -13009,7 +13009,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -13087,7 +13087,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -13215,7 +13215,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -13293,7 +13293,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -13367,7 +13367,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -13445,7 +13445,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -13527,7 +13527,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -13640,7 +13640,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -13736,7 +13736,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -13873,7 +13873,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -14001,7 +14001,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -14079,7 +14079,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -14179,7 +14179,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -14315,7 +14315,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -14386,7 +14386,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -14469,7 +14469,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -14637,7 +14637,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -14719,7 +14719,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -14847,7 +14847,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -14935,7 +14935,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -15018,7 +15018,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -15110,7 +15110,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -15207,7 +15207,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -15306,7 +15306,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -15406,7 +15406,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -15491,7 +15491,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -15601,7 +15601,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -15679,7 +15679,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -15786,7 +15786,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -15882,7 +15882,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -16019,7 +16019,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -16098,7 +16098,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -16175,7 +16175,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -16255,7 +16255,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -16350,7 +16350,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -16448,7 +16448,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -16525,7 +16525,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -16616,7 +16616,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -16714,7 +16714,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -16797,7 +16797,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -16913,7 +16913,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -17009,7 +17009,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -17089,7 +17089,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -17166,7 +17166,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -17261,7 +17261,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -17341,7 +17341,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -17420,7 +17420,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -17538,7 +17538,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -17609,7 +17609,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -17709,7 +17709,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -17786,7 +17786,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -17869,7 +17869,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -17942,7 +17942,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -18033,7 +18033,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -18146,7 +18146,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -18288,7 +18288,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -18386,7 +18386,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -18495,7 +18495,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -18573,7 +18573,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -18692,7 +18692,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -18800,7 +18800,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -18893,7 +18893,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -18999,7 +18999,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -19079,7 +19079,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -19190,7 +19190,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -19296,7 +19296,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -19402,7 +19402,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -19516,7 +19516,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -19606,7 +19606,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -19687,7 +19687,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -19803,7 +19803,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -19931,7 +19931,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -20048,7 +20048,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -20126,7 +20126,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -20211,7 +20211,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -20304,7 +20304,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -20348,8 +20348,8 @@
     "sub_08068AD4",
     "PlaySong"
    ],
-   "limitations": "The sub_08068AD4 probe and the sub_08045F9C attack-box match stay caller approximations; entity +0x36 (the drop selector) is unmodelled and reads 0, so only case 0 (heart or full-MP money) drops — cases 1/2 are unreachable; the +0x92 param0 cache's last-variant-wins VRAM fight is drawn per-entity instead; shared sheet 0x081C15F4 now uses palette descriptor 0x082099FC bank 3 for destination OBJ row 7 (live mGBA row-7 bytes match exactly), replacing the erroneous use of alternate graphics 0x0826F8A4 as colours; unk_60.unk_A1_4 uses its new-game value (the sub_080074C0 menu toggle is unported); sub_08032DF0 is reduced to the ==0x3E8 all-souls check; kind-5 id>=5 and kind-6 categories outside 1-4 spawn nothing (native sub_08044054 coverage); the state-1 gore burst remains an effect approximation; the retained +0x5C band 0x14 now enters the BG/OBJ priority interleave instead of the final front pass, but the overlap is runtime-only and not synchronized with mGBA; palette RAM is emulator-compared, but destruction and drop timing are not. Patch 1264: the drawFunc animation step is now ported per entity — AosBreakable.anim_tick counts update frames and the frame index resolves from it at the native one-tick-per-frame rate (func_0803EBA8 mode 0), replacing the four-times-slow shared step/4 wall-clock pick for this prop. Audit (patches 1246/1250): the sub_08045F9C mask & 0x1E's bit 0x4 (sub_08041BDC, victim hurt box vs the + 0x13110 player entity's attack rect at 0x03001A48) was unmodelled at patch 1246 — patch 1249 ported the player's slide/dive-kick attack box in aos_soma/aos_enemy_collide and patch 1250 wires it into this matcher through aos_soma_body_attack_hit against the same prop box; bit 0x2 is approximated by the live weapon hitbox and bits 0x8/0x10 by the soul lists. sub_0800F1FC case 3 spawns every kind-3 record through sub_08046080/sub_08045EE0: sub_08046148's per-param0 tile DMA is exported as Object/special_62_v00-v15 animation 3 (0x081C3E00 chunks onto sheet tiles 32-37/48-53) and drawn per record; the animation cycles at the native drawFunc rate through the entity's own anim_tick (patch 1264); sub_08045F9C case 0 drops a sub_08043F70 money pickup ((RNG&1)+param1) on full MP Soma or a sub_08043C10 heart (big = param1 != 0) through the AosPickup paths. Cases 5/6 spawn their conditional sub_08044054 placed pickups once on camera-window entry: kind 5 on unk_A1_4 + Soma, kind 6 on Soma + unowned inventory slot + all souls collected. Patch 1234 corrects Object/special_15 rows 6/7/9 and every special_62 breakable variant to shared-effect palette banks 2/3/6; a private room-0/3 runtime capture restores the orange flame and metal instead of an opaque black silhouette. Patch 1238 routes sub_08046080's +0x5C band 0x14 through the shared priority interleave; a forced runtime overlap at (768,128), frame 1, shows Soma composed above the prop.",
-   "next_action": "Compare the break animation, pickup spawn and per-frame candle placement against the same native room-0/3 checkpoint; port the +0x36 drop-selector source if found and model the unk_60.unk_A1_4 menu toggle.",
+   "limitations": "The sub_08068AD4 probe and the sub_08045F9C attack-box match stay caller approximations; entity +0x36 (the drop selector) is unmodelled and reads 0, so only case 0 (heart or full-MP money) drops — cases 1/2 are unreachable; the +0x92 param0 cache's last-variant-wins VRAM fight is drawn per-entity instead; sub_08045EE0's hit sets +0x58 bit 0x20 which sub_0803AC40 reads as do-not-draw, so the prop now vanishes on the hit frame while the 0x28-tick break plays; sub_08046080's +0x72 bit-1 light emitter is drawn as the same procedural flame glow stand-in Object0F uses (the real room light pass is unported); the kind-3 gore burst now spawns the sub_0806D5C0 entity-0x49/0xCF particle — animation 0 flame art, translucent, rising -0x8000/frame at the rand-jittered position — instead of the soul-sparkle still; shared sheet 0x081C15F4 now uses palette descriptor 0x082099FC bank 3 for destination OBJ row 7 (live mGBA row-7 bytes match exactly), replacing the erroneous use of alternate graphics 0x0826F8A4 as colours; unk_60.unk_A1_4 uses its new-game value (the sub_080074C0 menu toggle is unported); sub_08032DF0 is reduced to the ==0x3E8 all-souls check; kind-5 id>=5 and kind-6 categories outside 1-4 spawn nothing (native sub_08044054 coverage); the state-1 gore burst remains an effect approximation; the retained +0x5C band 0x14 now enters the BG/OBJ priority interleave instead of the final front pass, but the overlap is runtime-only and not synchronized with mGBA; palette RAM is emulator-compared, but destruction and drop timing are not. Patch 1264: the drawFunc animation step is now ported per entity — AosBreakable.anim_tick counts update frames and the frame index resolves from it at the native one-tick-per-frame rate (func_0803EBA8 mode 0), replacing the four-times-slow shared step/4 wall-clock pick for this prop. Audit (patches 1246/1250): the sub_08045F9C mask & 0x1E's bit 0x4 (sub_08041BDC, victim hurt box vs the + 0x13110 player entity's attack rect at 0x03001A48) was unmodelled at patch 1246 — patch 1249 ported the player's slide/dive-kick attack box in aos_soma/aos_enemy_collide and patch 1250 wires it into this matcher through aos_soma_body_attack_hit against the same prop box; bit 0x2 is approximated by the live weapon hitbox and bits 0x8/0x10 by the soul lists. sub_0800F1FC case 3 spawns every kind-3 record through sub_08046080/sub_08045EE0: sub_08046148's per-param0 tile DMA is exported as Object/special_62_v00-v15 animation 3 (0x081C3E00 chunks onto sheet tiles 32-37/48-53) and drawn per record; the animation cycles at the native drawFunc rate through the entity's own anim_tick (patch 1264); sub_08045F9C case 0 drops a sub_08043F70 money pickup ((RNG&1)+param1) on full MP Soma or a sub_08043C10 heart (big = param1 != 0) through the AosPickup paths. Patch 1275 hides the prop on the hit frame, adds the flame glow and replaces the sparkle gore with the native flame particle. Cases 5/6 spawn their conditional sub_08044054 placed pickups once on camera-window entry: kind 5 on unk_A1_4 + Soma, kind 6 on Soma + unowned inventory slot + all souls collected. Patch 1234 corrects Object/special_15 rows 6/7/9 and every special_62 breakable variant to shared-effect palette banks 2/3/6; a private room-0/3 runtime capture restores the orange flame and metal instead of an opaque black silhouette. Patch 1238 routes sub_08046080's +0x5C band 0x14 through the shared priority interleave; a forced runtime overlap at (768,128), frame 1, shows Soma composed above the prop.",
+   "next_action": "Compare the break animation, glow and hide-on-hit frame against pickup spawn and per-frame candle placement against the same native room-0/3 checkpoint; port the +0x36 drop-selector source if found and model the unk_60.unk_A1_4 menu toggle.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_breakable.c",
@@ -20389,7 +20389,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -20418,7 +20418,7 @@
     "sub_0803C150",
     "sub_0806E0D0"
    ],
-   "limitations": "The cleanup state 0x63 (entered when + 0x59 bit 2 is clear; its setter is not traced) is not modelled. Door state now synchronizes gEwramData + 0x42C bits 0x101 for the pickup path and yellow-soul hold check; other + 0x42C readers stay unmodelled; + 0xA074 bit 1 now reports through the entity pass's sub_0800C5A8 channel (0 at create and while holding, 1 on the frame holding clears); sounds 0x114 / 0x115 are reported, not played. Other door kinds are separate objects outside this entry. Object00 is ported: creation open or closed with its three blocks, opening on contact while facing it (not on a backdash), walking Soma through or out, closing, the off-screen hiding of sub_08068AD4(e, -32, 0, 0x130, 0xD0) and the global flags held while Soma passes; wooden and green door graphics with their palette cycles are exported, and sub_0804D794's affine swing is approximated: the native submits the frame's two sprite components with separate OBJ affine matrices (sin(swing) scaleX on the lower 32x16 band, cos(swing) on the upper 32x32 band of records 0/5 in 0x0820F160, scaleY 1.0; aos_door_swing_bands exposes both curves) plus the shared 32*sin(swing)-1 px drift; the port still draws the single composited leaf squashed by cos(swing) shifted by that drift (aos_door_swing_scale/shift) — the per-part split was tried and rejected visually, per-part pivot anchoring unverified; the fully-open non-affine draw of the door-frame variant is approximated by the edge-on (zero-width) leaf since the open-doorway art is not separately exported. The palette cycle phase is the door's own sub_0803C150 script instance (registered at spawn by sub_0804D8F0's sub_0806E0D0, ticked once per frame into palette_age), not the run frame counter; the drawFunc's per-state sprite-group picks (+ 0x65 when fully open, + 0x65 + 1 while swinging and as the second closed-state draw, + 0x65 + 2 as the first closed-state draw) still share the single exported leaf art — the frame and open-doorway variants are not separately exported.",
+   "limitations": "The cleanup state 0x63 (entered when + 0x59 bit 2 is clear; its setter is not traced) is not modelled. Door state now synchronizes gEwramData + 0x42C bits 0x101 for the pickup path and yellow-soul hold check; other + 0x42C readers stay unmodelled; + 0xA074 bit 1 now reports through the entity pass's sub_0800C5A8 channel (0 at create and while holding, 1 on the frame holding clears); sounds 0x114 / 0x115 are reported, not played. Other door kinds are separate objects outside this entry. Object00 is ported: creation open or closed with its three blocks, opening on contact while facing it (not on a backdash), walking Soma through or out, closing, the off-screen hiding of sub_08068AD4(e, -32, 0, 0x130, 0xD0) and the global flags held while Soma passes; wooden and green door graphics with their palette cycles are exported, and the swing draw was measured live in OAM (aos_mgba_lab room 0/0->0/3 door, frames 401-459, swing +=0x100/frame 0->0x3B00): NO sprite carries the OBJ affine flag — the earlier two-matrix affine reading of sub_0804D794 does not match live OAM; the door is ~6 plain OBJ sprites. A static frame pair (tiles 912/920 pal0, wide 64x32 x2 at y 64/96) plus a 4-sprite panel (pal10 tiles 16/17/144/145) split into two groups easing apart with s=sin(pi*swing/0x8000): group A x~-7+14s, group B x~8+27s, a one-time shape/size swap at swing start, group B hidden once swing>=0x4000; per-frame OAM captures of the same swing show the panel is TWO affine sprite groups (attr1 affine index 8 and 9 — the earlier no-affine reading was wrong): group A (hinge side, wide pieces tiles 17/145) stays near x -4..7 and crushes edge-on, group B (free side, narrow pieces tiles 16/144) travels x14 -> x35 toward the room interior while shrinking, opening a gap that reveals the doorway; sub_0804D794 also shifts the entity draw x by sin(swing)*32-1 px (sign by facing, restored from +0x40 after). The port renders the composited leaf as a cosine-narrowed quad anchored on the hinge edge plus the native sin(swing)*32-1 px entity shift (aos_door_swing_scale + aos_door_swing_shift), and now also draws the 8x48 edge-on strip — frame record 1 of the door graphics descriptor (sheet column x0-7, the same art as live-OAM group B tiles 16/144, affine index 9) — travelling +21 px toward the room interior behind the narrowing leaf (WoodenDoorEdge/style_N export, edge_frames in AriaObjects, drawn in aria_draw.c); the exact 2x2 affine matrix math of sub_0803E058/sub_0804342C (scale+rotation per component, OAM indices 8/9) remains approximated by the cosine squash; the fully-open non-affine draw of the door-frame variant is approximated by the edge-on (zero-width) leaf since the open-doorway art is not separately exported. The palette cycle phase is the door's own sub_0803C150 script instance (registered at spawn by sub_0804D8F0's sub_0806E0D0, ticked once per frame into palette_age), not the run frame counter; the drawFunc's per-state sprite-group picks (+ 0x65 when fully open, + 0x65 + 1 while swinging and as the second closed-state draw, + 0x65 + 2 as the first closed-state draw) still share the single exported leaf art — the frame and open-doorway variants are not separately exported.",
    "next_action": "Trace the setter of + 0x59 bit 2 to model the cleanup state 0x63.",
    "evidence": {
     "unit_tests": [
@@ -20461,7 +20461,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -20996,7 +20996,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -21122,7 +21122,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -21187,7 +21187,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -21288,7 +21288,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -21385,7 +21385,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -21552,7 +21552,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -21654,7 +21654,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -21724,7 +21724,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -21786,7 +21786,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -21885,7 +21885,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -21996,7 +21996,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22070,7 +22070,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22133,7 +22133,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22196,7 +22196,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22264,7 +22264,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22331,7 +22331,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22425,7 +22425,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22498,7 +22498,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22562,7 +22562,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22654,7 +22654,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22719,7 +22719,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22751,13 +22751,15 @@
     "sub_08045CEC",
     "PlaySong"
    ],
-   "limitations": "The sub_08068AD4 probe is approximated by a player-near window, the sub_08045F9C attack-box match (sub_080421AC over the player + 0x70 slots, the sub_08043C10/sub_08043F70 case dispatch on param1) collapses to the weapon hitbox overlap plus the bit-0x4 player body attack (aos_soma_body_attack_hit, patch 1250) with a 16x16 entity box, the sub_0803AFB8/0x081C15F4 resource attach and the 0x080CF8FA attack-box preset are covered by the exported special_15_v* art, the + 0x5A draw byte stays 0 so particle palettes read 0, and there is no emulator comparison. Patch 1264: the SPECIAL draw now selects animation 0xE (defs[14]) for id 15 — the full burning-chandelier cycle that carries the flame flicker — instead of the shared animation 0, and the frame step uses the entity's own anim_tick at the native one-tick-per-frame rate like the breakable. Audit (patches 1246/1250): the mask & 0x1E's bit 0x4 (sub_08041BDC vs the + 0x13110 player attack rect) was unmodelled at patch 1246 — patch 1249 ported the player's slide/dive-kick attack box in aos_soma/aos_enemy_collide and patch 1250 wires it into this matcher through aos_soma_body_attack_hit. Object0FCreate (0x08050DB4) splits param0 into the OBJ palette row (high byte, default 7) and the kept low byte, attaches tiles through sub_0803AFB8(0x081C15F4) and sub_0803B924 with palette 0x0820ED60, sets + 0x5C = 0x14, + 0x58 &= 0xBF, animation 0xE and + 0x72 bit 1, presets the attack box and installs the sub_08050F08 frame callback. Object0FUpdate (0x08050E3C) sets + 0x58 bit 0x20 and ends on a failed sub_08068AD4 probe; state 0 clears + 0x58 bits 0 and 5 and on a sub_08045F9C hit plays song 0xA2, sets bit 0x20, + 0xD = 0x28 and enters state 1; state 1 emits a sub_08045CEC drift every fourth frame while + 0xD exceeds 0x1E, jittered by sub_0802D5EC(0x80000) with the + 0x5A palette bits, counts the u8 timer down and sets + 0x59 bit 3 on the 0xFF wrap. Unit-tested in test_aos_object0f.",
-   "next_action": "Port the sub_080421AC attack-slot matcher and the sub_08045F9C case dispatch for a faithful hit resolution.",
+   "limitations": "The sub_08068AD4 probe is approximated by a player-near window, the sub_08045F9C attack-box match (sub_080421AC over the player + 0x70 slots) collapses to the weapon hitbox overlap plus the bit-0x4 player body attack (aos_soma_body_attack_hit) and the soul-hit probe with a 16x16 entity box, the sub_0803AFB8/0x081C15F4 resource attach and the 0x080CF8FA attack-box preset are covered by the exported special_15_v* art, the + 0x5A draw byte stays 0 so particle palettes read 0, the lamp glow is a procedural radial disc stand-in — the native + 0x72 bit-1 emitter's dynamic-light pass is not ported — the break flourish plays the shared burst_15 export (common animation 15, the filled-circle flash into debris) rather than a dedicated Object0F break entity, and there is no emulator comparison. Patch 1264: the SPECIAL draw selects animation 0xE (defs[14]) for id 15 — the full burning-chandelier cycle — and the frame step uses the entity's own anim_tick at the native one-tick-per-frame rate.; sub_08050F08 routes through sub_0803AC40, so the +0x58 bit-0x20 set on the hit now also hides the prop sprite for the whole break (only the glow, particles and drop remain); the state-1 drift particle now uses the animation-0 flame art translucent via sub_08045C9C instead of the soul-sparkle still Object0FCreate (0x08050DB4) splits param0 into the OBJ palette row (high byte, default 7) and the kept low byte, attaches tiles through sub_0803AFB8(0x081C15F4) and sub_0803B924 with palette 0x0820ED60, sets + 0x5C = 0x14, + 0x58 &= 0xBF, animation 0xE and + 0x72 bit 1, presets the attack box and installs the sub_08050F08 frame callback. Object0FUpdate (0x08050E3C) sets + 0x58 bit 0x20 and ends on a failed sub_08068AD4 probe; state 0 clears + 0x58 bits 0 and 5 and on a sub_08045F9C hit plays song 0xA2, sets bit 0x20, + 0xD = 0x28 and enters state 1; state 1 emits a sub_08045CEC drift every fourth frame while + 0xD exceeds 0x1E, jittered by sub_0802D5EC(0x80000) with the + 0x5A palette bits, counts the u8 timer down and sets + 0x59 bit 3 on the 0xFF wrap. The sub_08045F9C drop dispatch is ported as per-frame outputs latched on the accepted hit frame: case 0 drops a sub_08043F70 money pickup of variant (RNG&1)+param1 on a full-MP Soma or a sub_08043C10 heart (big = param1 != 0), selector 1 money of variant param1 and selector 2 a sub_08044054(x, y, 2, param1) item — every extracted record keeps selector 0, so the heart/money path is the live one; the pickups spawn through the same AosPickup creators the breakable and enemy drops use. The hit frame also requests the burst_15 break flourish and song 0xA2 reaches the room sound output; the draw adds the blinking filled-disc glow (smoothstep radial, breathing with the anim-14 flicker, fading with the + 0xD timer through state 1) as the documented stand-in for the + 0x72 bit-1 light emitter. Unit-tested in test_aos_object0f including the drop latch and the burst one-shot.",
+   "next_action": "Compare the break sequence (song 0xA2, burst_15 flourish, drift particles, pickup pop) against an emulator capture of room 0/16; port the + 0x72 bit-1 emitter's native dynamic-light pass if the glow needs to match.",
    "evidence": {
     "unit_tests": [
      "tests/test_aos_object0f.c"
     ],
-    "in_game_check": [],
+    "in_game_check": [
+     "aria area_00_room_016 (--spawn 66 140 --simulate 500 --simulate-script with a jump+whip tap, --weapon 0): the lamp at (80,120) plays song 0xA2, enters state 1 with timer 40 counting to the 0xFF wrap, drops one money pickup on the hit frame at full MP and the burst_15 flourish renders."
+    ],
     "emulator_compared": false,
     "played_through": false
    },
@@ -22780,7 +22782,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22856,7 +22858,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22928,7 +22930,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -22986,7 +22988,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23047,7 +23049,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23118,7 +23120,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23181,7 +23183,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23244,7 +23246,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23319,7 +23321,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23387,7 +23389,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23444,7 +23446,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23506,7 +23508,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23574,7 +23576,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23658,7 +23660,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23722,7 +23724,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23785,7 +23787,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23841,7 +23843,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23910,7 +23912,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -23977,7 +23979,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24036,7 +24038,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24113,7 +24115,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24170,7 +24172,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24259,7 +24261,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24317,7 +24319,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24385,7 +24387,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24441,7 +24443,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24509,7 +24511,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24588,7 +24590,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24677,7 +24679,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24750,7 +24752,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24815,7 +24817,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24890,7 +24892,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -24955,7 +24957,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -25025,7 +25027,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -25084,7 +25086,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -25150,7 +25152,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -25215,7 +25217,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -25291,7 +25293,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -25355,7 +25357,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -25416,7 +25418,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -25477,7 +25479,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -25541,7 +25543,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -25601,7 +25603,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -25717,7 +25719,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -25790,7 +25792,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -25931,7 +25933,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -26130,7 +26132,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -26392,7 +26394,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -26570,7 +26572,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -26664,7 +26666,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -27461,7 +27463,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -27550,7 +27552,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -27717,7 +27719,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -27948,7 +27950,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -28103,7 +28105,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -28279,7 +28281,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -28356,7 +28358,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -28559,7 +28561,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -28699,7 +28701,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -28898,7 +28900,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -29012,7 +29014,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -29080,7 +29082,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -29129,7 +29131,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -29191,7 +29193,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -29240,7 +29242,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -29300,7 +29302,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -29499,7 +29501,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -29576,7 +29578,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -29637,7 +29639,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -29721,7 +29723,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -29788,7 +29790,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -29888,7 +29890,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -29967,7 +29969,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -30018,7 +30020,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -30081,7 +30083,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -30130,7 +30132,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -30351,7 +30353,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -30415,7 +30417,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -30514,7 +30516,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The native C11 rebuild task exports 2,143 traced door, enemy, skill and shared-effect sequences, 7,153 indexed frames, 3,940 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 3,941 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v4) also exports experience and drop fields used by the runtime, plus money and equipment metadata. Compressed tile sheets skip their expanded header. It exports breakable-wall art, opening actors and attacks, guardians and shared collision effects. Version 68 adds the four palette-specific direct type-4 soul-container sparkle sequences at 0x0852513C, with their native 3, 7, 7 and 3 frame durations; the nine most-placed SPECIAL room objects (ids 7,10,13,14,15,17,18,19,21) are exported as Object/special_NN sequences and drawn in rooms, with per-object animation/behaviour selection and the remaining ids still open. Version 69 adds Effect/level_up, the still frame 0x48 level-up display of sub_080455BC Sky Fish, Ectoplasm, Ghost Dancer, Medusa Head, Ghost, Zombie Officer, Curly/Durga Needles, Gorgon/Catoblepas, Dead Warrior, Mimic, Fleaman, Skeleton Knight, Killer Doll, Lightning Doll and Beam Skeleton are the first families compiled as their own translation units through the shared prefixed internal framework API; this refactor changes no runtime behavior or feature status.. Version 70 adds Object/special_29_v0/v1, the two Object1D (SPECIAL id 29) sprite sets decoded from descriptors 0x082052F0/0x082052E8, also drawn for the Object1C save point marker child. Version 74 adds Object/special_31_v2/v4/v5/v6/v7, the Object1F (SPECIAL id 31) opening-gate children sets: the packed 0x082052F0 descriptor and the twelve 0x08257BD8 frame records exported per palette bank (v2 for the nine ring children, v4-v7 for the two flanks cycling through the 0x081185F8 table). Version 76 adds Object/whiteout_burst_carrier (four variant animations over frames 0x08267EE4) and Object/whiteout_burst_particle (still frames 0xB/0xC), drawn for the whiteout burst state machines. Version 75 adds Object/special_28_v1-v4, the Object1C (SPECIAL id 28) child palette banks over the shared 0x08257964 frame records: every child kind resolves the same descriptor, differing only in OBJ palette row (marker bank 4, sparkle anim0 bank 2 / anim4 bank 1, beam and spark bank 3). Scripted Death, Balore and phase-2 Chaos deaths now propagate the shared collision helper's one-frame killed result while entering their native death states, preserving the runtime's once-only reward path. Headless real-room integrations kill the early Skeleton and Cockatrice with exported weapon hitboxes, verifying their exact 3-XP and 120-XP records and the latter's level-2 transition; the Skeleton child integration also proves its separate head and held bone remain linked to the body; no fidelity status changes without emulator comparison. Version 77 fixes the shared 0x081C15F4 palette mapping: OBJ rows 6/7/9 use banks 2/3/6 of descriptor 0x082099FC; 0x0826F8A4 and 0x082718A8 are alternate graphics, not palettes. Patch 1237 makes Object07 ambient children consume their exported layer-specific animations and native OAM bands; param0 1 tile DMA and anchored selectors 11-14 remain partial. Version 80 forwards Creaking Skull bone contact and weapon callbacks to the owning body, preserves owner-attributed XP/drops/boss-clear state, and fixes the screen-margin probe; choreography remains partial and emulator-unverified. Version 79 exports Creaking Skull and Giant Skeleton still-frame ids {0..11,20}, restores the first boss body visibility, and draws Object02 with its native shared palette-row-6 animations 6/9; the room 0/9 -> 0/10 integration verifies the gate and all fourteen boss parts, without an emulator-comparison claim. Version 78 corrects Merman to EnemyMermanCreate's sub_0807188C resources (0x081CBF44 / 0x0820A488 / 0x082133F4), exposing its seven native animations instead of the Killer Fish sheet; source-exact and runtime-captured, not emulator-compared. Version 81 connects sub_0809808C affine angles for Creaking Skull records {0,1,2,11} and ports the sub_08098C1C/38 position snapshot/restore; a private unmatched-state emulator comparison still shows separated portable segments, so choreography remains partial. Version 82 replaces Creaking Skull's arbitrary flying CS_SHOT with sub_0809884C/sub_080989DC's native stationary spawn offsets, affine turn and collision-triggered 0x76 burst lifecycle; its fourteen native particle emissions and parent scheduling cases remain partial. Version 83 corrects Creaking Skull sub_08097D1C to negate all thirteen record x values and mirror angles {0,1,2,8,11} only when facing changes; the frame-300 diagnostic remains visibly separated because the missing choreography, not this unexercised branch, dominates that setup.",
+   "limitations": "The native C11 rebuild task exports 2,143 traced door, enemy, skill and shared-effect sequences, 7,153 indexed frames, 3,940 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 3,941 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v4) also exports experience and drop fields used by the runtime, plus money and equipment metadata. Compressed tile sheets skip their expanded header. It exports breakable-wall art, opening actors and attacks, guardians and shared collision effects. Version 68 adds the four palette-specific direct type-4 soul-container sparkle sequences at 0x0852513C, with their native 3, 7, 7 and 3 frame durations; the nine most-placed SPECIAL room objects (ids 7,10,13,14,15,17,18,19,21) are exported as Object/special_NN sequences and drawn in rooms, with per-object animation/behaviour selection and the remaining ids still open. Version 69 adds Effect/level_up, the still frame 0x48 level-up display of sub_080455BC Sky Fish, Ectoplasm, Ghost Dancer, Medusa Head, Ghost, Zombie Officer, Curly/Durga Needles, Gorgon/Catoblepas, Dead Warrior, Mimic, Fleaman, Skeleton Knight, Killer Doll, Lightning Doll and Beam Skeleton are the first families compiled as their own translation units through the shared prefixed internal framework API; this refactor changes no runtime behavior or feature status.. Version 70 adds Object/special_29_v0/v1, the two Object1D (SPECIAL id 29) sprite sets decoded from descriptors 0x082052F0/0x082052E8, also drawn for the Object1C save point marker child. Version 74 adds Object/special_31_v2/v4/v5/v6/v7, the Object1F (SPECIAL id 31) opening-gate children sets: the packed 0x082052F0 descriptor and the twelve 0x08257BD8 frame records exported per palette bank (v2 for the nine ring children, v4-v7 for the two flanks cycling through the 0x081185F8 table). Version 76 adds Object/whiteout_burst_carrier (four variant animations over frames 0x08267EE4) and Object/whiteout_burst_particle (still frames 0xB/0xC), drawn for the whiteout burst state machines. Version 75 adds Object/special_28_v1-v4, the Object1C (SPECIAL id 28) child palette banks over the shared 0x08257964 frame records: every child kind resolves the same descriptor, differing only in OBJ palette row (marker bank 4, sparkle anim0 bank 2 / anim4 bank 1, beam and spark bank 3). Scripted Death, Balore and phase-2 Chaos deaths now propagate the shared collision helper's one-frame killed result while entering their native death states, preserving the runtime's once-only reward path. Headless real-room integrations kill the early Skeleton and Cockatrice with exported weapon hitboxes, verifying their exact 3-XP and 120-XP records and the latter's level-2 transition; the Skeleton child integration also proves its separate head and held bone remain linked to the body; no fidelity status changes without emulator comparison. Version 77 fixes the shared 0x081C15F4 palette mapping: OBJ rows 6/7/9 use banks 2/3/6 of descriptor 0x082099FC; 0x0826F8A4 and 0x082718A8 are alternate graphics, not palettes. Patch 1237 makes Object07 ambient children consume their exported layer-specific animations and native OAM bands; param0 1 tile DMA and anchored selectors 11-14 remain partial. Version 80 forwards Creaking Skull bone contact and weapon callbacks to the owning body, preserves owner-attributed XP/drops/boss-clear state, and fixes the screen-margin probe; choreography remains partial and emulator-unverified. Version 79 exports Creaking Skull and Giant Skeleton still-frame ids {0..11,20}, restores the first boss body visibility, and draws Object02 with its native shared palette-row-6 animations 6/9; the room 0/9 -> 0/10 integration verifies the gate and all fourteen boss parts, without an emulator-comparison claim. Version 78 corrects Merman to EnemyMermanCreate's sub_0807188C resources (0x081CBF44 / 0x0820A488 / 0x082133F4), exposing its seven native animations instead of the Killer Fish sheet; source-exact and runtime-captured, not emulator-compared. Version 81 connects sub_0809808C affine angles for Creaking Skull records {0,1,2,11} and ports the sub_08098C1C/38 position snapshot/restore; a private unmatched-state emulator comparison still shows separated portable segments, so choreography remains partial. Version 82 replaces Creaking Skull's arbitrary flying CS_SHOT with sub_0809884C/sub_080989DC's native stationary spawn offsets, affine turn and collision-triggered 0x76 burst lifecycle; its fourteen native particle emissions and parent scheduling cases remain partial. Version 83 corrects Creaking Skull sub_08097D1C to negate all thirteen record x values and mirror angles {0,1,2,8,11} only when facing changes; the frame-300 diagnostic remains visibly separated because the missing choreography, not this unexercised branch, dominates that setup. Version 84 replaces Creaking Skull's non-integrated 0x10 chase with sub_08095898 case-0's signed stride velocity, cases-1/2 sub_0806D288 collision movement and the decoded case-2-to-3 record arms; case 3 and later choreography remain partial.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -30665,7 +30667,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -30715,7 +30717,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -30766,7 +30768,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -30816,7 +30818,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -30866,7 +30868,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -30935,7 +30937,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -31040,7 +31042,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -31197,7 +31199,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -31262,7 +31264,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -31354,7 +31356,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -31405,7 +31407,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -31548,7 +31550,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -31627,7 +31629,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -31691,7 +31693,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -31768,7 +31770,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -31859,7 +31861,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -31937,7 +31939,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -32095,7 +32097,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -32142,7 +32144,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -32185,7 +32187,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-19"
+    "verified_on": "2026-11-20"
    }
   },
   {
@@ -33922,6 +33924,90 @@
  },
  "timeline": [
   {
+   "commit": "ecc32857",
+   "date": "2026-11-20",
+   "subject": "aria: breakable torches and Object0F hide on hit, glow, native particles",
+   "scope": "project"
+  },
+  {
+   "commit": "1ca93a38",
+   "date": "2026-11-20",
+   "subject": "aria: Object0F chandelier break — immediate loot, glow and break flourish",
+   "scope": "project"
+  },
+  {
+   "commit": "b1f4a297",
+   "date": "2026-11-20",
+   "subject": "aria: draw the wooden door's edge strip during the swing",
+   "scope": "project"
+  },
+  {
+   "commit": "7908891c",
+   "date": "2026-11-20",
+   "subject": "aria: restore single-quad wooden-door swing (revert two-half split)",
+   "scope": "project"
+  },
+  {
+   "commit": "71fa214e",
+   "date": "2026-11-20",
+   "subject": "aria: split wooden-door swing into hinge and free halves",
+   "scope": "project"
+  },
+  {
+   "commit": "423e5100",
+   "date": "2026-11-19",
+   "subject": "aria: restore Patch 1192 cosine-squash wooden-door swing",
+   "scope": "project"
+  },
+  {
+   "commit": "2af474a0",
+   "date": "2026-11-19",
+   "subject": "aria: draw wooden-door leaf static during swing",
+   "scope": "project"
+  },
+  {
+   "commit": "6ba64b31",
+   "date": "2026-11-19",
+   "subject": "aria: restore cosine-squash wooden-door swing (revert two-slice)",
+   "scope": "project"
+  },
+  {
+   "commit": "673153c3",
+   "date": "2026-11-19",
+   "subject": "aria: split wooden-door swing into hinge edge + inward free slice",
+   "scope": "project"
+  },
+  {
+   "commit": "729b144e",
+   "date": "2026-11-19",
+   "subject": "aria: drift wooden-door swing toward the room interior",
+   "scope": "project"
+  },
+  {
+   "commit": "0fba6db2",
+   "date": "2026-11-19",
+   "subject": "aria: anchor wooden-door foreshortening on the opening side",
+   "scope": "project"
+  },
+  {
+   "commit": "bd510325",
+   "date": "2026-11-19",
+   "subject": "aria: render wooden-door swing as hinge-anchored foreshortening",
+   "scope": "project"
+  },
+  {
+   "commit": "a75aae3c",
+   "date": "2026-11-19",
+   "subject": "Aria door: split-leaf swing from live OAM measurement",
+   "scope": "project"
+  },
+  {
+   "commit": "79132b9b",
+   "date": "2026-11-19",
+   "subject": "Fix Creaking Skull record facing transform",
+   "scope": "project"
+  },
+  {
    "commit": "8147b609",
    "date": "2026-11-19",
    "subject": "Port Creaking Skull rotating attack entity",
@@ -34315,90 +34401,6 @@
    "commit": "1dafdf89",
    "date": "2026-11-17",
    "subject": "aos: wire gEwramData input/pause/cinematic-control globals into object consumers",
-   "scope": "project"
-  },
-  {
-   "commit": "9bc21cf2",
-   "date": "2026-11-17",
-   "subject": "aos: correct Object0C region-trigger gate bit and port the type-2 heavy OR",
-   "scope": "project"
-  },
-  {
-   "commit": "483cb72a",
-   "date": "2026-11-17",
-   "subject": "Port Aria Object19/29/31/14 mover corrections from native audit",
-   "scope": "project"
-  },
-  {
-   "commit": "45192cd6",
-   "date": "2026-11-17",
-   "subject": "aos: port Balore param0 intro sub_080B6880 twelve-state cutscene controller",
-   "scope": "project"
-  },
-  {
-   "commit": "7c3c2e74",
-   "date": "2026-11-17",
-   "subject": "aos: port Chaos phase-2 sub_080A57BC crawler body, eight trail limbs and mouth shots",
-   "scope": "project"
-  },
-  {
-   "commit": "944a8064",
-   "date": "2026-11-17",
-   "subject": "Port the full sub_08048108 Soul Set three-sprite swipe and native +0x65 pause press frames",
-   "scope": "project"
-  },
-  {
-   "commit": "b2e1ab2c",
-   "date": "2026-11-17",
-   "subject": "aos: port Chaos phase-2 attack machines, script tables and role children",
-   "scope": "project"
-  },
-  {
-   "commit": "c6b831d5",
-   "date": "2026-11-17",
-   "subject": "opening: port sub_08067A04 page-clear window slide, close ~1085f pacing gap",
-   "scope": "project"
-  },
-  {
-   "commit": "a0595e1c",
-   "date": "2026-11-17",
-   "subject": "opening: pin Arikado entity x at native 0x119, decode sub_08067A04 wait model (Patch 1206)",
-   "scope": "project"
-  },
-  {
-   "commit": "6e31828d",
-   "date": "2026-11-17",
-   "subject": "opening: restore full Soma beat-animation chain and entry-pan step excursion (Patch 1205)",
-   "scope": "project"
-  },
-  {
-   "commit": "81c800d3",
-   "date": "2026-11-17",
-   "subject": "aria: raise SPECIAL_VARIANTS to 64 — object library overflow fix (Patch 1204)",
-   "scope": "project"
-  },
-  {
-   "commit": "8d05ef48",
-   "date": "2026-11-17",
-   "subject": "docs: opening cutscene native-vs-runtime visual ground truth (Patch 1203)",
-   "scope": "project"
-  },
-  {
-   "commit": "52c08ba2",
-   "date": "2026-11-17",
-   "subject": "aos opening: port +0x58 facing flips, fix absorb-pose window, anchor Arikado stop to player (Patch 1202)",
-   "scope": "project"
-  },
-  {
-   "commit": "97868deb",
-   "date": "2026-11-17",
-   "subject": "aos: port Headhunter case-24 sine-wave projectile (Patch 1201)",
-   "scope": "project"
-  },
-  {
-   "commit": "0e416d35",
-   "date": "2026-11-17",
-   "subject": "aos: port Manticore sub_08073568 volley-child brain and container fold (Patch 1200)",
    "scope": "project"
   }
  ],
@@ -39212,7 +39214,7 @@
        "loot": "ported",
        "soul": "ported",
        "soul_ref": "red:41",
-       "notes": "Soul: drops (soul_index 41 through the boss soul path, rare item 0x002D) and is collected; its red soul 41 runs the shared throw routine 0x08025785 with parameter 4, now ported as SKILL_THROW: record 4 of metadata/skill_throws.tsv (vx 0x10000, vy -0x20000, gravity 0x2000, resource 18 = skill_archer, still frame 0, song 0xE3, flags 0x0280, spin 0x0480) with the flag 0x200 frame-derived attack box {-16,-16,32,32} exported as skill_archer static_attack row 0; unit-tested in aos_soul_red_throw_tests. Animations, sounds, sprite (including the thirteen exported still-frame ids) and loot are the Creaking Skull row (the Giant Skeleton thunks forward to the same create/update; its enemies.tsv record drops rare item 0x002D through the generic roll). Divergences are the Creaking Skull row's plus the throw's documented ones; sub_08097D1C now transforms all thirteen record x values and angles {0,1,2,8,11} on facing changes, records {0,1,2,11} consume their affine angles, attack record positions are restored and the rotating attack entity uses its native stationary lifecycle, but the unmatched-state room-0/10 comparison is diagnostic only."
+       "notes": "Soul: drops (soul_index 41 through the boss soul path, rare item 0x002D) and is collected; its red soul 41 runs the shared throw routine 0x08025785 with parameter 4, now ported as SKILL_THROW: record 4 of metadata/skill_throws.tsv (vx 0x10000, vy -0x20000, gravity 0x2000, resource 18 = skill_archer, still frame 0, song 0xE3, flags 0x0280, spin 0x0480) with the flag 0x200 frame-derived attack box {-16,-16,32,32} exported as skill_archer static_attack row 0; unit-tested in aos_soul_red_throw_tests. Animations, sounds, sprite (including the thirteen exported still-frame ids) and loot are the Creaking Skull row (the Giant Skeleton thunks forward to the same create/update; its enemies.tsv record drops rare item 0x002D through the generic roll). Divergences are the Creaking Skull row's plus the throw's documented ones; sub_08097D1C now transforms all thirteen record x values and angles {0,1,2,8,11} on facing changes, records {0,1,2,11} consume their affine angles, attack record positions are restored and the rotating attack entity uses its native stationary lifecycle and state-0 cases 0-2 use their native stride velocity, collision movement and transition arms, but the unmatched-state room-0/10 comparison is diagnostic only."
       }
      },
      {
@@ -39593,7 +39595,7 @@
        "loot": "n/a",
        "soul": "ported",
        "soul_ref": "blue:14",
-       "notes": "Soul: drops (soul_index 14, soul_rarity 4) and is collected; its blue soul 14 (routine 0x08030A25, SkillCreakingSkullUse, toggled, 5 MP/s) is ported as aos_soul_blue_creaking_skull — the anchor rides 0x14 px above Soma with his inverse facing, ramps + 0x28 and cycles the 0x084F13DC attack records while three embedded skulls (the native + 0x13144 slot entities) orbit on the record angles; child 2 carries the {-16,-16,32,32} contact box at power 0x28; unit-tested in test_aos_soul_blue_creaking_skull. Divergences: the + 0x1311C empowered table-B path is parameterised but not reached, the sub_0803E654 palette roll, the sub_0803E058 affine transform, the children's own animation stepping and children 0/1's contact path are approximated or not ported, and there is no emulator comparison. Animations: ported from EnemyCreakingSkullCreate (0x0809549C) / EnemyCreakingSkullUpdate (0x08095320) and the sub_0809808C thirteen-bone follower, the sub_08095898 sixteen-case state-0 machine and the sub_08096A94 state-1 attack — the shared animation record 0x082232B8 through the shared play/step helpers, with the decoded per-case record re-arms (case-0 alert, case-0 entry, case-13 windup, case-14 volley and case-20 reset) and their + 0xD dividers wired into the ported cases; unit-tested in creaking_skull_tests. Sounds: the 0x8C bone creak stingers, the 0x86/0x80/0x84/0x76/0x77/0x7A/0x97/0xE0/0x1C/0x29 attack songs and the 0x6B death song are requested and unit-tested, not listened to. Sprite: tiles 0x081CC044, palette 0x0820AB38 bank 0 and animation record 0x082232B8 are exported natively; the body uses its sequences and the thirteen bone children now resolve the create table's still-frame ids {0..11,20}. The room 0/9 -> 0/10 integration verifies all fourteen live parts with the private ROM-derived library. Loot: the enemies.tsv record drops nothing (common/rare item 0). Divergences: the + 0x1C container entity and its thirteen 0x30-byte records fold into cs_rec[13] and the persistent CS_BONE children emitted under the 8-child cap; the variant home tables (0x08527FD8/0x085280B0), the sub_08097D84/sub_08097EC4 record arming, the sub_08097B94 orbit step in the 0x08119063 order, sub_08097D1C's facing transform (all thirteen x values and angles {0,1,2,8,11}) and the sub_0809808C state-0 record ride with ArcTan2 aim are ported, and the choreography machines now fire the decoded case re-arms at the ported case points while the remaining per-case arms (the state-0 strike cases, the state-1 projectile scheduling cases and the sub_08097EC4 pairs) stay unported; sub_0809884C/sub_080989DC now use the native +/-36,-25 spawn, stationary 0x2400/every-other-frame affine turn, collision callbacks and 0x76 burst transition, while their eight launch and six burst particles remain open; sub_08098C1C/38 now snapshot and restore all thirteen record positions around attacks, and the sub_0809808C state-1/2 death machines keep their 0x08119081 timers and deletes while palette writes, spark helpers and the native affine pivot/OAM rounding remain open; records {0,1,2,11} consume their sub_0803E058 angles in the SDL draw path; sub_08098C54/sub_08098C84 bone contact and weapon-hit forwarding now temporarily run the parent collision at the bone position and attribute rewards to the owning body, the sub_08098CF0 debris becomes CS_GORE children, the sub_08098E00 room gate and the + 0x5A palette merge are not ported; a private native/portable room-0/10 comparison diagnoses visibly separated portable segments but does not validate fidelity because player/camera states were unmatched."
+       "notes": "Soul: drops (soul_index 14, soul_rarity 4) and is collected; its blue soul 14 (routine 0x08030A25, SkillCreakingSkullUse, toggled, 5 MP/s) is ported as aos_soul_blue_creaking_skull — the anchor rides 0x14 px above Soma with his inverse facing, ramps + 0x28 and cycles the 0x084F13DC attack records while three embedded skulls (the native + 0x13144 slot entities) orbit on the record angles; child 2 carries the {-16,-16,32,32} contact box at power 0x28; unit-tested in test_aos_soul_blue_creaking_skull. Divergences: the + 0x1311C empowered table-B path is parameterised but not reached, the sub_0803E654 palette roll, the sub_0803E058 affine transform, the children's own animation stepping and children 0/1's contact path are approximated or not ported, and there is no emulator comparison. Animations: ported from EnemyCreakingSkullCreate (0x0809549C) / EnemyCreakingSkullUpdate (0x08095320) and the sub_0809808C thirteen-bone follower, the sub_08095898 sixteen-case state-0 machine and the sub_08096A94 state-1 attack — the shared animation record 0x082232B8 through the shared play/step helpers, with the decoded case-0 stride velocity, cases-1/2 sub_0806D288 collision movement and per-case record re-arms (case-0 alert, case-2-to-3 stride, case-0 entry, case-13 windup, case-14 volley and case-20 reset) and their + 0xD dividers wired into the ported cases; unit-tested in creaking_skull_tests. Sounds: the 0x8C bone creak stingers, the 0x86/0x80/0x84/0x76/0x77/0x7A/0x97/0xE0/0x1C/0x29 attack songs and the 0x6B death song are requested and unit-tested, not listened to. Sprite: tiles 0x081CC044, palette 0x0820AB38 bank 0 and animation record 0x082232B8 are exported natively; the body uses its sequences and the thirteen bone children now resolve the create table's still-frame ids {0..11,20}. The room 0/9 -> 0/10 integration verifies all fourteen live parts with the private ROM-derived library. Loot: the enemies.tsv record drops nothing (common/rare item 0). Divergences: the + 0x1C container entity and its thirteen 0x30-byte records fold into cs_rec[13] and the persistent CS_BONE children emitted under the 8-child cap; the variant home tables (0x08527FD8/0x085280B0), the sub_08097D84/sub_08097EC4 record arming, the sub_08097B94 orbit step in the 0x08119063 order, sub_08097D1C's facing transform (all thirteen x values and angles {0,1,2,8,11}) and the sub_0809808C state-0 record ride with ArcTan2 aim are ported, and the choreography machines now fire the decoded case re-arms at the ported case points while the remaining per-case arms (the state-0 case-3 decision and strike cases, the state-1 projectile scheduling cases and the sub_08097EC4 pairs) stay unported; sub_0809884C/sub_080989DC now use the native +/-36,-25 spawn, stationary 0x2400/every-other-frame affine turn, collision callbacks and 0x76 burst transition, while their eight launch and six burst particles remain open; sub_08098C1C/38 now snapshot and restore all thirteen record positions around attacks, and the sub_0809808C state-1/2 death machines keep their 0x08119081 timers and deletes while palette writes, spark helpers and the native affine pivot/OAM rounding remain open; records {0,1,2,11} consume their sub_0803E058 angles in the SDL draw path; sub_08098C54/sub_08098C84 bone contact and weapon-hit forwarding now temporarily run the parent collision at the bone position and attribute rewards to the owning body, the sub_08098CF0 debris becomes CS_GORE children, the sub_08098E00 room gate and the + 0x5A palette merge are not ported; a private native/portable room-0/10 comparison diagnoses visibly separated portable segments but does not validate fidelity because player/camera states were unmatched."
       }
      },
      {
@@ -46235,7 +46237,7 @@
        "id": "05:29",
        "name": "Giant Skeleton",
        "status": "functional",
-       "note": "Soul: drops (soul_index 41 through the boss soul path, rare item 0x002D) and is collected; its red soul 41 runs the shared throw routine 0x08025785 with parameter 4, now ported as SKILL_THROW: record 4 of metadata/skill_throws.tsv (vx 0x10000, vy -0x20000, gravity 0x2000, resource 18 = skill_archer, still frame 0, song 0xE3, flags 0x0280, spin 0x0480) with the flag 0x200 frame-derived attack box {-16,-16,32,32} exported as skill_archer static_attack row 0; unit-tested in aos_soul_red_throw_tests. Animations, sounds, sprite (including the thirteen exported still-frame ids) and loot are the Creaking Skull row (the Giant Skeleton thunks forward to the same create/update; its enemies.tsv record drops rare item 0x002D through the generic roll). Divergences are the Creaking Skull row's plus the throw's documented ones; sub_08097D1C now transforms all thirteen record x values and angles {0,1,2,8,11} on facing changes, records {0,1,2,11} consume their affine angles, attack record positions are restored and the rotating attack entity uses its native stationary lifecycle, but the unmatched-state room-0/10 comparison is diagnostic only.",
+       "note": "Soul: drops (soul_index 41 through the boss soul path, rare item 0x002D) and is collected; its red soul 41 runs the shared throw routine 0x08025785 with parameter 4, now ported as SKILL_THROW: record 4 of metadata/skill_throws.tsv (vx 0x10000, vy -0x20000, gravity 0x2000, resource 18 = skill_archer, still frame 0, song 0xE3, flags 0x0280, spin 0x0480) with the flag 0x200 frame-derived attack box {-16,-16,32,32} exported as skill_archer static_attack row 0; unit-tested in aos_soul_red_throw_tests. Animations, sounds, sprite (including the thirteen exported still-frame ids) and loot are the Creaking Skull row (the Giant Skeleton thunks forward to the same create/update; its enemies.tsv record drops rare item 0x002D through the generic roll). Divergences are the Creaking Skull row's plus the throw's documented ones; sub_08097D1C now transforms all thirteen record x values and angles {0,1,2,8,11} on facing changes, records {0,1,2,11} consume their affine angles, attack record positions are restored and the rotating attack entity uses its native stationary lifecycle and state-0 cases 0-2 use their native stride velocity, collision movement and transition arms, but the unmatched-state room-0/10 comparison is diagnostic only.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_soul.c",
@@ -47403,7 +47405,7 @@
        "id": "06:0E",
        "name": "Creaking Skull",
        "status": "functional",
-       "note": "Soul: drops (soul_index 14, soul_rarity 4) and is collected; its blue soul 14 (routine 0x08030A25, SkillCreakingSkullUse, toggled, 5 MP/s) is ported as aos_soul_blue_creaking_skull — the anchor rides 0x14 px above Soma with his inverse facing, ramps + 0x28 and cycles the 0x084F13DC attack records while three embedded skulls (the native + 0x13144 slot entities) orbit on the record angles; child 2 carries the {-16,-16,32,32} contact box at power 0x28; unit-tested in test_aos_soul_blue_creaking_skull. Divergences: the + 0x1311C empowered table-B path is parameterised but not reached, the sub_0803E654 palette roll, the sub_0803E058 affine transform, the children's own animation stepping and children 0/1's contact path are approximated or not ported, and there is no emulator comparison. Animations: ported from EnemyCreakingSkullCreate (0x0809549C) / EnemyCreakingSkullUpdate (0x08095320) and the sub_0809808C thirteen-bone follower, the sub_08095898 sixteen-case state-0 machine and the sub_08096A94 state-1 attack — the shared animation record 0x082232B8 through the shared play/step helpers, with the decoded per-case record re-arms (case-0 alert, case-0 entry, case-13 windup, case-14 volley and case-20 reset) and their + 0xD dividers wired into the ported cases; unit-tested in creaking_skull_tests. Sounds: the 0x8C bone creak stingers, the 0x86/0x80/0x84/0x76/0x77/0x7A/0x97/0xE0/0x1C/0x29 attack songs and the 0x6B death song are requested and unit-tested, not listened to. Sprite: tiles 0x081CC044, palette 0x0820AB38 bank 0 and animation record 0x082232B8 are exported natively; the body uses its sequences and the thirteen bone children now resolve the create table's still-frame ids {0..11,20}. The room 0/9 -> 0/10 integration verifies all fourteen live parts with the private ROM-derived library. Loot: the enemies.tsv record drops nothing (common/rare item 0). Divergences: the + 0x1C container entity and its thirteen 0x30-byte records fold into cs_rec[13] and the persistent CS_BONE children emitted under the 8-child cap; the variant home tables (0x08527FD8/0x085280B0), the sub_08097D84/sub_08097EC4 record arming, the sub_08097B94 orbit step in the 0x08119063 order, sub_08097D1C's facing transform (all thirteen x values and angles {0,1,2,8,11}) and the sub_0809808C state-0 record ride with ArcTan2 aim are ported, and the choreography machines now fire the decoded case re-arms at the ported case points while the remaining per-case arms (the state-0 strike cases, the state-1 projectile scheduling cases and the sub_08097EC4 pairs) stay unported; sub_0809884C/sub_080989DC now use the native +/-36,-25 spawn, stationary 0x2400/every-other-frame affine turn, collision callbacks and 0x76 burst transition, while their eight launch and six burst particles remain open; sub_08098C1C/38 now snapshot and restore all thirteen record positions around attacks, and the sub_0809808C state-1/2 death machines keep their 0x08119081 timers and deletes while palette writes, spark helpers and the native affine pivot/OAM rounding remain open; records {0,1,2,11} consume their sub_0803E058 angles in the SDL draw path; sub_08098C54/sub_08098C84 bone contact and weapon-hit forwarding now temporarily run the parent collision at the bone position and attribute rewards to the owning body, the sub_08098CF0 debris becomes CS_GORE children, the sub_08098E00 room gate and the + 0x5A palette merge are not ported; a private native/portable room-0/10 comparison diagnoses visibly separated portable segments but does not validate fidelity because player/camera states were unmatched.",
+       "note": "Soul: drops (soul_index 14, soul_rarity 4) and is collected; its blue soul 14 (routine 0x08030A25, SkillCreakingSkullUse, toggled, 5 MP/s) is ported as aos_soul_blue_creaking_skull — the anchor rides 0x14 px above Soma with his inverse facing, ramps + 0x28 and cycles the 0x084F13DC attack records while three embedded skulls (the native + 0x13144 slot entities) orbit on the record angles; child 2 carries the {-16,-16,32,32} contact box at power 0x28; unit-tested in test_aos_soul_blue_creaking_skull. Divergences: the + 0x1311C empowered table-B path is parameterised but not reached, the sub_0803E654 palette roll, the sub_0803E058 affine transform, the children's own animation stepping and children 0/1's contact path are approximated or not ported, and there is no emulator comparison. Animations: ported from EnemyCreakingSkullCreate (0x0809549C) / EnemyCreakingSkullUpdate (0x08095320) and the sub_0809808C thirteen-bone follower, the sub_08095898 sixteen-case state-0 machine and the sub_08096A94 state-1 attack — the shared animation record 0x082232B8 through the shared play/step helpers, with the decoded case-0 stride velocity, cases-1/2 sub_0806D288 collision movement and per-case record re-arms (case-0 alert, case-2-to-3 stride, case-0 entry, case-13 windup, case-14 volley and case-20 reset) and their + 0xD dividers wired into the ported cases; unit-tested in creaking_skull_tests. Sounds: the 0x8C bone creak stingers, the 0x86/0x80/0x84/0x76/0x77/0x7A/0x97/0xE0/0x1C/0x29 attack songs and the 0x6B death song are requested and unit-tested, not listened to. Sprite: tiles 0x081CC044, palette 0x0820AB38 bank 0 and animation record 0x082232B8 are exported natively; the body uses its sequences and the thirteen bone children now resolve the create table's still-frame ids {0..11,20}. The room 0/9 -> 0/10 integration verifies all fourteen live parts with the private ROM-derived library. Loot: the enemies.tsv record drops nothing (common/rare item 0). Divergences: the + 0x1C container entity and its thirteen 0x30-byte records fold into cs_rec[13] and the persistent CS_BONE children emitted under the 8-child cap; the variant home tables (0x08527FD8/0x085280B0), the sub_08097D84/sub_08097EC4 record arming, the sub_08097B94 orbit step in the 0x08119063 order, sub_08097D1C's facing transform (all thirteen x values and angles {0,1,2,8,11}) and the sub_0809808C state-0 record ride with ArcTan2 aim are ported, and the choreography machines now fire the decoded case re-arms at the ported case points while the remaining per-case arms (the state-0 case-3 decision and strike cases, the state-1 projectile scheduling cases and the sub_08097EC4 pairs) stay unported; sub_0809884C/sub_080989DC now use the native +/-36,-25 spawn, stationary 0x2400/every-other-frame affine turn, collision callbacks and 0x76 burst transition, while their eight launch and six burst particles remain open; sub_08098C1C/38 now snapshot and restore all thirteen record positions around attacks, and the sub_0809808C state-1/2 death machines keep their 0x08119081 timers and deletes while palette writes, spark helpers and the native affine pivot/OAM rounding remain open; records {0,1,2,11} consume their sub_0803E058 angles in the SDL draw path; sub_08098C54/sub_08098C84 bone contact and weapon-hit forwarding now temporarily run the parent collision at the bone position and attribute rewards to the owning body, the sub_08098CF0 debris becomes CS_GORE children, the sub_08098E00 room gate and the + 0x5A palette merge are not ported; a private native/portable room-0/10 comparison diagnoses visibly separated portable segments but does not validate fidelity because player/camera states were unmatched.",
        "evidence": {
         "unit_tests": [
          "tests/test_aos_pickup.c",

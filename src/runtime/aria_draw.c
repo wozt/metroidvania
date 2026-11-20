@@ -758,8 +758,13 @@ static SDL_Texture *object0f_glow_texture(SDL_Renderer *renderer) {
         for (int x = 0; x < S; ++x) {
             float d = sqrtf((x - c) * (x - c) + (y - c) * (y - c)) / r;
             if (d >= 1.0f) continue;
-            float a = 1.0f - d;
-            a = a * a * (3.0f - 2.0f * a);      /* smoothstep falloff */
+            /* Measured native halo: warmth holds ~flat through the inner
+             * half then falls off toward the rim, rather than peaking at
+             * the centre. smoothstep over a remapped radius reproduces
+             * that plateau-then-decay profile. */
+            float t = (d - 0.45f) / 0.55f;
+            t = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
+            float a = 1.0f - t * t * (3.0f - 2.0f * t);
             px[y * S + x] = ((uint32_t)(a * 255.0f) << 24) | 0x00FFFFFF;
         }
     tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
@@ -784,7 +789,7 @@ static void draw_flame_glow(SDL_Renderer *renderer, int ex, int ey,
     if (!glow || fade <= 0.0f) return;
     float blink = 0.65f + 0.35f *
         sinf((float)(anim_tick % 32) * (3.14159265f / 16.0f));
-    SDL_SetTextureColorMod(glow, 255, 196, 110);
+    SDL_SetTextureColorMod(glow, 255, 180, 90);
     SDL_SetTextureAlphaMod(glow, (uint8_t)(110.0f * blink * fade));
     SDL_FRect g = {(float)(ex - radius - cam_x),
                    (float)(ey + dy - radius - cam_y),
@@ -831,7 +836,7 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                             e->breakable.state == 1
                                 ? (float)e->breakable.timer / 0x28f
                                 : 1.0f,
-                            18.0f, -8);
+                            15.0f, -8);
             /* On the hit sub_08045EE0 sets + 0x58 bit 0x20, which
              * sub_0803AC40 reads as "do not draw": the prop vanishes
              * instantly and only the sub_0806D5C0 particles, the
@@ -1199,15 +1204,30 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
          * its first exported animation pending the per-object
          * audit. */
         if (e->id == 2) {
-            /* sub_0804DF3C stores the static descriptor record 0x3F in
-             * +0x65.  Its +0x1B value 6 is the allocated OBJ palette
-             * slot, not an animation id. */
+            /* sub_0804DEA0 is Object02's draw animation. Record 0x3F
+             * itself is static, but +0x14 opens the gate geometrically:
+             * 0 draws the closed leaf once; 1..47 draw one copy at
+             * y-48 and another at y-timer; >47 draws neither.  The first
+             * copy also selects palette variant 4 natively; both use the
+             * same decoded pixels in this renderer. */
             const AriaFrame *frame = &art->frames[0][0x3F];
             if (!art->loaded || !frame->texture) continue;
-            SDL_FRect rect = {(float)(e->x + frame->offset_x - cam_x),
-                              (float)(e->y + frame->offset_y - cam_y),
-                              frame->w, frame->h};
-            SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+            int timer = e->object02.timer;
+            if (timer > 0x2F) continue;
+            int ys[2] = {e->y, e->y};
+            int copies = 1;
+            if (timer > 0) {
+                ys[0] = e->y - 0x30;
+                ys[1] = e->y - timer;
+                copies = 2;
+            }
+            for (int copy = 0; copy < copies; ++copy) {
+                SDL_FRect rect = {
+                    (float)(e->x + frame->offset_x - cam_x),
+                    (float)(ys[copy] + frame->offset_y - cam_y),
+                    frame->w, frame->h};
+                SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+            }
             continue;
         }
         int anim = e->id == 15 ? 14 : 0;
@@ -1239,7 +1259,7 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                             e->object0f.state == 1
                                 ? (float)e->object0f.timer / 0x28f
                                 : 1.0f,
-                            20.0f, -16);
+                            16.0f, -16);
             /* Same + 0x58 bit 0x20 rule as the breakable: on the hit
              * sub_0803AC40 stops drawing the prop — only the glow,
              * particles and drop remain until + 0x59 bit 3. */

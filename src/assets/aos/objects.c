@@ -882,7 +882,11 @@ static const EntitySpec special07_variants[] = {
 };
 
 static const EntitySpec special15_variants[] = {
-    ENTITY("special_15_v6", 0x081C15F4, 0x082099FC, 2, 0x0820ED60),
+    /* sub_0804DF3C gives Object02 this resource triple and writes
+     * descriptor record 0x3F directly to entity +0x65.  It does not
+     * start animation 6; +0x1B = 6 is the loaded OBJ palette slot. */
+    STATIC("special_15_v6", 0x081C15F4, 0x082099FC, 2, 0x0820ED60,
+           1, 0x3F),
     ENTITY("special_15_v7", 0x081C15F4, 0x082099FC, 3, 0x0820ED60),
     ENTITY("special_15_v9", 0x081C15F4, 0x082099FC, 6, 0x0820ED60),
 };

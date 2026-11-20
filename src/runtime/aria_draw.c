@@ -1198,7 +1198,19 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
          * the flame flicker. Every other special object still draws
          * its first exported animation pending the per-object
          * audit. */
-        int anim = e->id == 2 ? e->object02.anim : e->id == 15 ? 14 : 0;
+        if (e->id == 2) {
+            /* sub_0804DF3C stores the static descriptor record 0x3F in
+             * +0x65.  Its +0x1B value 6 is the allocated OBJ palette
+             * slot, not an animation id. */
+            const AriaFrame *frame = &art->frames[0][0x3F];
+            if (!art->loaded || !frame->texture) continue;
+            SDL_FRect rect = {(float)(e->x + frame->offset_x - cam_x),
+                              (float)(e->y + frame->offset_y - cam_y),
+                              frame->w, frame->h};
+            SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
+            continue;
+        }
+        int anim = e->id == 15 ? 14 : 0;
         if (!art->loaded || anim >= OBJECT_MAX_ANIMS ||
             !art->defs[anim].count) continue;
         unsigned total = 0;
@@ -1208,8 +1220,7 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         /* Object0F's sub_08050F08 frame callback steps once per
          * drawn frame like the breakable's sub_08046100 — its own
          * counter replaces the wall-clock step/4 for id 15. */
-        unsigned t = (e->id == 2 ? step
-                                 : e->id == 15 ? e->object0f.anim_tick
+        unsigned t = (e->id == 15 ? e->object0f.anim_tick
                                                : step / 4) % total,
                  index = 0;
         while (index + 1 < art->defs[anim].count &&

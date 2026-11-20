@@ -389,16 +389,16 @@ static void cs_init_records(AosEnemy *e) {
     }
     e->cs_cool = 1; /* + 0xD = 1 at create; state 3 clears it below */
     /* Bake A: the three armed records at their launch offsets. */
-    cs_config_ex(e, 0xC, 0xB, (int32_t)0xFFFFC000, 0x7C0000,
+    cs_config_ex(e, 0xC, 0xB, (int32_t)0xFFFFC000, 0x1F0000,
                  true, false);
-    cs_config_ex(e, 1, 0, (int32_t)0xFFFFF800, 0x780000,
+    cs_config_ex(e, 1, 0, (int32_t)0xFFFFF800, 0x1E0000,
                  true, false);
-    cs_config_ex(e, 2, 1, 0x6000, 0x700000, true, false);
+    cs_config_ex(e, 2, 1, 0x6000, 0x1C0000, true, false);
     cs_step_perm(e, cs_perm_tab);
     /* Bake B: the same arms with a zero speed target. */
-    cs_config_ex(e, 0xC, 0xB, 0, 0x7C0000, true, false);
-    cs_config_ex(e, 1, 0, 0, 0x780000, true, false);
-    cs_config_ex(e, 2, 1, 0, 0x700000, true, false);
+    cs_config_ex(e, 0xC, 0xB, 0, 0x1F0000, true, false);
+    cs_config_ex(e, 1, 0, 0, 0x1E0000, true, false);
+    cs_config_ex(e, 2, 1, 0, 0x1C0000, true, false);
     cs_step_perm(e, cs_perm_tab);
     /* The bake already reads the current facing in sub_08097B94 and
      * sub_08097D84.  sub_08097D1C is a change-of-facing transform,

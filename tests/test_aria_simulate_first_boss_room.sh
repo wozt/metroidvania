@@ -32,6 +32,13 @@ for frame in 0 1 2 3 4 5 6 7 8 9 10 11 20; do
     }
 done
 
+# Object02 uses descriptor record +0x65 = 0x3F; +0x1B = 6 is its
+# palette slot, not animation 6.
+grep -q '^Object/special_15_v6/frame_63[[:space:]]' "$index" || {
+    echo "FAIL: Object02 static frame 0x3F is absent" >&2
+    exit 1
+}
+
 # Start far enough from x=504 that Object02 takes its ordinary outside
 # create path, opens as Soma approaches and exposes the room transition.
 out=$("$bin" --simulate 300 --simulate-hold 16 \
@@ -44,6 +51,10 @@ printf '%s\n' "$out" | grep -q "Room 0/9 -> 0/10" || {
 }
 printf '%s\n' "$out" | grep -q "frames, room 0/10," || {
     echo "FAIL: simulation did not remain in the first boss room" >&2
+    exit 1
+}
+printf '%s\n' "$out" | grep -q "music 0x14 boss" || {
+    echo "FAIL: first boss room did not select native boss song 0x14" >&2
     exit 1
 }
 alive=$(printf '%s\n' "$out" |

@@ -1,3 +1,32 @@
+## Patch 1277 - First-boss gate frame, assembled pose and battle music
+
+- **Object02 gate frame corrected.** `sub_0804DF3C` loads graphics
+  `0x081C15F4`, frame descriptor `0x0820ED60` and OBJ palette row 6, then
+  writes static frame `0x3F` to entity `+0x65`. The previous renderer
+  misread the separate `+0x1B = 6` palette-slot byte as animation 6 and
+  advanced it on the host clock. The ROM exporter now includes
+  `Object/special_15_v6/frame_63`, the loader retains its native index and
+  Object02 draws that fixed frame at band `0x16`.
+- **Creaking Skull assembly corrected.** The two create-time
+  `sub_08097D84` bake passes used radii four times larger than the assembly:
+  the literals are `0xF8 << 13`, `0xF0 << 13` and `0xE0 << 13`, hence
+  `0x1F0000`, `0x1E0000` and `0x1C0000`. Correcting those values keeps the
+  thirteen bone records assembled around the body. A fresh portable room
+  0/10 capture now shows the connected native silhouette instead of parts
+  spread across the room; the available native capture has a different
+  player/camera checkpoint, so this is not a frame-perfect validation.
+- **First-boss music connected.** The active room-0/10 Creaking Skull record
+  now drives the native `unk_4CC_0` view before room-music entry, selecting
+  song `0x14` exactly as `sub_08013960` does. The mode is suppressed once
+  the boss-clear `+0x37E` bit `0xB` is set. The real-room headless route now
+  asserts Object02 entry, all fourteen boss records and `music 0x14 boss`.
+  This writer is intentionally scoped to the first boss; other boss-room
+  mode writers remain to be decoded.
+- **Remaining partial work.** Creaking Skull's unported state-0 locomotion
+  branches, distinct state-1 projectile schedules, particles, palette
+  effects and exact affine/OAM rounding remain open. No fidelity or feature
+  status was raised.
+
 ## Patch 1276 - Creaking Skull state-0 decision pose
 
 - **Native one-frame pose.** `sub_08095898` case 3 does not enter an attack

@@ -758,7 +758,7 @@ bool aria_load_objects(const char *path, AriaObjects *objects, SDL_Renderer *ren
          * animation is kept. */
         char object_name[24];
         int object_id = -1, object_param = -1, object_style = -1;
-        int burst_kind = 0; /* 1 = carrier (anim_), 2 = particle (frame_) */
+        int burst_kind = 0; /* 1 = carrier anim, 2 = burst still, 3 = object still */
         int burst_sub = 0;  /* still-row sub-index (always 0) */
         if (sscanf(line, "Object/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s", object_name,
                    &object_style, &frame, &ticks, &ox, &oy, frame_path) == 7 &&
@@ -769,6 +769,12 @@ bool aria_load_objects(const char *path, AriaObjects *objects, SDL_Renderer *ren
                         frame_path) == 7 &&
                  strcmp(object_name, "whiteout_burst_particle") == 0)
             burst_kind = 2;
+        else if (sscanf(line, "Object/%23[^/]/frame_%d\t%d\t%d\t%d\t%d\t%511s",
+                        object_name, &frame, &burst_sub, &ticks, &ox, &oy,
+                        frame_path) == 7 &&
+                 sscanf(object_name, "special_%d_v%d", &object_id,
+                        &object_param) >= 1)
+            burst_kind = 3;
         if (!burst_kind) {
             if (sscanf(line, "Object/%23[^/]/anim_%d\t%d\t%d\t%d\t%d\t%511s",
                        object_name, &object_style, &frame, &ticks, &ox, &oy,
@@ -792,6 +798,43 @@ bool aria_load_objects(const char *path, AriaObjects *objects, SDL_Renderer *ren
             }
             part->ticks[0][frame] = (uint8_t)ticks;
             part->loaded = true;
+            continue;
+        }
+        if (burst_kind == 3) {
+            if (object_id < 0 || object_id >= 64 || frame < 0 ||
+                frame >= MAX_FRAMES || ticks < 1 || ticks > 255) {
+                ok = false;
+                break;
+            }
+            __typeof__(objects->special_objects[0]) *art = NULL;
+            if (object_param >= 0) {
+                for (int v = 0; v < SPECIAL_VARIANTS; ++v)
+                    if (objects->special_variants[v].id == object_id &&
+                        objects->special_variants[v].param0 == object_param) {
+                        art = &objects->special_variants[v];
+                        break;
+                    }
+                if (!art)
+                    for (int v = 0; v < SPECIAL_VARIANTS; ++v)
+                        if (objects->special_variants[v].id < 0) {
+                            objects->special_variants[v].id = object_id;
+                            objects->special_variants[v].param0 = object_param;
+                            art = &objects->special_variants[v];
+                            break;
+                        }
+            } else {
+                art = &objects->special_objects[object_id];
+            }
+            /* Still records retain their native +0x65 index.  Slot 0 is
+             * otherwise an animation row, but frame 0x3F cannot collide
+             * with a valid exported animation frame. */
+            if (!art || !load_frame(&art->frames[0][frame], frame_path,
+                                    ox, oy, renderer)) {
+                ok = false;
+                break;
+            }
+            art->ticks[0][frame] = (uint8_t)ticks;
+            art->loaded = true;
             continue;
         }
         if ((burst_kind != 2 &&

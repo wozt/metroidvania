@@ -38,12 +38,27 @@ Analysis only — `draw_flame_glow` is still an unverified placeholder.
   pass in asm (`sub_08041BDC` family) or a hardware watchpoint on the
   light-table records — romdev's Ghidra decompile needs a Thumb-aware
   function-analysis pass that was not completed this session.
+- **Measured native glow profile** (framebuffer `/tmp/lampA_00200.ppm`,
+  glow centre screen (117,72)): the warm `R-B` halo decays from ~92 at
+  the flame core to ~20 at r≈10-12 and ~5 at r≈15, reaching the warm-wall
+  baseline (~3-4) by r≈18. Meaningful glow extent ≈ 15 px radius —
+  smaller than the runtime stand-in's 18 px disc. The halo is a subtle
+  warm tint, not a bright pool.
+- **Runtime comparison attempted.** `fusion_aria_runtime --area 0
+  --room 3 --spawn 256 191` (world pos = native pos+scroll at frame
+  200) renders the same room and the breakable lamp glow path fires, but
+  the room diverges from native elsewhere (unrelated bright elements,
+  scattered warm art), so a masked diff cannot isolate the glow yet.
+  The current stand-in is conceptually aligned (warm radial disc on the
+  flame) but its radius/alpha/colour are unverified against the native
+  halo.
 - **Honest status.** `draw_flame_glow` remains a procedural stand-in.
   The defensible next step is a *measured* reproduction: encode the
-  observed ~30 px warm halo (radius, `R>B` falloff, intensity) as the
+  observed ~15 px warm halo (radius, `R>B` falloff, intensity) as the
   glow, establish the matched native/runtime camera, and prove it with
   a masked pixel diff — rather than continuing to guess at an
-  undecoded render path.
+  undecoded render path. The masked diff is gated on broader room-0/3
+  parity, not on the glow code itself.
 
 ## Patch 1279 - LAB IO/register peeks + Aria lamp-lighting mechanism identified
 

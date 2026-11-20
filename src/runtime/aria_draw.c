@@ -1211,11 +1211,11 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
          * audit. */
         if (e->id == 2) {
             /* sub_0804DEA0 is Object02's draw animation. Record 0x3F
-             * itself is static, but +0x14 opens the gate geometrically:
-             * 0 draws the closed leaf once; 1..47 draw one copy at
-             * y-48 and another at y-timer; >47 draws neither.  The first
-             * copy also selects palette variant 4 natively; both use the
-             * same decoded pixels in this renderer. */
+             * itself is static and +0x14 slides its visible submission
+             * upward.  During 1..47 native submits another copy at y-48
+             * with +0x5A=4: in sub_0803ACE0 those bits become attr0 OBJ
+             * mode 2, an OBJ-window mask.  Drawing it as ordinary pixels
+             * caused the duplicated leaf and the tiles-above overhang. */
             const AriaFrame *frame = &art->frames[0][0x3F];
             if (!art->loaded || !frame->texture) continue;
             AosObject02Draw draw;

@@ -1476,7 +1476,7 @@ static void creaking_skull_tests(void) {
     AosEnemy e;
     assert(aos_enemy_create(&e, 0x21, 300, 150, 0, 0,
                             &soma, &layer, &kind, &cs33));
-    assert(e.state == 0 && e.hp == 240);
+    assert(e.state == 0 && e.step == 0x14 && e.hp == 240);
     /* EnemyCreakingSkullCreate's sub_0806AF98 lands the container
      * origin on the first solid floor row (8-pixel cell row 20 ->
      * the last air pixel at y 159). */
@@ -1493,6 +1493,17 @@ static void creaking_skull_tests(void) {
     AosEnemy contact_boss;
     assert(aos_enemy_create(&contact_boss, 0x21, 200, 150, 0, 0,
                             &soma, &layer, &boxless, &cs33));
+    /* `0xB0 << 14` packs width byte 0x2C (44 pixels).  The former
+     * 0xC0 decode wrongly made nearly the entire arena dangerous. */
+    contact_boss.mirrored = false;
+    soma.x = contact_boss.x + AOS_FIXED(100);
+    soma.y = contact_boss.y - AOS_FIXED(16);
+    soma.hp = soma.max_hp;
+    soma.combat = (AosCombat){0};
+    AosHitReport far_contact = aos_enemy_update(
+        &contact_boss, &soma, &layer, &boxless, NULL, NULL,
+        10, 4, 0, 0, always_zero);
+    assert(!far_contact.soma_hit && soma.hp == soma.max_hp);
     soma.x = contact_boss.x;
     soma.y = contact_boss.y - AOS_FIXED(16);
     soma.hp = soma.max_hp;
@@ -1566,10 +1577,7 @@ static void creaking_skull_tests(void) {
     for (int i = 0; i < hit.child_count; ++i)
         if (hit.children[i].role == AOS_ROLE_CS_BONE) bones++;
     assert(bones == 8 && e.spawned_count == 8);
-    assert(e.step == 2 && e.timer == 0x20 && e.cs_cool == 0x1F);
-    assert(e.vx == (e.mirrored ? 0x190000 : -0x190000) / 0x3C &&
-           e.vy == 0x10000 && e.ay == 0x2800);
-    int32_t stride_x = e.x, stride_y = e.y;
+    assert(e.step == 21 && e.timer == 0x0E && e.cs_cool == 0x0D);
     hit = aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
                            10, 4, 0, 0, always_zero);
     bones = 0;
@@ -1577,6 +1585,17 @@ static void creaking_skull_tests(void) {
         if (hit.children[i].role == AOS_ROLE_CS_BONE) bones++;
     assert(bones == 5 && e.spawned_count == 13 &&
            e.boss_parts_spawned);
+    /* Create begins at native case 20.  Its 14/24/14/24 neutral cycle
+     * reaches case 24's proximity decision before entering stride case 2. */
+    for (int i = 0; i < 90 && e.step != 2; ++i)
+        (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+    assert(e.step == 2 && e.timer == 0x20 && e.cs_cool == 0x1F);
+    assert(e.vx == (e.mirrored ? 0x190000 : -0x190000) / 0x3C &&
+           e.vy == 0x10000 && e.ay == 0x2800);
+    int32_t stride_x = e.x, stride_y = e.y;
+    (void)aos_enemy_update(&e, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
     assert(e.x != stride_x && e.y != stride_y && e.timer == 0x1F);
 
     /* The visibility probe receives the boss's screen position, not

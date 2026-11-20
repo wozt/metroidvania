@@ -32,13 +32,8 @@ static void reset_outputs(AosObject02 *o) {
 void aos_object02_draw(const AosObject02 *o, AosObject02Draw *out) {
     *out = (AosObject02Draw){0};
     if (!o || o->deleted || o->timer > 0x2F) return;
-    if (o->timer == 0) {
-        out->count = 1;
-        return;
-    }
-    out->count = 2;
-    out->y_offset[0] = -0x30;
-    out->y_offset[1] = (int16_t)-o->timer;
+    out->count = 1;
+    out->y_offset[0] = (int16_t)-o->timer;
 }
 
 bool aos_object02_create(AosObject02 *o, int param0, int param1,
@@ -140,9 +135,9 @@ void aos_object02_update(AosObject02 *o, AosCollision *layer,
         break;
     }
     case 2:
-        /* Walk Soma toward the object: screen x > 0x78 forces LEFT
-         * (0x20), else RIGHT (0x10). */
-        o->forced = o->facing_right ? 0x20 : 0x10;
+        /* _0804E1BC is the opposite-facing exit walk: a right-side
+         * object forces RIGHT (0x10), a left-side object LEFT (0x20). */
+        o->forced = o->facing_right ? 0x10 : 0x20;
         o->holding = true;
         break;
     case 10:

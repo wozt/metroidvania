@@ -1539,7 +1539,9 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->cs_bone = enemy->cs_pose = 0;
         enemy->cs_cool = enemy->cs_hits = 0;
         enemy->state = flag_8e_40 ? 3 : 0;
-        enemy->step = 0;
+        /* EnemyCreakingSkullCreate writes +0xB = 0x14.  Cases 20..24
+         * are its visible neutral choreography before it engages. */
+        enemy->step = 0x14;
         enemy->substep = 0;
         enemy->timer = 0;
         enemy->boss_parts_spawned = false;

@@ -46,9 +46,11 @@ typedef struct {
     int32_t sparkle_x, sparkle_y; /* its room-pixel position */
 } AosObject02;
 
-/* sub_0804DEA0 draw callback: static frame 0x3F is submitted at one or
- * two vertical offsets according to +0x14.  `y_offset[0]` is the copy
- * that temporarily selects OBJ palette variant 4 natively. */
+/* sub_0804DEA0 draw callback: static frame 0x3F is submitted visibly at
+ * y - timer while timer is 0..47.  During 1..47 the native also submits
+ * the frame at y - 48 with +0x5A low bits set to 4.  Those bits are
+ * attr0 OBJ-mode 2 (OBJ window), not a palette or a visible second leaf;
+ * the SDL renderer therefore exposes only the visible submission here. */
 typedef struct {
     uint8_t count;
     int16_t y_offset[2];

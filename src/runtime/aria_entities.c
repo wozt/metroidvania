@@ -5607,6 +5607,18 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 aos_object02_create(&e->object02, e->param0, e->param1,
                                     aria_pickup_state.special, near, sx, ssx,
                                     soma->vx, layer, e->x, e->y);
+                /* Object02Create itself calls SetPlayerInput(1, 0) on
+                 * the near-entry branch.  The old early continue dropped
+                 * that creation-frame pause and began the forced walk one
+                 * frame too soon. */
+                if (e->object02.force_zero) {
+                    input->active = true;
+                    input->held = 0;
+                }
+                if (e->object02.zero_soma_vx) {
+                    soma->vx = 0;
+                    soma->friction = 0;
+                }
                 continue;
             }
             if (e->object02.deleted) continue;
@@ -5624,6 +5636,11 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             if (e->object02.song >= 0) {
                 sound = e->object02.song;
+                /* PlaySong is issued inside Object02Update natively.
+                 * Returning it from this aggregate pass was ineffective in
+                 * the runtime callers, which intentionally ignore the
+                 * legacy single-sound return value. */
+                aos_audio_play_song((uint16_t)e->object02.song);
                 printf("Object02 %zu: song 0x%X\n", i, e->object02.song);
             }
             if (e->object02.sparkle && room->effect_count < MAX_EFFECTS)

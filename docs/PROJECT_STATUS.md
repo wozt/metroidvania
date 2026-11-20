@@ -1,3 +1,38 @@
+## Patch 1290 - Boss-gate OBJ window, exact contact width and native wake cycle
+
+- **Gate rendering root cause.** `sub_0804DEA0` does submit frame `0x3F`
+  twice while timer is 1-47, but the fixed `y-48` submission temporarily
+  writes entity `+0x5A = 4`. `sub_0803ACE0` maps those low bits to GBA OBJ
+  mode 2 (OBJ window), not to a palette: it is a mask and is not visible
+  sprite pixels. The SDL path now draws only the visible `y-timer` leaf,
+  removing the duplicate and the false overhang above the doorway. The
+  broader WINOUT mask effect is still not emulated and remains partial.
+- **Gate staging and audio.** The near-create branch's native
+  `SetPlayerInput(1, 0)` is now applied before the entity loop's create-frame
+  early return, so Soma pauses before state 10 begins the forced walk. State
+  2's direction was corrected from `_0804E1BC` (right-side object forces
+  RIGHT; left-side forces LEFT), and Object02's `PlaySong(0x113)` now reaches
+  the live audio owner instead of being lost in an ignored aggregate return.
+  The existing arena route still proves the left three-block reseal and the
+  bit-11-gated right exit after the boss dies.
+- **Boss hitbox correction.** In `EnemyCreakingSkullUpdate`, `0xB0 << 14`
+  produces packed word `0x002C0000`; the width byte is `0x2C` (44 pixels),
+  not `0xC0` (192 pixels). A regression check now proves that an actor 100
+  pixels away does not take contact damage while an actual overlap does.
+- **Boss choreography progress.** `EnemyCreakingSkullCreate` writes state-0
+  subcase `0x14`, not zero. Cases 20-24 are now translated as the native
+  14/24/14/24-frame neutral pose cycle and proximity decision before the
+  stride/attack path. A portable capture at frame 180 shows the assembled
+  bones changing pose rather than remaining on the create still. State-0
+  strike cases 4-12 and state-1 cases 4-12/15-19/21-37 remain unported, so
+  the full fight is still honestly `partial`, not claimed 1:1.
+- **Evidence boundary.** The targeted `aos_object02`, `aos_enemy` and
+  `aria_simulate_first_boss_room` tests pass. The available mGBA save state
+  resets to the licensing screen with this lab build and is not a usable
+  synchronized boss checkpoint; therefore these corrections are backed by
+  authoritative assembly, unit/integration tests and portable captures, not
+  by a frame-diff fidelity claim.
+
 ## Patch 1289 - First boss playable loop: native music, animated gates and container collision
 
 - **Music correction.** The previous patch incorrectly inferred song `0x14`

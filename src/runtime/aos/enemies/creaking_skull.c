@@ -39,8 +39,8 @@
  * its decoded + 0xD divider (the 0x08119070/0x08119078 timing bytes
  * selected by entity + 0x24, or the per-case constants 2/0xE);
  * cs_step_perm counts + 0xD down like the native cases.  The
- * remaining case arms — the state-0 case-3 locomotion outcomes and
- * cases 4-12/20-24 strike tables,
+ * create-time cases 20-24 neutral cycle and the remaining case arms —
+ * the state-0 case-3 locomotion outcomes and cases 4-12 strike tables,
  * the state-1 cases 4-12/15-19/21-37 including the sub_08097EC4
  * pairs and the RNG-driven projectile cases — stay unported because
  * the ported case structure does not reproduce them.  The terminal
@@ -159,7 +159,9 @@ static AosBox cs_container_box(const AosEnemy *e) {
     if (e->mirrored) x = -x;
     x -= 0x14;
     int y = cs_px(e->cs_rec[5].y) - 0x14;
-    return (AosBox){(int8_t)x, (int8_t)y, 0xC0,
+    /* `movs r0,#0xB0; lsls r0,#0xE` is 0x002C0000: byte 2 is
+     * 0x2C (44 pixels), not 0xC0. */
+    return (AosBox){(int8_t)x, (int8_t)y, 0x2C,
                     (uint8_t)(y < 0 ? -y : y)};
 }
 
@@ -677,12 +679,69 @@ static void cs_gore_update(AosEnemy *e) {
 }
 
 /* sub_08095898 state 0: the native multi-case approach and strike
- * machine. This translated prefix covers alert, stride and decision;
- * cases 4-12/20-24 remain explicitly open. */
+ * machine. The create-time 20-24 cycle, alert, stride and decision are
+ * translated; cases 4-12 remain explicitly open. */
 static void cs_state0(AosEnemy *e, AosSoma *soma,
                       const AosCollision *layer, const AosAnimSet *anims,
                       uint32_t (*random)(void)) {
     switch (e->step) {
+    case 20:
+        /* Native create starts at case 20.  It arms the neutral pose,
+         * then cycles cases 21..24 for 14/24/14/24 frames before the
+         * proximity decision. */
+        cs_face_records(e, soma);
+        cs_run_arms(e, cs_arms_s1_exit,
+                    (int)(sizeof cs_arms_s1_exit /
+                          sizeof cs_arms_s1_exit[0]));
+        e->timer = 0x0E;
+        e->cs_cool = e->timer;
+        e->cs_pose = 1;
+        e->step = 21;
+        e->substep = 0;
+        break;
+    case 21:
+    case 22:
+    case 23:
+        if (e->timer && --e->timer)
+            break;
+        e->step++;
+        if (e->step == 22) {
+            e->timer = 0x18;
+            e->cs_pose = 2;
+        } else if (e->step == 23) {
+            e->timer = 0x0E;
+            e->cs_pose = 3;
+        } else {
+            e->timer = 0x18;
+            e->cs_pose = 0;
+        }
+        e->cs_cool = e->timer;
+        break;
+    case 24:
+        if (e->timer && --e->timer)
+            break;
+        cs_face_records(e, soma);
+        if (player_near(soma, e->x >> 16, e->y >> 16, 0xFA, 0xA0)) {
+            e->step = 2;
+            e->substep = 0;
+            e->timer = cs_cool_tab(0, e->id);
+            e->cs_pose = 5;
+            cs_run_arms(e, cs_arms_s0_alert,
+                        (int)(sizeof cs_arms_s0_alert /
+                              sizeof cs_arms_s0_alert[0]));
+            e->cs_cool = e->timer;
+            int divisor = (int)e->timer * 2 - 4;
+            e->vx = (e->mirrored ? 0x190000 : -0x190000) / divisor;
+            e->vy = 0x10000;
+            e->ax = 0;
+            e->ay = 0x2800;
+        } else {
+            e->step = 21;
+            e->timer = 0x0E;
+            e->cs_pose = 1;
+            e->cs_cool = e->timer;
+        }
+        break;
     case 0:
         /* Native case 0: aggro, face, enter case 2 and seed the
          * sub_0806D288 stride.  The x speed is +/-0x190000 divided

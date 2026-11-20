@@ -100,17 +100,17 @@ int main(void) {
      * 1-2 (timer 0 leaves it open). */
     assert(block_count() == 3);
 
-    /* State 2 forces LEFT (0x20) while the object sits right of
-     * centre, RIGHT (0x10) on the left. */
+    /* State 2's exit walk forces RIGHT (0x10) for a right-side object,
+     * LEFT (0x20) for a left-side object. */
     reset_layer();
     aos_object02_create(&o, 0, 0, 0, false, 0, 0, 0, NULL, 0, 0);
     o.state = 2;
     o.facing_right = true;
     aos_object02_update(&o, &layer, 0, 0, 200, 100, 0, 0, 0, test_rng);
-    assert(o.forced == 0x20 && o.holding);
+    assert(o.forced == 0x10 && o.holding);
     o.facing_right = false;
     aos_object02_update(&o, &layer, 0, 0, 50, 100, 0, 0, 0, test_rng);
-    assert(o.forced == 0x10);
+    assert(o.forced == 0x20);
 
     /* State 10: Soma inside the zone keeps it; leaving reseals,
      * plays 0x113 and advances to 11. */
@@ -134,10 +134,8 @@ int main(void) {
     aos_object02_update(&o, &layer, 0, 0, 100, 100, 200, 100, 0, test_rng);
     assert(o.state == 0x14 && !o.holding && !o.scene_active);
 
-    /* sub_0804DEA0's apparent gate animation is draw geometry, not a
-     * frame sequence: closed submits one copy, the 1..47 interval
-     * submits the fixed upper copy and the sliding lower copy, and
-     * timer 48 hides both. */
+    /* sub_0804DEA0's visible gate is one sliding copy.  Its other native
+     * submission is OBJ-window mode and must not become duplicated pixels. */
     AosObject02Draw draw;
     o.deleted = false;
     o.timer = 0;
@@ -145,8 +143,7 @@ int main(void) {
     assert(draw.count == 1 && draw.y_offset[0] == 0);
     o.timer = 17;
     aos_object02_draw(&o, &draw);
-    assert(draw.count == 2 && draw.y_offset[0] == -48 &&
-           draw.y_offset[1] == -17);
+    assert(draw.count == 1 && draw.y_offset[0] == -17);
     o.timer = 48;
     aos_object02_draw(&o, &draw);
     assert(draw.count == 0);

@@ -1,3 +1,22 @@
+## Patch 1276 - Creaking Skull state-0 decision pose
+
+- **Native one-frame pose.** `sub_08095898` case 3 does not enter an attack
+  immediately when the preceding stride timer ends. Its first-entry tail
+  `_080966B4` sets `+0xC=1`, holds `+0xD=1`, and re-arms records 12/1/2 at
+  `0x13000/0x17000/0x1D000` with the existing native radii. The runtime now
+  reproduces that intervening frame before making the next decision.
+- **Bounded decision evidence.** The following Creaking-Skull-only
+  `RandomNumberGenerator2() & 0x7F <= 0x1F` route and the close-range
+  (at most 99 pixels) `<= 0x3F` route are consumed in native order. Both
+  currently enter the already-bounded state-1 controller because its native
+  case-20 projectile schedule is not yet distinguished. The unit test proves
+  the extra frame, state/timer transition and all three record speeds; the
+  first-boss-room integration still passes.
+- **Remaining reduction.** State-0 cases 4/7/10 and their continuations
+  5/6, 8/9 and 11/12 are still absent, so decision outcomes that would enter
+  those locomotion cycles retain the prior attack fallback. This is a source-
+  exact partial port, not a live-emulator fidelity claim; no status changed.
+
 ## Patch 1275 - Breakable torches (kind 3) and Object0F hide-on-hit, glow, native particles
 
 - **Scope.** Correction after the user reported no visible change in

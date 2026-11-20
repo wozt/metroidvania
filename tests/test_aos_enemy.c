@@ -1589,6 +1589,27 @@ static void creaking_skull_tests(void) {
            e.cs_rec[2].dist == 0x1C0000);
     assert(e.cs_cool > 1);
 
+    /* sub_08095898 case 3 does not jump straight to the attack: it
+     * holds _080966B4's exact three-record decision pose for one
+     * frame, then performs its RNG/distance branch. */
+    AosEnemy decision = e;
+    decision.state = 0;
+    decision.step = 3;
+    decision.substep = 0;
+    decision.timer = 1;
+    decision.cs_cool = 1;
+    aos_enemy_update(&decision, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(decision.state == 0 && decision.step == 3 &&
+           decision.substep == 1 && decision.timer == 1);
+    assert(decision.cs_rec[12].spd == 0x13000 &&
+           decision.cs_rec[1].spd == 0x17000 &&
+           decision.cs_rec[2].spd == 0x1D000);
+    aos_enemy_update(&decision, &soma, &layer, &kind, NULL, NULL,
+                     10, 4, 0, 0, always_zero);
+    assert(decision.state == 1 && decision.step == 0 &&
+           decision.substep == 0);
+
     /* A bone child tracks its parent; a state-2 parent detaches it
      * into the sub_0809808C state-1 death fall (0x08119081 timer by
      * record index), which deletes after the countdown. */

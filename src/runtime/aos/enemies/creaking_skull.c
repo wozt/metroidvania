@@ -41,7 +41,8 @@
  * its decoded + 0xD divider (the 0x08119070/0x08119078 timing bytes
  * selected by entity + 0x24, or the per-case constants 2/0xE);
  * cs_step_perm counts + 0xD down like the native cases.  The
- * remaining case arms — the state-0 cases 3-12/20-24 strike tables,
+ * remaining case arms — the state-0 case-3 locomotion outcomes and
+ * cases 4-12/20-24 strike tables,
  * the state-1 cases 4-12/15-19/21-37 including the sub_08097EC4
  * pairs and the RNG-driven projectile cases — stay unported because
  * the ported case structure does not reproduce them.  The terminal
@@ -220,6 +221,15 @@ static const CsArm cs_arms_s0_stride[] = {
     {0xC, 0xB, (int32_t)0xFFFFF000, 0x1F0000},
     {1, 0, (int32_t)0xFFFFE800, 0x1E0000},
     {2, 1, (int32_t)0xFFFFE800, 0x1C0000},
+};
+
+/* sub_08095898 case 3 first-entry tail _080966B4: one decision
+ * pose is held before the distance/RNG branches, with the three
+ * records accelerating forward at 0x13000/0x17000/0x1D000. */
+static const CsArm cs_arms_s0_decide[] = {
+    {0xC, 0xB, 0x13000, 0x1F0000},
+    {1, 0, 0x17000, 0x1E0000},
+    {2, 1, 0x1D000, 0x1C0000},
 };
 
 /* sub_08096A94 case 0: the state-1 entry re-arm — record 12 holds
@@ -684,11 +694,41 @@ static void cs_state0(AosEnemy *e, AosSoma *soma,
         }
         break;
     case 3:
-        /* Native case 3 contains the distance/wall/RNG branch into
-         * cases 4, 7, 10 or state 1.  The port still collapses that
-         * decision, but only after preserving its timed record pose. */
+        /* Native case 3 first holds _080966B4's record pose for one
+         * tick.  Its following decision can enter state 1 or the
+         * still-unported state-0 locomotion cases 4, 7 and 10. */
         if (e->timer && --e->timer)
             break;
+        if (e->substep == 0) {
+            e->substep = 1;
+            e->timer = 1;
+            cs_run_arms(e, cs_arms_s0_decide,
+                        (int)(sizeof cs_arms_s0_decide /
+                             sizeof cs_arms_s0_decide[0]));
+            e->cs_cool = 1;
+            break;
+        }
+
+        /* _08095C5E gives Creaking Skull a 1/4 RNG2 route to native
+         * state-1 case 20; the reduced state-1 controller cannot yet
+         * distinguish that projectile schedule, so both native
+         * state-1 entries start its existing bounded attack.  The
+         * next close-range roll is the <=0x3F branch at _08095C94. */
+        bool attack = false;
+        if (e->id == 0x21 && random && (random() & 0x7F) <= 0x1F)
+            attack = true;
+        if (!attack && soma) {
+            int dx = (int16_t)((target_x(soma) >> 16) - (e->x >> 16));
+            if (dx < 0)
+                dx = -dx;
+            if (dx <= 0x63 && random && (random() & 0x7F) <= 0x3F)
+                attack = true;
+        }
+        /* Cases 4/7/10 are not represented yet.  Preserve the old
+         * bounded attack fallback for those outcomes, but keep this
+         * divergence explicit rather than claiming their branch and
+         * collision choreography was ported. */
+        (void)attack;
         cs_snapshot_records(e);
         e->state = 1;
         e->step = 0;

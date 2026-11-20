@@ -1,3 +1,25 @@
+## Patch 1281 - Lamp glow: native light engine located (sub_080BD358 jump table)
+
+Deeper asm trace located the real light-render routine, replacing the
+procedural stand-in path. The glow is driven by a slot-indexed light
+record table, not a single sprite or the blend engine.
+
+- **Light record table.** `entity+0x73` is a slot index; `sub_08042A6C`
+  returns `&table[entity+0x73]` where table = `0x03001A58`/`0x03001A5C`
+  (8-byte records). `sub_080428F0` writes a record gated by
+  `entity+0x72` bit0; `sub_08042920` reads record + entity pos
+  (`sub_080415A8`) + camera (`gEwramData+0x13074`) to compute screen pos.
+- **Render consumer.** `sub_080BD2D0` in `code_080B0AD4.s` calls
+  `sub_08042A6C`/`sub_080428F0`/`sub_080429D0` to place records.
+- **Dispatch.** `sub_080BD358` (same file) has a 9-case jump table
+  `_080BD398` (cases 0-8 at `_080BD3BC`/`_080BD4EC`/`_080BD50C`/
+  `_080BD5B4`/`_080BD668`/`_080BD772`/`_080BD7A8`/`_080BD87E`/`_080BD8F8`)
+  — the light/glow effect-type dispatch. This is the render entry point
+  to decode next.
+- **Status.** `draw_flame_glow` was tuned to the measured ~15 px warm
+  halo (095eaca2) as a stopgap; the faithful port is to decode
+  `sub_080BD358`'s cases and reimplement the real record-driven glow.
+
 ## Patch 1280 - Lamp glow: framebuffer-level investigation corrects the light-sprite hypothesis
 
 Follow-up to Patch 1279's mechanism write-up. That entry inferred a

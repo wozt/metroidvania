@@ -1,3 +1,67 @@
+## Patch 1286 - Lamp light engine: core decode (implementation-ready spec)
+
+Decoded the dynamic-lighting module `asm/code/code_08040A38.s` far
+enough to spec the port. Still asm-only in cvaos (no decompiled C).
+
+Data layout (verified against live WRAM + asm):
+
+- Two light-record tables at `0x03001A58` and `0x03001A5C`; each is a
+  bank of 8-byte records indexed by `entity+0x73` (light slot). The
+  `+0x73` byte *8 gives the record offset; `0x03001A50`/`0x03001A48`
+  nearby hold related pointers used as `sub_080417A0` args.
+- A record is TWO 4-byte rect descriptors: bytes 0-3 = `{x_off:s8,
+  y_off:s8, w:u8, h:u8}`; bytes 4-7 = a second rect of the same shape.
+- `entity+0x42`/`+0x46` = u16 x/y position; `entity+0x58` bit6 = flipX,
+  bit7 = flipY; `entity+0x70..` = per-object light state.
+- `gEwramData+0x13110` holds a POINTER to the master/reference entity;
+  its `+0x70` block is the comparison target.
+- `gEwramData+0x13074/76/78/7A` = the computed light rect
+  (left/top/right/bottom); `+0x1307C..7F` = four global per-type
+  counters; `0x080E33F0` = ROM table indexed by light type.
+
+Decoded routines:
+
+- `sub_080415A8(entity, rectDesc[4])` — writes the entity's light rect
+  to `+0x13074..7A`. Normal (flip clear): left=`x+rect[0]`,
+  right=`x+rect[0]+rect[2]-1`, top=`y+rect[1]`,
+  bottom=`y+rect[1]+rect[3]-1`. With flipX (bit6) the X edges mirror
+  (`x-rect[0]-rect[2]+1` .. `x-rect[0]`); flipY (bit7) mirrors Y.
+- `sub_08041688` / `sub_080417A0` — two near-identical overlap tests:
+  given a computed rect and an object+rectDesc, return whether the
+  object's rect intersects it (early-out on degenerate 1px axes and on
+  `rect[2]==1`/`rect[3]==1`).
+- `sub_08041864(objA, objB)` — object-vs-object accumulation. Computes
+  objB's rect via `sub_080415A8(objB, recordB+4)`, overlap-tests with
+  `sub_08041688(objA, recordA)`, then for each of up to three stored
+  light "slots" (`objB+0x74/75/76` type bytes) increments a per-type
+  counter: type 3/5/6/9 map to `gEwramData+0x1307C/7D/7E/7F`, other
+  types index `0x080E33F0`. Results stored to `objB+0x78/79/7A`.
+- `sub_08041BDC(obj)` / `sub_08041D54(obj)` — same accumulation but
+  object-vs-MASTER-entity (`gEwramData+0x13110`), using the
+  `0x03001A5C`/`0x03001A58` record halves respectively and
+  `sub_080417A0`. Called from different pipeline stages.
+- `sub_080421AC(out, obj)` — higher-level resolver: builds a result
+  struct `{u16 flags@0, u16@2, u16@4, u8 type@6}`, calls `sub_08041D54`,
+  merges per-type influence into the output.
+- `sub_080429D0` — copies `+0x74/+0x78` bound bytes between objects,
+  calls `sub_080421AC`, conditionally copies back.
+
+Interpretation: this is a per-object light-INFLUENCE accumulator, not a
+direct pixel shader. Each light source registers an 8-byte record (two
+rects); every frame the engine resolves which objects each light's rect
+touches and accumulates per-light-type counts onto the objects
+(`+0x78..`) and global counters (`+0x1307C..`). A later shade/render
+stage (`sub_080430B0`/`sub_0804311C`, ARM) presumably turns those counts
+into the visible dimming/glow. The visible lamp halo is the composite of
+these accumulated light contributions plus the flame/ember sprites.
+
+Remaining decode for a faithful port: the exact 8-byte record field
+split (which half is "source rect" vs "affected rect"), the full
+`0x080E33F0` type table, the driver loop that calls
+`41864/41BDC/41D54/421AC` each frame, and the ARM shade/render emission
+that consumes the accumulated counts. `draw_flame_glow` remains the
+measured stand-in until that port lands and is pixel-verified.
+
 ## Patch 1285 - Lamp glow: frame/component model + live OAM decode of the glow sprites
 
 Deeper decode of the shared flame resource and a frame-matched OAM dump

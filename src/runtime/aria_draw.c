@@ -772,6 +772,27 @@ static SDL_Texture *object0f_glow_texture(SDL_Renderer *renderer) {
     return tex;
 }
 
+/* The + 0x72 bit-1 emitter's stand-in glow for the flame props
+ * (Object0F id 15 and the kind-3 breakable records — sub_08046080
+ * sets the same bit): a filled warm disc centred on the flame that
+ * breathes with the animation tick; `fade` (0..1) carries the
+ * state-1 break timer so the light dies with the prop. */
+static void draw_flame_glow(SDL_Renderer *renderer, int ex, int ey,
+                            int cam_x, int cam_y, uint32_t anim_tick,
+                            float fade, float radius, int dy) {
+    SDL_Texture *glow = object0f_glow_texture(renderer);
+    if (!glow || fade <= 0.0f) return;
+    float blink = 0.65f + 0.35f *
+        sinf((float)(anim_tick % 32) * (3.14159265f / 16.0f));
+    SDL_SetTextureColorMod(glow, 255, 196, 110);
+    SDL_SetTextureAlphaMod(glow, (uint8_t)(110.0f * blink * fade));
+    SDL_FRect g = {(float)(ex - radius - cam_x),
+                   (float)(ey + dy - radius - cam_y),
+                   radius * 2.0f, radius * 2.0f};
+    SDL_RenderTexture(renderer, glow, NULL, &g);
+    SDL_SetTextureAlphaMod(glow, 255);
+}
+
 void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                                  const AriaObjects *objects, int cam_x, int cam_y,
                                  unsigned step, int prio_slot) {
@@ -802,6 +823,20 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                                 : breakable_prio >= 0) ||
                 e->breakable.finished)
                 continue;
+            /* sub_08046080 sets the same + 0x72 bit 1 light emitter
+             * Object0F carries: the flame glow stays up through the
+             * state-1 break and fades with the + 0xD timer. */
+            draw_flame_glow(renderer, e->x, e->y, cam_x, cam_y,
+                            e->breakable.anim_tick,
+                            e->breakable.state == 1
+                                ? (float)e->breakable.timer / 0x28f
+                                : 1.0f,
+                            18.0f, -8);
+            /* On the hit sub_08045EE0 sets + 0x58 bit 0x20, which
+             * sub_0803AC40 reads as "do not draw": the prop vanishes
+             * instantly and only the sub_0806D5C0 particles, the
+             * drop and song 0xA2 remain for the 0x28-tick break. */
+            if (e->breakable.state == 1) continue;
             const __typeof__(objects->special_objects[0]) *art = NULL;
             for (int v = 0; v < SPECIAL_VARIANTS; ++v)
                 if (objects->special_variants[v].id == 62 &&
@@ -1186,28 +1221,18 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (e->id == 15) {
             /* The lamp glow behind the flame: a filled warm disc that
              * blinks with the anim-14 cycle (the native light emitter
-             * has no port yet — see object0f_glow_texture). During the
+             * has no port yet — see draw_flame_glow). During the
              * state-1 break it fades out with the + 0xD timer. */
-            SDL_Texture *glow = object0f_glow_texture(renderer);
-            if (glow) {
-                float fade = e->object0f.state == 1
-                                 ? (float)e->object0f.timer / 0x28f
-                                 : 1.0f;
-                if (fade > 0.0f) {
-                    /* Blink: the disc breathes twice per 32-tick flame
-                     * cycle, brighter on the flame's fuller frames. */
-                    float blink = 0.65f + 0.35f *
-                        sinf((float)(e->object0f.anim_tick % 32) *
-                             (3.14159265f / 16.0f));
-                    SDL_SetTextureColorMod(glow, 255, 196, 110);
-                    SDL_SetTextureAlphaMod(glow,
-                        (uint8_t)(110.0f * blink * fade));
-                    SDL_FRect g = {(float)(ex - 20 - cam_x),
-                                   (float)(ey - 34 - cam_y), 40.0f, 40.0f};
-                    SDL_RenderTexture(renderer, glow, NULL, &g);
-                    SDL_SetTextureAlphaMod(glow, 255);
-                }
-            }
+            draw_flame_glow(renderer, ex, ey, cam_x, cam_y,
+                            e->object0f.anim_tick,
+                            e->object0f.state == 1
+                                ? (float)e->object0f.timer / 0x28f
+                                : 1.0f,
+                            20.0f, -16);
+            /* Same + 0x58 bit 0x20 rule as the breakable: on the hit
+             * sub_0803AC40 stops drawing the prop — only the glow,
+             * particles and drop remain until + 0x59 bit 3. */
+            if (e->object0f.state == 1) continue;
         }
         SDL_FRect rect = {(float)(ex + frame->offset_x - cam_x),
                           (float)(ey + frame->offset_y - cam_y), frame->w, frame->h};

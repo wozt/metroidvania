@@ -3475,10 +3475,8 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 combat->progress->character == 0;
             aos_breakable_update(&e->breakable, near, hit,
                                  combat->weapon != NULL, mp_full_soma);
-            if (e->breakable.song >= 0) {
+            if (e->breakable.song >= 0)
                 sound = e->breakable.song;
-                printf("Breakable %zu: song 0x%X\n", i, e->breakable.song);
-            }
             /* sub_08045F9C's latched drop, created through the same
              * AosPickup paths the placed records and enemy drops
              * use: sub_08043F70 money (variant (RNG&1) + param1) or
@@ -3491,7 +3489,6 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     (uint8_t)((aos_random() & 1) + e->breakable.param1);
                 room->pickups[room->pickup_count++] = aos_pickup_create_money(
                     combat->money, variant, e->x, e->y);
-                printf("Breakable %zu: money variant %u\n", i, variant);
             } else if (e->breakable.drop_kind == AOS_BREAKABLE_DROP_HEART &&
                        room->pickup_count < MAX_PICKUPS) {
                 room->pickups[room->pickup_count++] = aos_pickup_create_heart(
@@ -3499,9 +3496,17 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             }
             for (int fx = 0; fx < e->breakable.gore_fx &&
                  room->effect_count < MAX_EFFECTS; fx++) {
+                /* sub_0806D5C0: entity 0x49/0xCF updated by
+                 * sub_0806E524 — animation 0 of 0x0820ED60 (the flame
+                 * art), translucent, rising -0x8000 per frame, at a
+                 * position jittered by rand % 0x80000 - 0x40000 on
+                 * both axes around the prop. */
                 room->effects[room->effect_count++] = (AosEffect){
-                    .kind = AOS_EFFECT_SPARKLE, .direct = true,
-                    .x = e->x, .y = e->y - 8};
+                    .kind = AOS_EFFECT_FLAME, .translucent = true,
+                    .x = ((int32_t)e->x << 16) +
+                         (int32_t)(aos_random() % 0x80000) - 0x40000,
+                    .y = (((int32_t)e->y - 8) << 16) +
+                         (int32_t)(aos_random() % 0x80000) - 0x40000};
             }
             e->breakable.gore_fx = 0;
             continue;
@@ -3903,8 +3908,13 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                     .kind = AOS_EFFECT_BURST_15, .drift = true,
                     .x = ((int32_t)e->x) << 16, .y = ((int32_t)e->y) << 16};
             if (e->object0f.particle && room->effect_count < MAX_EFFECTS)
+                /* sub_08045CEC: entity 0x49/0xCF updated by
+                 * sub_08045C9C — animation 0 of 0x0820ED60 (the flame
+                 * art), translucent, drifting without velocity at the
+                 * jittered position the update already computed. */
                 room->effects[room->effect_count++] = (AosEffect){
-                    .kind = AOS_EFFECT_SPARKLE, .direct = true,
+                    .kind = AOS_EFFECT_FLAME, .drift = true,
+                    .translucent = true,
                     .x = e->object0f.particle_x,
                     .y = e->object0f.particle_y};
             continue;

@@ -1,3 +1,43 @@
+## Patch 1275 - Breakable torches (kind 3) and Object0F hide-on-hit, glow, native particles
+
+- **Scope.** Correction after the user reported no visible change in
+  room 0/3: that room's breakables are kind-3 records (the wall
+  torches at (256,128) etc.), not SPECIAL id 15 — Patch 1274 only
+  touched Object0F. Both native paths share `sub_08046080`'s create
+  shape: `+ 0x72` bit 1 light emitter, `+ 0x5C` band 0x14, attack box
+  via `sub_08045EE0`/`sub_08045F9C`.
+- **Hide on hit.** `sub_08045EE0` sets `+ 0x58` bit `0x20` on the
+  accepted hit and `sub_0803AC40` (reached through each drawFunc,
+  including `sub_08050F08`) returns without drawing when the bit is
+  set — the prop vanishes on the hit frame and only particles, the
+  drop and song 0xA2 remain for the `0x28`-tick break. The port now
+  skips the prop sprite whenever `state == 1` for both kind-3
+  breakables and Object0F; previously the sprite stayed up for the
+  whole break.
+- **Glow on kind-3.** `sub_08046080` sets the same `+ 0x72` bit 1
+  emitter Object0F carries, so the torches get the same procedural
+  filled warm disc — blink on the anim tick, fade with the `+ 0xD`
+  break timer — factored into `draw_flame_glow` in `aria_draw.c`.
+- **Native destruction particles.** The kind-3 gore burst was
+  spawning `AOS_EFFECT_SPARKLE` (`.direct`, wrong art, and raw pixel
+  coordinates where fixed-point was expected). It now spawns the
+  `sub_0806D5C0` entity `0x49`/`0xCF` shape: animation 0 of
+  `0x0820ED60` (the flame art) via `AOS_EFFECT_FLAME`, translucent,
+  rising `0x8000`/frame in the default update, at the
+  `rand % 0x80000 - 0x40000` jittered fixed-point position.
+  Object0F's `sub_08045CEC`/`sub_08045C9C` drift particle was
+  corrected the same way (`FLAME` + `drift` + `translucent`, no
+  rise). Leftover debug `printf`s in the breakable drop path removed.
+- **Evidence.** `aos_object0f` and `aos_breakable` unit tests pass;
+  the hide-on-hit, glow and particle kinds are drawn through the
+  existing `draw_special_objects`/`aos_effect_update` paths. No new
+  live capture — the kind-3 torches sit too high for the scripted
+  whip reach in the tested spawn.
+- **Remaining gap.** The glow is still the procedural stand-in, not
+  the native `+ 0x72` light pass; the kind-3 break still lacks an
+  emulator-side visual comparison; the probe/attack approximations
+  documented in Patch 1274 are unchanged.
+
 ## Patch 1274 - Object0F breakable chandelier: loot, glow and break flourish
 
 - **Scope.** SPECIAL id 15 (Object0F, the burning chandelier/lamp) in
@@ -33,6 +73,30 @@
   pass; the burst reuses shared animation 15 rather than a dedicated
   Object0F break entity; the + 0x5A draw byte stays 0; no emulator
   comparison of the break sequence yet.
+
+## Patch 1273 - Creaking Skull native state-0 stride entry
+
+- **Removed false chase.** The reduced state 0 previously called
+  `aos_enemy_move_toward(..., 0x10)` without integrating the resulting
+  velocity, so the body never followed the native opening movement. Native
+  `sub_08095898` case 0 instead enters case 2, loads the per-enemy timing
+  byte, sets horizontal speed to signed `0x190000/(2*timer-4)`, and seeds
+  `vy=0x10000`, `ay=0x2800`. Those values and transition are now ported.
+- **Cases 1/2 physics and records.** Both native movement cases use
+  `sub_0806D288(0x10000, -0x300000)`; the port now routes them through the
+  shared collision/integration owner. On the case-2 timer boundary it also
+  installs the decoded `_08096544` record arms: record 12 at `-0x1000` and
+  records 1/2 at `-0x1800`, with native radii and timing. The unit test
+  verifies the initial velocities, actual body displacement, timers and
+  the existing thirteen-part room integration.
+- **Remaining reduction.** Native case 3 chooses among cases 4, 7, 10 or
+  attack state 1 from distance, wall probes and two RNG branches. That
+  decision still collapses to the existing attack path after preserving
+  its timed pose; secondary animation counters, particles and creak-song
+  rolls in cases 1/2 remain open. A private portable frame-300 capture is
+  still visibly separated, confirming that later record-arm cases remain
+  the dominant visual gap. The current romdev core rejects the older private
+  room-0/10 state by save-state size, so no new native comparison is claimed.
 
 ## Patch 1272 - Creaking Skull full record-facing transform
 

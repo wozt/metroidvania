@@ -1,3 +1,74 @@
+## Patch 1285 - Lamp glow: frame/component model + live OAM decode of the glow sprites
+
+Deeper decode of the shared flame resource and a frame-matched OAM dump
+at the room-0/3 lamp sharpened the model and corrected one misattribution.
+
+Frame/component model (`objects.c` `read_components`/`render_frame`):
+each frame record in a frame descriptor is a list of up to 256 "OAM
+components" — positioned sprite rectangles `{x, y, source_x, source_y,
+w, h, flags}` baked into one canvas per frame. The flame descriptor
+`0x0820ED60` holds 126 frame records; multi-component frames reach 8
+parts (verified by decoding the descriptor directly from the ROM).
+
+Flame tile sheet: `0x081C15F4` is an encoding-0 descriptor — depth 4,
+16x16 tiles (128x128 px) at ROM `0x081C15F8`. It is a shared effect
+tileset (flames, damage digits, sparks, embers), not a dedicated lamp
+sheet.
+
+Live OAM decode (`moved.state`, frame ~220, sprites overlapping the
+flame at screen ~(95,75)):
+
+- `spr13` tile 68 pal 7 — the flame body sprite.
+- `spr30`/`spr33` tiles 336/284, attr0 `0x44xx` = **mode 1** (GBA
+  semi-transparent blend), pal 11 — the glow/ember sprites.
+- `spr22`/`spr23` tiles 311/309, pal 11 — further light sprites.
+
+The glow sprites are separate mode-1 (blend) OAM entries, not baked
+frame components — consistent with the light-record pass
+(`0x03001A58`/`0x03001A5C`, `sub_080415A8` screen-rect, per-object
+resolution `sub_08041864`/`sub_08041BDC`/`sub_08041D54`) placing them.
+Their tiles live in the same shared effect tileset region as the flame.
+
+Correction: `sub_08042A7C`/`sub_08042D4C` (decompiled in
+`code_080211F0.c`) is the **damage-number / HP-gain effect spawner**
+(`PlaySong` + `sub_08042A7C(damage,0)`), not the lamp glow — the earlier
+reading of it as the light-effect creator was wrong.
+
+Port implication: faithful reproduction = place the real glow sprite
+art (from the shared effect tileset) as blend sprites at the light
+record's screen position, driven by the light engine — not a procedural
+disc. `draw_flame_glow` remains the measured stand-in (Patch 1282).
+
+## Patch 1284 - Lamp glow: kind-3 object create + light-tile resources decoded
+
+Corrected and completed the lamp pipeline using the object-create path
+(`code_0800F1FC.c` `param_0->unk_5 == 3`) and `sub_08046080`/`sub_08046148`
+in `asm/code/code_08040A38.s`. Patch 1283's `sub_080BD358`/`0x080E11D4`
+chain was entityData[0] (the player), not the lamp — superseded here.
+
+Verified native path for a room lamp (kind-3 object):
+
+- `updateFunc = sub_08045EE0`, `drawFunc = sub_08046100` (the per-frame
+  flame flicker; `sub_08046100` also calls `sub_0803F17C`/`sub_0803AC40`).
+- `sub_08046080` loads the flame sprite: graphics `0x081C15F4`, frames
+  `0x0820ED60` (the SAME shared flame resource already exported as the
+  `"flame"` effect / `special_15`), palette via `sub_0803AFB8`, then
+  `sub_0803F2C8`/`sub_0803F17C`/`sub_0804277C`.
+- It sets `entity+0x72 |= 2` (light-emitter bit1) and calls
+  `sub_080428F0(entity, 0x140CF4FA)` to register the light record.
+- `sub_08046148(entity+0x30 size-param)` DMAs the glow tiles: source
+  `0x081C3E00 + (param&1)*0x100 + (param>>1)*0x400`, length `0xC0`,
+  into VRAM `0x06010800` AND `0x06010C00`. `0x081C3E00` holds ~0x2000
+  bytes of flame/ember tile variants (8 blocks of ~0x400); decoded
+  tiles are small flame-tongue sprites, not a radial gradient.
+
+Conclusion: the visible lamp effect is a COMPOSITE — the extracted
+flame sprite (already in the pipeline) plus light-system ember/glow
+tiles drawn by the `sub_08041BDC`/`sub_08041864` light pass from the
+`0x03001A58`/`0x03001A5C` records. There is no single "glow sprite" to
+extract; faithful reproduction means porting the light-record pass that
+positions these tiles. `draw_flame_glow` remains the measured stand-in.
+
 ## Patch 1283 - Lamp glow: full native sprite-resource chain decoded
 
 Traced the complete glow pipeline to its ROM art resources. The glow

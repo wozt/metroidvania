@@ -38,11 +38,17 @@ static void dump_peek(const AosPeekResult *peek) {
         return;
     }
     printf("peek %08x size %u:\n", peek->address, peek->size);
+    /* Build each row in one buffer and print it once: the emulator core
+     * logs to stdout mid-run, and per-byte printf would interleave those
+     * messages inside the hex dump. */
     for (uint32_t i = 0; i < peek->size; i += 16) {
-        printf("  %08x  ", peek->address + i);
+        char row[3 * 16 + 40];
+        int n = snprintf(row, sizeof row, "  %08x  ", peek->address + i);
         for (uint32_t j = i; j < i + 16 && j < peek->size; ++j)
-            printf("%02x ", peek->data[j]);
-        printf("\n");
+            n += snprintf(row + n, sizeof row - (size_t)n, "%02x ",
+                          peek->data[j]);
+        snprintf(row + n, sizeof row - (size_t)n, "\n");
+        fputs(row, stdout);
     }
 }
 

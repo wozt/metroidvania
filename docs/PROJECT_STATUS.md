@@ -1,3 +1,44 @@
+## Patch 1279 - LAB IO/register peeks + Aria lamp-lighting mechanism identified
+
+Two work items: a small LAB capability needed for rendering
+investigation, and a reverse-engineering pass that pinned down how the
+native lamp/torch glow actually works (analysis only — the runtime
+`draw_flame_glow` procedural stand-in is unchanged and still partial).
+
+- **LAB can now read the GBA IO register file.** `--peek`/`--peek-at`
+  previously resolved addresses only through `mCoreGetMemoryBlock`,
+  which cannot reach `0x04000000-0x040003FF` (DISPCNT, BGCNT, the window
+  and blend registers). `lab_mem_block()` now serves that range straight
+  from `gba->memory.io`, so e.g. `--peek 0x04000000:96` dumps the full
+  display/window/blend state at end-of-run or at a `--peek-at` frame.
+  `dump_peek()` also builds each hex row in one buffer before printing:
+  the core logs DMA to stdout mid-run and per-byte `printf` let those
+  messages corrupt the dump.
+- **AriaRecomp evaluated as a reference — not adopted.** The
+  `sergiomanzur/ariaOfSorrow-recomp` project is a GBARecomp *static
+  recompilation* (~12.7k generated C++ functions, never committed), not
+  a readable reimplementation. Its only semantic naming is the audio
+  driver; gameplay seeds are `sub_080xxxxx`. Execution validation covers
+  translation fidelity (0 misses across playthrough sweeps), not logic
+  understanding, and it contains no lighting/object insight beyond what
+  `third_party/cvaos` already provides. Kept at `~/dev/ariaOfSorrow-recomp`
+  for consultation; not vendored into `third_party/`.
+- **Lamp lighting mechanism (native, from cvaos + LAB).** Room lamps are
+  kind-3 objects built by `sub_08046080`, which registers the object as a
+  light emitter into an IWRAM light table (slot index `+0x73`, records at
+  `0x03001A58`/`0x03001A5C`) via `sub_080428F0` (packed param
+  `0x140CF4FA`), and calls `sub_08046148` to DMA a radial-gradient tile
+  set from ROM `0x081C3E00` (variant selected by the object `+0x30`
+  size parameter) into VRAM `0x06010800`/`0x06010C00`. The per-frame
+  update `sub_08046100` flickers `+0x46`. A dynamic-light render pass
+  (`sub_08041BDC` family) draws the glow sprites; the room darkness is a
+  separate overlay. Confirmed NOT window/blend-register based: a live
+  LAB `DISPCNT` read shows WIN0/WIN1/OBJWIN all disabled during gameplay.
+  Faithful reproduction means porting the light-table registration, the
+  gradient-sprite draw and the room-darkness overlay — a bounded but
+  real task; the current procedural glow remains an explicitly partial
+  stand-in until that port is verified against a matched native view.
+
 ## Patch 1278 - LAB tooling reliability: input semantics, scheduling, failure propagation
 
 A development-process correction cycle, not a gameplay feature. The

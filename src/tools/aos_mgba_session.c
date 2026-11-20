@@ -241,6 +241,26 @@ static void run_fail(const char *fmt, ...) {
     fprintf(stderr, "lab: %s\n", g_ctx.error);
 }
 
+/* Resolve a peek/poke address to a readable byte block. The GBA IO register
+ * file (0x04000000-0x040003FF) is not a flat memory region, so
+ * mCoreGetMemoryBlock cannot reach it; the core keeps the raw register values
+ * in gba->memory.io (uint16_t[512], little-endian, byte offset = addr-base).
+ * Every other address uses the normal memory-block lookup. */
+static const uint8_t *lab_mem_block(struct mCore *core, uint32_t address,
+                                    size_t *avail) {
+    if (address >= 0x04000000u && address < 0x04000400u) {
+        struct GBA *gba = (struct GBA *)core->board;
+        if (!gba) {
+            *avail = 0;
+            return NULL;
+        }
+        uint32_t off = address - 0x04000000u;
+        *avail = sizeof(gba->memory.io) - off;
+        return (const uint8_t *)gba->memory.io + off;
+    }
+    return mCoreGetMemoryBlock(core, address, avail);
+}
+
 static void run_on_thread(struct mCoreThread *thread) {
     AosMgbaSession *s = g_ctx.session;
     const AosRunSpec *spec = g_ctx.spec;
@@ -344,7 +364,7 @@ static void run_on_thread(struct mCoreThread *thread) {
                     continue;
                 size_t avail = 0;
                 const uint8_t *data =
-                    mCoreGetMemoryBlock(core, req->address, &avail);
+                    lab_mem_block(core, req->address, &avail);
                 uint32_t want = req->size < avail ? req->size : (uint32_t)avail;
                 if (data && want) {
                     g_ctx.result->peeks[i].address = req->address;
@@ -364,7 +384,7 @@ static void run_on_thread(struct mCoreThread *thread) {
             if (req->frame >= spec->frames) continue;
             size_t avail = 0;
             const uint8_t *data =
-                mCoreGetMemoryBlock(core, req->address, &avail);
+                lab_mem_block(core, req->address, &avail);
             uint32_t want = req->size < avail ? req->size : (uint32_t)avail;
             if (data && want) {
                 free(g_ctx.result->peeks[i].data);

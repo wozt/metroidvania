@@ -1,3 +1,50 @@
+## Patch 1280 - Lamp glow: framebuffer-level investigation corrects the light-sprite hypothesis
+
+Follow-up to Patch 1279's mechanism write-up. That entry inferred a
+radial-gradient tile set and a glow-sprite render pass from the
+`sub_08046148` DMA targets; a frame-matched OAM/VRAM/framebuffer capture
+at the lamp (`/tmp/aos_room03/moved.state`, RIGHT walk to scroll ≈ 435,
+frame 200, `/tmp/lampA_00200.ppm`) now shows that inference was wrong.
+Analysis only — `draw_flame_glow` is still an unverified placeholder.
+
+- **The glow is a small warm halo, not a large light pool.** Warm-pixel
+  (`R>B`) mapping localizes it to roughly screen (105-140, 55-95), a
+  ~30-35 px halo around the flame core. The room is uniformly dim
+  (luminance p10≈66, median≈97, p90≈123 of 255) with no dramatic
+  dark-to-light falloff — consistent with a moody palette plus a local
+  warm flame, not a room-spanning dynamic-lighting engine.
+- **No gradient tiles exist in either tile region.** The full OBJ tile
+  dump (`0x06010000`, 32 KB) and the BG1/2/3 char region
+  (`0x06008000`, 32 KB) were scanned tile-by-tile: every candidate is a
+  solid-fill or sprite-fragment tile; there is no radial-gradient tile
+  anywhere. The `0x06010800`/`0x06010C00` DMA target Patch 1279 called a
+  "lightmap" is ordinary OBJ sprite data (font/character fragments), not
+  light art.
+- **No large glow sprite exists.** Decoding all 128 OAM entries at the
+  capture frame: the only sprites overlapping the halo are small parts
+  (8x8 / 16x8 / 8x16, palettes 7 and 11); there is no 16x16+ sprite and
+  no sprite whose tiles form a gradient. The mode=1 (semi-transparent)
+  sprites 31-36 are small vertical fragments, and `BLDCNT` reads
+  `0x0E40` = blend engine disabled, so they are not alpha-glowing.
+- **BG1 is room art, not a light layer.** `BGCNT` decodes to BG0-3 all
+  enabled (mode 0); BG1 (`charbase 0x06008000`, `screenbase 0x0600E800`,
+  priority 1) holds 641 tile entries of ordinary room geometry — its
+  char region cannot even address the `0x06010800` OBJ tiles.
+- **Refined conclusion.** Every framebuffer/VRAM hypothesis for a
+  distinct glow mechanism is now empirically ruled out. The native lamp
+  appearance is best explained as the flame sprite plus warm-colored
+  lamp/wall art in a dim room; whether a subtle per-pixel contribution
+  exists can only be settled by tracing the actual per-frame render
+  pass in asm (`sub_08041BDC` family) or a hardware watchpoint on the
+  light-table records — romdev's Ghidra decompile needs a Thumb-aware
+  function-analysis pass that was not completed this session.
+- **Honest status.** `draw_flame_glow` remains a procedural stand-in.
+  The defensible next step is a *measured* reproduction: encode the
+  observed ~30 px warm halo (radius, `R>B` falloff, intensity) as the
+  glow, establish the matched native/runtime camera, and prove it with
+  a masked pixel diff — rather than continuing to guess at an
+  undecoded render path.
+
 ## Patch 1279 - LAB IO/register peeks + Aria lamp-lighting mechanism identified
 
 Two work items: a small LAB capability needed for rendering

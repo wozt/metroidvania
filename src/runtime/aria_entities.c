@@ -3482,8 +3482,15 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 combat->progress->character == 0;
             aos_breakable_update(&e->breakable, near, hit,
                                  combat->weapon != NULL, mp_full_soma);
-            if (e->breakable.song >= 0)
+            if (e->breakable.song >= 0) {
                 sound = e->breakable.song;
+                /* PlaySong 0xA2 is issued inside sub_08045F9C natively;
+                 * the aggregate `sound` return is a legacy diagnostic
+                 * the callers ignore (Object02/14/20 already play
+                 * directly for the same reason), so the break jingle
+                 * goes out here on the hit frame. */
+                aos_audio_play_song((uint16_t)e->breakable.song);
+            }
             /* sub_08045F9C's latched drop, created through the same
              * AosPickup paths the placed records and enemy drops
              * use: sub_08043F70 money (variant (RNG&1) + param1) or
@@ -3880,8 +3887,12 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
             aos_object0f_update(&e->object0f, near, hit,
                                 ((int32_t)e->x) << 16, ((int32_t)e->y) << 16,
                                 aos_random, mp_full_soma);
-            if (e->object0f.song >= 0)
+            if (e->object0f.song >= 0) {
                 sound = e->object0f.song;
+                /* Same dropped-return fix as the kind-3 breakable:
+                 * PlaySong 0xA2 goes out directly on the break frame. */
+                aos_audio_play_song((uint16_t)e->object0f.song);
+            }
             /* sub_08045F9C's latched drop, created through the same
              * AosPickup paths the breakable and enemy drops use: the
              * pickup spawns on the accepted hit frame. Case 0 drops a

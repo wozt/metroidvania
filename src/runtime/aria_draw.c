@@ -741,67 +741,78 @@ static void draw_object20_entity(SDL_Renderer *renderer,
  * and Object1F's per-child band5c. prio_slot < 0 is the front pass:
  * every unit without a resolved band draws there, preserving
  * the pre-priority all-on-top order. */
-/* Object0F's lamp glow: the native lamp draws its flame plus glow
- * sprite tiles (the 0x081C3E00 chunks sub_08046148 DMAs into OBJ VRAM)
- * through the normal sprite path — there is no dynamic-light engine
- * (the + 0x72 bit-1 flag is the hitbox attack-box-off bit, not a light
- * emitter; see docs/PROJECT_STATUS.md Patch 1288). This procedural
- * radial disc is the measured stand-in for that sprite glow — a filled
- * warm circle centred on the flame tuned to the native halo profile. */
-static SDL_Texture *object0f_glow_texture(SDL_Renderer *renderer) {
-    static SDL_Texture *tex;
-    if (tex) return tex;
-    enum { S = 64 };
-    uint32_t *px = calloc((size_t)S * S, sizeof *px);
-    if (!px) return NULL;
-    const float c = (S - 1) * 0.5f, r = S * 0.5f;
-    for (int y = 0; y < S; ++y)
-        for (int x = 0; x < S; ++x) {
-            float d = sqrtf((x - c) * (x - c) + (y - c) * (y - c)) / r;
-            if (d >= 1.0f) continue;
-            /* Measured native halo: warmth holds ~flat through the inner
-             * half then falls off toward the rim, rather than peaking at
-             * the centre. smoothstep over a remapped radius reproduces
-             * that plateau-then-decay profile. */
-            float t = (d - 0.45f) / 0.55f;
-            t = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
-            float a = 1.0f - t * t * (3.0f - 2.0f * t);
-            px[y * S + x] = ((uint32_t)(a * 255.0f) << 24) | 0x00FFFFFF;
-        }
-    tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
-                            SDL_TEXTUREACCESS_STATIC, S, S);
-    if (tex) {
-        SDL_UpdateTexture(tex, NULL, px, S * (int)sizeof *px);
-        SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
-    }
-    free(px);
-    return tex;
-}
+/* Object0F's lamp glow / the kind-3 breakable flame glow. There is no
+ * dynamic-light engine (the + 0x72 bit-1 flag is the hitbox
+ * attack-box-off bit, not a light emitter; docs/PROJECT_STATUS.md
+ * Patch 1288). The native glow is a filled, pixel-crisp, OPAQUE circle
+ * strobed above the lamp faster than the eye resolves — the retinal
+ * persistence reads the fast blink as a soft transparent halo (the
+ * cheap GBA substitute for alpha light). It is drawn as horizontal
+ * scanline fill spans at the room's native pixel size (integer logical
+ * coordinates, so the 4x presentation upscale keeps every edge on a
+ * game pixel), toggled on a fast period, in the warm colour measured
+ * on the native framebuffer. `fade` (0..1) carries the state-1 break
+ * timer so the glow dies with the prop. */
 
-/* The flame-prop glow stand-in (Object0F id 15 and the kind-3
- * breakable records — sub_08046080 sets the same + 0x72 bit 1, which
- * disables the attack box, not a light): a filled warm disc centred on
- * the flame tuned to the framebuffer-measured native halo; `fade`
- * (0..1) carries the state-1 break timer so the glow dies with the
- * prop. The faithful replacement is the 0x081C3E00 glow sprite tiles
- * drawn through the normal sprite path. */
+/* Draw the glow as horizontal scanline spans in logical pixels. Each
+ * span is an integer-coordinate fill rect, so the 4x presentation
+ * upscale keeps every edge on a native game pixel — the "pixelisé"
+ * hard edge the strobe turns into a soft halo. Opaque warm fill; the
+ * on/off strobe supplies the transparency, not an alpha ramp. */
 static void draw_flame_glow(SDL_Renderer *renderer, int ex, int ey,
                             int cam_x, int cam_y, uint32_t anim_tick,
                             float fade, float radius, int dy) {
-    SDL_Texture *glow = object0f_glow_texture(renderer);
-    if (!glow || fade <= 0.0f) return;
-    float blink = 0.65f + 0.35f *
-        sinf((float)(anim_tick % 32) * (3.14159265f / 16.0f));
-    /* Framebuffer-measured halo (room 0/3 lamp, native frame): the
-     * light is a pale warm haze ~(231,214,206), not saturated orange,
-     * fading to the dim-room baseline by ~12 px. */
-    SDL_SetTextureColorMod(glow, 255, 208, 158);
-    SDL_SetTextureAlphaMod(glow, (uint8_t)(72.0f * blink * fade));
-    SDL_FRect g = {(float)(ex - radius - cam_x),
-                   (float)(ey + dy - radius - cam_y),
-                   radius * 2.0f, radius * 2.0f};
-    SDL_RenderTexture(renderer, glow, NULL, &g);
-    SDL_SetTextureAlphaMod(glow, 255);
+    if (fade <= 0.0f) return;
+    /* Fast strobe: the disc is present one frame and absent the next
+     * (30 Hz at 60 fps). The break fade adds a slow envelope on top so
+     * the glow dies with the prop instead of cutting out hard. */
+    if (anim_tick & 1) return;
+    if (fade < 1.0f && (anim_tick % 32) >= (unsigned)(32.0f * fade))
+        return;
+    int r = (int)(radius + 0.5f);
+    if (r <= 0) return;
+    int cx = ex - cam_x, cy = ey + dy - cam_y;
+    /* Warm light measured on the native lamp halo ~(231,214,206); the
+     * on-frames run hotter so the 50% strobe averages toward that haze. */
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    SDL_SetRenderDrawColor(renderer, 255, 208, 150, 255);
+    for (int row = -r; row <= r; ++row) {
+        int hw = (int)sqrtf((float)(r * r - row * row));
+        if (hw < 0) continue;
+        SDL_FRect span = {(float)(cx - hw), (float)(cy + row),
+                          (float)(2 * hw + 1), 1.0f};
+        SDL_RenderFillRect(renderer, &span);
+    }
+}
+
+/* Lamp-glow overlay pass. The kind-3 breakables (sub_08046080) and
+ * Object0F's lamp (special id 15) throw the strobing warm disc as a
+ * light effect, not as part of the fixture's own sprite — so it paints
+ * in a dedicated late pass over the window/frame foreground that would
+ * otherwise bury it inside the priority interleave (Patch 1292). The
+ * same + 0xD break timer fades it out with the prop. */
+void draw_lamp_glows(SDL_Renderer *renderer, const AriaRoom *room,
+                     int cam_x, int cam_y) {
+    for (size_t i = 0; i < room->entity_count; ++i) {
+        const AriaEntity *e = &room->entities[i];
+        if (!e->spawned) continue;
+        if (e->kind == ARIA_KIND_BREAKABLE && !e->breakable.finished) {
+            draw_flame_glow(renderer, e->x, e->y, cam_x, cam_y,
+                            e->breakable.anim_tick,
+                            e->breakable.state == 1
+                                ? (float)e->breakable.timer / 0x28f
+                                : 1.0f,
+                            11.0f, -8);
+        } else if (e->kind == ARIA_KIND_SPECIAL && e->id == 15 &&
+                   !e->object0f.finished) {
+            draw_flame_glow(renderer, e->x, e->y, cam_x, cam_y,
+                            e->object0f.anim_tick,
+                            e->object0f.state == 1
+                                ? (float)e->object0f.timer / 0x28f
+                                : 1.0f,
+                            12.0f, -14);
+        }
+    }
 }
 
 void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
@@ -834,15 +845,9 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                                 : breakable_prio >= 0) ||
                 e->breakable.finished)
                 continue;
-            /* sub_08046080 sets the same + 0x72 bit 1 (attack box
-             * off) Object0F carries: the flame glow stays up through
-             * the state-1 break and fades with the + 0xD timer. */
-            draw_flame_glow(renderer, e->x, e->y, cam_x, cam_y,
-                            e->breakable.anim_tick,
-                            e->breakable.state == 1
-                                ? (float)e->breakable.timer / 0x28f
-                                : 1.0f,
-                            11.0f, -8);
+            /* The flame glow is a light thrown over the fixture; it is
+             * painted by draw_lamp_glows in the late overlay pass so the
+             * window/frame foreground cannot bury it (Patch 1292). */
             /* On the hit sub_08045EE0 sets + 0x58 bit 0x20, which
              * sub_0803AC40 reads as "do not draw": the prop vanishes
              * instantly and only the sub_0806D5C0 particles, the
@@ -1250,20 +1255,11 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
         if (!frame->texture) continue;
         int ex = e->x, ey = e->y;
         if (e->id == 15) {
-            /* The lamp glow behind the flame: a filled warm disc
-             * tuned to the measured native halo (the real glow is the
-             * 0x081C3E00 sprite tiles on the normal draw path — see
-             * draw_flame_glow). During the state-1 break it fades out
-             * with the + 0xD timer. */
-            draw_flame_glow(renderer, ex, ey, cam_x, cam_y,
-                            e->object0f.anim_tick,
-                            e->object0f.state == 1
-                                ? (float)e->object0f.timer / 0x28f
-                                : 1.0f,
-                            12.0f, -14);
             /* Same + 0x58 bit 0x20 rule as the breakable: on the hit
              * sub_0803AC40 stops drawing the prop — only the glow,
-             * particles and drop remain until + 0x59 bit 3. */
+             * particles and drop remain until + 0x59 bit 3. The glow
+             * itself is painted by draw_lamp_glows in the late overlay
+             * pass so foreground window/frame art cannot bury it. */
             if (e->object0f.state == 1) continue;
         }
         SDL_FRect rect = {(float)(ex + frame->offset_x - cam_x),

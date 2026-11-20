@@ -5271,6 +5271,10 @@ aria_render_frame:
                                       : NULL,
                                   (uint32_t)step);
         }
+        /* Lamp glows are a light thrown over the fixture, painted in a
+         * dedicated late pass so window/frame foreground cannot bury
+         * the strobing disc (Patch 1292). */
+        if (objects_ok) draw_lamp_glows(renderer, &room, cam_x, cam_y);
         draw_debug(renderer, &debug, paused, &room, &soma, step);
         if (capture_path && step >= capture_frames) {
             SDL_Surface *shot = SDL_RenderReadPixels(renderer, NULL);

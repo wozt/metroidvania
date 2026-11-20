@@ -1,3 +1,60 @@
+## Patch 1292 - Lamp glow: measured strobing opaque disc + break sound wired
+
+- **Glow mechanism corrected.** The steady lamp halo is not a smooth
+  alpha disc and not the `0x081C3E00` destruction-flame tiles — it is a
+  filled, pixel-crisp, **opaque** circle strobed above the flame faster
+  than the eye resolves, so retinal persistence reads it as a soft
+  transparent halo (the cheap GBA substitute for alpha light). The
+  earlier procedural radial-alpha `object0f_glow_texture` stand-in is
+  removed.
+- **Implementation.** `draw_flame_glow` now emits the disc as horizontal
+  scanline `SDL_FRect` spans at integer logical coordinates, so the 4x
+  logical-presentation upscale keeps every edge on a native game pixel.
+  The warm on-frame colour `(255,208,150)` runs hotter than the
+  framebuffer-measured halo `~(231,214,206)` so the ~30 Hz strobe
+  averages toward it. Radius 11 (kind-3 breakables) / 12 (Object0F),
+  `dy` -8 / -14, gated by the same `+0xD` break timer as the prop.
+- **Late overlay pass.** `draw_lamp_glows` paints both lamp kinds once
+  per frame after dialogue and before debug/capture, so window/frame
+  foreground can no longer bury the disc inside the BG/OBJ priority
+  interleave. Verified in `--capture` room 0/3: the disc strobes
+  deterministically (identical warm-pixel count on even frames, ~96
+  background pixels on odd), at the lamp's screen position.
+- **Destruction sound.** `update_entities` returns a song id, but every
+  caller ignores it — a legacy diagnostic return (Object02/14/20 already
+  play directly for the same reason). The kind-3 breakable and Object0F
+  now issue `aos_audio_play_song(0xA2)` on the hit frame, so the
+  destruction jingle actually reaches the mixer. Object0E/Object18 share
+  the same dropped-return gap and remain open.
+- **Evidence.** Room 0/3 `--capture` frames show the strobing disc at
+  the lamp positions; `aos_breakable`/`aos_object0f`/`aos_audio` tests
+  pass. The glow is a documented stand-in, not the extracted sprite —
+  native frame comparison still awaits camera parity.
+
+## Patch 1291 - Creaking Skull native barrage cases 20-27 and 31-37
+
+- **Attack selection restored.** `sub_08095898` case 3 has two distinct
+  attack entries: `_08096736` sends the Creaking Skull to state-1 case 20,
+  while the close-range `_0809600C` branch sends it to case 0. The port no
+  longer collapses both into its reduced three-step volley.
+- **Native barrage sequence.** `sub_08096A94` cases 20-27 and 31-37 are now
+  represented with their exact branch selection from pose 5, pose changes,
+  `30/41/10/40/3/30/60` counters, songs `0x77`, `0x84` and `0x7A`, the
+  `sub_0809884C` stationary shot, position snapshot/restore and terminal
+  return to state-0 case 3 or 6. Both branches are regression-tested through
+  their complete state sequence, including the emitted attack entity.
+- **Remaining boundary.** The particle-only calls inside the barrage
+  (`sub_0806D518`, `sub_08098CF0`, `sub_0806D6CC`) remain absent, and the
+  alternate state-1 cases 4-12/15-19 plus state-0 strike cases 4-12 are still
+  reduced or missing. This materially restores an actual first-boss attack,
+  but the fight remains `partial` until those branches and a synchronized
+  native frame sequence are covered.
+- **Evidence.** `aos_enemy` exercises both native barrage branches and their
+  sounds/projectile/terminal states; `aria_simulate_first_boss_room` still
+  completes the sealed-entry, contact, kill and post-clear exit route. A
+  portable room capture at frame 300 was inspected, but is not native
+  comparison evidence.
+
 ## Patch 1290 - Boss-gate OBJ window, exact contact width and native wake cycle
 
 - **Gate rendering root cause.** `sub_0804DEA0` does submit frame `0x3F`

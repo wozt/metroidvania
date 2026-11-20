@@ -57,6 +57,11 @@ void draw_enemies(SDL_Renderer *renderer, const AriaRoom *room, const AriaObject
 void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
                           const AriaObjects *objects, int cam_x, int cam_y,
                           unsigned step, int prio_slot);
+/* Lamp-glow overlay: the kind-3 breakables and Object0F's lamp throw the
+ * strobing warm disc as a light effect over the window/frame foreground.
+ * Call once per frame after the world passes. */
+void draw_lamp_glows(SDL_Renderer *renderer, const AriaRoom *room,
+                     int cam_x, int cam_y);
 /* Object20's first-room actors (sub_0805D198's Mina/Arikado/skeleton).
  * `prio_slot` is the native OBJ-priority interleave slot (0 front ..
  * 3 back); pass -1 for the front pass, which takes every element

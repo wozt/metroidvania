@@ -1,3 +1,26 @@
+## Patch 1283 - Lamp glow: full native sprite-resource chain decoded
+
+Traced the complete glow pipeline to its ROM art resources. The glow
+is a standard animated entity, NOT alpha-blend and NOT a radial
+texture.
+
+- Lamp (kind-3, `+0x72` bit1) registers a light record in
+  `entityData[]` (`gEwramData+0x4E4`, 0x84-byte records).
+- A light-effect entity is spawned; its `updateFunc = sub_080BD358`
+  (9-case dispatch, tracks the lamp via `entityData[entity+0x14]`)
+  and `drawFunc = sub_08021494` which only positions and calls
+  `sub_0803B9D0` (the generic entity sprite renderer).
+- The entity's ROM graphic resources (init in `code_08014548.s`):
+  animation table `0x080E11D4` (frame ptrs -> 0x2004-byte blocks at
+  `0x081604A8`/`0x081624AC`/`0x081644B0`...), palette `0x082097D4`,
+  descriptor `0x080E12F8`, aux `0x080E126C`/`0x080E11C4`.
+- `0x082097D4` matches the warm OBJ palette seen live in palette RAM.
+- Remaining work: decode Aria's sprite/anim descriptor format at these
+  pointers and extract the glow tiles+palette+anim frames, then feed
+  the existing art pipeline (or draw natively). The procedural
+  `draw_flame_glow` disc (retuned Patch 1282) stays a documented
+  stand-in until then.
+
 ## Patch 1282 - Lamp glow retuned to measured pale-warm haze profile
 
 Framebuffer re-measurement of the native room 0/3 lamp (frame

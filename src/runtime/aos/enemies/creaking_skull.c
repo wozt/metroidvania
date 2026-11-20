@@ -18,9 +18,9 @@
  * - the sub_0809884C/sub_080989DC rotating attack entity becomes an
  *   AOS_ROLE_CS_SHOT child and the sub_08098CF0 debris spawns
  *   AOS_ROLE_CS_GORE;
- * - the + 0xB sixteen-case state-0 machine, the state-1 attack
- *   machine and the + 0xD death countdown fold into step/substep/
- *   timer with the cs_* counters.
+ * - the + 0xB state-0 machine, the state-1 attack machine and the
+ *   + 0xD death countdown fold into step/substep/timer with the cs_*
+ *   counters. Only the cases named below are translated so far.
  *
  * The container record machinery is ported: the create's variant
  * home tables (0x08527FD8 x/y pairs and the 0x085280B0 bone-2 angle
@@ -30,11 +30,9 @@
  * record ride with the ArcTan2 aim of records {0,1,11} and the held
  * angle of records {2,8}.
  *
- * The two ~2000-line choreography machines keep their case order,
- * the song stingers (0x8C bone creaks, 0x86/0x80/0x84/0x76/0x77/0x7A/
- * 0x97/0xE0/0x1C/0x29/0x6B) and the state transitions.  The decoded
- * per-case record re-arms are ported at the points the ported
- * machines traverse: the sub_08095898 case-0 alert arms on aggro,
+ * The translated paths retain their native case order and song
+ * stingers. The decoded per-case record re-arms are ported at the
+ * points those paths traverse: the sub_08095898 case-0 alert arms on aggro,
  * the sub_08096A94 case-0 entry arms on the state-0->1 transition,
  * the case-13 windup arms (song 0x86), the case-14 volley arms
  * (song 0x80) and the case-20 reset arms on the return, each with
@@ -150,6 +148,37 @@ static int32_t cs_div(int32_t v, int d) {
 }
 /* The ROM's sign-fix >> 16: truncation toward zero, like C division. */
 static int32_t cs_px(int32_t v) { return v / 0x10000; }
+
+/* EnemyCreakingSkullUpdate 0x080953DC builds one container rectangle
+ * from record 5 every frame and submits that same rectangle to
+ * sub_08042848 (hurt) and sub_080428B4 (contact).  The ordinary body
+ * animation deliberately has zero boxes, so using frame_boxes here
+ * makes the assembled boss intangible. */
+static AosBox cs_container_box(const AosEnemy *e) {
+    int x = cs_px(e->cs_rec[5].x);
+    if (e->mirrored) x = -x;
+    x -= 0x14;
+    int y = cs_px(e->cs_rec[5].y) - 0x14;
+    return (AosBox){(int8_t)x, (int8_t)y, 0xC0,
+                    (uint8_t)(y < 0 ? -y : y)};
+}
+
+static AosHitReport cs_container_collide(
+    AosEnemy *e, AosSoma *soma, const AosEnemyKind *kind,
+    const AosWeaponEntity *weapon, const AosWeaponFrames *weapon_frames,
+    int soma_atk, int soma_def) {
+    bool own = e->own_boxes;
+    AosBox old_hurt = e->own_hurt, old_attack = e->own_attack;
+    AosBox box = cs_container_box(e);
+    e->own_boxes = true;
+    e->own_hurt = e->own_attack = box;
+    AosHitReport hit = collide(e, soma, kind, weapon, weapon_frames,
+                               soma_atk, soma_def);
+    e->own_boxes = own;
+    e->own_hurt = old_hurt;
+    e->own_attack = old_attack;
+    return hit;
+}
 
 /* sub_08097D84 (snap) and sub_08097EC4 (no snap): arm record idx —
  * flag 0x80000000, anchor sub, orbit radius (explicit or measured to
@@ -647,11 +676,9 @@ static void cs_gore_update(AosEnemy *e) {
     integrate(e);
 }
 
-/* sub_08095898 state 0: the sixteen-case machine — approach with
- * wall probes, random attack entries into state 1, the 0x8C bone
- * creak stingers on case boundaries and the return cycle.  The
- * ported cycle fires the decoded case-0 alert arms on aggro while
- * cs_step_perm keeps the records live. */
+/* sub_08095898 state 0: the native multi-case approach and strike
+ * machine. This translated prefix covers alert, stride and decision;
+ * cases 4-12/20-24 remain explicitly open. */
 static void cs_state0(AosEnemy *e, AosSoma *soma,
                       const AosCollision *layer, const AosAnimSet *anims,
                       uint32_t (*random)(void)) {
@@ -857,6 +884,15 @@ AosHitReport aos_enemy_creaking_skull_update(
     if (!cs_is_boss(e->id))
         return hit;
 
+    /* The create bakes the +0x1C record container before the first
+     * update.  Do this before collision too: the custom native box is
+     * derived from record 5 and cannot be replaced by the body's empty
+     * animation-frame boxes. */
+    if (!e->cs_init) {
+        cs_init_records(e);
+        e->cs_init = true;
+    }
+
     /* EnemyCreakingSkullUpdate prologue: state 2 skips the activity
      * gates; the probe, collision and the container hit box fold
      * into the shared collide. */
@@ -866,8 +902,8 @@ AosHitReport aos_enemy_creaking_skull_update(
             e->hidden = true;
             return hit;
         }
-        hit = collide(e, soma, kind, weapon, weapon_frames,
-                      soma_atk, soma_def);
+        hit = cs_container_collide(e, soma, kind, weapon, weapon_frames,
+                                   soma_atk, soma_def);
     }
     /* EnemyCreakingSkullUpdate does not hide the body here.  The native
      * tail at 0x080953DC builds the container hit boxes and submits them;
@@ -877,10 +913,6 @@ AosHitReport aos_enemy_creaking_skull_update(
 
     /* The create's record bake runs once, then the thirteen bone
      * children emit on the first updates. */
-    if (!e->cs_init) {
-        cs_init_records(e);
-        e->cs_init = true;
-    }
     if (!e->boss_parts_spawned) {
         cs_emit_bones(e, &hit);
         if (e->spawned_count >= CS_BONES)

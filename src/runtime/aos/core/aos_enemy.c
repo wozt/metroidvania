@@ -1546,12 +1546,16 @@ static bool enemy_create(AosEnemy *enemy, uint8_t id, int32_t x, int32_t y, int1
         enemy->spawned_count = 0;
         play_loop(enemy, anims, 0, true);
         step_anim(enemy, anims);
+        /* EnemyCreakingSkullCreate calls sub_0806AF98 after installing
+         * its callbacks.  Resolve the room-record anchor onto the live
+         * floor before the bone container is baked around it. */
+        if (!flag_8e_40) snap_to_floor(enemy, layer);
         if (!flag_8e_40 && enemy->param0 != 0) {
-        /* sub_08034498(self) + the + 0x42C |= 2 write of the
-         * EnemyXxxCreate tail (code site in the block comment);
-         * drained by the host through aos_enemy_create_events. */
-        create_events.escort_register = true;
-        create_events.flags42c_set |= 2;
+            /* _0809585A: sub_08034498(self), +0x42C |= 2 and
+             * sub_08013CF0(0x11).  Song 0x14 is an unrelated mode. */
+            create_events.escort_register = true;
+            create_events.flags42c_set |= 2;
+            create_events.song = 0x11;
         }
         return true;
     }

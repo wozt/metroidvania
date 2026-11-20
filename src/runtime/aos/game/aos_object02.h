@@ -46,6 +46,16 @@ typedef struct {
     int32_t sparkle_x, sparkle_y; /* its room-pixel position */
 } AosObject02;
 
+/* sub_0804DEA0 draw callback: static frame 0x3F is submitted at one or
+ * two vertical offsets according to +0x14.  `y_offset[0]` is the copy
+ * that temporarily selects OBJ palette variant 4 natively. */
+typedef struct {
+    uint8_t count;
+    int16_t y_offset[2];
+} AosObject02Draw;
+
+void aos_object02_draw(const AosObject02 *o, AosObject02Draw *out);
+
 /* Object02Create. `spawn` decides the branch: the native probes the
  * entity screen position against (soma screen x - 0x1C, soma screen y)
  * within 0x38 x 0x22; `near` is that result computed by the caller.

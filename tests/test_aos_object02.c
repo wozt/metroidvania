@@ -134,6 +134,23 @@ int main(void) {
     aos_object02_update(&o, &layer, 0, 0, 100, 100, 200, 100, 0, test_rng);
     assert(o.state == 0x14 && !o.holding && !o.scene_active);
 
+    /* sub_0804DEA0's apparent gate animation is draw geometry, not a
+     * frame sequence: closed submits one copy, the 1..47 interval
+     * submits the fixed upper copy and the sliding lower copy, and
+     * timer 48 hides both. */
+    AosObject02Draw draw;
+    o.deleted = false;
+    o.timer = 0;
+    aos_object02_draw(&o, &draw);
+    assert(draw.count == 1 && draw.y_offset[0] == 0);
+    o.timer = 17;
+    aos_object02_draw(&o, &draw);
+    assert(draw.count == 2 && draw.y_offset[0] == -48 &&
+           draw.y_offset[1] == -17);
+    o.timer = 48;
+    aos_object02_draw(&o, &draw);
+    assert(draw.count == 0);
+
     /* State 20 waits on the + 0x37E bit, then songs and advances. */
     reset_layer();
     aos_object02_create(&o, 2, 5, 0, false, 0, 0, 0, &layer, 100, 100);

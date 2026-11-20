@@ -1218,19 +1218,13 @@ void draw_special_objects(SDL_Renderer *renderer, const AriaRoom *room,
              * same decoded pixels in this renderer. */
             const AriaFrame *frame = &art->frames[0][0x3F];
             if (!art->loaded || !frame->texture) continue;
-            int timer = e->object02.timer;
-            if (timer > 0x2F) continue;
-            int ys[2] = {e->y, e->y};
-            int copies = 1;
-            if (timer > 0) {
-                ys[0] = e->y - 0x30;
-                ys[1] = e->y - timer;
-                copies = 2;
-            }
-            for (int copy = 0; copy < copies; ++copy) {
+            AosObject02Draw draw;
+            aos_object02_draw(&e->object02, &draw);
+            for (int copy = 0; copy < draw.count; ++copy) {
                 SDL_FRect rect = {
                     (float)(e->x + frame->offset_x - cam_x),
-                    (float)(ys[copy] + frame->offset_y - cam_y),
+                    (float)(e->y + draw.y_offset[copy] +
+                            frame->offset_y - cam_y),
                     frame->w, frame->h};
                 SDL_RenderTexture(renderer, frame->texture, NULL, &rect);
             }

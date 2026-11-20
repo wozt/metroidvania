@@ -1477,7 +1477,33 @@ static void creaking_skull_tests(void) {
     assert(aos_enemy_create(&e, 0x21, 300, 150, 0, 0,
                             &soma, &layer, &kind, &cs33));
     assert(e.state == 0 && e.hp == 240);
+    /* EnemyCreakingSkullCreate's sub_0806AF98 lands the container
+     * origin on the first solid floor row (8-pixel cell row 20 ->
+     * the last air pixel at y 159). */
+    assert(e.y == AOS_FIXED(159));
     assert(!e.boss_parts_spawned && e.spawned_count == 0);
+
+    /* Its animation frames intentionally contain no regular boxes.
+     * EnemyCreakingSkullUpdate instead submits the record-5 container
+     * rectangle through sub_08042848/sub_080428B4; prove that native
+     * path can damage Soma even with every imported frame box zero. */
+    AosEnemyKind boxless = kind;
+    memset(boxless.hurt, 0, sizeof boxless.hurt);
+    memset(boxless.attack, 0, sizeof boxless.attack);
+    AosEnemy contact_boss;
+    assert(aos_enemy_create(&contact_boss, 0x21, 200, 150, 0, 0,
+                            &soma, &layer, &boxless, &cs33));
+    soma.x = contact_boss.x;
+    soma.y = contact_boss.y - AOS_FIXED(16);
+    soma.hp = soma.max_hp;
+    soma.combat = (AosCombat){0};
+    AosHitReport contact = aos_enemy_update(
+        &contact_boss, &soma, &layer, &boxless, NULL, NULL,
+        10, 4, 0, 0, always_zero);
+    assert(contact.soma_hit && contact.soma_damage > 0 &&
+           soma.hp < soma.max_hp);
+    soma = aos_soma_spawn(AOS_FIXED(150), AOS_FIXED(120), NULL);
+    soma.max_hp = soma.hp = 800;
     aos_enemy_set_flag_8e_40(true);
     AosEnemy ed;
     assert(aos_enemy_create(&ed, 0x5C, 300, 150, 0, 0,
@@ -14493,7 +14519,8 @@ static void escort_tests(void) {
     assert(aos_enemy_create(&e, AOS_ENEMY_CREAKING_SKULL, 100, 100, 1, 0,
                             &soma, &layer, &kind, &stats));
     aos_enemy_create_events(&ev);
-    assert(ev.escort_register && (ev.flags42c_set & 2) == 2);
+    assert(ev.escort_register && (ev.flags42c_set & 2) == 2 &&
+           ev.song == 0x11);
 
     /* Legion: 42C|=2 always on the flag-clear path; the register
      * only on the param0 == 0 branch. */

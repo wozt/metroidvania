@@ -281,11 +281,18 @@ static int c5a8_dbg_line;
  * slot's lifetime; NULL releases, matching sub_08034498's NULL
  * argument. The + 0x42C bits land on aria_pickup_state.global_flags
  * like every other + 0x42C writer. */
-static void apply_enemy_create_events(const AosEnemy *enemy) {
+static void apply_enemy_create_events(const AosEnemy *enemy,
+                                      AosRoomMusic *room_music) {
     AosEnemyCreateEvents events;
     aos_enemy_create_events(&events);
     if (events.escort_register) aria_ewram_escort_13220 = (void *)enemy;
     aria_pickup_state.global_flags |= events.flags42c_set;
+    if (events.song) {
+        if (room_music)
+            aos_room_music_change(room_music, events.song);
+        else
+            aos_audio_play_song(events.song);
+    }
 }
 /* gEwramData bgInfo[4] scroll state (+0xA078): the ported
  * sub_0803FBBC/sub_08000F60/sub_0800D288 behind every
@@ -3002,7 +3009,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                 e->spawned = aos_enemy_create(&e->enemy, (uint8_t)e->id, e->x, e->y,
                                               (int16_t)e->param0, (int16_t)e->param1, soma, layer,
                                               kind, combat->stats[e->id]);
-                apply_enemy_create_events(&e->enemy);
+                apply_enemy_create_events(&e->enemy, room_music);
                 e->spawner = -1;
                 /* The record's +0x5C draw band: the kind's
                  * create-time band (the draw path overrides it
@@ -3415,7 +3422,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                                                 soma, layer, kind, combat->stats[e->id]);
                 if (!created && child_slot + 1 == room->entity_count)
                     room->entity_count--;
-                apply_enemy_create_events(&child->enemy);
+                apply_enemy_create_events(&child->enemy, room_music);
             }
             if (hit.enemy_hit)
                 printf("%s hit: %d damage%s\n", enemy_names[e->id], hit.enemy_damage,
@@ -3591,7 +3598,7 @@ int update_entities(AriaRoom *room, AosCollision *layer, AosSoma *soma,
                         &child->enemy, (uint8_t)e->param0, e->x, e->y, 0, 0,
                         soma, layer, combat->kinds[e->param0],
                         combat->stats[e->param0]);
-                    apply_enemy_create_events(&child->enemy);
+                    apply_enemy_create_events(&child->enemy, room_music);
                     if (child->spawned)
                         printf("Object%02X spawned enemy %d at %d,%d\n", e->id,
                                e->param0, e->x, e->y);

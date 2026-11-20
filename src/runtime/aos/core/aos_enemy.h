@@ -1044,10 +1044,13 @@ typedef struct {
  * entry, so an undrained create cannot leak into the next one):
  *  - escort_register: sub_08034498(self) — the host stores the
  *    persistent AosEnemy record it passed in into + 0x13220.
- *  - flags42c_set: + 0x42C bits the create tail ORs. */
+ *  - flags42c_set: + 0x42C bits the create tail ORs.
+ *  - song: sub_08013CF0 request emitted by the same create tail; zero
+ *    means that the create did not change the room music. */
 typedef struct {
     bool escort_register;
     uint32_t flags42c_set;
+    uint16_t song;
 } AosEnemyCreateEvents;
 
 /* RandomNumberGenerator: r = (r >> 8) * 0x3243F6AD + 0x1B0CB175. The seed

@@ -1,3 +1,36 @@
+## Patch 1289 - First boss playable loop: native music, animated gates and container collision
+
+- **Music correction.** The previous patch incorrectly inferred song `0x14`
+  from the unrelated `unk_4CC_0` branch. `EnemyCreakingSkullCreate`
+  `_0809585A` explicitly calls `sub_08013CF0(0x11)` after
+  `sub_08034498(self)` and `+0x42C |= 2`. That create-tail request now travels
+  through `AosEnemyCreateEvents` into the room-music owner; the artificial
+  room-number mode writer was removed. The real-room route asserts `0x11`
+  ("A Formidable Foe Appears").
+- **Native gate animation and collision.** Object02 still uses static frame
+  `0x3F`, but `sub_0804DEA0` submits it geometrically: timer 0 draws the
+  closed leaf, timers 1-47 draw the fixed copy at `y-48` and the sliding copy
+  at `y-timer`, and timer 48 hides both. `aos_object02_draw` owns that decoded
+  geometry and the SDL path consumes it. The normal room-0/9 entry scenario
+  now proves the left gate reseals its three collision blocks and prevents a
+  return transition; after the boss-clear bit 11, the right gate opens and
+  the same route crosses from room 0/10 to 0/35.
+- **Grounding and combat interaction.** `EnemyCreakingSkullCreate` now runs
+  its native `sub_0806AF98` floor snap before the thirteen record positions
+  are baked. The boss's ordinary animation frames intentionally contain zero
+  hitboxes: `EnemyCreakingSkullUpdate` builds one record-5 container rectangle
+  every frame and submits it to both `sub_08042848` and `sub_080428B4`. The
+  port now does the same, so Soma can damage the boss and takes its 35-contact
+  attack. The integration scenario proves overlap damage, a weapon kill, the
+  death/clear path and the post-clear exit.
+- **Evidence boundary.** `aos_enemy`, `aos_object02` and
+  `aria_simulate_first_boss_room` cover the decoded units and complete
+  portable arena route. A fresh portable capture shows the assembled boss
+  grounded on the room floor. No synchronized native lab checkpoint was
+  available in this cycle, so choreography remains `partial`: state-0 cases
+  4-12/20-24, state-1 cases 4-12/15-19/21-37, launch/burst particles and
+  exact affine/OAM effects are still documented work, not claimed fidelity.
+
 ## Patch 1288 - CORRECTION: code_08040A38.s is the hitbox/collision system, not lighting
 
 A focused decode pass (asm + a subagent cross-check against the ported
@@ -386,13 +419,10 @@ No new emulator, LAB or debugging framework was added.
   0/10 capture now shows the connected native silhouette instead of parts
   spread across the room; the available native capture has a different
   player/camera checkpoint, so this is not a frame-perfect validation.
-- **First-boss music connected.** The active room-0/10 Creaking Skull record
-  now drives the native `unk_4CC_0` view before room-music entry, selecting
-  song `0x14` exactly as `sub_08013960` does. The mode is suppressed once
-  the boss-clear `+0x37E` bit `0xB` is set. The real-room headless route now
-  asserts Object02 entry, all fourteen boss records and `music 0x14 boss`.
-  This writer is intentionally scoped to the first boss; other boss-room
-  mode writers remain to be decoded.
+- **Superseded music inference.** This patch incorrectly connected room 0/10
+  to song `0x14` through `unk_4CC_0`. Patch 1289 removes that host-only mode
+  writer and follows the explicit create-tail call
+  `EnemyCreakingSkullCreate -> sub_08013CF0(0x11)` instead.
 - **Remaining partial work.** Creaking Skull's unported state-0 locomotion
   branches, distinct state-1 projectile schedules, particles, palette
   effects and exact affine/OAM rounding remain open. No fidelity or feature

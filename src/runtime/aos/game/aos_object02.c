@@ -29,6 +29,18 @@ static void reset_outputs(AosObject02 *o) {
     o->sparkle_x = o->sparkle_y = 0;
 }
 
+void aos_object02_draw(const AosObject02 *o, AosObject02Draw *out) {
+    *out = (AosObject02Draw){0};
+    if (!o || o->deleted || o->timer > 0x2F) return;
+    if (o->timer == 0) {
+        out->count = 1;
+        return;
+    }
+    out->count = 2;
+    out->y_offset[0] = -0x30;
+    out->y_offset[1] = (int16_t)-o->timer;
+}
+
 bool aos_object02_create(AosObject02 *o, int param0, int param1,
                          uint16_t special_37e, bool near,
                          int32_t screen_x, int32_t soma_screen_x,

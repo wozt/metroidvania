@@ -1013,32 +1013,6 @@ int16_t aria_ewram_pause_4be;
 uint8_t aria_ewram_cine_4cc;
 void *aria_ewram_escort_13220;
 
-/* Castle Corridor room 0/10 is the Creaking Skull arena in the verified
- * room table (enemy 0x21, param0 4).  Its native death callback writes
- * gEwramData +0x37E bit 0xB; while that bit is clear, unk_4CC_0 selects
- * song 0x14 in sub_08013960.  Keep this deliberately scoped to the first
- * boss until the remaining arenas' mode writers are decoded. */
-static bool first_boss_music_mode(const AriaRoom *room) {
-    if (!room || room->area != 0 || room->number != 10 ||
-        (aria_pickup_state.special & (1u << 0xB)))
-        return false;
-    for (size_t i = 0; i < room->entity_count; ++i) {
-        const AriaEntity *e = &room->entities[i];
-        if (e->kind == ARIA_KIND_ENEMY &&
-            e->id == AOS_ENEMY_CREAKING_SKULL && e->param0 != 0)
-            return true;
-    }
-    return false;
-}
-
-static void first_boss_music_sync(AosRoomMusic *music,
-                                  const AriaRoom *room) {
-    bool active = first_boss_music_mode(room);
-    music->boss_mode = active;
-    aria_ewram_cine_4cc =
-        (uint8_t)((aria_ewram_cine_4cc & (uint8_t)~1u) | active);
-}
-
 /* One shared room dialogue: the native routines never run two text
  * windows at once and sub_08067934 re-open closes the previous one.
  * The host adapter reuses the opening path's verified-ROM text
@@ -1843,7 +1817,6 @@ int aria_runtime_main(int argc, char **argv) {
         if (has_active_save)
             map_warp.discovered = active_save.warp_discovered;
         (void)load_room_music(DEFAULT_ROOM_MUSIC);
-        first_boss_music_sync(&room_music, &room);
         (void)aos_room_music_enter(&room_music, room.area, room.number,
                                    NULL);
         for (long frame = 0; frame < simulate_frames; ++frame) {
@@ -1860,7 +1833,6 @@ int aria_runtime_main(int argc, char **argv) {
                                                   : NULL,
                                               sim_have_quick_map);
                 if (tr == 1) {
-                    first_boss_music_sync(&room_music, &room);
                     (void)aos_room_music_enter(&room_music, room.area,
                                                room.number, NULL);
                     printf("Aria simulate: transition commit frame %ld -> %d/%d\n",
@@ -2973,7 +2945,6 @@ int aria_runtime_main(int argc, char **argv) {
                 (room.area != music_area || room.number != music_room)) {
                 music_area = room.area;
                 music_room = room.number;
-                first_boss_music_sync(&room_music, &room);
                 /* sub_08013960's save/warp bits come from the
                  * room's map-anchor castle cell, not the tsv
                  * row's room-wide OR (room_music_flags_for). */

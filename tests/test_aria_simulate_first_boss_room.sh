@@ -53,8 +53,8 @@ printf '%s\n' "$out" | grep -q "frames, room 0/10," || {
     echo "FAIL: simulation did not remain in the first boss room" >&2
     exit 1
 }
-printf '%s\n' "$out" | grep -q "music 0x14 boss" || {
-    echo "FAIL: first boss room did not select native boss song 0x14" >&2
+printf '%s\n' "$out" | grep -q "music 0x11" || {
+    echo "FAIL: Creaking Skull create did not select native song 0x11" >&2
     exit 1
 }
 alive=$(printf '%s\n' "$out" |
@@ -64,4 +64,58 @@ if [ -z "$alive" ] || [ "$alive" -lt 14 ]; then
     exit 1
 fi
 
-echo "aria first boss room: OK ($alive boss entities alive)"
+# Enter normally, allow the near-created left Object02 to finish its
+# 48-frame close, then walk back into it.  The three native block writes
+# must keep Soma inside room 0/10 instead of permitting a second room exit.
+script=$(mktemp "${TMPDIR:-/tmp}/aria_first_boss_gate.XXXXXX")
+trap 'rm -f "$script"' EXIT HUP INT TERM
+cat > "$script" <<'EOF'
+hold 16 130
+hold 32 300
+EOF
+gate_out=$("$bin" --simulate 430 --simulate-script "$script" \
+           --area 0 --room 9 --spawn 400 1440 --hp 9999 --mute 2>/dev/null)
+changes=$(printf '%s\n' "$gate_out" |
+    sed -n 's/.*room changes \([0-9][0-9]*\).*/\1/p' | tail -1)
+final_x=$(printf '%s\n' "$gate_out" |
+    sed -n 's/.*Soma \([0-9][0-9]*\),[0-9-]* hp.*/\1/p' | tail -1)
+if [ "$changes" != 1 ] || [ -z "$final_x" ] || [ "$final_x" -lt 16 ]; then
+    echo "FAIL: the closed left boss gate did not retain Soma in room 0/10" >&2
+    exit 1
+fi
+
+# The runtime path must use the record-container hitbox, not the empty
+# animation-frame boxes: overlapping the assembled boss costs HP.
+contact_out=$("$bin" --simulate 120 --area 0 --room 10 \
+              --spawn 250 176 --hp 500 --mute 2>/dev/null)
+printf '%s\n' "$contact_out" | grep -q 'Soma hit:' || {
+    echo "FAIL: Creaking Skull did not damage overlapping Soma" >&2
+    exit 1
+}
+
+# Complete the arena loop: kill the real room entity through Soma's
+# weapon path, wait through its death machine, approach the right
+# Object02 and cross the native transition after bit 11 releases it.
+cat > "$script" <<'EOF'
+hold 16 25
+tap 2 10
+wait 10
+tap 2 10
+wait 10
+tap 2 10
+wait 100
+hold 16 700
+EOF
+clear_out=$("$bin" --simulate 865 --simulate-script "$script" \
+            --area 0 --room 10 --spawn 180 176 --atk 9999 \
+            --def 9999 --hp 9999 --mute 2>/dev/null)
+printf '%s\n' "$clear_out" | grep -q 'creaking_skull hit: .* killed' || {
+    echo "FAIL: the playable route did not kill Creaking Skull" >&2
+    exit 1
+}
+printf '%s\n' "$clear_out" | grep -q 'Room 0/10 -> 0/35' || {
+    echo "FAIL: the right boss gate did not release after the clear" >&2
+    exit 1
+}
+
+echo "aria first boss room: OK ($alive boss entities, both gates, contact and clear route)"

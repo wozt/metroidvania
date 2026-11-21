@@ -1,3 +1,24 @@
+## Patch 1295 - Creaking Skull native room-edge and floor route selector
+
+- **Existing collision owner reused.** `sub_0806D188` is the room-column
+  margin query, not a boss-specific heuristic. The core collision owner now
+  exposes its exact side result (1 left, 2 right, 0 inside) for an arbitrary
+  margin while preserving the existing boolean margin-1 wrapper. Its native
+  one-screen width exception remains shared.
+- **Native route geometry connected.** The common Creaking Skull tails at
+  `_08095D44`, `_08096060` and `_08096740` now query the native 24-column
+  edge margin, face Soma, and run the two `sub_0806D0B8` cell-kind probes
+  50 pixels to either side. They choose cases 4/10 or 1/7 from actual room
+  floor/drop geometry instead of the previous documented unobstructed-path
+  fallback.
+- **Evidence and boundary.** `aos_enemy` verifies left/interior/right margin
+  results and both continuous-floor and opposite-floor route outcomes. The
+  real-room `aria_simulate_first_boss_room` scenario remains green. This is
+  source-exact component and portable integration evidence, not a native
+  frame comparison; decorative movement/attack particles, shake and death
+  effects, affine/OAM rounding and a synchronized emulator run remain open,
+  so the fight stays `partial`.
+
 ## Patch 1294 - Creaking Skull native state-0 movement loops 4-12
 
 - **Three native loops restored.** `sub_08095898` cases `4→5→6`, `7→8→9`

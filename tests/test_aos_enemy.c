@@ -1752,6 +1752,45 @@ static void creaking_skull_tests(void) {
     assert(script_at == 2 && route.state == 0 && route.step == 1 &&
            route.cs_pose == 9);
 
+    /* sub_0806D188 keeps its native 24-column margin and side result;
+     * sub_0806D0B8 then selects case 1 on continuous floor or case 7
+     * when the near-player probe finds floor on the opposite side. */
+    AosEnemy edge_probe = e;
+    edge_probe.x = AOS_FIXED(100);
+    assert(aos_enemy_room_edge_side(&edge_probe, &layer, 0x18) == 1);
+    edge_probe.x = AOS_FIXED(250);
+    assert(aos_enemy_room_edge_side(&edge_probe, &layer, 0x18) == 0);
+    edge_probe.x = AOS_FIXED(500);
+    assert(aos_enemy_room_edge_side(&edge_probe, &layer, 0x18) == 2);
+
+    AosEnemy terrain = e;
+    terrain.x = AOS_FIXED(250);
+    terrain.y = AOS_FIXED(159);
+    terrain.state = 0;
+    terrain.step = 12;
+    terrain.substep = 1;
+    terrain.timer = 1;
+    soma.x = AOS_FIXED(350);
+    soma.y = terrain.y;
+    script = route1_pick;
+    script_at = 0;
+    (void)aos_enemy_update(&terrain, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, scripted);
+    assert(script_at == 2 && terrain.step == 1);
+
+    terrain.state = 0;
+    terrain.step = 12;
+    terrain.substep = 1;
+    terrain.timer = 1;
+    soma.x = AOS_FIXED(290);
+    script = route1_pick;
+    script_at = 0;
+    (void)aos_enemy_update(&terrain, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, scripted);
+    assert(script_at == 2 && terrain.step == 7);
+    soma.x = e.x;
+    soma.y = e.y;
+
     /* A bone child tracks its parent; a state-2 parent detaches it
      * into the sub_0809808C state-1 death fall (0x08119081 timer by
      * record index), which deletes after the countdown. */

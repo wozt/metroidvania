@@ -40,8 +40,8 @@
  * selected by entity + 0x24, or the per-case constants 2/0xE);
  * cs_step_perm counts + 0xD down like the native cases.  The
  * create-time cases 20-24 neutral cycle and state-0 movement loops
- * 4-12 are ported; their sub_0806D9CC particles and the
- * sub_0806D188/sub_0806D0B8 environment route selector remain open.
+ * 4-12 and their sub_0806D188/sub_0806D0B8 environment route selector
+ * are ported; their sub_0806D9CC particles remain open.
  * The native state-1 close attack cases 0-9/11-19,
  * including their sub_08097EC4 pairs, poses, timers and record arms,
  * are ported; their sub_0806D9CC/sub_0806DCC4 particles and
@@ -806,7 +806,37 @@ static int cs_abs_player_dx(const AosEnemy *e, const AosSoma *soma) {
     return dx < 0 ? -dx : dx;
 }
 
+/* The shared _08095D44/_08096060/_08096740 terrain selector:
+ * sub_0806D188(e, 0x18) first detects the room-edge side, then two
+ * sub_0806D0B8 probes at +/-50 pixels distinguish continuous floor
+ * from a drop/wall.  `normal` is cases 4 or 1; `alternate` is 10 or 7. */
+static void cs_state0_geometry_route(AosEnemy *e, AosSoma *soma,
+                                     const AosCollision *layer,
+                                     int normal, int alternate) {
+    int side = aos_enemy_room_edge_side(e, layer, 0x18);
+    cs_face_records(e, soma);
+    if ((side == 1 && !e->mirrored) || (side == 2 && e->mirrored)) {
+        cs_state0_enter_route(e, alternate);
+        return;
+    }
+
+    int x = e->x >> 16, y = e->y >> 16;
+    int first = e->mirrored ? 50 : -50;
+    if (cs_abs_player_dx(e, soma) > 0x31 &&
+        aos_enemy_cell_kind(layer, x + first, y) == 0) {
+        cs_state0_enter_route(e, normal);
+        return;
+    }
+    int second = -first;
+    if (aos_enemy_cell_kind(layer, x + second, y) != 0) {
+        cs_state0_enter_route(e, normal);
+        return;
+    }
+    cs_state0_enter_route(e, alternate);
+}
+
 static void cs_state0_cycle_decision(AosEnemy *e, AosSoma *soma,
+                                     const AosCollision *layer,
                                      uint32_t (*random)(void), int from) {
     int dx = cs_abs_player_dx(e, soma);
     if (from == 6) {
@@ -825,12 +855,7 @@ static void cs_state0_cycle_decision(AosEnemy *e, AosSoma *soma,
                 return;
             }
         }
-        /* Native next uses sub_0806D188/sub_0806D0B8 to choose
-         * case 7 or case 1 from nearby room geometry.  Until that
-         * probe is exposed, retain the source's unobstructed case-1
-         * path instead of inventing a wall result. */
-        cs_face_records(e, soma);
-        cs_state0_enter_route(e, 1);
+        cs_state0_geometry_route(e, soma, layer, 1, 7);
         return;
     }
 
@@ -842,8 +867,12 @@ static void cs_state0_cycle_decision(AosEnemy *e, AosSoma *soma,
         cs_state0_enter_attack(e, 20);
         return;
     }
-    cs_face_records(e, soma);
-    cs_state0_enter_route(e, from == 9 ? 4 : 1);
+    if (from == 9) {
+        cs_face_records(e, soma);
+        cs_state0_enter_route(e, 4);
+    } else {
+        cs_state0_geometry_route(e, soma, layer, 1, 7);
+    }
     if (from == 9) {
         /* _080962E6 enters case 4 with 0x08119070, unlike the case-3
          * environment entry which uses 0x08119072. */
@@ -854,8 +883,8 @@ static void cs_state0_cycle_decision(AosEnemy *e, AosSoma *soma,
 
 /* sub_08095898 state 0: the native multi-case approach and strike
  * machine. The create-time 20-24 cycle, alert, stride, decision and
- * movement loops 4-12 are translated.  The sub_0806D188/sub_0806D0B8
- * environment selector feeding some route entries remains open. */
+ * movement loops 4-12 and their sub_0806D188/sub_0806D0B8 environment
+ * selector are translated. */
 static void cs_state0(AosEnemy *e, AosSoma *soma,
                       const AosCollision *layer, const AosAnimSet *anims,
                       uint32_t (*random)(void)) {
@@ -987,11 +1016,7 @@ static void cs_state0(AosEnemy *e, AosSoma *soma,
             cs_state0_enter_route(e, 10);
             break;
         }
-        /* The obstructed alternatives use the still-open
-         * sub_0806D188/sub_0806D0B8 probes.  Case 4 is the native
-         * unobstructed continuation. */
-        cs_face_records(e, soma);
-        cs_state0_enter_route(e, 4);
+        cs_state0_geometry_route(e, soma, layer, 4, 10);
         break;
     case 4:
         (void)projectile_collide(e, layer, 0x10000,
@@ -1040,7 +1065,7 @@ static void cs_state0(AosEnemy *e, AosSoma *soma,
             e->cs_cool = 1;
             break;
         }
-        cs_state0_cycle_decision(e, soma, random, e->step);
+        cs_state0_cycle_decision(e, soma, layer, random, e->step);
         break;
     case 7:
         (void)projectile_collide(e, layer, 0x10000,

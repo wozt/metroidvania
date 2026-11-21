@@ -48,6 +48,8 @@ int32_t aos_enemy_slope_speed(const AosEnemy *enemy,
 bool aos_enemy_blocked_ahead(const AosCollision *layer, int32_t x, int32_t y);
 bool aos_enemy_at_room_edge(const AosEnemy *enemy,
                             const AosCollision *layer);
+int aos_enemy_room_edge_side(const AosEnemy *enemy,
+                             const AosCollision *layer, int margin);
 void aos_enemy_make_static_child(AosEnemy *child, const AosEnemy *owner,
                                  uint8_t role, int frame);
 void aos_enemy_integrate(AosEnemy *enemy);

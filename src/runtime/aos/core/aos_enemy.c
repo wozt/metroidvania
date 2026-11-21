@@ -4073,12 +4073,19 @@ int aos_enemy_room_columns(const AosCollision *layer) {
 }
 #define room_columns aos_enemy_room_columns
 
-/* sub_0806D188(e, 1): the entity's cell column outside [1, width - 1]
- * (a one-screen room counts 30 columns). */
-bool aos_enemy_at_room_edge(const AosEnemy *e, const AosCollision *layer) {
+/* sub_0806D188(e, margin): 1 left of the margin, 2 right of it and 0
+ * inside (a one-screen room counts 30 columns). */
+int aos_enemy_room_edge_side(const AosEnemy *e, const AosCollision *layer,
+                             int margin) {
     int32_t column = (e->x >> 16) >> 3;
     int width = room_columns(layer);
-    return column < 1 || column > width - 1;
+    if (column < margin) return 1;
+    if (column > width - margin) return 2;
+    return 0;
+}
+
+bool aos_enemy_at_room_edge(const AosEnemy *e, const AosCollision *layer) {
+    return aos_enemy_room_edge_side(e, layer, 1) != 0;
 }
 #define at_room_edge aos_enemy_at_room_edge
 

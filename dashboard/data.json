@@ -1,8 +1,8 @@
 {
  "schema": "metroidvania-dashboard-v1",
- "generated_at": "2026-11-20T21:06:40+00:00",
+ "generated_at": "2026-11-21T01:41:52+00:00",
  "git": {
-  "commit": "0d4a8f9a",
+  "commit": "31a2a3d7",
   "branch": "main",
   "dirty": true
  },
@@ -1068,7 +1068,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -1151,7 +1151,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -1280,7 +1280,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -1351,7 +1351,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -1479,7 +1479,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -1568,7 +1568,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -1647,7 +1647,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -1719,7 +1719,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -1792,7 +1792,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -1870,7 +1870,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -1962,7 +1962,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2036,7 +2036,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2110,7 +2110,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2192,7 +2192,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2257,7 +2257,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2339,7 +2339,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2401,7 +2401,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2489,7 +2489,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2589,7 +2589,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2648,7 +2648,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2721,7 +2721,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2790,7 +2790,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2861,7 +2861,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2919,7 +2919,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -2997,7 +2997,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -3055,7 +3055,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -3143,7 +3143,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -3226,7 +3226,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -3313,7 +3313,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -3419,7 +3419,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -3537,7 +3537,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -3595,7 +3595,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -3670,7 +3670,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -3763,7 +3763,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -3821,7 +3821,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -3916,7 +3916,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -3980,7 +3980,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -4050,7 +4050,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -4110,7 +4110,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -4222,7 +4222,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -4289,7 +4289,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -4349,7 +4349,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -4408,7 +4408,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -4534,7 +4534,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -4606,7 +4606,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -4691,7 +4691,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -4749,7 +4749,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -4808,7 +4808,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -4931,7 +4931,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -4993,7 +4993,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -5061,7 +5061,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -5120,7 +5120,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -5178,7 +5178,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -5236,7 +5236,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -5326,7 +5326,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -5398,7 +5398,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -5498,7 +5498,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -5577,7 +5577,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -5690,7 +5690,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -5759,7 +5759,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -5885,7 +5885,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -5984,7 +5984,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -6104,7 +6104,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -6169,7 +6169,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -6244,7 +6244,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -6342,7 +6342,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -6430,7 +6430,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -6579,7 +6579,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -6651,7 +6651,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -6728,7 +6728,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -6803,7 +6803,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -6864,7 +6864,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -6953,7 +6953,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -7016,7 +7016,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -7109,7 +7109,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -7204,7 +7204,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -7394,7 +7394,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -7483,7 +7483,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -7607,7 +7607,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -7666,7 +7666,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -7774,7 +7774,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -7856,7 +7856,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -7933,7 +7933,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -8012,7 +8012,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -8138,7 +8138,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -8225,7 +8225,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -8302,7 +8302,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -8400,7 +8400,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -8503,7 +8503,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -8592,7 +8592,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -8684,7 +8684,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -8789,7 +8789,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -8942,7 +8942,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -9034,7 +9034,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -9102,7 +9102,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -9217,7 +9217,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -9339,7 +9339,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -9441,7 +9441,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -9536,7 +9536,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -9651,7 +9651,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -9723,7 +9723,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -9849,7 +9849,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -9937,7 +9937,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -10073,7 +10073,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -10174,7 +10174,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -10249,7 +10249,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -10334,7 +10334,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -10448,7 +10448,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -10585,7 +10585,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -10693,7 +10693,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -10777,7 +10777,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -10867,7 +10867,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -10950,7 +10950,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -11039,7 +11039,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -11112,7 +11112,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -11184,7 +11184,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -11326,7 +11326,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -11423,7 +11423,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -11525,7 +11525,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -11627,7 +11627,7 @@
     "RandomNumberGenerator2",
     "sub_08034498"
    ],
-   "limitations": "The + 0x1C container entity and its thirteen 0x30-byte records fold into cs_rec[13] and the persistent CS_BONE children emitted under the 8-child cap; the create's variant home tables (0x08527FD8 pairs, the 0x085280B0 bone-2 angle dwords and the 0x0811903C/49/56/63/81 byte tables) are reproduced, the sub_08097D84/sub_08097EC4 record arming, the sub_08097B94 orbit/unlaunched-lerp step in the 0x08119063 order, sub_08097D1C's facing transform (all thirteen x values and angles {0,1,2,8,11}) and the sub_0809808C state-0 record ride with the ArcTan2 aim of records {0,1,11} and the held angle of {2,8} are ported, while the translated choreography paths retain their case order and songs and fire the decoded per-case record re-arms at the points the ported cases traverse — the sub_08095898 case-0 alert arms and signed stride velocity on aggro, the cases-1/2 sub_0806D288 collision movement, the case-2-to-3 _08096544 stride arms and case-3's one-frame _080966B4 decision pose with its ordered RNG rolls, the sub_08096A94 case-0 entry, case-13 windup (0x86), case-14 volley (0x80), case-20 reset arms and the complete case-20..27/case-31..37 barrage branches (pose selection, 30/41/10/40/3/30/60 timers, songs 0x77/0x84/0x7A, stationary shot and terminal snapshot restore) — each with its decoded + 0xD divider (the 0x08119070/0x08119078 timing bytes selected by entity + 0x24, or the per-case constants 2/0xE) that cs_step_perm counts down like the native cases; the remaining case arms (state-0 case-3 locomotion outcomes and cases 4-12 and state-1 cases 4-12/15-19 including the sub_08097EC4 pairs) stay unported because the ported case structure does not reproduce them; sub_0809884C/sub_080989DC now use the native +/-36,-25 spawn, stationary 0x2400/every-other-frame affine turn, collision callbacks and 0x76 burst transition, while their eight launch and six burst particles remain open; the sub_0809808C state-1/state-2 death machines keep their 0x08119081 timers and deletes while the palette writes (sub_08042848/428B4/429D0), the spark helpers (sub_0806D3D8/5C0/518), the native affine pivot/OAM rounding and the sub_0803E6BC slot free stay open; sub_0803E058 angles records {0,1,2,11} in the SDL draw path, sub_08098C1C/38 snapshot and restore all thirteen record positions around attacks, and the sub_08098C54/84 callbacks forward bone contact and weapon strikes through the owning body with owner-attributed rewards; the sub_08098CF0 debris becomes CS_GORE children; the sub_08098E00 room gate, the gEwramData flag checks and the + 0x5A palette merge are covered by the shared spawn/collide paths or not ported; the former erroneous 0x44000 fixed-point hide was removed; the runtime object export now includes the thirteen native still-frame ids {0..11,20}; and the corrected create-bake radii assemble the portable silhouette in a fresh capture; the native sub_0806AF98 floor snap and record-5 dynamic container rectangle are integrated with the packed width correctly decoded as 0x2C (44 pixels), and create now starts the native cases-20..24 neutral cycle before engagement; the normal-entry route proves the left Object02 reseal, boss contact, weapon kill, bit-11 clear, right Object02 release and room 0/10 -> 0/35 exit. The correct create-tail tracked song is 0x11, not the superseded 0x14 mode inference. The available native checkpoint has unmatched player/camera state and does not validate frame-perfect fidelity. EnemyCreakingSkullCreate (0x0809549C) loads tiles 0x081CC044, palette 0x0820AB38 and frames 0x082232B8 shared by the body and the thirteen bone children, runs the + 0x30 param and gEwramData room gates, builds the 0x9C container with thirteen sub_0806DFF8 children of callback sub_0809808C indexed by the 0x0811903C/49/56/63 tables, bakes the two sub_08098BE0 bone poses through sub_08097D84 and parks state 3 under the global 0x8E & 0x40 else state 0. EnemyCreakingSkullUpdate (0x08095320) clears + 0x21, runs the sub_0806D128(6) gate, the sub_08068AD4 probe and sub_0806AE54, the sub_0806D4C0 collision and the container hit box, then dispatches state 0 sub_08095898 (the sixteen-case machine), state 1 sub_08096A94 (the attack), state 2 (the + 0xD death countdown with the container delete) and state 3 sub_08097A14 (dormant). EnemyGiantSkeletonCreate/Update are thunks to the same routines. The port keeps the container's thirteen records in cs_rec[13], runs the create bake (home pairs, the three sub_08097D84 arms {12->11, 1->0, 2->1} and the two sub_08098BE0 passes at the native 31/30/28-pixel radii) once per boss, fires the decoded choreography re-arms (sub_08095898 create cases 20-24, case 0 alert and case 3 decision pose; sub_08096A94 cases 0 entry, 13 windup, 14 volley and 20 reset) with their + 0xD dividers, steps the records through the ported sub_08097B94/sub_08098BE0 math each update in the 0x08119063 order and drives the bone children from their + 0x20/+ 0x21/+ 0x65 table bytes. Unit-tested in creaking_skull_tests; the room 0/9 -> 0/10 integration proves Object02 entry, visible grounded body, thirteen live bone children, left-gate collision, contact damage, weapon kill and the post-clear room 0/10 -> 0/35 exit. The reachable sub_08034498 escort writes of its create/update tail now report through aos_enemy_create_events / AosHitReport.escort_op into gEwramData + 0x13220 (the stored identity is the persistent AosEnemy record); the remaining native sites stay in unported sub-machines.",
+   "limitations": "The + 0x1C container entity and its thirteen 0x30-byte records fold into cs_rec[13] and the persistent CS_BONE children emitted under the 8-child cap; the create's variant home tables (0x08527FD8 pairs, the 0x085280B0 bone-2 angle dwords and the 0x0811903C/49/56/63/81 byte tables) are reproduced, the sub_08097D84/sub_08097EC4 record arming, the sub_08097B94 orbit/unlaunched-lerp step in the 0x08119063 order, sub_08097D1C's facing transform (all thirteen x values and angles {0,1,2,8,11}) and the sub_0809808C state-0 record ride with the ArcTan2 aim of records {0,1,11} and the held angle of {2,8} are ported, while the translated choreography paths retain their case order and songs and fire the decoded per-case record re-arms at the points the ported cases traverse — the sub_08095898 case-0 alert arms and signed stride velocity on aggro, the cases-1/2 sub_0806D288 collision movement, the case-2-to-3 _08096544 stride arms and case-3's one-frame _080966B4 decision pose with its ordered RNG rolls, the sub_08096A94 case-0 entry, case-13 windup (0x86), case-14 volley (0x80), case-20 reset arms and the complete case-20..27/case-31..37 barrage branches (pose selection, 30/41/10/40/3/30/60 timers, songs 0x77/0x84/0x7A, stationary shot and terminal snapshot restore) — each with its decoded + 0xD divider (the 0x08119070/0x08119078 timing bytes selected by entity + 0x24, or the per-case constants 2/0xE) that cs_step_perm counts down like the native cases; the remaining case arms (state-0 case-3 locomotion outcomes and cases 4-12 and state-1 cases 4-12/15-19 including the sub_08097EC4 pairs) stay unported because the ported case structure does not reproduce them; sub_0809884C/sub_080989DC now use the native +/-36,-25 spawn, stationary 0x2400/every-other-frame affine turn, collision callbacks and 0x76 burst transition, while their eight launch and six burst particles remain open; the sub_0809808C state-1/state-2 death machines keep their 0x08119081 timers and deletes while the palette writes (sub_08042848/428B4/429D0), the spark helpers (sub_0806D3D8/5C0/518), the native affine pivot/OAM rounding and the sub_0803E6BC slot free stay open; sub_0803E058 angles records {0,1,2,11} in the SDL draw path, sub_08098C1C/38 snapshot and restore all thirteen record positions around attacks, and the sub_08098C54/84 callbacks forward bone contact and weapon strikes through the owning body with owner-attributed rewards; the sub_08098CF0 debris becomes CS_GORE children; the sub_08098E00 room gate, the gEwramData flag checks and the + 0x5A palette merge are covered by the shared spawn/collide paths or not ported; the former erroneous 0x44000 fixed-point hide was removed; the runtime object export now includes the thirteen native still-frame ids {0..11,20}; and the corrected create-bake radii assemble the portable silhouette in a fresh capture; the native sub_0806AF98 floor snap and record-5 dynamic container rectangle are integrated with the packed width correctly decoded as 0x2C (44 pixels), and create now starts the native cases-20..24 neutral cycle before engagement; the normal-entry route proves the left Object02 reseal, boss contact, weapon kill, bit-11 clear, right Object02 release and room 0/10 -> 0/35 exit. The correct create-tail tracked song is 0x11, not the superseded 0x14 mode inference. The available native checkpoint has unmatched player/camera state and does not validate frame-perfect fidelity. EnemyCreakingSkullCreate (0x0809549C) loads tiles 0x081CC044, palette 0x0820AB38 and frames 0x082232B8 shared by the body and the thirteen bone children, runs the + 0x30 param and gEwramData room gates, builds the 0x9C container with thirteen sub_0806DFF8 children of callback sub_0809808C indexed by the 0x0811903C/49/56/63 tables, bakes the two sub_08098BE0 bone poses through sub_08097D84 and parks state 3 under the global 0x8E & 0x40 else state 0. EnemyCreakingSkullUpdate (0x08095320) clears + 0x21, runs the sub_0806D128(6) gate, the sub_08068AD4 probe and sub_0806AE54, the sub_0806D4C0 collision and the container hit box, then dispatches state 0 sub_08095898 (the sixteen-case machine), state 1 sub_08096A94 (the attack), state 2 (the + 0xD death countdown with the container delete) and state 3 sub_08097A14 (dormant). EnemyGiantSkeletonCreate/Update are thunks to the same routines. The port keeps the container's thirteen records in cs_rec[13], runs the create bake (home pairs, the three sub_08097D84 arms {12->11, 1->0, 2->1} and the two sub_08098BE0 passes at the native 31/30/28-pixel radii) once per boss, fires the decoded choreography re-arms (sub_08095898 create cases 20-24, case 0 alert and case 3 decision pose; sub_08096A94 cases 0 entry, 13 windup, 14 volley and 20 reset) with their + 0xD dividers, steps the records through the ported sub_08097B94/sub_08098BE0 math each update in the 0x08119063 order and drives the bone children from their + 0x20/+ 0x21/+ 0x65 table bytes. Patch 1291 unit-tests both native barrage branches in creaking_skull_tests; the room 0/9 -> 0/10 integration proves Object02 entry, visible grounded body, thirteen live bone children, left-gate collision, contact damage, weapon kill and the post-clear room 0/10 -> 0/35 exit. The reachable sub_08034498 escort writes of its create/update tail now report through aos_enemy_create_events / AosHitReport.escort_op into gEwramData + 0x13220 (the stored identity is the persistent AosEnemy record); the remaining native sites stay in unported sub-machines.",
    "next_action": "Acquire a synchronized native boss-room checkpoint; compare the gate draw sequence, ground anchor, container contact rectangle, bone choreography, the attack volleys and the death timing against an emulator; port the remaining per-case sub_08097D84/sub_08097EC4 record re-arms and + 0xD divider writes of sub_08095898/sub_08096A94 (state-0 strike cases 4-12 and state-1 cases 4-12/15-19), the decorative particle calls inside the now-ported barrage, the sub_0809884C/sub_080989DC launch/burst particle helpers, the native affine pivot/OAM rounding and the sub_0809808C state-1/2 effect helpers.",
    "evidence": {
     "unit_tests": [
@@ -11681,7 +11681,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -11761,7 +11761,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -11837,7 +11837,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -11914,7 +11914,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -12012,7 +12012,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -12084,7 +12084,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -12212,7 +12212,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -12305,7 +12305,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -12402,7 +12402,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -12473,7 +12473,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -12570,7 +12570,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -12641,7 +12641,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -12734,7 +12734,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -12852,7 +12852,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -12940,7 +12940,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -13012,7 +13012,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -13090,7 +13090,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -13218,7 +13218,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -13296,7 +13296,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -13370,7 +13370,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -13448,7 +13448,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -13530,7 +13530,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -13643,7 +13643,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -13739,7 +13739,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -13876,7 +13876,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -14004,7 +14004,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -14082,7 +14082,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -14182,7 +14182,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -14318,7 +14318,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -14389,7 +14389,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -14472,7 +14472,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -14640,7 +14640,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -14722,7 +14722,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -14850,7 +14850,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -14938,7 +14938,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -15021,7 +15021,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -15113,7 +15113,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -15210,7 +15210,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -15309,7 +15309,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -15409,7 +15409,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -15494,7 +15494,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -15604,7 +15604,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -15682,7 +15682,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -15789,7 +15789,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -15885,7 +15885,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -16022,7 +16022,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -16101,7 +16101,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -16178,7 +16178,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -16258,7 +16258,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -16353,7 +16353,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -16451,7 +16451,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -16528,7 +16528,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -16619,7 +16619,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -16717,7 +16717,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -16800,7 +16800,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -16916,7 +16916,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -17012,7 +17012,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -17092,7 +17092,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -17169,7 +17169,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -17264,7 +17264,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -17344,7 +17344,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -17423,7 +17423,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -17541,7 +17541,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -17612,7 +17612,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -17712,7 +17712,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -17789,7 +17789,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -17872,7 +17872,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -17945,7 +17945,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -18036,7 +18036,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -18149,7 +18149,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -18291,7 +18291,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -18389,7 +18389,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -18498,7 +18498,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -18576,7 +18576,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -18695,7 +18695,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -18803,7 +18803,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -18896,7 +18896,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -19002,7 +19002,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -19082,7 +19082,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -19193,7 +19193,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -19299,7 +19299,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -19405,7 +19405,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -19519,7 +19519,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -19609,7 +19609,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -19690,7 +19690,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -19806,7 +19806,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -19934,7 +19934,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -20051,7 +20051,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -20129,7 +20129,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -20214,7 +20214,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -20307,7 +20307,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -20392,7 +20392,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -20464,7 +20464,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -20999,7 +20999,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -21125,7 +21125,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -21190,7 +21190,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -21291,7 +21291,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -21388,7 +21388,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -21555,7 +21555,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -21657,7 +21657,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -21727,7 +21727,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -21789,7 +21789,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -21888,7 +21888,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -21999,7 +21999,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22073,7 +22073,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22136,7 +22136,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22199,7 +22199,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22267,7 +22267,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22334,7 +22334,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22428,7 +22428,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22501,7 +22501,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22565,7 +22565,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22657,7 +22657,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22722,7 +22722,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22785,7 +22785,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22861,7 +22861,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22933,7 +22933,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -22991,7 +22991,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23052,7 +23052,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23123,7 +23123,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23186,7 +23186,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23249,7 +23249,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23324,7 +23324,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23392,7 +23392,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23449,7 +23449,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23511,7 +23511,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23579,7 +23579,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23663,7 +23663,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23727,7 +23727,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23790,7 +23790,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23846,7 +23846,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23915,7 +23915,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -23982,7 +23982,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24041,7 +24041,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24118,7 +24118,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24175,7 +24175,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24264,7 +24264,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24322,7 +24322,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24390,7 +24390,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24446,7 +24446,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24514,7 +24514,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24593,7 +24593,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24682,7 +24682,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24755,7 +24755,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24820,7 +24820,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24895,7 +24895,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -24960,7 +24960,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -25030,7 +25030,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -25089,7 +25089,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -25155,7 +25155,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -25220,7 +25220,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -25296,7 +25296,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -25360,7 +25360,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -25421,7 +25421,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -25482,7 +25482,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -25546,7 +25546,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -25606,7 +25606,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -25722,7 +25722,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -25795,7 +25795,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -25936,7 +25936,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -26135,7 +26135,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -26397,7 +26397,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -26575,7 +26575,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -26669,7 +26669,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -27466,7 +27466,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -27555,7 +27555,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -27722,7 +27722,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -27953,7 +27953,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -28108,7 +28108,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -28284,7 +28284,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -28361,7 +28361,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -28564,7 +28564,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -28704,7 +28704,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -28903,7 +28903,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29017,7 +29017,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29085,7 +29085,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29134,7 +29134,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29196,7 +29196,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29245,7 +29245,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29305,7 +29305,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29361,7 +29361,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29519,7 +29519,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29596,7 +29596,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29657,7 +29657,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29741,7 +29741,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29808,7 +29808,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29908,7 +29908,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -29987,7 +29987,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -30038,7 +30038,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -30101,7 +30101,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -30150,7 +30150,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -30371,7 +30371,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -30435,7 +30435,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -30534,7 +30534,7 @@
     "assets.rom_verification"
    ],
    "native_routines": [],
-   "limitations": "The native C11 rebuild task exports 2,146 traced door, enemy, skill and shared-effect sequences, 7,161 indexed frames, 3,943 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 3,944 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v4) also exports experience and drop fields used by the runtime, plus money and equipment metadata. Compressed tile sheets skip their expanded header. It exports breakable-wall art, opening actors and attacks, guardians and shared collision effects. Version 68 adds the four palette-specific direct type-4 soul-container sparkle sequences at 0x0852513C, with their native 3, 7, 7 and 3 frame durations; the nine most-placed SPECIAL room objects (ids 7,10,13,14,15,17,18,19,21) are exported as Object/special_NN sequences and drawn in rooms, with per-object animation/behaviour selection and the remaining ids still open. Version 69 adds Effect/level_up, the still frame 0x48 level-up display of sub_080455BC Sky Fish, Ectoplasm, Ghost Dancer, Medusa Head, Ghost, Zombie Officer, Curly/Durga Needles, Gorgon/Catoblepas, Dead Warrior, Mimic, Fleaman, Skeleton Knight, Killer Doll, Lightning Doll and Beam Skeleton are the first families compiled as their own translation units through the shared prefixed internal framework API; this refactor changes no runtime behavior or feature status.. Version 70 adds Object/special_29_v0/v1, the two Object1D (SPECIAL id 29) sprite sets decoded from descriptors 0x082052F0/0x082052E8, also drawn for the Object1C save point marker child. Version 74 adds Object/special_31_v2/v4/v5/v6/v7, the Object1F (SPECIAL id 31) opening-gate children sets: the packed 0x082052F0 descriptor and the twelve 0x08257BD8 frame records exported per palette bank (v2 for the nine ring children, v4-v7 for the two flanks cycling through the 0x081185F8 table). Version 76 adds Object/whiteout_burst_carrier (four variant animations over frames 0x08267EE4) and Object/whiteout_burst_particle (still frames 0xB/0xC), drawn for the whiteout burst state machines. Version 75 adds Object/special_28_v1-v4, the Object1C (SPECIAL id 28) child palette banks over the shared 0x08257964 frame records: every child kind resolves the same descriptor, differing only in OBJ palette row (marker bank 4, sparkle anim0 bank 2 / anim4 bank 1, beam and spark bank 3). Scripted Death, Balore and phase-2 Chaos deaths now propagate the shared collision helper's one-frame killed result while entering their native death states, preserving the runtime's once-only reward path. Headless real-room integrations kill the early Skeleton and Cockatrice with exported weapon hitboxes, verifying their exact 3-XP and 120-XP records and the latter's level-2 transition; the Skeleton child integration also proves its separate head and held bone remain linked to the body; no fidelity status changes without emulator comparison. Version 77 fixes the shared 0x081C15F4 palette mapping: OBJ rows 6/7/9 use banks 2/3/6 of descriptor 0x082099FC; 0x0826F8A4 and 0x082718A8 are alternate graphics, not palettes. Patch 1237 makes Object07 ambient children consume their exported layer-specific animations and native OAM bands; param0 1 tile DMA and anchored selectors 11-14 remain partial. Version 80 forwards Creaking Skull bone contact and weapon callbacks to the owning body, preserves owner-attributed XP/drops/boss-clear state, and fixes the screen-margin probe; choreography remains partial and emulator-unverified. Version 79 exports Creaking Skull and Giant Skeleton still-frame ids {0..11,20}, restores the first boss body visibility, and draws Object02 with its native shared palette-row-6 animations 6/9; the room 0/9 -> 0/10 integration verifies the gate and all fourteen boss parts, without an emulator-comparison claim. Version 78 corrects Merman to EnemyMermanCreate's sub_0807188C resources (0x081CBF44 / 0x0820A488 / 0x082133F4), exposing its seven native animations instead of the Killer Fish sheet; source-exact and runtime-captured, not emulator-compared. Version 81 connects sub_0809808C affine angles for Creaking Skull records {0,1,2,11} and ports the sub_08098C1C/38 position snapshot/restore; a private unmatched-state emulator comparison still shows separated portable segments, so choreography remains partial. Version 82 replaces Creaking Skull's arbitrary flying CS_SHOT with sub_0809884C/sub_080989DC's native stationary spawn offsets, affine turn and collision-triggered 0x76 burst lifecycle; its fourteen native particle emissions and parent scheduling cases remain partial. Version 83 corrects Creaking Skull sub_08097D1C to negate all thirteen record x values and mirror angles {0,1,2,8,11} only when facing changes; the frame-300 diagnostic remains visibly separated because the missing choreography, not this unexercised branch, dominates that setup. Version 84 replaces Creaking Skull's non-integrated 0x10 chase with sub_08095898 case-0's signed stride velocity, cases-1/2 sub_0806D288 collision movement and the decoded case-2-to-3 record arms; case 3 and later choreography remain partial. Version 85 adds sub_08095898 case-3's exact one-frame _080966B4 record pose and consumes its two represented RNG2 attack rolls in native order; state-0 locomotion outcomes 4/7/10 and the distinct state-1 case-20 schedule remain partial. Version 86 exports Object02 static descriptor frame 0x3F and corrects the Creaking Skull create-bake radii from four-times scale to the native 31/30/28 pixels; its song-0x14 inference is superseded. Version 87 ports sub_0804DEA0 fixed-plus-sliding gate draw geometry, sub_0806AF98 boss floor snap and the record-5 dynamic hurt/contact rectangle, and routes EnemyCreakingSkullCreate's explicit sub_08013CF0(0x11) request through AosEnemyCreateEvents; the playable route proves left-gate collision, contact damage, weapon kill and the right-gate room-0/35 exit; synchronized player/camera emulator comparison and the remaining choreography stay partial. Version 88 corrects Object02's +0x5A=4 submission to OBJ-window mode instead of visible duplicate pixels, preserves its creation-frame input pause and plays gate song 0x113 through the live audio path; Creaking Skull now starts native state-0 cases 20-24 and uses the correctly packed 44-pixel record-5 contact width. Remaining boss choreography and synchronized emulator comparison stay partial.",
+   "limitations": "The native C11 rebuild task exports 2,146 traced door, enemy, skill and shared-effect sequences, 7,161 indexed frames, 3,943 unique BMPs, frame boxes, anchors, probes, volleys and all 113 enemy stat records; all 3,944 runtime files are guarded by recorded digests. Coverage remains partial because only objects, skills and enemies whose routines are traced are catalogued. The Python object writer is removed. The enemy-stats table (schema v4) also exports experience and drop fields used by the runtime, plus money and equipment metadata. Compressed tile sheets skip their expanded header. It exports breakable-wall art, opening actors and attacks, guardians and shared collision effects. Version 68 adds the four palette-specific direct type-4 soul-container sparkle sequences at 0x0852513C, with their native 3, 7, 7 and 3 frame durations; the nine most-placed SPECIAL room objects (ids 7,10,13,14,15,17,18,19,21) are exported as Object/special_NN sequences and drawn in rooms, with per-object animation/behaviour selection and the remaining ids still open. Version 69 adds Effect/level_up, the still frame 0x48 level-up display of sub_080455BC Sky Fish, Ectoplasm, Ghost Dancer, Medusa Head, Ghost, Zombie Officer, Curly/Durga Needles, Gorgon/Catoblepas, Dead Warrior, Mimic, Fleaman, Skeleton Knight, Killer Doll, Lightning Doll and Beam Skeleton are the first families compiled as their own translation units through the shared prefixed internal framework API; this refactor changes no runtime behavior or feature status.. Version 70 adds Object/special_29_v0/v1, the two Object1D (SPECIAL id 29) sprite sets decoded from descriptors 0x082052F0/0x082052E8, also drawn for the Object1C save point marker child. Version 74 adds Object/special_31_v2/v4/v5/v6/v7, the Object1F (SPECIAL id 31) opening-gate children sets: the packed 0x082052F0 descriptor and the twelve 0x08257BD8 frame records exported per palette bank (v2 for the nine ring children, v4-v7 for the two flanks cycling through the 0x081185F8 table). Version 76 adds Object/whiteout_burst_carrier (four variant animations over frames 0x08267EE4) and Object/whiteout_burst_particle (still frames 0xB/0xC), drawn for the whiteout burst state machines. Version 75 adds Object/special_28_v1-v4, the Object1C (SPECIAL id 28) child palette banks over the shared 0x08257964 frame records: every child kind resolves the same descriptor, differing only in OBJ palette row (marker bank 4, sparkle anim0 bank 2 / anim4 bank 1, beam and spark bank 3). Scripted Death, Balore and phase-2 Chaos deaths now propagate the shared collision helper's one-frame killed result while entering their native death states, preserving the runtime's once-only reward path. Headless real-room integrations kill the early Skeleton and Cockatrice with exported weapon hitboxes, verifying their exact 3-XP and 120-XP records and the latter's level-2 transition; the Skeleton child integration also proves its separate head and held bone remain linked to the body; no fidelity status changes without emulator comparison. Version 77 fixes the shared 0x081C15F4 palette mapping: OBJ rows 6/7/9 use banks 2/3/6 of descriptor 0x082099FC; 0x0826F8A4 and 0x082718A8 are alternate graphics, not palettes. Patch 1237 makes Object07 ambient children consume their exported layer-specific animations and native OAM bands; param0 1 tile DMA and anchored selectors 11-14 remain partial. Version 80 forwards Creaking Skull bone contact and weapon callbacks to the owning body, preserves owner-attributed XP/drops/boss-clear state, and fixes the screen-margin probe; choreography remains partial and emulator-unverified. Version 79 exports Creaking Skull and Giant Skeleton still-frame ids {0..11,20}, restores the first boss body visibility, and draws Object02 with its native shared palette-row-6 animations 6/9; the room 0/9 -> 0/10 integration verifies the gate and all fourteen boss parts, without an emulator-comparison claim. Version 78 corrects Merman to EnemyMermanCreate's sub_0807188C resources (0x081CBF44 / 0x0820A488 / 0x082133F4), exposing its seven native animations instead of the Killer Fish sheet; source-exact and runtime-captured, not emulator-compared. Version 81 connects sub_0809808C affine angles for Creaking Skull records {0,1,2,11} and ports the sub_08098C1C/38 position snapshot/restore; a private unmatched-state emulator comparison still shows separated portable segments, so choreography remains partial. Version 82 replaces Creaking Skull's arbitrary flying CS_SHOT with sub_0809884C/sub_080989DC's native stationary spawn offsets, affine turn and collision-triggered 0x76 burst lifecycle; its fourteen native particle emissions and parent scheduling cases remain partial. Version 83 corrects Creaking Skull sub_08097D1C to negate all thirteen record x values and mirror angles {0,1,2,8,11} only when facing changes; the frame-300 diagnostic remains visibly separated because the missing choreography, not this unexercised branch, dominates that setup. Version 84 replaces Creaking Skull's non-integrated 0x10 chase with sub_08095898 case-0's signed stride velocity, cases-1/2 sub_0806D288 collision movement and the decoded case-2-to-3 record arms; case 3 and later choreography remain partial. Version 85 adds sub_08095898 case-3's exact one-frame _080966B4 record pose and consumes its two represented RNG2 attack rolls in native order; state-0 locomotion outcomes 4/7/10 and the distinct state-1 case-20 schedule remain partial. Version 86 exports Object02 static descriptor frame 0x3F and corrects the Creaking Skull create-bake radii from four-times scale to the native 31/30/28 pixels; its song-0x14 inference is superseded. Version 87 ports sub_0804DEA0 fixed-plus-sliding gate draw geometry, sub_0806AF98 boss floor snap and the record-5 dynamic hurt/contact rectangle, and routes EnemyCreakingSkullCreate's explicit sub_08013CF0(0x11) request through AosEnemyCreateEvents; the playable route proves left-gate collision, contact damage, weapon kill and the right-gate room-0/35 exit; synchronized player/camera emulator comparison and the remaining choreography stay partial. Version 88 corrects Object02's +0x5A=4 submission to OBJ-window mode instead of visible duplicate pixels, preserves its creation-frame input pause and plays gate song 0x113 through the live audio path; Creaking Skull now starts native state-0 cases 20-24 and uses the correctly packed 44-pixel record-5 contact width. Remaining boss choreography and synchronized emulator comparison stay partial. Version 89 ports Creaking Skull state-1 cases 20-27 and 31-37 with native branch selection, poses, timers, songs, stationary shot and snapshot restore; decorative barrage particles, alternate strike branches and synchronized emulator comparison remain partial.",
    "next_action": "",
    "evidence": {
     "unit_tests": [
@@ -30555,7 +30555,7 @@
     "emulator_compared": false,
     "played_through": false
    },
-   "last_validated": "2026-11-20",
+   "last_validated": "2026-11-21",
    "source": "data/dashboard/features.tsv",
    "verification": {
     "sources_found": true,
@@ -30685,7 +30685,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -30735,7 +30735,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -30786,7 +30786,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -30836,7 +30836,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -30886,7 +30886,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -30955,7 +30955,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -31060,7 +31060,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -31217,7 +31217,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -31282,7 +31282,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -31374,7 +31374,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -31425,7 +31425,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -31568,7 +31568,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -31647,7 +31647,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -31711,7 +31711,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -31788,7 +31788,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -31879,7 +31879,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -31957,7 +31957,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -32115,7 +32115,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -32162,7 +32162,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -32205,7 +32205,7 @@
     ],
     "verdict": "passing",
     "warnings": [],
-    "verified_on": "2026-11-20"
+    "verified_on": "2026-11-21"
    }
   },
   {
@@ -33949,6 +33949,12 @@
  },
  "timeline": [
   {
+   "commit": "31a2a3d7",
+   "date": "2026-11-20",
+   "subject": "Regenerate parity checklist and dashboard for lamp glow patch",
+   "scope": "project"
+  },
+  {
    "commit": "0d4a8f9a",
    "date": "2026-11-20",
    "subject": "Aria lamps: strobing opaque glow disc + wired break sound",
@@ -34420,12 +34426,6 @@
    "commit": "45495ea0",
    "date": "2026-11-18",
    "subject": "aria: recycle deleted enemy entity slots",
-   "scope": "project"
-  },
-  {
-   "commit": "a72c4bf5",
-   "date": "2026-11-18",
-   "subject": "aos: complete the player damage path's status gates and correct the boss-rush flag",
    "scope": "project"
   }
  ],

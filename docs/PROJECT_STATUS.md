@@ -53,7 +53,8 @@
   sounds/projectile/terminal states; `aria_simulate_first_boss_room` still
   completes the sealed-entry, contact, kill and post-clear exit route. A
   portable room capture at frame 300 was inspected, but is not native
-  comparison evidence.
+  comparison evidence. The final cycle passed all 245 CTest entries with zero
+  failures and regenerated the parity checklist and dashboard.
 
 ## Patch 1290 - Boss-gate OBJ window, exact contact width and native wake cycle
 

@@ -1550,6 +1550,7 @@ static void creaking_skull_tests(void) {
     /* A later facing change runs the exact sub_08097D1C record loop:
      * every x changes sign, while only angles 0/1/2/8/11 mirror. */
     ed.state = 1;
+    ed.step = 0;
     ed.substep = 0xFF; /* reduced-machine default: no record arm */
     ed.cs_cool = 0;
     soma.x = ed.x - AOS_FIXED(40);
@@ -1652,7 +1653,7 @@ static void creaking_skull_tests(void) {
            decision.cs_rec[2].spd == 0x1D000);
     aos_enemy_update(&decision, &soma, &layer, &kind, NULL, NULL,
                      10, 4, 0, 0, always_zero);
-    assert(decision.state == 1 && decision.step == 0 &&
+    assert(decision.state == 1 && decision.step == 20 &&
            decision.substep == 0);
 
     /* A bone child tracks its parent; a state-2 parent detaches it
@@ -1718,6 +1719,7 @@ static void creaking_skull_tests(void) {
     (void)aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
                            10, 4, 0, 0, always_zero);
     a.state = 1;
+    a.step = 0; /* focused legacy case-0 path; barrage is tested below */
     for (int i = 0; i < 13; ++i) {
         a.cs_rec[i].sx = a.cs_rec[i].x;
         a.cs_rec[i].sy = a.cs_rec[i].y;
@@ -1797,6 +1799,55 @@ static void creaking_skull_tests(void) {
      * entry even though the orbit speed/radius arms above survive. */
     assert(a.cs_rec[3].x == a.cs_rec[3].sx);
     assert(a.cs_rec[3].y == a.cs_rec[3].sy);
+
+    /* Native state-1 case 20 selects the 21..27 barrage when pose 5 is
+     * active: 30-frame windup, song 0x77, 41-frame debris phase with
+     * song 0x84, the case-24 shot and song 0x7A, then case 27 restores
+     * the snapshot and returns to state-0 case 3. */
+    AosEnemy barrage;
+    assert(aos_enemy_create(&barrage, 0x21, 150, 120, 0, 0,
+                            &soma, &layer, &kind, &cs33));
+    barrage.x = AOS_FIXED(150);
+    barrage.y = AOS_FIXED(120);
+    barrage.boss_parts_spawned = true;
+    barrage.spawned_count = 13;
+    barrage.state = 3;
+    (void)aos_enemy_update(&barrage, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    barrage.state = 1;
+    barrage.step = 20;
+    barrage.cs_pose = 5;
+    int song77 = aos_audio_requested(AOS_AUDIO_START_SONG, 0x77);
+    int song84 = aos_audio_requested(AOS_AUDIO_START_SONG, 0x84);
+    int song7a = aos_audio_requested(AOS_AUDIO_START_SONG, 0x7A);
+    hit = aos_enemy_update(&barrage, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(barrage.step == 21 && barrage.timer == 0x1E &&
+           barrage.cs_pose == 0x16);
+    bool barrage_shot = false;
+    for (int frame = 0; frame < 240 && barrage.state == 1; ++frame) {
+        hit = aos_enemy_update(&barrage, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+        for (int i = 0; i < hit.child_count; ++i)
+            barrage_shot |= hit.children[i].role == AOS_ROLE_CS_SHOT;
+    }
+    assert(barrage_shot && barrage.state == 0 && barrage.step == 3);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x77) > song77 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x84) > song84 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x7A) > song7a);
+
+    /* A non-5 pose takes the parallel 31..37 branch and returns to
+     * state-0 case 6. */
+    barrage.state = 1;
+    barrage.step = 20;
+    barrage.cs_pose = 7;
+    (void)aos_enemy_update(&barrage, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(barrage.step == 31 && barrage.cs_pose == 0x1A);
+    for (int frame = 0; frame < 240 && barrage.state == 1; ++frame)
+        (void)aos_enemy_update(&barrage, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+    assert(barrage.state == 0 && barrage.step == 6);
 
     /* Lethal: hp 0 -> defeated, state 2 death machine with gore,
      * then the delete. */

@@ -41,10 +41,13 @@
  * cs_step_perm counts + 0xD down like the native cases.  The
  * create-time cases 20-24 neutral cycle and the remaining case arms —
  * the state-0 case-3 locomotion outcomes and cases 4-12 strike tables,
- * the state-1 cases 4-12/15-19/21-37 including the sub_08097EC4
- * pairs and the RNG-driven projectile cases — stay unported because
+ * the state-1 cases 4-12/15-19 including the sub_08097EC4 pairs —
+ * stay unported because
  * the ported case structure does not reproduce them.  The terminal
- * cases 9/27/37 restore the sub_08098C1C pose snapshot through
+ * case 9 and its prelude remain reduced; the native barrage cases
+ * 20-27/31-37 (poses, timers, songs, shot and terminal restore) are
+ * ported, while their sub_0806D518/6D6CC/98CF0 decorative particle
+ * calls remain open. Cases 27/37 restore the sub_08098C1C pose snapshot through
  * sub_08098C38; that position-only snapshot/restore is ported.  The
  * sub_0809808C state-1/state-2 death machines keep their timers and
  * deletes while the sub_08042848/428B4/429D0 palette writes, the
@@ -796,28 +799,28 @@ static void cs_state0(AosEnemy *e, AosSoma *soma,
         }
 
         /* _08095C5E gives Creaking Skull a 1/4 RNG2 route to native
-         * state-1 case 20; the reduced state-1 controller cannot yet
-         * distinguish that projectile schedule, so both native
-         * state-1 entries start its existing bounded attack.  The
-         * next close-range roll is the <=0x3F branch at _08095C94. */
-        bool attack = false;
+         * state-1 case 20; the next close-range roll is the <=0x3F
+         * branch at _08095C94 and enters state-1 case 0. */
+        int attack_step = -1;
         if (e->id == 0x21 && random && (random() & 0x7F) <= 0x1F)
-            attack = true;
-        if (!attack && soma) {
+            attack_step = 20;
+        if (attack_step < 0 && soma) {
             int dx = (int16_t)((target_x(soma) >> 16) - (e->x >> 16));
             if (dx < 0)
                 dx = -dx;
             if (dx <= 0x63 && random && (random() & 0x7F) <= 0x3F)
-                attack = true;
+                attack_step = 0;
         }
         /* Cases 4/7/10 are not represented yet.  Preserve the old
          * bounded attack fallback for those outcomes, but keep this
          * divergence explicit rather than claiming their branch and
          * collision choreography was ported. */
-        (void)attack;
         cs_snapshot_records(e);
         e->state = 1;
-        e->step = 0;
+        /* _08096736 enters the dedicated case-20 barrage, while the
+         * close-range _0809600C branch enters case 0.  The old reduced
+         * controller collapsed both and could never reach 20..37. */
+        e->step = (uint8_t)(attack_step >= 0 ? attack_step : 0);
         e->substep = 0;
         e->cs_hits = 0;
         cs_run_arms(e, cs_arms_s1_entry,
@@ -832,6 +835,106 @@ static void cs_state0(AosEnemy *e, AosSoma *soma,
     }
 }
 
+/* sub_08096A94 cases 20..27 and 31..37.  Case 20 selects the branch
+ * from the current +0x20 pose (5 uses 21..27, every other pose 31..37).
+ * Particle helpers sub_0806D518/sub_08098CF0/sub_0806D6CC are visual
+ * emissions and remain outside this controller; the record poses, exact
+ * timers, songs, sub_0809884C shot and terminal state-0 case are native. */
+static bool cs_state1_barrage(AosEnemy *e, AosSoma *soma,
+                              AosHitReport *hit) {
+    bool upper = e->step >= 31;
+    switch (e->step) {
+    case 20:
+        cs_face_records(e, soma);
+        cs_snapshot_records(e);
+        cs_run_arms(e, cs_arms_s1_exit,
+                    (int)(sizeof cs_arms_s1_exit /
+                          sizeof cs_arms_s1_exit[0]));
+        e->timer = 0x1E; /* 0x0811907E[id variant]: both entries are 30 */
+        e->cs_hits = e->timer >> 1;
+        if (e->cs_pose == 5) {
+            e->cs_pose = 0x16;
+            e->step = 21;
+        } else {
+            e->cs_pose = 0x1A;
+            e->step = 31;
+        }
+        e->cs_cool = e->timer;
+        return true;
+    case 21:
+    case 31:
+        if (e->cs_hits && --e->cs_hits == 0)
+            e->cs_pose = upper ? 0x19 : 0x15;
+        if (e->timer && --e->timer)
+            return true;
+        e->step++;
+        e->timer = 0x29;
+        aos_audio_play_song(0x77);
+        return true;
+    case 22:
+    case 32:
+        if ((e->timer & 7) == 0)
+            aos_audio_play_song(0x84);
+        if (e->timer && --e->timer)
+            return true;
+        e->step++;
+        e->timer = 0x0A;
+        e->cs_hits = 5;
+        e->cs_pose = upper ? 0x1B : 0x17;
+        return true;
+    case 23:
+    case 33:
+        if (e->timer && --e->timer)
+            return true;
+        e->step++;
+        e->timer = 0x28;
+        return true;
+    case 24:
+    case 34:
+        if ((e->timer & 7) == 0)
+            aos_audio_play_song(0x77);
+        if (e->timer && --e->timer)
+            return true;
+        cs_fire_shot(e, soma, hit);
+        e->step++;
+        e->timer = 3;
+        e->cs_pose = upper ? 0x1C : 0x18;
+        aos_audio_play_song(0x7A);
+        return true;
+    case 25:
+    case 35:
+        if (e->timer && --e->timer)
+            return true;
+        e->step++;
+        e->timer = 0x1E;
+        e->cs_pose = upper ? 0x1B : 0x17;
+        return true;
+    case 26:
+    case 36:
+        if (e->timer && --e->timer)
+            return true;
+        e->cs_pose = upper ? 7 : 5;
+        e->step++;
+        e->timer = 0x3C;
+        return true;
+    case 27:
+    case 37:
+        if (e->timer && --e->timer)
+            return true;
+        cs_restore_records(e);
+        e->state = 0;
+        e->step = upper ? 6 : 3;
+        e->substep = 0;
+        e->timer = 1;
+        cs_config_ex(e, 1, 0, 0x17000, 0x1E0000, true, false);
+        cs_config_ex(e, 2, 1, 0x1D000, 0x1C0000, true, false);
+        e->cs_cool = 1;
+        return true;
+    default:
+        return false;
+    }
+}
+
 /* sub_08096A94 state 1: the attack machine — windup, the shot
  * volleys with their songs (0x86 windup, 0x80/0x84/0x76/0x77/0x7A/
  * 0x97/0xE0/0x1C/0x29 stingers), then back to state 0. */
@@ -839,6 +942,8 @@ static void cs_state1(AosEnemy *e, AosSoma *soma,
                       const AosAnimSet *anims, AosHitReport *hit,
                       uint32_t (*random)(void)) {
     (void)random;
+    if (cs_state1_barrage(e, soma, hit))
+        return;
     switch (e->substep) {
     case 0:
         play(e, anims, 2);

@@ -1,3 +1,25 @@
+## Patch 1294 - Creaking Skull native state-0 movement loops 4-12
+
+- **Three native loops restored.** `sub_08095898` cases `4→5→6`, `7→8→9`
+  and `10→11→12` now run as distinct controllers instead of falling through
+  the former forced attack. Each keeps its ROM timing table, pose sequence,
+  `sub_0806D288` collision movement, decoded `sub_08097D84` record arms and
+  terminal one-frame decision pose. Cases 5 and 10/11 request their native
+  songs `0x7C` and `0x118`.
+- **Attack routing corrected.** Case 3 now preserves the native ordered RNG2
+  choices for barrage case 20, close attack case 0 and reverse locomotion
+  case 10; its unobstructed continuation enters case 4. Terminal cases 6, 9
+  and 12 likewise route to their native close attack, barrage or next
+  locomotion loop rather than collapsing into one fallback.
+- **Evidence and remaining boundary.** `aos_enemy` exercises all three loops,
+  their timers, poses, sounds, record arms and terminal routes. The real-room
+  `aria_simulate_first_boss_room` entry/contact/kill/exit scenario remains
+  green. The room-geometry selector `sub_0806D188/sub_0806D0B8` between some
+  case-1/case-7 alternatives is not yet represented, and the loops' decorative
+  `sub_0806D9CC` particles remain absent. Together with native affine/OAM
+  rounding, death effects and a synchronized emulator comparison, those gaps
+  keep the fight honestly `partial`.
+
 ## Patch 1293 - Creaking Skull native close-attack cases 0-9 and 11-19
 
 - **Reduced attack removed.** The old state-1 fallback invented a three-step

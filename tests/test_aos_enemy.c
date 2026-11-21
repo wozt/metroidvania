@@ -1658,6 +1658,100 @@ static void creaking_skull_tests(void) {
     assert(decision.state == 1 && decision.step == 20 &&
            decision.substep == 0);
 
+    /* sub_08095898's three native locomotion loops now keep their
+     * distinct case sequence, ROM timers, poses and terminal choice. */
+    AosEnemy route = e;
+    route.state = 0;
+    route.step = 4;
+    route.substep = 0;
+    route.timer = 1;
+    route.cs_pose = 8;
+    int song7c = aos_audio_requested(AOS_AUDIO_START_SONG, 0x7C);
+    (void)aos_enemy_update(&route, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(route.step == 5 && route.timer == 0x18 && route.cs_pose == 7);
+    route.timer = 5;
+    (void)aos_enemy_update(&route, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(route.step == 6 && route.timer == 8 && route.cs_pose == 7 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x7C) == song7c + 1);
+    route.timer = 1;
+    (void)aos_enemy_update(&route, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(route.step == 6 && route.substep == 1 && route.timer == 1);
+    const uint32_t route7_pick[] = {0x7F, 0x7F, 0};
+    script = route7_pick;
+    script_at = 0;
+    (void)aos_enemy_update(&route, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, scripted);
+    assert(script_at == 3 && route.state == 0 && route.step == 7 &&
+           route.timer == 0x20 && route.cs_pose == 8);
+    route.timer = 1;
+    (void)aos_enemy_update(&route, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(route.step == 8 && route.timer == 0x20 && route.cs_pose == 5);
+    route.timer = 5;
+    (void)aos_enemy_update(&route, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(route.step == 9 && route.timer == 0x18 && route.cs_pose == 5);
+    route.timer = 1;
+    (void)aos_enemy_update(&route, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(route.step == 9 && route.substep == 1);
+    const uint32_t close_pick[] = {0};
+    script = close_pick;
+    script_at = 0;
+    (void)aos_enemy_update(&route, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, scripted);
+    assert(script_at == 1 && route.state == 1 && route.step == 0);
+
+    AosEnemy route9 = e;
+    route9.state = 0;
+    route9.step = 9;
+    route9.substep = 1;
+    route9.timer = 1;
+    const uint32_t route4_pick[] = {0x7F, 0x7F};
+    script = route4_pick;
+    script_at = 0;
+    (void)aos_enemy_update(&route9, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, scripted);
+    assert(script_at == 2 && route9.state == 0 && route9.step == 4 &&
+           route9.timer == 0x20 && route9.cs_pose == 8);
+
+    route = e;
+    route.state = 0;
+    route.step = 10;
+    route.timer = 8;
+    route.cs_hits = 2;
+    route.cs_pose = 9;
+    int song118 = aos_audio_requested(AOS_AUDIO_START_SONG, 0x118);
+    (void)aos_enemy_update(&route, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(route.step == 10 && route.timer == 7 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x118) == song118 + 1);
+    route.timer = 1;
+    route.cs_hits = 1;
+    (void)aos_enemy_update(&route, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(route.step == 11 && route.timer == 0x20 &&
+           route.cs_pose == 0x0C);
+    route.timer = 5;
+    route.cs_hits = 1;
+    (void)aos_enemy_update(&route, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(route.step == 12 && route.timer == 0x18 && route.cs_pose == 7);
+    route.timer = 1;
+    (void)aos_enemy_update(&route, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(route.step == 12 && route.substep == 1);
+    const uint32_t route1_pick[] = {0x7F, 0x7F};
+    script = route1_pick;
+    script_at = 0;
+    (void)aos_enemy_update(&route, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, scripted);
+    assert(script_at == 2 && route.state == 0 && route.step == 1 &&
+           route.cs_pose == 9);
+
     /* A bone child tracks its parent; a state-2 parent detaches it
      * into the sub_0809808C state-1 death fall (0x08119081 timer by
      * record index), which deletes after the countdown. */

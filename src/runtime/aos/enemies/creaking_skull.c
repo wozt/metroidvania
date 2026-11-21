@@ -39,9 +39,10 @@
  * its decoded + 0xD divider (the 0x08119070/0x08119078 timing bytes
  * selected by entity + 0x24, or the per-case constants 2/0xE);
  * cs_step_perm counts + 0xD down like the native cases.  The
- * create-time cases 20-24 neutral cycle and the remaining case arms —
- * the state-0 case-3 locomotion outcomes and cases 4-12 strike tables
- * stay unported.  The native state-1 close attack cases 0-9/11-19,
+ * create-time cases 20-24 neutral cycle and state-0 movement loops
+ * 4-12 are ported; their sub_0806D9CC particles and the
+ * sub_0806D188/sub_0806D0B8 environment route selector remain open.
+ * The native state-1 close attack cases 0-9/11-19,
  * including their sub_08097EC4 pairs, poses, timers and record arms,
  * are ported; their sub_0806D9CC/sub_0806DCC4 particles and
  * sub_08011F7C shake calls remain open.  The native barrage cases
@@ -266,6 +267,49 @@ static const CsArm cs_arms_s0_decide[] = {
     {2, 1, 0x1D000, 0x1C0000},
 };
 
+/* sub_08095898 route entries and exits for the three native movement
+ * loops 4->5->6, 7->8->9 and 10->11->12. */
+static const CsArm cs_arms_s0_route1[] = {
+    {0xC, 0xB, (int32_t)0xFFFFF000, 0x1F0000},
+    {1, 0, 0x1800, 0x1E0000},
+    {2, 1, 0x1800, 0x1C0000},
+};
+static const CsArm cs_arms_s0_route4[] = {
+    {0xC, 0xB, 0x400, 0x1F0000},
+    {1, 0, 0x1000, 0x1E0000},
+    {2, 1, 0x1000, 0x1C0000},
+};
+static const CsArm cs_arms_s0_route7[] = {
+    {0xC, 0xB, (int32_t)0xFFFFF000, 0x1F0000},
+    {1, 0, 0x1000, 0x1E0000},
+    {2, 1, 0x1000, 0x1C0000},
+};
+static const CsArm cs_arms_s0_route10[] = {
+    {0xC, 0xB, 0x400, 0x1F0000},
+    {1, 0, 0x1800, 0x1E0000},
+    {2, 1, 0x1800, 0x1C0000},
+};
+static const CsArm cs_arms_s0_to5[] = {
+    {0xC, 0xB, 0x400, 0x1F0000},
+    {1, 0, (int32_t)0xFFFFF800, 0x1E0000},
+    {2, 1, (int32_t)0xFFFFF800, 0x1C0000},
+};
+static const CsArm cs_arms_s0_to8[] = {
+    {0xC, 0xB, (int32_t)0xFFFFF000, 0x1F0000},
+    {1, 0, (int32_t)0xFFFFF800, 0x1E0000},
+    {2, 1, (int32_t)0xFFFFF800, 0x1C0000},
+};
+static const CsArm cs_arms_s0_to11[] = {
+    {0xC, 0xB, 0x400, 0x1F0000},
+    {1, 0, (int32_t)0xFFFFE800, 0x1E0000},
+    {2, 1, (int32_t)0xFFFFE800, 0x1C0000},
+};
+static const CsArm cs_arms_s0_cycle_decide[] = {
+    {0xC, 0xB, 0x15000, 0x1F0000},
+    {1, 0, 0x17000, 0x1E0000},
+    {2, 1, 0x1D000, 0x1C0000},
+};
+
 /* sub_08096A94 case 0: the state-1 entry re-arm — record 12 holds
  * (speed 0 snaps ang2 to the anchor bearing), records 1/2 orbit at
  * 0x5000/0x1000. */
@@ -330,6 +374,16 @@ static void cs_run_arms(AosEnemy *e, const CsArm *arms, int n) {
 static uint8_t cs_cool_tab(int state, uint8_t id) {
     return state == 0 ? (id == 0x5C ? 0x18 : 0x20)
                       : (id == 0x5C ? 0x28 : 0x30);
+}
+
+static uint8_t cs_state0_route_timer(int route, uint8_t id) {
+    if (route == 4)
+        return id == 0x5C ? 0x10 : 0x18; /* 0x08119072 */
+    if (route == 6)
+        return 8;                         /* 0x08119076 */
+    if (route == 9 || route == 12)
+        return 0x18;                      /* 0x08119074 */
+    return cs_cool_tab(0, id);            /* 0x08119070 */
 }
 
 /* sub_08097B94: one record's per-frame step.  An unlaunched record
@@ -700,9 +754,108 @@ static void cs_gore_update(AosEnemy *e) {
     integrate(e);
 }
 
+static void cs_state0_enter_attack(AosEnemy *e, int step) {
+    cs_snapshot_records(e);
+    e->state = 1;
+    e->step = (uint8_t)step;
+    e->substep = 0;
+    e->cs_hits = 0;
+    cs_run_arms(e, cs_arms_s1_entry,
+                (int)(sizeof cs_arms_s1_entry /
+                      sizeof cs_arms_s1_entry[0]));
+    e->cs_cool = cs_cool_tab(1, e->id);
+}
+
+/* Enter one of sub_08095898's four locomotion starts.  The direction
+ * bit is already synchronized by sub_08097D1C/cs_face_records. */
+static void cs_state0_enter_route(AosEnemy *e, int route) {
+    const CsArm *arms = cs_arms_s0_route1;
+    int n = (int)(sizeof cs_arms_s0_route1 / sizeof cs_arms_s0_route1[0]);
+    e->step = (uint8_t)route;
+    e->substep = 0;
+    e->timer = cs_state0_route_timer(route, e->id);
+    e->cs_cool = e->timer;
+    e->cs_hits = e->timer >> 1;
+    e->vy = 0x10000;
+    e->ay = 0x2800;
+    if (route == 4) {
+        e->cs_pose = 8;
+        e->vx = 0;
+        arms = cs_arms_s0_route4;
+    } else if (route == 7) {
+        e->cs_pose = 8;
+        e->vx = 0;
+        arms = cs_arms_s0_route7;
+    } else {
+        int divisor = (int)e->timer * 2 - 4;
+        int32_t speed = (e->mirrored ? 0x190000 : -0x190000) / divisor;
+        e->cs_pose = 9;
+        if (route == 10) {
+            e->vx = -speed;
+            arms = cs_arms_s0_route10;
+        } else {
+            e->vx = speed;
+        }
+    }
+    cs_run_arms(e, arms, n);
+}
+
+static int cs_abs_player_dx(const AosEnemy *e, const AosSoma *soma) {
+    int dx = soma ? (int16_t)((target_x(soma) >> 16) - (e->x >> 16))
+                  : INT16_MAX;
+    return dx < 0 ? -dx : dx;
+}
+
+static void cs_state0_cycle_decision(AosEnemy *e, AosSoma *soma,
+                                     uint32_t (*random)(void), int from) {
+    int dx = cs_abs_player_dx(e, soma);
+    if (from == 6) {
+        if (e->id == 0x21 && random && (random() & 0x7F) <= 0x1F) {
+            cs_state0_enter_attack(e, 20);
+            return;
+        }
+        if (dx <= 0x63) {
+            if (random && (random() & 0x7F) <= 0x3F) {
+                cs_state0_enter_attack(e, 0);
+                return;
+            }
+            if (random && (random() & 0x7F) <= 0x3F) {
+                cs_face_records(e, soma);
+                cs_state0_enter_route(e, 7);
+                return;
+            }
+        }
+        /* Native next uses sub_0806D188/sub_0806D0B8 to choose
+         * case 7 or case 1 from nearby room geometry.  Until that
+         * probe is exposed, retain the source's unobstructed case-1
+         * path instead of inventing a wall result. */
+        cs_face_records(e, soma);
+        cs_state0_enter_route(e, 1);
+        return;
+    }
+
+    if (random && (random() & 0x7F) <= 0x3F && dx <= 0x63) {
+        cs_state0_enter_attack(e, 0);
+        return;
+    }
+    if (random && (random() & 0x7F) <= 0x1F && e->id == 0x21) {
+        cs_state0_enter_attack(e, 20);
+        return;
+    }
+    cs_face_records(e, soma);
+    cs_state0_enter_route(e, from == 9 ? 4 : 1);
+    if (from == 9) {
+        /* _080962E6 enters case 4 with 0x08119070, unlike the case-3
+         * environment entry which uses 0x08119072. */
+        e->timer = cs_cool_tab(0, e->id);
+        e->cs_cool = e->timer;
+    }
+}
+
 /* sub_08095898 state 0: the native multi-case approach and strike
- * machine. The create-time 20-24 cycle, alert, stride and decision are
- * translated; cases 4-12 remain explicitly open. */
+ * machine. The create-time 20-24 cycle, alert, stride, decision and
+ * movement loops 4-12 are translated.  The sub_0806D188/sub_0806D0B8
+ * environment selector feeding some route entries remains open. */
 static void cs_state0(AosEnemy *e, AosSoma *soma,
                       const AosCollision *layer, const AosAnimSet *anims,
                       uint32_t (*random)(void)) {
@@ -820,33 +973,136 @@ static void cs_state0(AosEnemy *e, AosSoma *soma,
         /* _08095C5E gives Creaking Skull a 1/4 RNG2 route to native
          * state-1 case 20; the next close-range roll is the <=0x3F
          * branch at _08095C94 and enters state-1 case 0. */
-        int attack_step = -1;
-        if (e->id == 0x21 && random && (random() & 0x7F) <= 0x1F)
-            attack_step = 20;
-        if (attack_step < 0 && soma) {
-            int dx = (int16_t)((target_x(soma) >> 16) - (e->x >> 16));
-            if (dx < 0)
-                dx = -dx;
-            if (dx <= 0x63 && random && (random() & 0x7F) <= 0x3F)
-                attack_step = 0;
+        if (e->id == 0x21 && random && (random() & 0x7F) <= 0x1F) {
+            cs_state0_enter_attack(e, 20);
+            break;
         }
-        /* Cases 4/7/10 are not represented yet.  Preserve the old
-         * bounded attack fallback for those outcomes, but keep this
-         * divergence explicit rather than claiming their branch and
-         * collision choreography was ported. */
-        cs_snapshot_records(e);
-        e->state = 1;
-        /* _08096736 enters the dedicated case-20 barrage, while the
-         * close-range _0809600C branch enters case 0.  The old reduced
-         * controller collapsed both and could never reach 20..37. */
-        e->step = (uint8_t)(attack_step >= 0 ? attack_step : 0);
+        int dx = cs_abs_player_dx(e, soma);
+        if (dx <= 0x63 && random && (random() & 0x7F) <= 0x3F) {
+            cs_state0_enter_attack(e, 0);
+            break;
+        }
+        if (dx <= 0x63 && random && (random() & 0x7F) <= 0x3F) {
+            cs_face_records(e, soma);
+            cs_state0_enter_route(e, 10);
+            break;
+        }
+        /* The obstructed alternatives use the still-open
+         * sub_0806D188/sub_0806D0B8 probes.  Case 4 is the native
+         * unobstructed continuation. */
+        cs_face_records(e, soma);
+        cs_state0_enter_route(e, 4);
+        break;
+    case 4:
+        (void)projectile_collide(e, layer, 0x10000,
+                                 (int32_t)0xFFD00000);
+        if (e->timer && --e->timer)
+            break;
+        e->step = 5;
+        e->timer = cs_state0_route_timer(4, e->id);
+        e->cs_pose = 7;
+        cs_run_arms(e, cs_arms_s0_to5,
+                    (int)(sizeof cs_arms_s0_to5 /
+                          sizeof cs_arms_s0_to5[0]));
+        e->cs_cool = e->timer;
+        break;
+    case 5:
+        (void)projectile_collide(e, layer, 0x10000,
+                                 (int32_t)0xFFD00000);
+        if (e->timer)
+            --e->timer;
+        if ((int8_t)e->timer > 4)
+            break;
+        e->step = 6;
         e->substep = 0;
-        e->cs_hits = 0;
-        cs_run_arms(e, cs_arms_s1_entry,
-                    (int)(sizeof cs_arms_s1_entry /
-                         sizeof cs_arms_s1_entry[0]));
-        e->cs_cool = cs_cool_tab(1, e->id);
-        (void)random;
+        e->timer = cs_state0_route_timer(6, e->id);
+        e->cs_pose = 7;
+        e->cs_cool = e->timer;
+        aos_audio_play_song(0x7C);
+        break;
+    case 6:
+    case 9:
+    case 12:
+        if (e->timer && --e->timer)
+            break;
+        if (e->substep == 0) {
+            e->substep = 1;
+            e->timer = 1;
+            if (e->step == 9) {
+                cs_run_arms(e, cs_arms_s0_decide,
+                            (int)(sizeof cs_arms_s0_decide /
+                                  sizeof cs_arms_s0_decide[0]));
+            } else {
+                cs_run_arms(e, cs_arms_s0_cycle_decide,
+                            (int)(sizeof cs_arms_s0_cycle_decide /
+                                  sizeof cs_arms_s0_cycle_decide[0]));
+            }
+            e->cs_cool = 1;
+            break;
+        }
+        cs_state0_cycle_decision(e, soma, random, e->step);
+        break;
+    case 7:
+        (void)projectile_collide(e, layer, 0x10000,
+                                 (int32_t)0xFFD00000);
+        if (e->timer && --e->timer)
+            break;
+        e->step = 8;
+        e->timer = cs_cool_tab(0, e->id);
+        e->cs_pose = 5;
+        cs_run_arms(e, cs_arms_s0_to8,
+                    (int)(sizeof cs_arms_s0_to8 /
+                          sizeof cs_arms_s0_to8[0]));
+        e->cs_cool = e->timer;
+        break;
+    case 8:
+        (void)projectile_collide(e, layer, 0x10000,
+                                 (int32_t)0xFFD00000);
+        if (e->timer)
+            --e->timer;
+        if ((int8_t)e->timer > 4)
+            break;
+        e->step = 9;
+        e->substep = 0;
+        e->timer = cs_state0_route_timer(9, e->id);
+        e->cs_pose = 5;
+        e->cs_cool = e->timer;
+        break;
+    case 10:
+        (void)projectile_collide(e, layer, 0x10000,
+                                 (int32_t)0xFFD00000);
+        if (e->cs_hits && --e->cs_hits == 0)
+            e->cs_pose = 4;
+        if ((e->timer & 7) == 0 &&
+            ((e->timer & 8) != 0 || (random && (random() & 0x7F) <= 0x3F)))
+            aos_audio_play_song(0x118);
+        if (e->timer && --e->timer)
+            break;
+        e->step = 11;
+        e->timer = cs_cool_tab(0, e->id);
+        e->cs_hits = e->timer >> 1;
+        e->cs_pose = 0x0C;
+        cs_run_arms(e, cs_arms_s0_to11,
+                    (int)(sizeof cs_arms_s0_to11 /
+                          sizeof cs_arms_s0_to11[0]));
+        e->cs_cool = e->timer;
+        break;
+    case 11:
+        (void)projectile_collide(e, layer, 0x10000,
+                                 (int32_t)0xFFD00000);
+        if (e->cs_hits && --e->cs_hits == 0)
+            e->cs_pose = 7;
+        if ((e->timer & 7) == 0 &&
+            ((e->timer & 8) != 0 || (random && (random() & 0x7F) <= 0x3F)))
+            aos_audio_play_song(0x118);
+        if (e->timer)
+            --e->timer;
+        if ((int8_t)e->timer > 4)
+            break;
+        e->step = 12;
+        e->timer = cs_state0_route_timer(12, e->id);
+        e->cs_pose = 7;
+        e->cs_cool = e->timer;
         break;
     default:
         e->step = 1;

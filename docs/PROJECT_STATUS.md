@@ -1,3 +1,24 @@
+## Patch 1293 - Creaking Skull native close-attack cases 0-9 and 11-19
+
+- **Reduced attack removed.** The old state-1 fallback invented a three-step
+  windup with two `sub_0809884C` shots. Re-reading `sub_08096A94` shows that
+  case 0 instead selects two parallel bone-strike sequences: pose 5 enters
+  cases 1-9, while every other pose enters cases 11-19. The fallback is gone;
+  native no-op cases 10 and 28-30 now remain no-ops.
+- **Native close choreography.** Both branches now use the ROM timing bytes
+  `0x30/0x28`, their exact constant counters, poses `0x0D-0x14`, songs `0x86`
+  and `0x80`, decoded `sub_08097D84` record arms and the unsnapped
+  `sub_08097EC4` pair in cases 8/18. Cases 9/19 restore the record-position
+  snapshot and return to state-0 case 3/6 as in assembly. The invented close
+  shots no longer appear; the real stationary shot remains in barrage case 24.
+- **Evidence and remaining boundary.** `aos_enemy` walks both close branches
+  from entry through their terminal state, checks the ROM timers, poses,
+  sounds, unsnapped angle transition and snapshot restore. The real-room
+  `aria_simulate_first_boss_room` scenario still passes. The particle calls
+  `sub_0806D9CC`/`sub_0806DCC4`, `sub_08011F7C` shake effects, state-0
+  locomotion/strike cases 4-12, native affine/OAM rounding and synchronized
+  emulator comparison remain open; the fight therefore remains `partial`.
+
 ## Patch 1292 - Lamp glow: measured strobing opaque disc + break sound wired
 
 - **Glow mechanism corrected.** The steady lamp halo is not a smooth

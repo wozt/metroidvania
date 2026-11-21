@@ -40,11 +40,11 @@
  * selected by entity + 0x24, or the per-case constants 2/0xE);
  * cs_step_perm counts + 0xD down like the native cases.  The
  * create-time cases 20-24 neutral cycle and the remaining case arms —
- * the state-0 case-3 locomotion outcomes and cases 4-12 strike tables,
- * the state-1 cases 4-12/15-19 including the sub_08097EC4 pairs —
- * stay unported because
- * the ported case structure does not reproduce them.  The terminal
- * case 9 and its prelude remain reduced; the native barrage cases
+ * the state-0 case-3 locomotion outcomes and cases 4-12 strike tables
+ * stay unported.  The native state-1 close attack cases 0-9/11-19,
+ * including their sub_08097EC4 pairs, poses, timers and record arms,
+ * are ported; their sub_0806D9CC/sub_0806DCC4 particles and
+ * sub_08011F7C shake calls remain open.  The native barrage cases
  * 20-27/31-37 (poses, timers, songs, shot and terminal restore) are
  * ported, while their sub_0806D518/6D6CC/98CF0 decorative particle
  * calls remain open. Cases 27/37 restore the sub_08098C1C pose snapshot through
@@ -288,6 +288,25 @@ static const CsArm cs_arms_s1_windup[] = {
 static const CsArm cs_arms_s1_volley[] = {
     {1, 0, 0, 0x1E0000},
     {2, 1, 0x400, 0x1C0000},
+};
+
+/* sub_08096A94 cases 1/11: both close-attack branches ease records
+ * 1/2 at 0x200 before their respective pose sequence. */
+static const CsArm cs_arms_s1_close_ease[] = {
+    {1, 0, 0x200, 0x1E0000},
+    {2, 1, 0x200, 0x1C0000},
+};
+
+/* Cases 5/15 reverse record 2 after the impact pose. */
+static const CsArm cs_arms_s1_close_reverse[] = {
+    {1, 0, 0, 0x1E0000},
+    {2, 1, (int32_t)0xFFFFFC00, 0x1C0000},
+};
+
+/* Cases 7/17 prepare the two bone chains for the unsnapped throw. */
+static const CsArm cs_arms_s1_close_throw[] = {
+    {1, 0, 0x800, 0x1E0000},
+    {2, 1, 0x6000, 0x1C0000},
 };
 
 /* sub_08096A94 case 20: the return-to-state-0 reset — all three
@@ -935,69 +954,153 @@ static bool cs_state1_barrage(AosEnemy *e, AosSoma *soma,
     }
 }
 
-/* sub_08096A94 state 1: the attack machine — windup, the shot
- * volleys with their songs (0x86 windup, 0x80/0x84/0x76/0x77/0x7A/
- * 0x97/0xE0/0x1C/0x29 stingers), then back to state 0. */
+/* sub_08096A94 cases 0..9 and 11..19.  Case 0 selects one of two
+ * parallel close-attack pose sequences from +0x20 == 5.  Both use the
+ * exact ROM timing bytes (0x30/0x28), the case constants and the
+ * sub_08097D84 arms.  Cases 8/18 deliberately use sub_08097EC4: they
+ * change the speed target without snapping the current angle.  The
+ * particle-only sub_0806D9CC/sub_0806DCC4 calls and the
+ * sub_08011F7C shake calls remain outside the shared effect model. */
+static bool cs_state1_close(AosEnemy *e, AosSoma *soma) {
+    bool upper = e->step >= 11;
+    switch (e->step) {
+    case 0:
+        cs_face_records(e, soma);
+        cs_snapshot_records(e);
+        if (e->cs_pose == 5) {
+            e->cs_pose = 0x0D;
+            e->step = 1;
+        } else {
+            e->cs_pose = 0x11;
+            e->step = 11;
+        }
+        cs_run_arms(e, cs_arms_s1_entry,
+                    (int)(sizeof cs_arms_s1_entry /
+                          sizeof cs_arms_s1_entry[0]));
+        e->timer = cs_cool_tab(1, e->id); /* 0x08119078 */
+        e->cs_cool = e->timer;
+        return true;
+    case 1:
+    case 11:
+        if (e->timer && --e->timer)
+            return true;
+        e->cs_pose = upper ? 0x12 : 0x0E;
+        e->step++;
+        e->timer = 0x28; /* 0x0811907B, both native variants */
+        cs_run_arms(e, cs_arms_s1_close_ease,
+                    (int)(sizeof cs_arms_s1_close_ease /
+                          sizeof cs_arms_s1_close_ease[0]));
+        e->cs_cool = e->timer;
+        return true;
+    case 2:
+    case 12:
+        if (e->timer && --e->timer)
+            return true;
+        e->step++;
+        e->timer = upper ? 2 : 4;
+        return true;
+    case 3:
+    case 13:
+        if (e->timer && --e->timer)
+            return true;
+        e->cs_pose = upper ? 0x13 : 0x0F;
+        e->step++;
+        e->timer = 0x0E;
+        cs_run_arms(e, cs_arms_s1_windup,
+                    (int)(sizeof cs_arms_s1_windup /
+                          sizeof cs_arms_s1_windup[0]));
+        e->cs_cool = e->timer;
+        aos_audio_play_song(0x86);
+        return true;
+    case 4:
+    case 14:
+        if (e->timer && --e->timer)
+            return true;
+        e->cs_pose = upper ? 0x14 : 0x10;
+        e->step++;
+        e->timer = 6;
+        cs_run_arms(e, cs_arms_s1_volley,
+                    (int)(sizeof cs_arms_s1_volley /
+                          sizeof cs_arms_s1_volley[0]));
+        e->cs_cool = e->timer;
+        aos_audio_play_song(0x80);
+        return true;
+    case 5:
+    case 15:
+        if (e->timer && --e->timer)
+            return true;
+        e->cs_pose = upper ? 0x13 : 0x0F;
+        e->step++;
+        e->timer = 6;
+        cs_run_arms(e, cs_arms_s1_close_reverse,
+                    (int)(sizeof cs_arms_s1_close_reverse /
+                          sizeof cs_arms_s1_close_reverse[0]));
+        e->cs_cool = e->timer;
+        return true;
+    case 6:
+    case 16:
+        if (e->timer && --e->timer)
+            return true;
+        e->cs_pose = upper ? 0x13 : 0x0F;
+        e->step++;
+        e->timer = cs_cool_tab(1, e->id); /* 0x08119078 */
+        cs_run_arms(e, cs_arms_s1_exit + 1, 2);
+        e->cs_cool = e->timer;
+        return true;
+    case 7:
+    case 17:
+        if (e->timer && --e->timer)
+            return true;
+        e->cs_pose = upper ? 7 : 5;
+        e->step++;
+        e->timer = upper ? 0x1E : 0x32;
+        cs_run_arms(e, cs_arms_s1_close_throw,
+                    (int)(sizeof cs_arms_s1_close_throw /
+                          sizeof cs_arms_s1_close_throw[0]));
+        e->cs_cool = e->timer;
+        return true;
+    case 8:
+    case 18:
+        if (e->timer)
+            --e->timer;
+        if ((int8_t)e->timer > 4)
+            return true;
+        e->step++;
+        e->timer = 0x0A;
+        cs_config_ex(e, 1, 0, 0x17000, 0x1E0000, false, true);
+        cs_config_ex(e, 2, 1, 0x1D000, 0x1C0000, false, true);
+        e->cs_cool = e->timer;
+        return true;
+    case 9:
+    case 19:
+        if (e->timer && --e->timer)
+            return true;
+        cs_restore_records(e);
+        e->state = 0;
+        e->step = upper ? 6 : 3;
+        e->substep = 0;
+        e->timer = 1;
+        cs_config_ex(e, 1, 0, 0x17000, 0x1E0000, true, false);
+        cs_config_ex(e, 2, 1, 0x1D000, 0x1C0000, true, false);
+        e->cs_cool = 1;
+        return true;
+    default:
+        return false;
+    }
+}
+
+/* sub_08096A94 state 1 dispatch.  Cases 10 and 28..30 are native
+ * no-op jump-table entries; every reachable case handled here now uses
+ * the decoded case controller rather than the former three-step volley. */
 static void cs_state1(AosEnemy *e, AosSoma *soma,
                       const AosAnimSet *anims, AosHitReport *hit,
                       uint32_t (*random)(void)) {
+    (void)anims;
     (void)random;
     if (cs_state1_barrage(e, soma, hit))
         return;
-    switch (e->substep) {
-    case 0:
-        play(e, anims, 2);
-        aos_audio_play_song(0x86);
-        e->substep = 1;
-        e->timer = 0;
-        /* The 0x86 windup strum is native case 13: records 1/2
-         * reverse-orbit while + 0xD counts down from the 2 the
-         * preceding case assigned. */
-        cs_run_arms(e, cs_arms_s1_windup,
-                    (int)(sizeof cs_arms_s1_windup /
-                         sizeof cs_arms_s1_windup[0]));
-        e->cs_cool = 2;
-        break;
-    case 1:
-        /* Volley: the case-14 re-arm on entry (the + 0xD = 0xE the
-         * windup case assigned), two shots then the 0x80 stinger. */
-        if (e->timer == 0) {
-            cs_run_arms(e, cs_arms_s1_volley,
-                        (int)(sizeof cs_arms_s1_volley /
-                             sizeof cs_arms_s1_volley[0]));
-            e->cs_cool = 0xE;
-        }
-        if (e->timer == 0x10 || e->timer == 0x28) {
-            cs_fire_shot(e, soma, hit);
-            if (e->timer == 0x28)
-                aos_audio_play_song(0x80);
-        }
-        if (++e->timer > 0x40) {
-            e->substep = 2;
-            e->timer = 0;
-        }
-        break;
-    case 2:
-        /* Return to the approach — the case-20 reset re-arm with
-         * the table + 0xD divider.  Native terminal cases 9/27/37
-         * first call sub_08098C38, undoing positional drift from the
-         * attack while retaining the new orbit parameters. */
-        cs_restore_records(e);
-        e->state = 0;
-        e->step = 1;
-        e->substep = 0;
-        cs_run_arms(e, cs_arms_s1_exit,
-                    (int)(sizeof cs_arms_s1_exit /
-                         sizeof cs_arms_s1_exit[0]));
-        e->cs_cool = cs_cool_tab(1, e->id);
-        play_loop(e, anims, 0, true);
-        break;
-    default:
-        e->substep = 0;
-        break;
-    }
-    if (soma)
-        cs_face_records(e, soma);
+    if (cs_state1_close(e, soma))
+        return;
 }
 
 AosHitReport aos_enemy_creaking_skull_update(

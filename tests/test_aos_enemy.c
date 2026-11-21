@@ -1551,7 +1551,7 @@ static void creaking_skull_tests(void) {
      * every x changes sign, while only angles 0/1/2/8/11 mirror. */
     ed.state = 1;
     ed.step = 0;
-    ed.substep = 0xFF; /* reduced-machine default: no record arm */
+    ed.cs_pose = 5;
     ed.cs_cool = 0;
     soma.x = ed.x - AOS_FIXED(40);
     (void)aos_enemy_update(&ed, &soma, &layer, &kind, NULL, NULL,
@@ -1559,7 +1559,9 @@ static void creaking_skull_tests(void) {
     assert(!ed.mirrored);
     for (int i = 0; i < 13; ++i) {
         bool angle_mirrors = i <= 2 || i == 8 || i == 11;
-        assert(ed.cs_rec[i].x == -cs_before_x[i]);
+        /* Native case 0 snapshots immediately after sub_08097D1C,
+         * before its record arms and this frame's sub_08098BE0. */
+        assert(ed.cs_rec[i].sx == -cs_before_x[i]);
         assert(ed.cs_rec[i].ang ==
                (angle_mirrors ? 0x20000 - cs_before_ang[i]
                               : cs_before_ang[i]));
@@ -1702,10 +1704,9 @@ static void creaking_skull_tests(void) {
     assert(b.removed);
     e.state = 0;
 
-    /* State 1 volley: the case-0 entry arms and the case-13 windup
-     * re-arm fire entering substep 0, the case-14 volley re-arm on
-     * the first volley tick, two shots then back to state 0 with
-     * the case-20 reset arms. */
+    /* Native state-1 case 0 selects cases 1..9 from pose 5.  Exercise
+     * every transition with the countdown accelerated only after its
+     * decoded entry value has been observed. */
     AosEnemy a;
     assert(aos_enemy_create(&a, 0x21, 150, 120, 0, 0,
                             &soma, &layer, &kind, &cs33));
@@ -1719,86 +1720,65 @@ static void creaking_skull_tests(void) {
     (void)aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
                            10, 4, 0, 0, always_zero);
     a.state = 1;
-    a.step = 0; /* focused legacy case-0 path; barrage is tested below */
-    for (int i = 0; i < 13; ++i) {
-        a.cs_rec[i].sx = a.cs_rec[i].x;
-        a.cs_rec[i].sy = a.cs_rec[i].y;
+    a.step = 0;
+    a.cs_pose = 5;
+    int song86 = aos_audio_requested(AOS_AUDIO_START_SONG, 0x86);
+    int song80 = aos_audio_requested(AOS_AUDIO_START_SONG, 0x80);
+    hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(a.step == 1 && a.cs_pose == 0x0D && a.timer == 0x30 &&
+           a.cs_cool == 0x2F);
+    int32_t saved_x = a.cs_rec[3].sx, saved_y = a.cs_rec[3].sy;
+    a.cs_rec[3].x += AOS_FIXED(8);
+    for (int expected = 2; expected <= 8; ++expected) {
+        a.timer = 1;
+        (void)aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+        assert(a.step == expected);
     }
-    hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
-                           10, 4, 0, 0, always_zero);
-    /* substep 0 -> 1: the windup arms leave records 1/2 aimed at
-     * anchors 0/1 and the divider at the assigned 2 (decremented
-     * to 1 by the same update's record step). */
-    assert(a.substep == 1);
-    assert(a.cs_rec[1].sub == 0 && a.cs_rec[2].sub == 1);
-    assert(a.cs_rec[1].dist == 0x1E0000 &&
-           a.cs_rec[2].dist == 0x1C0000);
-    /* The first volley tick (timer 0) runs the case-14 re-arm:
-     * record 1 holds, record 2 takes the 0x400 crawl. */
-    hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
-                           10, 4, 0, 0, always_zero);
-    assert(a.cs_cool == 0xD); /* 0xE assigned, decremented once */
-    a.timer = 0x10;
-    hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
-                           10, 4, 0, 0, always_zero);
-    int shots = 0;
-    for (int i = 0; i < hit.child_count; ++i)
-        if (hit.children[i].role == AOS_ROLE_CS_SHOT) shots++;
-    assert(shots == 1);
-    a.timer = 0x28;
-    hit = aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
-                           10, 4, 0, 0, always_zero);
-    shots = 0;
-    for (int i = 0; i < hit.child_count; ++i)
-        if (hit.children[i].role == AOS_ROLE_CS_SHOT) shots++;
-    assert(shots == 1);
-    AosEnemy shot = hit.children[0];
-    assert(shot.role == AOS_ROLE_CS_SHOT);
-    int32_t shot_dx = shot.mirrored ? AOS_FIXED(36) : -AOS_FIXED(36);
-    uint32_t shot_start = shot.mirrored ? 0x30000u : (uint32_t)-0x30000;
-    assert(shot.x == a.x + shot_dx &&
-           shot.y == a.y - AOS_FIXED(25));
-    assert(shot.vx == 0 && shot.vy == 0 && shot.angle == shot_start);
-    soma.x = soma.y = 0;
-    uint32_t shot_angle = shot.angle;
-    (void)aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
-                           10, 4, 0, 0, always_zero);
-    assert(!shot.removed && shot.x == a.x + shot_dx &&
-           shot.angle == shot_angle);
-    (void)aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
-                           10, 4, 0, 0, always_zero);
-    assert(shot.angle == shot_angle + 0x2400);
-    /* sub_08098DF0: a weapon strike starts the stationary entity's
-     * burst without awarding damage, XP or a damage popup. */
-    soma.x = shot.x;
-    soma.y = shot.y;
-    cs_weapon.active = true;
-    int shot_burst_songs =
-        aos_audio_requested(AOS_AUDIO_START_SONG, 0x76);
-    hit = aos_enemy_update(&shot, &soma, &layer, &kind, &cs_weapon,
-                           &cs_blade, 20, 4, 0, 0, always_zero);
-    assert(hit.enemy_hit && hit.enemy_damage == 0 &&
-           !hit.has_damage_popup && !hit.killed && shot.state == 1 &&
-           !shot.removed &&
-           aos_audio_requested(AOS_AUDIO_START_SONG, 0x76) ==
-               shot_burst_songs + 1);
-    hit = aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
-                           10, 4, 0, 0, always_zero);
-    assert(shot.removed);
-    a.state = 1;
-    a.substep = 2;
-    aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
-                     10, 4, 0, 0, always_zero);
-    assert(a.state == 0 && a.step == 1);
-    /* The case-20 reset re-armed all three records at speed 0. */
-    assert(a.cs_rec[12].dist == 0x1F0000 &&
+    assert(a.cs_pose == 5 && a.timer == 0x32 &&
+           a.cs_rec[1].sub == 0 && a.cs_rec[2].sub == 1 &&
            a.cs_rec[1].dist == 0x1E0000 &&
            a.cs_rec[2].dist == 0x1C0000);
+    int32_t before_unsnapped = a.cs_rec[1].ang2;
+    a.timer = 5;
+    (void)aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(a.step == 9 && a.timer == 0x0A &&
+           a.cs_rec[1].spd == (a.mirrored ? 0x11000 : 0x17000) &&
+           a.cs_rec[1].ang2 != a.cs_rec[1].spd &&
+           a.cs_rec[1].ang2 != before_unsnapped);
+    a.timer = 1;
+    (void)aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(a.state == 0 && a.step == 3 &&
+           a.cs_rec[3].x == saved_x && a.cs_rec[3].y == saved_y);
+    assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x86) == song86 + 1 &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x80) == song80 + 1);
 
-    /* sub_08098C38 restored the record positions captured at attack
-     * entry even though the orbit speed/radius arms above survive. */
-    assert(a.cs_rec[3].x == a.cs_rec[3].sx);
-    assert(a.cs_rec[3].y == a.cs_rec[3].sy);
+    /* Any other pose takes the parallel cases 11..19, with its
+     * distinct poses/timers and terminal return to state-0 case 6. */
+    a.state = 1;
+    a.step = 0;
+    a.cs_pose = 7;
+    (void)aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(a.step == 11 && a.cs_pose == 0x11 && a.timer == 0x30);
+    for (int expected = 12; expected <= 18; ++expected) {
+        a.timer = 1;
+        (void)aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                               10, 4, 0, 0, always_zero);
+        assert(a.step == expected);
+    }
+    assert(a.cs_pose == 7 && a.timer == 0x1E);
+    a.timer = 5;
+    (void)aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(a.step == 19 && a.timer == 0x0A);
+    a.timer = 1;
+    (void)aos_enemy_update(&a, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(a.state == 0 && a.step == 6);
 
     /* Native state-1 case 20 selects the 21..27 barrage when pose 5 is
      * active: 30-frame windup, song 0x77, 41-frame debris phase with
@@ -1825,16 +1805,58 @@ static void creaking_skull_tests(void) {
     assert(barrage.step == 21 && barrage.timer == 0x1E &&
            barrage.cs_pose == 0x16);
     bool barrage_shot = false;
+    AosEnemy shot;
+    memset(&shot, 0, sizeof shot);
     for (int frame = 0; frame < 240 && barrage.state == 1; ++frame) {
         hit = aos_enemy_update(&barrage, &soma, &layer, &kind, NULL, NULL,
                                10, 4, 0, 0, always_zero);
-        for (int i = 0; i < hit.child_count; ++i)
-            barrage_shot |= hit.children[i].role == AOS_ROLE_CS_SHOT;
+        for (int i = 0; i < hit.child_count; ++i) {
+            if (hit.children[i].role == AOS_ROLE_CS_SHOT) {
+                barrage_shot = true;
+                shot = hit.children[i];
+            }
+        }
     }
     assert(barrage_shot && barrage.state == 0 && barrage.step == 3);
     assert(aos_audio_requested(AOS_AUDIO_START_SONG, 0x77) > song77 &&
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x84) > song84 &&
            aos_audio_requested(AOS_AUDIO_START_SONG, 0x7A) > song7a);
+
+    /* sub_080989DC: the case-24 helper stays fixed while its affine
+     * angle advances every other tick; sub_08098DF0 starts the burst
+     * on a weapon strike without damage, XP or a popup. */
+    assert(shot.role == AOS_ROLE_CS_SHOT);
+    int32_t shot_dx = shot.mirrored ? AOS_FIXED(36) : -AOS_FIXED(36);
+    uint32_t shot_start = shot.mirrored ? 0x30000u : (uint32_t)-0x30000;
+    assert(shot.x == barrage.x + shot_dx &&
+           shot.y == barrage.y - AOS_FIXED(25));
+    assert(shot.vx == 0 && shot.vy == 0 && shot.angle == shot_start);
+    soma.x = soma.y = 0;
+    uint32_t shot_angle = shot.angle;
+    (void)aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(!shot.removed && shot.x == barrage.x + shot_dx &&
+           shot.angle == shot_angle);
+    (void)aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(shot.angle == shot_angle + 0x2400);
+    soma.x = shot.x;
+    soma.y = shot.y;
+    cs_weapon.active = true;
+    int shot_burst_songs =
+        aos_audio_requested(AOS_AUDIO_START_SONG, 0x76);
+    hit = aos_enemy_update(&shot, &soma, &layer, &kind, &cs_weapon,
+                           &cs_blade, 20, 4, 0, 0, always_zero);
+    assert(hit.enemy_hit && hit.enemy_damage == 0 &&
+           !hit.has_damage_popup && !hit.killed && shot.state == 1 &&
+           !shot.removed &&
+           aos_audio_requested(AOS_AUDIO_START_SONG, 0x76) ==
+               shot_burst_songs + 1);
+    hit = aos_enemy_update(&shot, &soma, &layer, &kind, NULL, NULL,
+                           10, 4, 0, 0, always_zero);
+    assert(shot.removed);
+    soma.x = barrage.x;
+    soma.y = barrage.y;
 
     /* A non-5 pose takes the parallel 31..37 branch and returns to
      * state-0 case 6. */
